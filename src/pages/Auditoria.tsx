@@ -1,16 +1,10 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-
-const mockAudit = [
-  { id: 1, usuario: "Dr. García López", accion: "Creó folio GR-2025-001", timestamp: "2025-01-15 09:23:11", ip: "192.168.1.45", valorAnterior: "—", valorNuevo: "Borrador" },
-  { id: 2, usuario: "Dr. García López", accion: "Agregó riesgo R1 a GR-2025-001", timestamp: "2025-01-15 09:45:30", ip: "192.168.1.45", valorAnterior: "—", valorNuevo: "Falla mecánica / NPR: 120" },
-  { id: 3, usuario: "Ing. Martínez R.", accion: "Creó folio GR-2025-002", timestamp: "2025-02-01 11:12:05", ip: "192.168.1.78", valorAnterior: "—", valorNuevo: "Borrador" },
-  { id: 4, usuario: "Ing. Martínez R.", accion: "Cambió estado GR-2025-002", timestamp: "2025-02-10 14:30:22", ip: "192.168.1.78", valorAnterior: "Borrador", valorNuevo: "En Firma" },
-  { id: 5, usuario: "Dra. Hernández P.", accion: "Aprobó folio GR-2025-003", timestamp: "2025-03-01 16:05:44", ip: "192.168.1.92", valorAnterior: "En Firma", valorNuevo: "Aprobado" },
-  { id: 6, usuario: "Admin", accion: "Modificó severidad R3 en GR-2025-001", timestamp: "2025-03-05 10:15:00", ip: "192.168.1.10", valorAnterior: "S=8", valorNuevo: "S=10" },
-];
+import { Card, CardContent } from "@/components/ui/card";
+import { useAuditTrail } from "@/hooks/useFolios";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function Auditoria() {
+  const { data: entries, isLoading } = useAuditTrail();
+
   return (
     <div className="space-y-6">
       <div>
@@ -20,34 +14,37 @@ export default function Auditoria() {
 
       <Card>
         <CardContent className="pt-6">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b">
-                  <th className="text-left pb-2 font-medium text-muted-foreground">#</th>
-                  <th className="text-left pb-2 font-medium text-muted-foreground">Usuario</th>
-                  <th className="text-left pb-2 font-medium text-muted-foreground">Acción</th>
-                  <th className="text-left pb-2 font-medium text-muted-foreground">Timestamp</th>
-                  <th className="text-left pb-2 font-medium text-muted-foreground">IP</th>
-                  <th className="text-left pb-2 font-medium text-muted-foreground">Anterior</th>
-                  <th className="text-left pb-2 font-medium text-muted-foreground">Nuevo</th>
-                </tr>
-              </thead>
-              <tbody>
-                {mockAudit.map((entry) => (
-                  <tr key={entry.id} className="border-b last:border-0">
-                    <td className="py-2 font-mono text-xs text-muted-foreground">{entry.id}</td>
-                    <td className="py-2 font-medium">{entry.usuario}</td>
-                    <td className="py-2">{entry.accion}</td>
-                    <td className="py-2 font-mono text-xs">{entry.timestamp}</td>
-                    <td className="py-2 font-mono text-xs text-muted-foreground">{entry.ip}</td>
-                    <td className="py-2 text-xs">{entry.valorAnterior}</td>
-                    <td className="py-2 text-xs font-medium">{entry.valorNuevo}</td>
+          {isLoading ? (
+            <div className="space-y-2">{Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-8 w-full" />)}</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-left pb-2 font-medium text-muted-foreground">Tabla</th>
+                    <th className="text-left pb-2 font-medium text-muted-foreground">Acción</th>
+                    <th className="text-left pb-2 font-medium text-muted-foreground">Timestamp</th>
+                    <th className="text-left pb-2 font-medium text-muted-foreground">IP</th>
+                    <th className="text-left pb-2 font-medium text-muted-foreground">Registro ID</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {entries?.map((entry) => (
+                    <tr key={entry.id} className="border-b last:border-0">
+                      <td className="py-2 font-medium">{entry.tabla}</td>
+                      <td className="py-2">{entry.accion}</td>
+                      <td className="py-2 font-mono text-xs">{new Date(entry.created_at).toLocaleString()}</td>
+                      <td className="py-2 font-mono text-xs text-muted-foreground">{entry.ip || "—"}</td>
+                      <td className="py-2 font-mono text-xs text-muted-foreground truncate max-w-[120px]">{entry.registro_id}</td>
+                    </tr>
+                  ))}
+                  {entries?.length === 0 && (
+                    <tr><td colSpan={5} className="py-4 text-center text-muted-foreground">Sin registros de auditoría</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
