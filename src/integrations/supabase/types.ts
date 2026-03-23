@@ -113,6 +113,7 @@ export type Database = {
         Row: {
           alcance: string | null
           codigo: string
+          conclusion: string | null
           control_cambios_id: string | null
           created_at: string
           created_by: string | null
@@ -121,6 +122,7 @@ export type Database = {
           fecha_cierre: string | null
           fecha_inicio: string
           id: string
+          justificacion_tecnica: string | null
           origen: Database["public"]["Enums"]["origen_riesgo"]
           proceso_equipo: string
           updated_at: string
@@ -128,6 +130,7 @@ export type Database = {
         Insert: {
           alcance?: string | null
           codigo: string
+          conclusion?: string | null
           control_cambios_id?: string | null
           created_at?: string
           created_by?: string | null
@@ -136,6 +139,7 @@ export type Database = {
           fecha_cierre?: string | null
           fecha_inicio?: string
           id?: string
+          justificacion_tecnica?: string | null
           origen: Database["public"]["Enums"]["origen_riesgo"]
           proceso_equipo: string
           updated_at?: string
@@ -143,6 +147,7 @@ export type Database = {
         Update: {
           alcance?: string | null
           codigo?: string
+          conclusion?: string | null
           control_cambios_id?: string | null
           created_at?: string
           created_by?: string | null
@@ -151,6 +156,7 @@ export type Database = {
           fecha_cierre?: string | null
           fecha_inicio?: string
           id?: string
+          justificacion_tecnica?: string | null
           origen?: Database["public"]["Enums"]["origen_riesgo"]
           proceso_equipo?: string
           updated_at?: string
