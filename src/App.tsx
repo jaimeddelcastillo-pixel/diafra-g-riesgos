@@ -3,6 +3,7 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { AuthProvider } from "@/hooks/useAuth";
 import { AppLayout } from "@/components/AppLayout";
 import Index from "./pages/Index";
 import Folios from "./pages/Folios";
@@ -21,18 +22,20 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route element={<AppLayout />}>
-            <Route path="/" element={<Index />} />
-            <Route path="/folios" element={<Folios />} />
-            <Route path="/folios/:id" element={<FolioDetail />} />
-            <Route path="/auditoria" element={<Auditoria />} />
-            <Route path="/catalogos" element={<Catalogos />} />
-            <Route path="/configuracion" element={<Configuracion />} />
-          </Route>
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+        <AuthProvider>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route element={<AppLayout />}>
+              <Route path="/" element={<Index />} />
+              <Route path="/folios" element={<Folios />} />
+              <Route path="/folios/:id" element={<FolioDetail />} />
+              <Route path="/auditoria" element={<Auditoria />} />
+              <Route path="/catalogos" element={<Catalogos />} />
+              <Route path="/configuracion" element={<Configuracion />} />
+            </Route>
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
