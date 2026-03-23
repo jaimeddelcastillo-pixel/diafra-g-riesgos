@@ -14,16 +14,310 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      audit_trail: {
+        Row: {
+          accion: string
+          created_at: string
+          id: string
+          ip: string | null
+          registro_id: string
+          tabla: string
+          user_id: string | null
+          valor_anterior: Json | null
+          valor_nuevo: Json | null
+        }
+        Insert: {
+          accion: string
+          created_at?: string
+          id?: string
+          ip?: string | null
+          registro_id: string
+          tabla: string
+          user_id?: string | null
+          valor_anterior?: Json | null
+          valor_nuevo?: Json | null
+        }
+        Update: {
+          accion?: string
+          created_at?: string
+          id?: string
+          ip?: string | null
+          registro_id?: string
+          tabla?: string
+          user_id?: string | null
+          valor_anterior?: Json | null
+          valor_nuevo?: Json | null
+        }
+        Relationships: []
+      }
+      folio_comite: {
+        Row: {
+          cargo: string
+          created_at: string
+          fecha_firma: string | null
+          firmado: boolean
+          folio_id: string
+          id: string
+          nombre: string
+          responsabilidad: string
+          user_id: string | null
+        }
+        Insert: {
+          cargo: string
+          created_at?: string
+          fecha_firma?: string | null
+          firmado?: boolean
+          folio_id: string
+          id?: string
+          nombre: string
+          responsabilidad: string
+          user_id?: string | null
+        }
+        Update: {
+          cargo?: string
+          created_at?: string
+          fecha_firma?: string | null
+          firmado?: boolean
+          folio_id?: string
+          id?: string
+          nombre?: string
+          responsabilidad?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "folio_comite_folio_id_fkey"
+            columns: ["folio_id"]
+            isOneToOne: false
+            referencedRelation: "folios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      folio_sequence: {
+        Row: {
+          last_number: number
+          year: number
+        }
+        Insert: {
+          last_number?: number
+          year: number
+        }
+        Update: {
+          last_number?: number
+          year?: number
+        }
+        Relationships: []
+      }
+      folios: {
+        Row: {
+          alcance: string | null
+          codigo: string
+          control_cambios_id: string | null
+          created_at: string
+          created_by: string | null
+          desviacion_id: string | null
+          estado: Database["public"]["Enums"]["estado_folio"]
+          fecha_cierre: string | null
+          fecha_inicio: string
+          id: string
+          origen: Database["public"]["Enums"]["origen_riesgo"]
+          proceso_equipo: string
+          updated_at: string
+        }
+        Insert: {
+          alcance?: string | null
+          codigo: string
+          control_cambios_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          desviacion_id?: string | null
+          estado?: Database["public"]["Enums"]["estado_folio"]
+          fecha_cierre?: string | null
+          fecha_inicio?: string
+          id?: string
+          origen: Database["public"]["Enums"]["origen_riesgo"]
+          proceso_equipo: string
+          updated_at?: string
+        }
+        Update: {
+          alcance?: string | null
+          codigo?: string
+          control_cambios_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          desviacion_id?: string | null
+          estado?: Database["public"]["Enums"]["estado_folio"]
+          fecha_cierre?: string | null
+          fecha_inicio?: string
+          id?: string
+          origen?: Database["public"]["Enums"]["origen_riesgo"]
+          proceso_equipo?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          cargo: string | null
+          created_at: string
+          email: string
+          id: string
+          nombre: string
+          updated_at: string
+        }
+        Insert: {
+          cargo?: string | null
+          created_at?: string
+          email: string
+          id: string
+          nombre: string
+          updated_at?: string
+        }
+        Update: {
+          cargo?: string | null
+          created_at?: string
+          email?: string
+          id?: string
+          nombre?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      riesgos: {
+        Row: {
+          accion_implementada: string | null
+          accion_propuesta: string | null
+          causa_potencial: string
+          controles_actuales: string | null
+          created_at: string
+          det_residual: number
+          deteccion: number
+          dictamen: Database["public"]["Enums"]["dictamen_tipo"]
+          efecto_dano: string
+          etapa_proceso: string
+          fecha_compromiso: string | null
+          fecha_evidencia: string | null
+          folio_id: string
+          id: string
+          npr: number | null
+          npr_residual: number | null
+          numero_id: number
+          ocu_residual: number
+          ocurrencia: number
+          peligro_modo_falla: string
+          requiere_accion: boolean
+          responsable: string | null
+          sev_residual: number
+          severidad: number
+          updated_at: string
+        }
+        Insert: {
+          accion_implementada?: string | null
+          accion_propuesta?: string | null
+          causa_potencial?: string
+          controles_actuales?: string | null
+          created_at?: string
+          det_residual?: number
+          deteccion?: number
+          dictamen?: Database["public"]["Enums"]["dictamen_tipo"]
+          efecto_dano?: string
+          etapa_proceso?: string
+          fecha_compromiso?: string | null
+          fecha_evidencia?: string | null
+          folio_id: string
+          id?: string
+          npr?: number | null
+          npr_residual?: number | null
+          numero_id?: number
+          ocu_residual?: number
+          ocurrencia?: number
+          peligro_modo_falla?: string
+          requiere_accion?: boolean
+          responsable?: string | null
+          sev_residual?: number
+          severidad?: number
+          updated_at?: string
+        }
+        Update: {
+          accion_implementada?: string | null
+          accion_propuesta?: string | null
+          causa_potencial?: string
+          controles_actuales?: string | null
+          created_at?: string
+          det_residual?: number
+          deteccion?: number
+          dictamen?: Database["public"]["Enums"]["dictamen_tipo"]
+          efecto_dano?: string
+          etapa_proceso?: string
+          fecha_compromiso?: string | null
+          fecha_evidencia?: string | null
+          folio_id?: string
+          id?: string
+          npr?: number | null
+          npr_residual?: number | null
+          numero_id?: number
+          ocu_residual?: number
+          ocurrencia?: number
+          peligro_modo_falla?: string
+          requiere_accion?: boolean
+          responsable?: string | null
+          sev_residual?: number
+          severidad?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "riesgos_folio_id_fkey"
+            columns: ["folio_id"]
+            isOneToOne: false
+            referencedRelation: "folios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      next_folio_code: { Args: never; Returns: string }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "comite_tecnico" | "operador" | "lectura"
+      dictamen_tipo: "Aceptable" | "No Aceptable" | "Pendiente"
+      estado_folio: "Borrador" | "En Firma" | "Aprobado" | "Cerrado"
+      origen_riesgo:
+        | "Diseño"
+        | "Proceso"
+        | "Queja / Devolución"
+        | "Desviación"
+        | "Control de Cambios"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +444,17 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "comite_tecnico", "operador", "lectura"],
+      dictamen_tipo: ["Aceptable", "No Aceptable", "Pendiente"],
+      estado_folio: ["Borrador", "En Firma", "Aprobado", "Cerrado"],
+      origen_riesgo: [
+        "Diseño",
+        "Proceso",
+        "Queja / Devolución",
+        "Desviación",
+        "Control de Cambios",
+      ],
+    },
   },
 } as const
