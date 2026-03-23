@@ -10,6 +10,7 @@ import { useFolioDetail, getNPRLevel, getEstadoStyle } from "@/hooks/useFolios";
 import type { Folio, Riesgo, FolioComite } from "@/hooks/useFolios";
 import { Skeleton } from "@/components/ui/skeleton";
 import { RiesgoFormDialog } from "@/components/RiesgoFormDialog";
+import { SeccionDictamen } from "@/components/SeccionDictamen";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
