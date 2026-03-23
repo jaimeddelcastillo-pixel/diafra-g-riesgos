@@ -38,7 +38,7 @@ function FormField({ label, value, className = "" }: { label: string; value: Rea
   return (
     <div className={`border-r border-b last:border-r-0 p-2 ${className}`}>
       <span className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wide">{label}</span>
-      <div className="text-sm mt-0.5">{value || <span className="text-muted-foreground/50">—</span>}</div>
+      <div className="text-sm mt-0.5 whitespace-pre-line">{value || <span className="text-muted-foreground/50">—</span>}</div>
     </div>
   );
 }
