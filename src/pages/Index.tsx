@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { NPRBarChart } from "@/components/NPRBarChart";
 import { HeatMap } from "@/components/HeatMap";
 import { useFolios, useAllRiesgos, getNPRLevel } from "@/hooks/useFolios";
-import { AlertTriangle, FileCheck, ClipboardList, ShieldAlert } from "lucide-react";
+import { AlertTriangle, FileCheck, FileX2, ClipboardList, ShieldAlert } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 
