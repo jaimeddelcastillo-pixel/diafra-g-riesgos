@@ -38,7 +38,7 @@ function FormField({ label, value, className = "" }: { label: string; value: Rea
   return (
     <div className={`border-r border-b last:border-r-0 p-2 ${className}`}>
       <span className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wide">{label}</span>
-      <div className="text-sm mt-0.5">{value || <span className="text-muted-foreground/50">—</span>}</div>
+      <div className="text-sm mt-0.5 whitespace-pre-line">{value || <span className="text-muted-foreground/50">—</span>}</div>
     </div>
   );
 }
@@ -265,20 +265,20 @@ function SeccionRiesgos({ riesgos, locked, folioId }: { riesgos: Riesgo[]; locke
                   <tr key={r.id} className={`border-b last:border-0 ${rowAlert ? "bg-destructive/5" : ""} ${!locked ? "hover:bg-muted/30 cursor-pointer" : ""}`} onClick={() => !locked && setRiesgoForm({ open: true, riesgo: r })}>
                     <td className="border-r p-1.5 text-center font-mono font-bold">{String(r.numero_id).padStart(2, "0")}</td>
                     <td className="border-r p-1.5">{r.etapa_proceso}</td>
-                    <td className="border-r p-1.5 max-w-[160px]">{r.peligro_modo_falla}</td>
-                    <td className="border-r p-1.5 max-w-[140px]">{r.causa_potencial}</td>
-                    <td className="border-r p-1.5 max-w-[140px]">{r.efecto_dano}</td>
+                    <td className="border-r p-1.5 max-w-[160px] whitespace-pre-line">{r.peligro_modo_falla}</td>
+                    <td className="border-r p-1.5 max-w-[140px] whitespace-pre-line">{r.causa_potencial}</td>
+                    <td className="border-r p-1.5 max-w-[140px] whitespace-pre-line">{r.efecto_dano}</td>
                     <td className={`border-r p-1.5 text-center font-bold ${r.severidad >= 9 ? "text-destructive bg-destructive/10" : ""}`}>{r.severidad}</td>
                     <td className="border-r p-1.5 text-center">{r.ocurrencia}</td>
                     <td className="border-r p-1.5 text-center">{r.deteccion}</td>
                     <td className="border-r p-1.5 text-center"><NPRBadge npr={npr} severidad={r.severidad} /></td>
-                    <td className="border-r p-1.5 max-w-[130px]">{r.controles_actuales}</td>
-                    <td className="border-r p-1.5 max-w-[160px]">
+                    <td className="border-r p-1.5 max-w-[130px] whitespace-pre-line">{r.controles_actuales}</td>
+                    <td className="border-r p-1.5 max-w-[160px] whitespace-pre-line">
                       {r.accion_propuesta || (needsAction && <span className="text-destructive font-bold">⚠ REQUERIDO</span>)}
                     </td>
                     <td className="border-r p-1.5">{r.responsable}</td>
                     <td className="border-r p-1.5 text-[10px]">{r.fecha_compromiso}</td>
-                    <td className="border-r p-1.5 max-w-[140px]">{r.accion_implementada || <span className="text-muted-foreground">—</span>}</td>
+                    <td className="border-r p-1.5 max-w-[140px] whitespace-pre-line">{r.accion_implementada || <span className="text-muted-foreground">—</span>}</td>
                     <td className="border-r p-1.5 text-center">{r.sev_residual}</td>
                     <td className="border-r p-1.5 text-center">{r.ocu_residual}</td>
                     <td className="border-r p-1.5 text-center">{r.det_residual}</td>

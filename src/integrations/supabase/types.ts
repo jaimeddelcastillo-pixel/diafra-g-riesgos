@@ -188,6 +188,7 @@ export type Database = {
         Row: {
           accion_implementada: string | null
           accion_propuesta: string | null
+          anexos: Json | null
           causa_potencial: string
           controles_actuales: string | null
           created_at: string
@@ -215,6 +216,7 @@ export type Database = {
         Insert: {
           accion_implementada?: string | null
           accion_propuesta?: string | null
+          anexos?: Json | null
           causa_potencial?: string
           controles_actuales?: string | null
           created_at?: string
@@ -242,6 +244,7 @@ export type Database = {
         Update: {
           accion_implementada?: string | null
           accion_propuesta?: string | null
+          anexos?: Json | null
           causa_potencial?: string
           controles_actuales?: string | null
           created_at?: string
