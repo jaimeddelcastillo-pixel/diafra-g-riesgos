@@ -272,8 +272,8 @@ function SeccionRiesgos({ riesgos, locked, folioId }: { riesgos: Riesgo[]; locke
                     <td className="border-r p-1.5 text-center">{r.ocurrencia}</td>
                     <td className="border-r p-1.5 text-center">{r.deteccion}</td>
                     <td className="border-r p-1.5 text-center"><NPRBadge npr={npr} severidad={r.severidad} /></td>
-                    <td className="border-r p-1.5 max-w-[130px]">{r.controles_actuales}</td>
-                    <td className="border-r p-1.5 max-w-[160px]">
+                    <td className="border-r p-1.5 max-w-[130px] whitespace-pre-line">{r.controles_actuales}</td>
+                    <td className="border-r p-1.5 max-w-[160px] whitespace-pre-line">
                       {r.accion_propuesta || (needsAction && <span className="text-destructive font-bold">⚠ REQUERIDO</span>)}
                     </td>
                     <td className="border-r p-1.5">{r.responsable}</td>
