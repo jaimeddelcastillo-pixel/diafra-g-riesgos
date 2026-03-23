@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 
 export default function Dashboard() {
   const allRisks = getAllRisks();
-  const critical = allRisks.filter((r) => r.npr > 100 || r.severidad >= 9);
+  const critical = allRisks.filter((r) => r.npr > 150 || r.severidad >= 9);
   const openFolios = mockFolios.filter((f) => f.estado !== "Cerrado");
 
   const stats = [
@@ -21,7 +21,7 @@ export default function Dashboard() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
-        <p className="text-sm text-muted-foreground">Panorama general del sistema de gestión de riesgos</p>
+        <p className="text-sm text-muted-foreground">Panorama general — Sistema de Gestión de Riesgos FOR-SGC-11-01</p>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -73,19 +73,19 @@ export default function Dashboard() {
                   <th className="pb-2 font-medium text-muted-foreground">Peligro</th>
                   <th className="pb-2 font-medium text-muted-foreground">NPR</th>
                   <th className="pb-2 font-medium text-muted-foreground">Nivel</th>
-                  <th className="pb-2 font-medium text-muted-foreground">Plan de Acción</th>
+                  <th className="pb-2 font-medium text-muted-foreground">Acción Propuesta</th>
                 </tr>
               </thead>
               <tbody>
                 {mockFolios.flatMap((f) =>
                   f.riesgos
-                    .filter((r) => r.npr > 100 || r.severidad >= 9)
+                    .filter((r) => r.npr > 150 || r.severidad >= 9)
                     .map((r) => {
-                      const level = getNPRLevel(r.npr);
+                      const level = getNPRLevel(r.npr, r.severidad);
                       return (
                         <tr key={`${f.id}-${r.id}`} className="border-b last:border-0">
                           <td className="py-2 font-mono text-xs">{f.codigo}</td>
-                          <td className="py-2">{r.peligro}</td>
+                          <td className="py-2">{r.peligroModoFalla}</td>
                           <td className="py-2 font-bold">{r.npr}</td>
                           <td className="py-2">
                             <Badge variant={level.label === "Crítico" ? "destructive" : "secondary"} className="text-[10px]">
@@ -93,7 +93,7 @@ export default function Dashboard() {
                             </Badge>
                           </td>
                           <td className="py-2 text-xs max-w-[250px] truncate">
-                            {r.planAccion || <span className="text-destructive font-medium">⚠ Requerido</span>}
+                            {r.accionPropuesta || <span className="text-destructive font-medium">⚠ Requerido</span>}
                           </td>
                         </tr>
                       );

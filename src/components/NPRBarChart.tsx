@@ -2,17 +2,16 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { getAllRisks, getNPRLevel } from "@/data/mockData";
 
 const COLORS: Record<string, string> = {
-  "Bajo": "hsl(152, 60%, 40%)",
-  "Medio": "hsl(38, 92%, 50%)",
-  "Alto": "hsl(25, 95%, 53%)",
+  "Menor": "hsl(152, 60%, 40%)",
+  "Mayor": "hsl(38, 92%, 50%)",
   "Crítico": "hsl(0, 72%, 51%)",
 };
 
 export function NPRBarChart() {
   const risks = getAllRisks();
-  const counts = { Bajo: 0, Medio: 0, Alto: 0, Crítico: 0 };
+  const counts = { Menor: 0, Mayor: 0, Crítico: 0 };
   risks.forEach((r) => {
-    const level = getNPRLevel(r.npr).label;
+    const level = getNPRLevel(r.npr, r.severidad).label;
     counts[level as keyof typeof counts]++;
   });
 
