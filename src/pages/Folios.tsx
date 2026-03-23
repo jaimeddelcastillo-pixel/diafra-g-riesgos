@@ -1,16 +1,9 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { mockFolios, getEstadoBadgeVariant } from "@/data/mockData";
-import { Plus, Eye, ChevronRight } from "lucide-react";
+import { mockFolios, getEstadoStyle } from "@/data/mockData";
+import { Plus, ChevronRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-
-const estadoStyles: Record<string, string> = {
-  Borrador: "bg-secondary text-secondary-foreground",
-  "En Firma": "bg-primary text-primary-foreground",
-  Aprobado: "bg-success text-success-foreground",
-  Cerrado: "bg-muted text-muted-foreground",
-};
 
 export default function Folios() {
   const navigate = useNavigate();
@@ -20,7 +13,7 @@ export default function Folios() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Mis Folios</h1>
-          <p className="text-sm text-muted-foreground">Gestión de análisis de riesgos por producto</p>
+          <p className="text-sm text-muted-foreground">Archivos Maestros de Gestión de Riesgos — FOR-SGC-11-01</p>
         </div>
         <Button className="gap-2">
           <Plus className="h-4 w-4" /> Nuevo Folio
@@ -37,14 +30,14 @@ export default function Folios() {
                     {folio.codigo}
                   </div>
                   <div className="min-w-0">
-                    <p className="font-medium truncate">{folio.producto}</p>
+                    <p className="font-medium truncate">{folio.procesoEquipo}</p>
                     <p className="text-xs text-muted-foreground">
-                      {folio.creador} · Creado {folio.fechaCreacion} · {folio.riesgos.length} riesgos
+                      Origen: {folio.origen} · {folio.riesgos.length} riesgos · Inicio: {folio.fechaInicio}
                     </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3 flex-shrink-0">
-                  <Badge className={`text-[10px] ${estadoStyles[folio.estado]}`}>
+                  <Badge className={`text-[10px] ${getEstadoStyle(folio.estado)}`}>
                     {folio.estado}
                   </Badge>
                   <ChevronRight className="h-4 w-4 text-muted-foreground" />
