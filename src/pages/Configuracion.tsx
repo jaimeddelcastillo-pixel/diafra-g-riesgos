@@ -1,22 +1,119 @@
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Shield, Users, Bell } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Users, Bell, Pencil, Plus, Trash2 } from "lucide-react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { toast } from "sonner";
+import type { Database } from "@/integrations/supabase/types";
 
-const mockUsers = [
-  { nombre: "Dr. García López", correo: "garcia@diafra.mx", rol: "Admin" },
-  { nombre: "Ing. Martínez R.", correo: "martinez@diafra.mx", rol: "Editor" },
-  { nombre: "Dra. Hernández P.", correo: "hernandez@diafra.mx", rol: "Comité_Técnico" },
-  { nombre: "Lic. Rodríguez S.", correo: "rodriguez@diafra.mx", rol: "Lectura" },
-];
+type AppRole = Database["public"]["Enums"]["app_role"];
 
-const rolStyles: Record<string, string> = {
-  Admin: "bg-destructive/10 text-destructive",
-  Editor: "bg-primary/10 text-primary",
-  Comité_Técnico: "bg-accent/10 text-accent",
-  Lectura: "bg-muted text-muted-foreground",
+const roleLabels: Record<AppRole, string> = {
+  admin: "Administrador",
+  comite_tecnico: "Comité Técnico",
+  operador: "Operador",
+  lectura: "Lectura",
 };
 
+const rolStyles: Record<AppRole, string> = {
+  admin: "bg-destructive/10 text-destructive",
+  operador: "bg-primary/10 text-primary",
+  comite_tecnico: "bg-accent/10 text-accent",
+  lectura: "bg-muted text-muted-foreground",
+};
+
+interface UserWithRole {
+  id: string;
+  nombre: string;
+  email: string;
+  cargo: string | null;
+  role: AppRole;
+}
+
 export default function Configuracion() {
+  const { hasRole } = useAuth();
+  const isAdmin = hasRole("admin");
+  const queryClient = useQueryClient();
+
+  const [editUser, setEditUser] = useState<UserWithRole | null>(null);
+  const [editForm, setEditForm] = useState({ nombre: "", cargo: "", role: "" as AppRole });
+  const [dialogOpen, setDialogOpen] = useState(false);
+
+  const { data: users = [], isLoading } = useQuery({
+    queryKey: ["users-with-roles"],
+    queryFn: async () => {
+      const { data: profiles, error: pErr } = await supabase
+        .from("profiles")
+        .select("id, nombre, email, cargo")
+        .order("nombre");
+      if (pErr) throw pErr;
+
+      const { data: roles, error: rErr } = await supabase
+        .from("user_roles")
+        .select("user_id, role");
+      if (rErr) throw rErr;
+
+      const roleMap = new Map<string, AppRole>();
+      roles?.forEach((r) => roleMap.set(r.user_id, r.role as AppRole));
+
+      return (profiles || []).map((p) => ({
+        ...p,
+        role: roleMap.get(p.id) || ("lectura" as AppRole),
+      }));
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, nombre, cargo, role }: { id: string; nombre: string; cargo: string; role: AppRole }) => {
+      const { error: pErr } = await supabase
+        .from("profiles")
+        .update({ nombre, cargo })
+        .eq("id", id);
+      if (pErr) throw pErr;
+
+      // Update role: delete existing, insert new
+      const { error: dErr } = await supabase
+        .from("user_roles")
+        .delete()
+        .eq("user_id", id);
+      if (dErr) throw dErr;
+
+      const { error: iErr } = await supabase
+        .from("user_roles")
+        .insert({ user_id: id, role });
+      if (iErr) throw iErr;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["users-with-roles"] });
+      queryClient.invalidateQueries({ queryKey: ["profiles"] });
+      toast.success("Usuario actualizado");
+      setDialogOpen(false);
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const openEdit = (u: UserWithRole) => {
+    setEditUser(u);
+    setEditForm({ nombre: u.nombre, cargo: u.cargo || "", role: u.role });
+    setDialogOpen(true);
+  };
+
+  const handleSave = () => {
+    if (!editUser) return;
+    updateMutation.mutate({
+      id: editUser.id,
+      nombre: editForm.nombre,
+      cargo: editForm.cargo,
+      role: editForm.role,
+    });
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -26,40 +123,112 @@ export default function Configuracion() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2"><Users className="h-4 w-4" /> Usuarios del Sistema</CardTitle>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Users className="h-4 w-4" /> Usuarios del Sistema
+          </CardTitle>
         </CardHeader>
         <CardContent>
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b">
-                <th className="text-left pb-2 font-medium text-muted-foreground">Nombre</th>
-                <th className="text-left pb-2 font-medium text-muted-foreground">Correo</th>
-                <th className="text-left pb-2 font-medium text-muted-foreground">Rol</th>
-              </tr>
-            </thead>
-            <tbody>
-              {mockUsers.map((u) => (
-                <tr key={u.correo} className="border-b last:border-0">
-                  <td className="py-2 font-medium">{u.nombre}</td>
-                  <td className="py-2 text-muted-foreground">{u.correo}</td>
-                  <td className="py-2">
-                    <Badge className={`text-[10px] ${rolStyles[u.rol]}`}>{u.rol}</Badge>
-                  </td>
+          {isLoading ? (
+            <p className="text-sm text-muted-foreground">Cargando usuarios…</p>
+          ) : (
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b">
+                  <th className="text-left pb-2 font-medium text-muted-foreground">Nombre</th>
+                  <th className="text-left pb-2 font-medium text-muted-foreground">Correo</th>
+                  <th className="text-left pb-2 font-medium text-muted-foreground">Cargo</th>
+                  <th className="text-left pb-2 font-medium text-muted-foreground">Rol</th>
+                  {isAdmin && <th className="text-left pb-2 font-medium text-muted-foreground">Acciones</th>}
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {users.map((u) => (
+                  <tr key={u.id} className="border-b last:border-0">
+                    <td className="py-2 font-medium">{u.nombre}</td>
+                    <td className="py-2 text-muted-foreground">{u.email}</td>
+                    <td className="py-2 text-muted-foreground">{u.cargo || "—"}</td>
+                    <td className="py-2">
+                      <Badge className={`text-[10px] ${rolStyles[u.role]}`}>
+                        {roleLabels[u.role]}
+                      </Badge>
+                    </td>
+                    {isAdmin && (
+                      <td className="py-2">
+                        <Button variant="ghost" size="icon" onClick={() => openEdit(u)}>
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                      </td>
+                    )}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2"><Bell className="h-4 w-4" /> Alertas Configuradas</CardTitle>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Bell className="h-4 w-4" /> Alertas Configuradas
+          </CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-muted-foreground">Las alertas de correo automático se activarán cuando se conecte el backend (Lovable Cloud).</p>
+          <p className="text-sm text-muted-foreground">
+            Las alertas de correo automático se activarán próximamente.
+          </p>
         </CardContent>
       </Card>
+
+      {/* Edit User Dialog */}
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar Usuario</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div>
+              <label className="text-sm font-medium">Nombre</label>
+              <Input
+                value={editForm.nombre}
+                onChange={(e) => setEditForm((f) => ({ ...f, nombre: e.target.value }))}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Cargo</label>
+              <Input
+                value={editForm.cargo}
+                onChange={(e) => setEditForm((f) => ({ ...f, cargo: e.target.value }))}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Rol</label>
+              <Select
+                value={editForm.role}
+                onValueChange={(v) => setEditForm((f) => ({ ...f, role: v as AppRole }))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {(Object.keys(roleLabels) as AppRole[]).map((r) => (
+                    <SelectItem key={r} value={r}>
+                      {roleLabels[r]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <p className="text-xs text-muted-foreground">Correo: {editUser?.email}</p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
+            <Button onClick={handleSave} disabled={updateMutation.isPending}>
+              {updateMutation.isPending ? "Guardando…" : "Guardar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
