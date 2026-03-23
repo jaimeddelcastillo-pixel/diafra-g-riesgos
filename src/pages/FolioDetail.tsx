@@ -383,6 +383,7 @@ export default function FolioDetail() {
         <SeccionDescripcion folio={folio} locked={locked} onSaved={handleRefresh} />
         <SeccionComite comite={comite} />
         <SeccionRiesgos riesgos={riesgos} locked={locked} folioId={folio.id} />
+        <SeccionDictamen folio={folio} riesgos={riesgos} locked={locked} onSaved={handleRefresh} />
         <div className="text-center pt-3 border-t">
           <p className="text-[10px] text-muted-foreground">FOR-SGC-11-01 (02)</p>
           <p className="text-[9px] text-muted-foreground">Documento confidencial propiedad de Diafra S.A. de C.V., queda prohibido su uso, divulgación y/o reproducción total o parcial sin previa autorización.</p>
