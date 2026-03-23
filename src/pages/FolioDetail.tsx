@@ -265,9 +265,9 @@ function SeccionRiesgos({ riesgos, locked, folioId }: { riesgos: Riesgo[]; locke
                   <tr key={r.id} className={`border-b last:border-0 ${rowAlert ? "bg-destructive/5" : ""} ${!locked ? "hover:bg-muted/30 cursor-pointer" : ""}`} onClick={() => !locked && setRiesgoForm({ open: true, riesgo: r })}>
                     <td className="border-r p-1.5 text-center font-mono font-bold">{String(r.numero_id).padStart(2, "0")}</td>
                     <td className="border-r p-1.5">{r.etapa_proceso}</td>
-                    <td className="border-r p-1.5 max-w-[160px]">{r.peligro_modo_falla}</td>
-                    <td className="border-r p-1.5 max-w-[140px]">{r.causa_potencial}</td>
-                    <td className="border-r p-1.5 max-w-[140px]">{r.efecto_dano}</td>
+                    <td className="border-r p-1.5 max-w-[160px] whitespace-pre-line">{r.peligro_modo_falla}</td>
+                    <td className="border-r p-1.5 max-w-[140px] whitespace-pre-line">{r.causa_potencial}</td>
+                    <td className="border-r p-1.5 max-w-[140px] whitespace-pre-line">{r.efecto_dano}</td>
                     <td className={`border-r p-1.5 text-center font-bold ${r.severidad >= 9 ? "text-destructive bg-destructive/10" : ""}`}>{r.severidad}</td>
                     <td className="border-r p-1.5 text-center">{r.ocurrencia}</td>
                     <td className="border-r p-1.5 text-center">{r.deteccion}</td>
