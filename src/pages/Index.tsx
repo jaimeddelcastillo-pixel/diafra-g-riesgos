@@ -32,7 +32,7 @@ export default function Dashboard() {
         <p className="text-sm text-muted-foreground">Panorama general — Sistema de Gestión de Riesgos FOR-SGC-11-01</p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         {stats.map((s) => (
           <Card key={s.label}>
             <CardContent className="pt-6">
