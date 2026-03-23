@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { NPRBarChart } from "@/components/NPRBarChart";
 import { HeatMap } from "@/components/HeatMap";
 import { useFolios, useAllRiesgos, getNPRLevel } from "@/hooks/useFolios";
-import { AlertTriangle, FileCheck, ClipboardList, ShieldAlert } from "lucide-react";
+import { AlertTriangle, FileCheck, FileX2, ClipboardList, ShieldAlert } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -19,7 +19,8 @@ export default function Dashboard() {
     { label: "Folios Activos", value: openFolios.length, icon: ClipboardList, color: "text-primary" },
     { label: "Riesgos Totales", value: risks.length, icon: ShieldAlert, color: "text-accent" },
     { label: "Riesgos Críticos", value: critical.length, icon: AlertTriangle, color: "text-destructive" },
-    { label: "Aprobados", value: fols.filter((f) => f.estado === "Aprobado").length, icon: FileCheck, color: "text-success" },
+    { label: "Aprobados", value: fols.filter((f) => f.conclusion === "Aprobado").length, icon: FileCheck, color: "text-success" },
+    { label: "Rechazados", value: fols.filter((f) => f.conclusion === "Rechazado").length, icon: FileX2, color: "text-destructive" },
   ];
 
   const isLoading = loadingFolios || loadingRisks;
@@ -31,7 +32,7 @@ export default function Dashboard() {
         <p className="text-sm text-muted-foreground">Panorama general — Sistema de Gestión de Riesgos FOR-SGC-11-01</p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         {stats.map((s) => (
           <Card key={s.label}>
             <CardContent className="pt-6">
