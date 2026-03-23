@@ -19,7 +19,8 @@ export default function Dashboard() {
     { label: "Folios Activos", value: openFolios.length, icon: ClipboardList, color: "text-primary" },
     { label: "Riesgos Totales", value: risks.length, icon: ShieldAlert, color: "text-accent" },
     { label: "Riesgos Críticos", value: critical.length, icon: AlertTriangle, color: "text-destructive" },
-    { label: "Aprobados", value: fols.filter((f) => f.estado === "Aprobado").length, icon: FileCheck, color: "text-success" },
+    { label: "Aprobados", value: fols.filter((f) => f.conclusion === "Aprobado").length, icon: FileCheck, color: "text-success" },
+    { label: "Rechazados", value: fols.filter((f) => f.conclusion === "Rechazado").length, icon: FileX2, color: "text-destructive" },
   ];
 
   const isLoading = loadingFolios || loadingRisks;
