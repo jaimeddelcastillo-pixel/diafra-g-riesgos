@@ -40,7 +40,7 @@ interface UserWithRole {
 
 export default function Configuracion() {
   const { hasRole } = useAuth();
-  const isAdmin = hasRole("admin");
+  const isAdmin = hasRole("admin") || hasRole("responsable_sanitario");
   const queryClient = useQueryClient();
 
   const [editUser, setEditUser] = useState<UserWithRole | null>(null);

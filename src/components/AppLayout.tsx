@@ -12,6 +12,7 @@ const roleLabels: Record<string, string> = {
   comite_tecnico: "Comité Técnico",
   operador: "Operador",
   lectura: "Lectura",
+  responsable_sanitario: "Responsable Sanitario",
 };
 
 export function AppLayout() {
