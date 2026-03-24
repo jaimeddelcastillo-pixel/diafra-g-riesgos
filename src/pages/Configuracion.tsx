@@ -228,7 +228,8 @@ export default function Configuracion() {
 
       const { error: rErr } = await supabase
         .from("user_roles")
-        .upsert({ user_id: id, role }, { onConflict: "user_id" });
+        .update({ role })
+        .eq("user_id", id);
       if (rErr) throw rErr;
     },
     onSuccess: () => {
