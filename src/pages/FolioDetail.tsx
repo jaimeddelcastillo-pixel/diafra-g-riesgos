@@ -14,7 +14,7 @@ import { RiesgoFormDialog } from "@/components/RiesgoFormDialog";
 import { SeccionDictamen } from "@/components/SeccionDictamen";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { Constants } from "@/integrations/supabase/types";
 import { generateFolioPDF } from "@/lib/generateFolioPDF";
 
@@ -160,6 +160,24 @@ function SeccionDescripcion({ folio, locked, onSaved }: { folio: Folio; locked: 
 }
 
 function SeccionComite({ comite }: { comite: FolioComite[] }) {
+  // Fetch profiles to get firma_url for signed members
+  const { data: profiles } = useQuery({
+    queryKey: ["profiles-firmas"],
+    queryFn: async () => {
+      const { data } = await supabase.from("profiles").select("id, nombre, firma_url");
+      return data || [];
+    },
+  });
+
+  const getFirmaUrl = (nombre: string) => {
+    const profile = profiles?.find((p: any) => p.nombre === nombre || p.nombre?.includes(nombre.split(" ")[0]));
+    if (profile && (profile as any).firma_url) {
+      const { data } = supabase.storage.from("firmas").getPublicUrl((profile as any).firma_url);
+      return data.publicUrl;
+    }
+    return null;
+  };
+
   return (
     <div className="border rounded-md overflow-hidden">
       <SectionHeader number="II" title="FORMACIÓN Y APROBACIÓN DEL COMITÉ TÉCNICO" />
@@ -173,26 +191,34 @@ function SeccionComite({ comite }: { comite: FolioComite[] }) {
           </tr>
         </thead>
         <tbody>
-          {comite.map((m) => (
-            <tr key={m.id} className="border-b last:border-0">
-              <td className="p-2">{m.nombre}</td>
-              <td className="p-2 font-medium">{m.cargo}</td>
-              <td className="p-2 text-xs">{m.responsabilidad}</td>
-              <td className="p-2 text-center">
-                {m.firmado ? (
-                  <div className="text-[10px]">
-                    <span className="text-success font-bold">✓ Firmado</span>
-                    <br />
-                    <span className="text-muted-foreground">{m.fecha_firma ? new Date(m.fecha_firma).toLocaleString() : ""}</span>
-                  </div>
-                ) : (
-                  <Button variant="outline" size="sm" className="h-7 text-[10px] gap-1">
-                    <FileSignature className="h-3 w-3" /> Firmar
-                  </Button>
-                )}
-              </td>
-            </tr>
-          ))}
+          {comite.map((m) => {
+            const firmaImgUrl = m.firmado ? getFirmaUrl(m.nombre) : null;
+            return (
+              <tr key={m.id} className="border-b last:border-0">
+                <td className="p-2">{m.nombre}</td>
+                <td className="p-2 font-medium">{m.cargo}</td>
+                <td className="p-2 text-xs">{m.responsabilidad}</td>
+                <td className="p-2 text-center">
+                  {m.firmado ? (
+                    <div className="flex flex-col items-center gap-1">
+                      {firmaImgUrl ? (
+                        <img src={firmaImgUrl} alt={`Firma de ${m.nombre}`} className="h-10 w-auto object-contain" />
+                      ) : (
+                        <span className="text-success font-bold text-[10px]">✓ Firmado</span>
+                      )}
+                      <span className="text-[9px] text-muted-foreground">
+                        {m.fecha_firma ? new Date(m.fecha_firma).toLocaleString("es-MX") : ""}
+                      </span>
+                    </div>
+                  ) : (
+                    <Button variant="outline" size="sm" className="h-7 text-[10px] gap-1">
+                      <FileSignature className="h-3 w-3" /> Firmar
+                    </Button>
+                  )}
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>
