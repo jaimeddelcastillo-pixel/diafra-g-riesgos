@@ -331,6 +331,9 @@ export default function FolioDetail() {
   const navigate = useNavigate();
   const { data, isLoading, refetch } = useFolioDetail(id);
   const queryClient = useQueryClient();
+  const { hasRole } = useAuth();
+
+  const isAdmin = hasRole("admin") || hasRole("responsable_sanitario");
 
   if (isLoading) {
     return <div className="space-y-4 p-6"><Skeleton className="h-8 w-1/3" /><Skeleton className="h-64 w-full" /></div>;
@@ -341,7 +344,7 @@ export default function FolioDetail() {
   }
 
   const { folio, riesgos, comite } = data;
-  const locked = folio.estado !== "Borrador";
+  const locked = folio.estado !== "Borrador" && !isAdmin;
 
   const handleRefresh = () => {
     queryClient.invalidateQueries({ queryKey: ["folio", id] });
