@@ -15,6 +15,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { Constants } from "@/integrations/supabase/types";
+import { generateFolioPDF } from "@/lib/generateFolioPDF";
 
 function NPRBadge({ npr, severidad }: { npr: number; severidad: number }) {
   const level = getNPRLevel(npr, severidad);
@@ -363,7 +364,7 @@ export default function FolioDetail() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" className="gap-1 text-xs">
+          <Button variant="outline" size="sm" className="gap-1 text-xs" onClick={() => generateFolioPDF(folio, riesgos, comite)}>
             <Printer className="h-3 w-3" /> Generar PDF
           </Button>
           {folio.estado === "Borrador" && (
