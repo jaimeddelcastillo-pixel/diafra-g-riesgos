@@ -19,6 +19,7 @@ const roleLabels: Record<AppRole, string> = {
   comite_tecnico: "Comité Técnico",
   operador: "Operador",
   lectura: "Lectura",
+  responsable_sanitario: "Responsable Sanitario",
 };
 
 const rolStyles: Record<AppRole, string> = {
@@ -26,6 +27,7 @@ const rolStyles: Record<AppRole, string> = {
   operador: "bg-primary/10 text-primary",
   comite_tecnico: "bg-accent/10 text-accent",
   lectura: "bg-muted text-muted-foreground",
+  responsable_sanitario: "bg-destructive/10 text-destructive",
 };
 
 interface UserWithRole {
@@ -38,7 +40,7 @@ interface UserWithRole {
 
 export default function Configuracion() {
   const { hasRole } = useAuth();
-  const isAdmin = hasRole("admin");
+  const isAdmin = hasRole("admin") || hasRole("responsable_sanitario");
   const queryClient = useQueryClient();
 
   const [editUser, setEditUser] = useState<UserWithRole | null>(null);
