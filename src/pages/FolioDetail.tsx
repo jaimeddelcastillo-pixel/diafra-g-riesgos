@@ -14,7 +14,7 @@ import { RiesgoFormDialog } from "@/components/RiesgoFormDialog";
 import { SeccionDictamen } from "@/components/SeccionDictamen";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { Constants } from "@/integrations/supabase/types";
 import { generateFolioPDF } from "@/lib/generateFolioPDF";
 
