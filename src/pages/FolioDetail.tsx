@@ -223,7 +223,6 @@ function SeccionComite({ comite }: { comite: FolioComite[] }) {
       </table>
     </div>
   );
-  );
 }
 
 function SeccionRiesgos({ riesgos, locked, folioId }: { riesgos: Riesgo[]; locked: boolean; folioId: string }) {
