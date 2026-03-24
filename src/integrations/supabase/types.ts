@@ -168,6 +168,7 @@ export type Database = {
           cargo: string | null
           created_at: string
           email: string
+          firma_url: string | null
           id: string
           nombre: string
           updated_at: string
@@ -176,6 +177,7 @@ export type Database = {
           cargo?: string | null
           created_at?: string
           email: string
+          firma_url?: string | null
           id: string
           nombre: string
           updated_at?: string
@@ -184,6 +186,7 @@ export type Database = {
           cargo?: string | null
           created_at?: string
           email?: string
+          firma_url?: string | null
           id?: string
           nombre?: string
           updated_at?: string
