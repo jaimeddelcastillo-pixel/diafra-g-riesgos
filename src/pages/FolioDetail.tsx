@@ -15,6 +15,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { Constants } from "@/integrations/supabase/types";
+import { generateFolioPDF } from "@/lib/generateFolioPDF";
 
 function NPRBadge({ npr, severidad }: { npr: number; severidad: number }) {
   const level = getNPRLevel(npr, severidad);
