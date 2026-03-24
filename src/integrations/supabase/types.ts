@@ -318,7 +318,12 @@ export type Database = {
       next_folio_code: { Args: never; Returns: string }
     }
     Enums: {
-      app_role: "admin" | "comite_tecnico" | "operador" | "lectura"
+      app_role:
+        | "admin"
+        | "comite_tecnico"
+        | "operador"
+        | "lectura"
+        | "responsable_sanitario"
       dictamen_tipo: "Aceptable" | "No Aceptable" | "Pendiente"
       estado_folio: "Borrador" | "En Firma" | "Aprobado" | "Cerrado"
       origen_riesgo:
@@ -454,7 +459,13 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "comite_tecnico", "operador", "lectura"],
+      app_role: [
+        "admin",
+        "comite_tecnico",
+        "operador",
+        "lectura",
+        "responsable_sanitario",
+      ],
       dictamen_tipo: ["Aceptable", "No Aceptable", "Pendiente"],
       estado_folio: ["Borrador", "En Firma", "Aprobado", "Cerrado"],
       origen_riesgo: [
