@@ -364,7 +364,7 @@ export default function FolioDetail() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" className="gap-1 text-xs">
+          <Button variant="outline" size="sm" className="gap-1 text-xs" onClick={() => generateFolioPDF(folio, riesgos, comite)}>
             <Printer className="h-3 w-3" /> Generar PDF
           </Button>
           {folio.estado === "Borrador" && (
