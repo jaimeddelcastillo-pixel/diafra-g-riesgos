@@ -226,16 +226,10 @@ export default function Configuracion() {
         .eq("id", id);
       if (pErr) throw pErr;
 
-      const { error: dErr } = await supabase
+      const { error: rErr } = await supabase
         .from("user_roles")
-        .delete()
-        .eq("user_id", id);
-      if (dErr) throw dErr;
-
-      const { error: iErr } = await supabase
-        .from("user_roles")
-        .insert({ user_id: id, role });
-      if (iErr) throw iErr;
+        .upsert({ user_id: id, role }, { onConflict: "user_id" });
+      if (rErr) throw rErr;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["users-with-roles"] });
