@@ -193,7 +193,7 @@ function SeccionComite({ comite }: { comite: FolioComite[] }) {
         </thead>
         <tbody>
           {comite.map((m) => {
-            const firmaImgUrl = m.firmado ? getFirmaUrl(m.nombre) : null;
+            const firmaImgUrl = m.firmado ? getFirmaUrl(m.user_id) : null;
             return (
               <tr key={m.id} className="border-b last:border-0">
                 <td className="p-2">{m.nombre}</td>
