@@ -208,7 +208,7 @@ function SeccionComite({ comite }: { comite: FolioComite[] }) {
                         <span className="text-success font-bold text-[10px]">✓ Firmado</span>
                       )}
                       <span className="text-[9px] text-muted-foreground">
-                        {m.fecha_firma ? new Date(m.fecha_firma).toLocaleString("es-MX") : ""}
+                        {m.fecha_firma ? new Date(m.fecha_firma).toLocaleDateString("es-MX") : ""}
                       </span>
                     </div>
                   ) : (
