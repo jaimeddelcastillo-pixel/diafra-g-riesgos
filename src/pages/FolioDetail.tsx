@@ -169,8 +169,9 @@ function SeccionComite({ comite }: { comite: FolioComite[] }) {
     },
   });
 
-  const getFirmaUrl = (nombre: string) => {
-    const profile = profiles?.find((p: any) => p.nombre === nombre || p.nombre?.includes(nombre.split(" ")[0]));
+  const getFirmaUrl = (userId: string | null) => {
+    if (!userId) return null;
+    const profile = profiles?.find((p: any) => p.id === userId);
     if (profile && (profile as any).firma_url) {
       const { data } = supabase.storage.from("firmas").getPublicUrl((profile as any).firma_url);
       return data.publicUrl;
