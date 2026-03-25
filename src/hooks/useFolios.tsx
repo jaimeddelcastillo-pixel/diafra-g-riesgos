@@ -14,7 +14,7 @@ export function useFolios() {
       const { data, error } = await supabase
         .from("folios")
         .select("*")
-        .order("created_at", { ascending: false });
+        .order("codigo", { ascending: true });
       if (error) throw error;
       return data as Folio[];
     },
