@@ -50,7 +50,7 @@ export default function Dashboard() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
-          <CardHeader><CardTitle className="text-base">Distribución de NPR</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="text-base">Distribución de NPR (Inicial vs Residual)</CardTitle></CardHeader>
           <CardContent><NPRBarChart risks={risks} /></CardContent>
         </Card>
         <Card>
