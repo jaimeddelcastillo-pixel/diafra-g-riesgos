@@ -559,6 +559,15 @@ export default function FolioDetail() {
   const { folio, riesgos, comite } = data;
   const locked = folio.estado !== "Borrador" && !isAdmin;
 
+  // Verificar si hay riesgos críticos sin evidencia — bloquea envío a firma
+  const criticosSinEvidencia = riesgos.filter((r) => {
+    const esCritico = (r.npr ?? 0) > 150 || r.severidad >= 9;
+    const tieneAccion = !!r.accion_propuesta;
+    const tieneEvidencia = (r as any).anexos && ((r as any).anexos as any[]).length > 0;
+    return esCritico && tieneAccion && !tieneEvidencia;
+  });
+  const bloqueadoPorEvidencia = criticosSinEvidencia.length > 0;
+
   const handleRefresh = () => {
     queryClient.invalidateQueries({ queryKey: ["folio", id] });
     queryClient.invalidateQueries({ queryKey: ["folios"] });
@@ -622,18 +631,32 @@ export default function FolioDetail() {
             <Printer className="h-3 w-3" /> Generar PDF
           </Button>
 
-          {/* Botón Enviar a Firma — solo en Borrador */}
+          {/* Botón Enviar a Firma — bloqueado si hay críticos sin evidencia */}
           {folio.estado === "Borrador" && (
-            <Button
-              size="sm"
-              className="gap-1 text-xs"
-              onClick={handleEnviarAFirma}
-              disabled={enviandoFirma || comite.length === 0}
-              title={comite.length === 0 ? "Agrega miembros al comité primero" : ""}
-            >
-              <FileSignature className="h-3 w-3" />
-              {enviandoFirma ? "Enviando..." : "Enviar a Firma"}
-            </Button>
+            <div className="flex flex-col items-end gap-1">
+              <Button
+                size="sm"
+                className="gap-1 text-xs"
+                onClick={handleEnviarAFirma}
+                disabled={enviandoFirma || comite.length === 0 || bloqueadoPorEvidencia}
+                title={
+                  bloqueadoPorEvidencia
+                    ? `${criticosSinEvidencia.length} riesgo(s) crítico(s) sin evidencia adjunta`
+                    : comite.length === 0
+                      ? "Agrega miembros al comité primero"
+                      : ""
+                }
+              >
+                <FileSignature className="h-3 w-3" />
+                {enviandoFirma ? "Enviando..." : "Enviar a Firma"}
+              </Button>
+              {bloqueadoPorEvidencia && (
+                <p className="text-[10px] text-destructive font-medium text-right max-w-[220px]">
+                  ⛔ {criticosSinEvidencia.length} crítico{criticosSinEvidencia.length > 1 ? "s" : ""} sin evidencia —
+                  adjunta PDF en sección IV
+                </p>
+              )}
+            </div>
           )}
 
           {/* Indicador de estado En Firma */}
