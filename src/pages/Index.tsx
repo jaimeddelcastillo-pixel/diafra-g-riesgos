@@ -2,99 +2,448 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { NPRBarChart } from "@/components/NPRBarChart";
 import { HeatMap } from "@/components/HeatMap";
 import { useFolios, useAllRiesgos, getNPRLevel } from "@/hooks/useFolios";
-import { AlertTriangle, FileCheck, FileX2, ClipboardList, ShieldAlert } from "lucide-react";
+import {
+  AlertTriangle,
+  FileCheck,
+  FileX2,
+  ClipboardList,
+  ShieldAlert,
+  TrendingDown,
+  Clock,
+  UserX,
+  CheckCircle2,
+  Circle,
+  AlertCircle,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useNavigate } from "react-router-dom";
 
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function diasDesde(fecha: string): number {
+  return Math.floor((Date.now() - new Date(fecha).getTime()) / 86_400_000);
+}
+
+function semaforo(pct: number) {
+  if (pct >= 80)
+    return { color: "text-green-600", bg: "bg-green-50 border-green-200", label: "Conforme", icon: CheckCircle2 };
+  if (pct >= 50)
+    return { color: "text-amber-600", bg: "bg-amber-50 border-amber-200", label: "En proceso", icon: AlertCircle };
+  return { color: "text-red-600", bg: "bg-red-50 border-red-200", label: "Atención requerida", icon: AlertTriangle };
+}
+
+// ─── Componente KPI Card ───────────────────────────────────────────────────────
+function KPICard({
+  label,
+  value,
+  icon: Icon,
+  color,
+  sub,
+  onClick,
+}: {
+  label: string;
+  value: React.ReactNode;
+  icon: any;
+  color: string;
+  sub?: string;
+  onClick?: () => void;
+}) {
+  return (
+    <Card className={onClick ? "cursor-pointer hover:shadow-md transition-shadow" : ""} onClick={onClick}>
+      <CardContent className="pt-5 pb-4">
+        <div className="flex items-start justify-between">
+          <div>
+            <p className="text-xs text-muted-foreground font-medium">{label}</p>
+            <p className={`text-3xl font-bold mt-1 ${color}`}>{value}</p>
+            {sub && <p className="text-[10px] text-muted-foreground mt-1">{sub}</p>}
+          </div>
+          <Icon className={`h-9 w-9 ${color} opacity-60 mt-1`} />
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ─── Barra de progreso ────────────────────────────────────────────────────────
+function ProgressBar({ value, max, color = "bg-primary" }: { value: number; max: number; color?: string }) {
+  const pct = max > 0 ? Math.round((value / max) * 100) : 0;
+  return (
+    <div className="flex items-center gap-2">
+      <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
+        <div className={`h-full rounded-full transition-all ${color}`} style={{ width: `${pct}%` }} />
+      </div>
+      <span className="text-xs font-medium w-8 text-right">{pct}%</span>
+    </div>
+  );
+}
+
+// ─── Dashboard principal ──────────────────────────────────────────────────────
 export default function Dashboard() {
+  const navigate = useNavigate();
   const { data: folios, isLoading: loadingFolios } = useFolios();
   const { data: allRisks, isLoading: loadingRisks } = useAllRiesgos();
 
   const risks = allRisks || [];
   const fols = folios || [];
-  const critical = risks.filter((r) => (r.npr ?? 0) > 150 || r.severidad >= 9);
-  const openFolios = fols.filter((f) => f.estado !== "Cerrado");
-
-  const stats = [
-    { label: "Folios Activos", value: openFolios.length, icon: ClipboardList, color: "text-primary" },
-    { label: "Riesgos Totales", value: risks.length, icon: ShieldAlert, color: "text-accent" },
-    { label: "Riesgos Críticos", value: critical.length, icon: AlertTriangle, color: "text-destructive" },
-    { label: "Aprobados", value: fols.filter((f) => f.conclusion === "Aprobado").length, icon: FileCheck, color: "text-success" },
-    { label: "Rechazados", value: fols.filter((f) => f.conclusion === "Rechazado").length, icon: FileX2, color: "text-destructive" },
-  ];
-
   const isLoading = loadingFolios || loadingRisks;
+
+  // ── Cálculos SGC ────────────────────────────────────────────────────────────
+  const foliosActivos = fols.filter((f) => f.estado !== "Cerrado");
+  const critical = risks.filter((r) => (r.npr ?? 0) > 150 || r.severidad >= 9);
+  const aprobados = fols.filter((f) => f.conclusion === "Aprobado");
+  const rechazados = fols.filter((f) => f.conclusion === "Rechazado");
+  const enFirma = fols.filter((f) => f.estado === "En Firma");
+  const borradores = fols.filter((f) => f.estado === "Borrador");
+
+  // Acciones pendientes: riesgos críticos sin acción propuesta
+  const accionesPendientes = risks.filter((r) => ((r.npr ?? 0) > 150 || r.severidad >= 9) && !r.accion_propuesta);
+
+  // Acciones sin responsable: tienen acción propuesta pero sin responsable
+  const sinResponsable = risks.filter((r) => r.accion_propuesta && !r.responsable);
+
+  // Folios en borrador hace más de 30 días (vencidos)
+  const foliosVencidos = borradores.filter((f) => diasDesde(f.fecha_inicio) > 30);
+
+  // % reducción de riesgos críticos (inicial → residual)
+  const criticalResidual = risks.filter((r) => (r.npr_residual ?? 0) > 150 || r.sev_residual >= 9);
+  const reduccionCriticos =
+    critical.length > 0 ? Math.round(((critical.length - criticalResidual.length) / critical.length) * 100) : 0;
+
+  // Avance captura AMEF: folios con al menos 1 riesgo / total folios
+  const foliosConRiesgo = fols.filter((f) => risks.some((r) => r.folio_id === f.id));
+  const avanceAMEF = fols.length > 0 ? Math.round((foliosConRiesgo.length / fols.length) * 100) : 0;
+
+  // Semáforo general SGC
+  const puntajeSGC = Math.round(
+    (aprobados.length / Math.max(fols.length, 1)) * 40 + // 40% peso aprobados
+      (avanceAMEF / 100) * 30 + // 30% peso avance AMEF
+      ((critical.length === 0 ? 100 : reduccionCriticos) / 100) * 30, // 30% reducción riesgos
+  );
+  const sgc = semaforo(puntajeSGC);
+  const SgcIcon = sgc.icon;
+
+  // Top 5 riesgos más críticos por NPR
+  const topRiesgos = [...risks]
+    .filter((r) => (r.npr ?? 0) > 0)
+    .sort((a, b) => (b.npr ?? 0) - (a.npr ?? 0))
+    .slice(0, 5);
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
-        <p className="text-sm text-muted-foreground">Panorama general — Sistema de Gestión de Riesgos FOR-SGC-11-01</p>
+      {/* Encabezado */}
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
+          <p className="text-sm text-muted-foreground">
+            Panorama general — Sistema de Gestión de Riesgos FOR-SGC-11-01
+          </p>
+        </div>
+        {/* Semáforo SGC */}
+        {!isLoading && (
+          <div className={`flex items-center gap-2 px-4 py-2 rounded-lg border ${sgc.bg}`}>
+            <SgcIcon className={`h-5 w-5 ${sgc.color}`} />
+            <div>
+              <p className={`text-sm font-bold ${sgc.color}`}>SGC {sgc.label}</p>
+              <p className="text-[10px] text-muted-foreground">Índice: {puntajeSGC}/100</p>
+            </div>
+          </div>
+        )}
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-        {stats.map((s) => (
-          <Card key={s.label}>
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">{s.label}</p>
-                  {isLoading ? <Skeleton className="h-9 w-16 mt-1" /> : <p className="text-3xl font-bold mt-1">{s.value}</p>}
-                </div>
-                <s.icon className={`h-10 w-10 ${s.color} opacity-70`} />
+      {/* KPIs principales — fila 1 */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+        <KPICard
+          label="Folios Activos"
+          value={isLoading ? <Skeleton className="h-8 w-12" /> : foliosActivos.length}
+          icon={ClipboardList}
+          color="text-primary"
+          sub={`${borradores.length} en borrador`}
+          onClick={() => navigate("/folios")}
+        />
+        <KPICard
+          label="Riesgos Totales"
+          value={isLoading ? <Skeleton className="h-8 w-12" /> : risks.length}
+          icon={ShieldAlert}
+          color="text-accent"
+          sub={`${foliosConRiesgo.length} folios con AMEF`}
+        />
+        <KPICard
+          label="Riesgos Críticos"
+          value={isLoading ? <Skeleton className="h-8 w-12" /> : critical.length}
+          icon={AlertTriangle}
+          color={critical.length > 0 ? "text-destructive" : "text-success"}
+          sub={`${criticalResidual.length} residuales`}
+        />
+        <KPICard
+          label="Reducción NPR"
+          value={isLoading ? <Skeleton className="h-8 w-12" /> : `${reduccionCriticos}%`}
+          icon={TrendingDown}
+          color={reduccionCriticos >= 50 ? "text-success" : "text-amber-600"}
+          sub="críticos → residual"
+        />
+        <KPICard
+          label="Aprobados"
+          value={isLoading ? <Skeleton className="h-8 w-12" /> : aprobados.length}
+          icon={FileCheck}
+          color="text-success"
+          sub={`${enFirma.length} en firma`}
+          onClick={() => navigate("/folios")}
+        />
+        <KPICard
+          label="Rechazados"
+          value={isLoading ? <Skeleton className="h-8 w-12" /> : rechazados.length}
+          icon={FileX2}
+          color={rechazados.length > 0 ? "text-destructive" : "text-muted-foreground"}
+          sub="requieren corrección"
+        />
+      </div>
+
+      {/* Alertas operativas NOM-241 */}
+      {!isLoading && (accionesPendientes.length > 0 || sinResponsable.length > 0 || foliosVencidos.length > 0) && (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {accionesPendientes.length > 0 && (
+            <div className="flex items-start gap-3 p-3 rounded-lg border border-red-200 bg-red-50">
+              <AlertTriangle className="h-5 w-5 text-red-600 mt-0.5 shrink-0" />
+              <div>
+                <p className="text-sm font-semibold text-red-800">
+                  {accionesPendientes.length} acción{accionesPendientes.length > 1 ? "es" : ""} sin definir
+                </p>
+                <p className="text-xs text-red-600">Riesgos críticos sin acción propuesta — requerido NOM-241</p>
               </div>
-            </CardContent>
-          </Card>
-        ))}
+            </div>
+          )}
+          {sinResponsable.length > 0 && (
+            <div className="flex items-start gap-3 p-3 rounded-lg border border-amber-200 bg-amber-50">
+              <UserX className="h-5 w-5 text-amber-600 mt-0.5 shrink-0" />
+              <div>
+                <p className="text-sm font-semibold text-amber-800">
+                  {sinResponsable.length} acción{sinResponsable.length > 1 ? "es" : ""} sin responsable
+                </p>
+                <p className="text-xs text-amber-600">Asignar responsable y fecha compromiso</p>
+              </div>
+            </div>
+          )}
+          {foliosVencidos.length > 0 && (
+            <div className="flex items-start gap-3 p-3 rounded-lg border border-amber-200 bg-amber-50">
+              <Clock className="h-5 w-5 text-amber-600 mt-0.5 shrink-0" />
+              <div>
+                <p className="text-sm font-semibold text-amber-800">
+                  {foliosVencidos.length} folio{foliosVencidos.length > 1 ? "s" : ""} en borrador +30 días
+                </p>
+                <p className="text-xs text-amber-600">Enviar a firma o cerrar</p>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Avance AMEF y estado por folio */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Avance captura AMEF */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center justify-between">
+              Avance captura AMEF
+              <span
+                className={`text-sm font-bold ${avanceAMEF >= 80 ? "text-green-600" : avanceAMEF >= 50 ? "text-amber-600" : "text-red-600"}`}
+              >
+                {avanceAMEF}%
+              </span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <ProgressBar
+              value={foliosConRiesgo.length}
+              max={fols.length}
+              color={avanceAMEF >= 80 ? "bg-green-500" : avanceAMEF >= 50 ? "bg-amber-500" : "bg-red-500"}
+            />
+            <p className="text-xs text-muted-foreground">
+              {foliosConRiesgo.length} de {fols.length} folios con riesgos capturados
+            </p>
+
+            {/* Lista folios sin riesgos */}
+            {fols
+              .filter((f) => !risks.some((r) => r.folio_id === f.id))
+              .slice(0, 4)
+              .map((f) => (
+                <div
+                  key={f.id}
+                  className="flex items-center justify-between text-xs py-1 border-t cursor-pointer hover:text-primary"
+                  onClick={() => navigate(`/folios/${f.id}`)}
+                >
+                  <span className="font-mono text-primary">{f.codigo}</span>
+                  <span className="text-muted-foreground truncate max-w-[140px]">{f.proceso_equipo}</span>
+                  <Badge variant="outline" className="text-[9px]">
+                    Sin AMEF
+                  </Badge>
+                </div>
+              ))}
+          </CardContent>
+        </Card>
+
+        {/* Estado de folios */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Estado de folios</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {[
+              { label: "Aprobados", count: aprobados.length, color: "bg-green-500", text: "text-green-700" },
+              { label: "En Firma", count: enFirma.length, color: "bg-blue-500", text: "text-blue-700" },
+              { label: "Borrador", count: borradores.length, color: "bg-gray-400", text: "text-gray-600" },
+              { label: "Rechazados", count: rechazados.length, color: "bg-red-500", text: "text-red-700" },
+            ].map((item) => (
+              <div key={item.label} className="space-y-1">
+                <div className="flex justify-between text-xs">
+                  <span className={`font-medium ${item.text}`}>{item.label}</span>
+                  <span className="text-muted-foreground">
+                    {item.count} folio{item.count !== 1 ? "s" : ""}
+                  </span>
+                </div>
+                <ProgressBar value={item.count} max={fols.length} color={item.color} />
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+
+        {/* Folios en firma */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">En proceso de firma</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <Skeleton className="h-24 w-full" />
+            ) : enFirma.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-6 text-center">
+                <CheckCircle2 className="h-8 w-8 text-green-500 mb-2" />
+                <p className="text-sm text-muted-foreground">Sin folios pendientes de firma</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {enFirma.map((f) => (
+                  <div
+                    key={f.id}
+                    className="flex items-center justify-between p-2 rounded border hover:bg-muted/50 cursor-pointer text-xs"
+                    onClick={() => navigate(`/folios/${f.id}`)}
+                  >
+                    <div>
+                      <p className="font-mono font-bold text-primary">{f.codigo}</p>
+                      <p className="text-muted-foreground truncate max-w-[140px]">{f.proceso_equipo}</p>
+                    </div>
+                    <div className="text-right">
+                      <Badge className="text-[9px] bg-blue-100 text-blue-700 border-blue-200">En Firma</Badge>
+                      <p className="text-[9px] text-muted-foreground mt-1">{diasDesde(f.fecha_inicio)}d desde inicio</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
 
+      {/* Gráficas */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
-          <CardHeader><CardTitle className="text-base">Distribución de NPR (Inicial vs Residual)</CardTitle></CardHeader>
-          <CardContent><NPRBarChart risks={risks} /></CardContent>
+          <CardHeader>
+            <CardTitle className="text-base">Distribución de NPR (Inicial vs Residual)</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <NPRBarChart risks={risks} />
+          </CardContent>
         </Card>
         <Card>
-          <CardHeader><CardTitle className="text-base">Matriz de Calor (Severidad × Ocurrencia)</CardTitle></CardHeader>
-          <CardContent><HeatMap risks={risks} /></CardContent>
+          <CardHeader>
+            <CardTitle className="text-base">Matriz de Calor (Severidad × Ocurrencia)</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <HeatMap risks={risks} />
+          </CardContent>
         </Card>
       </div>
 
+      {/* Top 5 riesgos por NPR */}
       <Card>
-        <CardHeader><CardTitle className="text-base">Riesgos que Requieren Acción</CardTitle></CardHeader>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <AlertTriangle className="h-4 w-4 text-destructive" />
+            Top riesgos por NPR — Requieren acción
+          </CardTitle>
+        </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b text-left">
-                  <th className="pb-2 font-medium text-muted-foreground">Folio</th>
-                  <th className="pb-2 font-medium text-muted-foreground">Peligro</th>
-                  <th className="pb-2 font-medium text-muted-foreground">NPR</th>
-                  <th className="pb-2 font-medium text-muted-foreground">Nivel</th>
-                  <th className="pb-2 font-medium text-muted-foreground">Acción Propuesta</th>
+                  <th className="pb-2 font-medium text-muted-foreground text-xs">Folio</th>
+                  <th className="pb-2 font-medium text-muted-foreground text-xs">Peligro / Modo de falla</th>
+                  <th className="pb-2 font-medium text-muted-foreground text-xs text-center">NPR</th>
+                  <th className="pb-2 font-medium text-muted-foreground text-xs text-center">NPR Residual</th>
+                  <th className="pb-2 font-medium text-muted-foreground text-xs">Nivel</th>
+                  <th className="pb-2 font-medium text-muted-foreground text-xs">Responsable</th>
+                  <th className="pb-2 font-medium text-muted-foreground text-xs">Acción</th>
                 </tr>
               </thead>
               <tbody>
-                {risks
-                  .filter((r) => (r.npr ?? 0) > 150 || r.severidad >= 9)
-                  .map((r) => {
-                    const npr = r.npr ?? r.severidad * r.ocurrencia * r.deteccion;
-                    const level = getNPRLevel(npr, r.severidad);
-                    return (
-                      <tr key={r.id} className="border-b last:border-0">
-                        <td className="py-2 font-mono text-xs">{r.folios?.codigo || "—"}</td>
-                        <td className="py-2">{r.peligro_modo_falla}</td>
-                        <td className="py-2 font-bold">{npr}</td>
-                        <td className="py-2">
-                          <Badge variant={level.label === "Crítico" ? "destructive" : "secondary"} className="text-[10px]">{level.label}</Badge>
-                        </td>
-                        <td className="py-2 text-xs max-w-[250px] truncate">
-                          {r.accion_propuesta || <span className="text-destructive font-medium">⚠ Requerido</span>}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                {!isLoading && critical.length === 0 && (
-                  <tr><td colSpan={5} className="py-4 text-center text-muted-foreground">Sin riesgos críticos</td></tr>
+                {topRiesgos.map((r) => {
+                  const npr = r.npr ?? r.severidad * r.ocurrencia * r.deteccion;
+                  const nprRes = r.npr_residual ?? r.sev_residual * r.ocu_residual * r.det_residual;
+                  const level = getNPRLevel(npr, r.severidad);
+                  const mejoró = nprRes < npr;
+                  return (
+                    <tr
+                      key={r.id}
+                      className="border-b last:border-0 hover:bg-muted/30 cursor-pointer"
+                      onClick={() => navigate(`/folios/${r.folio_id}`)}
+                    >
+                      <td className="py-2 font-mono text-xs text-primary">{(r as any).folios?.codigo || "—"}</td>
+                      <td className="py-2 max-w-[200px] truncate text-xs">{r.peligro_modo_falla}</td>
+                      <td className="py-2 font-bold text-center">
+                        <span
+                          className={
+                            level.label === "Crítico"
+                              ? "text-destructive"
+                              : level.label === "Mayor"
+                                ? "text-amber-600"
+                                : "text-green-600"
+                          }
+                        >
+                          {level.dot} {npr}
+                        </span>
+                      </td>
+                      <td className="py-2 text-center text-xs">
+                        <span className={mejoró ? "text-green-600 font-medium" : "text-muted-foreground"}>
+                          {mejoró ? "↓ " : ""}
+                          {nprRes}
+                        </span>
+                      </td>
+                      <td className="py-2">
+                        <Badge variant={level.label === "Crítico" ? "destructive" : "secondary"} className="text-[9px]">
+                          {level.label}
+                        </Badge>
+                      </td>
+                      <td className="py-2 text-xs">
+                        {r.responsable || (
+                          <span className="text-amber-600 font-medium flex items-center gap-1">
+                            <UserX className="h-3 w-3" /> Sin asignar
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-2 text-xs max-w-[180px] truncate">
+                        {r.accion_propuesta || <span className="text-destructive font-medium">⚠ Requerido</span>}
+                      </td>
+                    </tr>
+                  );
+                })}
+                {!isLoading && topRiesgos.length === 0 && (
+                  <tr>
+                    <td colSpan={7} className="py-6 text-center text-muted-foreground text-sm">
+                      <CheckCircle2 className="h-6 w-6 text-green-500 mx-auto mb-1" />
+                      Sin riesgos registrados
+                    </td>
+                  </tr>
                 )}
               </tbody>
             </table>
