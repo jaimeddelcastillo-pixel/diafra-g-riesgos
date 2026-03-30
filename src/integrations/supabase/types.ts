@@ -455,6 +455,7 @@ export type Database = {
           read_ct: number
         }[]
       }
+      todos_firmaron: { Args: { p_folio_id: string }; Returns: boolean }
     }
     Enums: {
       app_role:
