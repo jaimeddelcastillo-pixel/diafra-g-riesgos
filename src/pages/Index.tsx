@@ -105,6 +105,18 @@ export default function Dashboard() {
   // Folios en borrador hace más de 30 días (vencidos)
   const foliosVencidos = borradores.filter((f) => diasDesde(f.fecha_inicio) > 30);
 
+  // Críticos sin evidencia — NO CONFORMIDAD MAYOR NOM-241
+  // Riesgo crítico con acción propuesta pero sin PDF adjunto
+  const criticosSinEvidencia = risks.filter((r) => {
+    const esCritico = (r.npr ?? 0) > 150 || r.severidad >= 9;
+    const tieneAccion = !!r.accion_propuesta;
+    const tieneEvidencia = (r as any).anexos && ((r as any).anexos as any[]).length > 0;
+    return esCritico && tieneAccion && !tieneEvidencia;
+  });
+
+  // Folios con al menos 1 crítico sin evidencia
+  const foliosSinEvidencia = fols.filter((f) => criticosSinEvidencia.some((r) => r.folio_id === f.id));
+
   // % reducción de riesgos críticos (inicial → residual)
   const criticalResidual = risks.filter((r) => (r.npr_residual ?? 0) > 150 || r.sev_residual >= 9);
   const reduccionCriticos =
@@ -200,43 +212,67 @@ export default function Dashboard() {
       </div>
 
       {/* Alertas operativas NOM-241 */}
-      {!isLoading && (accionesPendientes.length > 0 || sinResponsable.length > 0 || foliosVencidos.length > 0) && (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          {accionesPendientes.length > 0 && (
-            <div className="flex items-start gap-3 p-3 rounded-lg border border-red-200 bg-red-50">
-              <AlertTriangle className="h-5 w-5 text-red-600 mt-0.5 shrink-0" />
-              <div>
-                <p className="text-sm font-semibold text-red-800">
-                  {accionesPendientes.length} acción{accionesPendientes.length > 1 ? "es" : ""} sin definir
-                </p>
-                <p className="text-xs text-red-600">Riesgos críticos sin acción propuesta — requerido NOM-241</p>
+      {!isLoading &&
+        (accionesPendientes.length > 0 ||
+          sinResponsable.length > 0 ||
+          foliosVencidos.length > 0 ||
+          criticosSinEvidencia.length > 0) && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            {/* ALERTA MÁXIMA — No conformidad mayor */}
+            {criticosSinEvidencia.length > 0 && (
+              <div
+                className="flex items-start gap-3 p-3 rounded-lg border-2 border-red-400 bg-red-50 cursor-pointer hover:bg-red-100 transition-colors"
+                onClick={() => navigate("/folios")}
+              >
+                <AlertTriangle className="h-5 w-5 text-red-600 mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-sm font-bold text-red-800">
+                    ⛔ {criticosSinEvidencia.length} crítico{criticosSinEvidencia.length > 1 ? "s" : ""} sin evidencia
+                  </p>
+                  <p className="text-xs text-red-700 font-medium">No conformidad mayor NOM-241</p>
+                  <p className="text-xs text-red-600 mt-0.5">
+                    {foliosSinEvidencia.length} folio{foliosSinEvidencia.length > 1 ? "s" : ""} afectado
+                    {foliosSinEvidencia.length > 1 ? "s" : ""}
+                  </p>
+                </div>
               </div>
-            </div>
-          )}
-          {sinResponsable.length > 0 && (
-            <div className="flex items-start gap-3 p-3 rounded-lg border border-amber-200 bg-amber-50">
-              <UserX className="h-5 w-5 text-amber-600 mt-0.5 shrink-0" />
-              <div>
-                <p className="text-sm font-semibold text-amber-800">
-                  {sinResponsable.length} acción{sinResponsable.length > 1 ? "es" : ""} sin responsable
-                </p>
-                <p className="text-xs text-amber-600">Asignar responsable y fecha compromiso</p>
+            )}
+
+            {accionesPendientes.length > 0 && (
+              <div className="flex items-start gap-3 p-3 rounded-lg border border-red-200 bg-red-50">
+                <AlertTriangle className="h-5 w-5 text-red-600 mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-sm font-semibold text-red-800">
+                    {accionesPendientes.length} acción{accionesPendientes.length > 1 ? "es" : ""} sin definir
+                  </p>
+                  <p className="text-xs text-red-600">Riesgos críticos sin acción propuesta — requerido NOM-241</p>
+                </div>
               </div>
-            </div>
-          )}
-          {foliosVencidos.length > 0 && (
-            <div className="flex items-start gap-3 p-3 rounded-lg border border-amber-200 bg-amber-50">
-              <Clock className="h-5 w-5 text-amber-600 mt-0.5 shrink-0" />
-              <div>
-                <p className="text-sm font-semibold text-amber-800">
-                  {foliosVencidos.length} folio{foliosVencidos.length > 1 ? "s" : ""} en borrador +30 días
-                </p>
-                <p className="text-xs text-amber-600">Enviar a firma o cerrar</p>
+            )}
+            {sinResponsable.length > 0 && (
+              <div className="flex items-start gap-3 p-3 rounded-lg border border-amber-200 bg-amber-50">
+                <UserX className="h-5 w-5 text-amber-600 mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-sm font-semibold text-amber-800">
+                    {sinResponsable.length} acción{sinResponsable.length > 1 ? "es" : ""} sin responsable
+                  </p>
+                  <p className="text-xs text-amber-600">Asignar responsable y fecha compromiso</p>
+                </div>
               </div>
-            </div>
-          )}
-        </div>
-      )}
+            )}
+            {foliosVencidos.length > 0 && (
+              <div className="flex items-start gap-3 p-3 rounded-lg border border-amber-200 bg-amber-50">
+                <Clock className="h-5 w-5 text-amber-600 mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-sm font-semibold text-amber-800">
+                    {foliosVencidos.length} folio{foliosVencidos.length > 1 ? "s" : ""} en borrador +30 días
+                  </p>
+                  <p className="text-xs text-amber-600">Enviar a firma o cerrar</p>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
       {/* Avance AMEF y estado por folio */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
