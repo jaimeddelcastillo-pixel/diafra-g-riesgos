@@ -353,8 +353,36 @@ export default function Dashboard() {
               <Skeleton className="h-24 w-full" />
             ) : enFirma.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-6 text-center">
-                <CheckCircle2 className="h-8 w-8 text-green-500 mb-2" />
-                <p className="text-sm text-muted-foreground">Sin folios pendientes de firma</p>
+                {criticosSinEvidencia.length > 0 ? (
+                  <>
+                    <AlertTriangle className="h-8 w-8 text-red-500 mb-2" />
+                    <p className="text-sm font-medium text-red-700">No se puede enviar a firma</p>
+                    <p className="text-xs text-red-500 mt-1 max-w-[180px]">
+                      {criticosSinEvidencia.length} riesgo{criticosSinEvidencia.length > 1 ? "s" : ""} crítico
+                      {criticosSinEvidencia.length > 1 ? "s" : ""} sin evidencia adjunta
+                    </p>
+                    <button
+                      className="text-xs text-primary underline mt-2 hover:opacity-70"
+                      onClick={() => navigate("/folios")}
+                    >
+                      Ir a folios →
+                    </button>
+                  </>
+                ) : accionesPendientes.length > 0 ? (
+                  <>
+                    <AlertCircle className="h-8 w-8 text-amber-500 mb-2" />
+                    <p className="text-sm font-medium text-amber-700">Acciones pendientes por definir</p>
+                    <p className="text-xs text-amber-500 mt-1 max-w-[180px]">
+                      Completa las acciones de los riesgos críticos para poder enviar a firma
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="h-8 w-8 text-green-500 mb-2" />
+                    <p className="text-sm text-muted-foreground">Sin folios pendientes de firma</p>
+                    <p className="text-xs text-muted-foreground mt-1">Todos los folios están al día</p>
+                  </>
+                )}
               </div>
             ) : (
               <div className="space-y-2">
