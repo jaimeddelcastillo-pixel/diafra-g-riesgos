@@ -123,11 +123,11 @@ export default function Dashboard() {
   const sgc = semaforo(puntajeSGC);
   const SgcIcon = sgc.icon;
 
-  // Top 5 riesgos más críticos por NPR
+  // Todos los riesgos críticos ordenados por NPR descendente
+  // Un auditor NOM-241 necesita ver TODOS, no solo los primeros
   const topRiesgos = [...risks]
-    .filter((r) => (r.npr ?? 0) > 0)
-    .sort((a, b) => (b.npr ?? 0) - (a.npr ?? 0))
-    .slice(0, 5);
+    .filter((r) => (r.npr ?? 0) > 150 || r.severidad >= 9)
+    .sort((a, b) => (b.npr ?? 0) - (a.npr ?? 0));
 
   return (
     <div className="space-y-6">
@@ -369,7 +369,7 @@ export default function Dashboard() {
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
             <AlertTriangle className="h-4 w-4 text-destructive" />
-            Top riesgos por NPR — Requieren acción
+            Riesgos Críticos ({critical.length}) — Requieren acción documentada NOM-241
           </CardTitle>
         </CardHeader>
         <CardContent>
