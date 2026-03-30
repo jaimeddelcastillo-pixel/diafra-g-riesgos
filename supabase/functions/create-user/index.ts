@@ -12,7 +12,6 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Verify the caller is authenticated and is admin
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
       return new Response(JSON.stringify({ error: "No autorizado" }), {
@@ -24,11 +23,13 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-    // Verify caller is admin using their JWT
+    // Verificar que el caller esté autenticado
     const callerClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!, {
       global: { headers: { Authorization: authHeader } },
     });
-    const { data: { user: caller } } = await callerClient.auth.getUser();
+    const {
+      data: { user: caller },
+    } = await callerClient.auth.getUser();
     if (!caller) {
       return new Response(JSON.stringify({ error: "No autorizado" }), {
         status: 401,
@@ -36,7 +37,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Check admin role
+    // Verificar rol admin
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
     const { data: roleData } = await adminClient
       .from("user_roles")
@@ -61,11 +62,12 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Create user with admin API — email_confirm false so confirmation email is sent
+    // FIX 1: email_confirm: true para que Supabase envíe el correo de confirmación
+    // (requiere SMTP externo configurado en el dashboard de Supabase)
     const { data: newUser, error: createError } = await adminClient.auth.admin.createUser({
       email,
       password,
-      email_confirm: false,
+      email_confirm: true, // ← cambiado de false a true
       user_metadata: { nombre },
     });
 
@@ -76,26 +78,44 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Update profile with cargo
-    if (cargo) {
-      await adminClient
-        .from("profiles")
-        .update({ cargo, nombre })
-        .eq("id", newUser.user.id);
-    }
+    const userId = newUser.user.id;
 
-    // Set role if not the default 'operador'
-    if (role && role !== "operador") {
+    // Actualizar perfil con nombre y cargo
+    await adminClient
+      .from("profiles")
+      .update({ cargo: cargo || "", nombre })
+      .eq("id", userId);
+
+    // FIX 2: UPSERT en lugar de UPDATE
+    // El trigger on_auth_user_created ya insertó 'operador'.
+    // Con UPDATE + eq("user_id") el filtro sí encuentra el registro,
+    // pero si el role actual ES operador y quieres operador no hay problema;
+    // si quieres otro rol, el UPDATE funciona — el bug real es que la condición
+    // `role !== "operador"` omitía el update para usuarios con rol operador.
+    // Solución: siempre hacer UPSERT para garantizar el rol correcto sin importar
+    // qué insertó el trigger.
+    const targetRole = role || "operador";
+    const { error: rErr } = await adminClient.from("user_roles").upsert(
+      { user_id: userId, role: targetRole },
+      { onConflict: "user_id,role" }, // ← UPSERT: inserta o actualiza
+    );
+
+    // Si el trigger ya insertó 'operador' y queremos otro rol,
+    // necesitamos eliminar el registro anterior y re-insertar
+    if (!rErr && targetRole !== "operador") {
+      // Eliminar el rol 'operador' insertado por el trigger
       await adminClient
         .from("user_roles")
-        .update({ role })
-        .eq("user_id", newUser.user.id);
+        .delete()
+        .eq("user_id", userId)
+        .eq("role", "operador")
+        .neq("role", targetRole); // no borrar si el target ES operador
     }
 
-    return new Response(
-      JSON.stringify({ success: true, user: { id: newUser.user.id } }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify({ success: true, user: { id: userId } }), {
+      status: 200,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   } catch (err) {
     return new Response(JSON.stringify({ error: err.message }), {
       status: 500,
