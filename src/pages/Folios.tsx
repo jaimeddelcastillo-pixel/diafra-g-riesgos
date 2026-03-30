@@ -1,8 +1,19 @@
+import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Plus, ChevronRight, FileDown, FileSpreadsheet } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { useQueryClient } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
+import { Constants } from "@/integrations/supabase/types";
 import { useFolios, useAllRiesgos, getEstadoStyle, getNPRLevel } from "@/hooks/useFolios";
 import { Skeleton } from "@/components/ui/skeleton";
 import jsPDF from "jspdf";
@@ -191,9 +202,168 @@ function exportarPDF(folios: any[], riesgosMap: Map<string, any[]>) {
   doc.save(`DIAFRA_Listado_Folios_${new Date().toISOString().slice(0, 10)}.pdf`);
 }
 
+// ─── Formulario nuevo folio ───────────────────────────────────────────────────
+function NuevoFolioDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  const [saving, setSaving] = useState(false);
+
+  const [form, setForm] = useState({
+    proceso_equipo: "",
+    origen: "Diseño" as string,
+    desviacion_id: "",
+    control_cambios_id: "",
+    fecha_inicio: new Date().toISOString().slice(0, 10),
+    fecha_cierre: "",
+    alcance: "",
+  });
+
+  const update = (field: string, value: string) => setForm((f) => ({ ...f, [field]: value }));
+
+  const handleGuardar = async () => {
+    if (!form.proceso_equipo.trim()) {
+      toast({ title: "Campo requerido", description: "El Proceso / Equipo es obligatorio.", variant: "destructive" });
+      return;
+    }
+    setSaving(true);
+    try {
+      const { data: codigoData, error: cErr } = await supabase.rpc("next_folio_code");
+      if (cErr) throw cErr;
+
+      const { data: folio, error: fErr } = await supabase
+        .from("folios")
+        .insert({
+          codigo: codigoData as string,
+          proceso_equipo: form.proceso_equipo.trim(),
+          origen: form.origen as any,
+          desviacion_id: form.desviacion_id.trim(),
+          control_cambios_id: form.control_cambios_id.trim(),
+          fecha_inicio: form.fecha_inicio,
+          fecha_cierre: form.fecha_cierre || null,
+          alcance: form.alcance.trim(),
+          created_by: user?.id,
+          estado: "Borrador",
+        })
+        .select()
+        .single();
+
+      if (fErr) throw fErr;
+
+      toast({ title: `✅ Folio ${codigoData} creado` });
+      queryClient.invalidateQueries({ queryKey: ["folios"] });
+      onClose();
+      navigate(`/folios/${folio.id}`);
+    } catch (err: any) {
+      toast({ title: "Error al crear folio", description: err.message, variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleClose = () => {
+    setForm({
+      proceso_equipo: "",
+      origen: "Diseño",
+      desviacion_id: "",
+      control_cambios_id: "",
+      fecha_inicio: new Date().toISOString().slice(0, 10),
+      fecha_cierre: "",
+      alcance: "",
+    });
+    onClose();
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => !o && handleClose()}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Nuevo Folio de Gestión de Riesgos</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4 py-2">
+          <p className="text-xs text-muted-foreground">
+            El código se genera automáticamente (GR-{new Date().getFullYear()}-XXX)
+          </p>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Proceso / Equipo Analizado *</Label>
+            <Input
+              value={form.proceso_equipo}
+              onChange={(e) => update("proceso_equipo", e.target.value)}
+              placeholder="Ej: Calificación de Áreas o Instalaciones"
+              autoFocus
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Origen del Riesgo *</Label>
+            <Select value={form.origen} onValueChange={(v) => update("origen", v)}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {Constants.public.Enums.origen_riesgo.map((o) => (
+                  <SelectItem key={o} value={o}>
+                    {o}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label className="text-xs">Fecha Inicio</Label>
+              <Input type="date" value={form.fecha_inicio} onChange={(e) => update("fecha_inicio", e.target.value)} />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Fecha Cierre Estimada</Label>
+              <Input type="date" value={form.fecha_cierre} onChange={(e) => update("fecha_cierre", e.target.value)} />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label className="text-xs">ID Desviación (opcional)</Label>
+              <Input
+                value={form.desviacion_id}
+                onChange={(e) => update("desviacion_id", e.target.value)}
+                placeholder="DES-2026-XXX"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Control de Cambios (opcional)</Label>
+              <Input
+                value={form.control_cambios_id}
+                onChange={(e) => update("control_cambios_id", e.target.value)}
+                placeholder="CC-2026-XXX"
+              />
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Alcance</Label>
+            <Textarea
+              value={form.alcance}
+              onChange={(e) => update("alcance", e.target.value)}
+              rows={3}
+              placeholder="Describe el alcance del análisis de riesgos..."
+            />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={handleClose}>
+            Cancelar
+          </Button>
+          <Button onClick={handleGuardar} disabled={saving}>
+            {saving ? "Creando..." : "Crear Folio"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 // ─── Componente principal ──────────────────────────────────────────────────────
 export default function Folios() {
   const navigate = useNavigate();
+  const [nuevoOpen, setNuevoOpen] = useState(false);
   const { data: folios, isLoading } = useFolios();
   const { data: allRiesgos, isLoading: loadingRiesgos } = useAllRiesgos();
 
@@ -243,11 +413,13 @@ export default function Folios() {
               </Button>
             </>
           )}
-          <Button className="gap-2">
+          <Button className="gap-2" onClick={() => setNuevoOpen(true)}>
             <Plus className="h-4 w-4" /> Nuevo Folio
           </Button>
         </div>
       </div>
+
+      <NuevoFolioDialog open={nuevoOpen} onClose={() => setNuevoOpen(false)} />
 
       {/* Resumen rápido */}
       {!cargando && lista.length > 0 && (
