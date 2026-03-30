@@ -212,7 +212,7 @@ function CatalogoInline({
                     <td className="p-1.5">
                       <span className="whitespace-pre-line">{item.descripcion}</span>
                       {"complemento" in item && item.complemento && (
-                        <span className="block text-muted-foreground italic mt-0.5">{item.complemento}</span>
+                        <span className="block text-muted-foreground italic mt-0.5">{item.complemento as string}</span>
                       )}
                     </td>
                   </tr>
