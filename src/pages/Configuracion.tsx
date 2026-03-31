@@ -166,7 +166,7 @@ function FirmaUpload({
 }
 
 export default function Configuracion() {
-  const { hasRole } = useAuth();
+  const { hasRole, user } = useAuth();
   const isAdmin = hasRole("admin") || hasRole("responsable_sanitario");
   const queryClient = useQueryClient();
 
@@ -184,6 +184,17 @@ export default function Configuracion() {
     role: "operador" as AppRole,
   });
   const [newFirmaFile, setNewFirmaFile] = useState<File | null>(null);
+
+  // Change own password state
+  const [pwDialogOpen, setPwDialogOpen] = useState(false);
+  const [pwForm, setPwForm] = useState({ current: "", newPw: "", confirm: "" });
+  const [pwLoading, setPwLoading] = useState(false);
+
+  // Admin reset password state
+  const [resetPwDialogOpen, setResetPwDialogOpen] = useState(false);
+  const [resetPwUser, setResetPwUser] = useState<UserWithRole | null>(null);
+  const [resetPwValue, setResetPwValue] = useState("");
+  const [resetPwLoading, setResetPwLoading] = useState(false);
 
   const { data: users = [], isLoading } = useQuery({
     queryKey: ["users-with-roles"],
