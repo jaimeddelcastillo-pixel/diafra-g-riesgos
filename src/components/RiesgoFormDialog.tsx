@@ -212,7 +212,7 @@ function CatalogoInline({
                     <td className="p-1.5">
                       <span className="whitespace-pre-line">{item.descripcion}</span>
                       {"complemento" in item && item.complemento && (
-                        <span className="block text-muted-foreground italic mt-0.5">{item.complemento as string}</span>
+                        <span className="block text-muted-foreground italic mt-0.5">{item.complemento}</span>
                       )}
                     </td>
                   </tr>
@@ -301,12 +301,17 @@ export function RiesgoFormDialog({ open, onClose, folioId, riesgo, nextNumeroId 
         toast({ title: "Solo archivos PDF", description: `"${file.name}" no es PDF.`, variant: "destructive" });
         continue;
       }
-      const path = `${folioId}/${Date.now()}_${file.name}`;
+      // Sanitizar nombre: reemplazar espacios y caracteres especiales
+      const nombreLimpio = file.name
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "") // quitar tildes
+        .replace(/[^a-zA-Z0-9._-]/g, "_"); // reemplazar espacios y especiales por _
+      const path = `${folioId}/${Date.now()}_${nombreLimpio}`;
       const { error } = await supabase.storage.from("evidencias").upload(path, file);
       if (error) {
         toast({ title: "Error al subir", description: error.message, variant: "destructive" });
       } else {
-        newAnexos.push({ name: file.name, path });
+        newAnexos.push({ name: file.name, path }); // guarda nombre original para mostrar
       }
     }
     update("anexos", newAnexos);
@@ -381,13 +386,8 @@ export function RiesgoFormDialog({ open, onClose, folioId, riesgo, nextNumeroId 
     setSaving(false);
   };
 
-  const parseSafeDate = (val: string | null | undefined): Date | undefined => {
-    if (!val) return undefined;
-    const d = new Date(val + (val.length === 10 ? "T12:00:00" : ""));
-    return isNaN(d.getTime()) ? undefined : d;
-  };
-  const fechaCompromisoDate = parseSafeDate(form.fecha_compromiso);
-  const fechaEvidenciaDate = parseSafeDate(form.fecha_evidencia);
+  const fechaCompromisoDate = form.fecha_compromiso ? new Date(form.fecha_compromiso + "T12:00:00") : undefined;
+  const fechaEvidenciaDate = form.fecha_evidencia ? new Date(form.fecha_evidencia + "T12:00:00") : undefined;
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
@@ -584,7 +584,7 @@ export function RiesgoFormDialog({ open, onClose, folioId, riesgo, nextNumeroId 
                       )}
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {fechaCompromisoDate ? format(fechaCompromisoDate, "PPP") : "Seleccionar fecha"}
+                      {form.fecha_compromiso ? format(fechaCompromisoDate!, "PPP") : "Seleccionar fecha"}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
@@ -636,7 +636,7 @@ export function RiesgoFormDialog({ open, onClose, folioId, riesgo, nextNumeroId 
                       )}
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {fechaEvidenciaDate ? format(fechaEvidenciaDate, "PPP") : "Seleccionar fecha"}
+                      {form.fecha_evidencia ? format(fechaEvidenciaDate!, "PPP") : "Seleccionar fecha"}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
