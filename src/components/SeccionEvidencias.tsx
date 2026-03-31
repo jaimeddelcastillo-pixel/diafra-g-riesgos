@@ -51,7 +51,12 @@ function UploadEvidencia({
 
     setUploading(true);
     try {
-      const path = `${folioId}/${Date.now()}_${file.name}`;
+      // Sanitizar nombre: eliminar tildes, espacios y caracteres especiales
+      const nombreLimpio = file.name
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-zA-Z0-9._-]/g, "_");
+      const path = `${folioId}/${Date.now()}_${nombreLimpio}`;
       const { error: upErr } = await supabase.storage.from("evidencias").upload(path, file);
       if (upErr) throw upErr;
 
