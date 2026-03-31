@@ -1,4 +1,4 @@
-// supabase/functions/folio-workflow/index.ts
+// supabase/functions/folio-workflow/index.ts v2
 // Maneja 3 acciones:
 //   1. enviar-a-firma   → cambia estado + correos al comité
 //   2. firmar           → registra firma + notifica RS si todos firmaron
