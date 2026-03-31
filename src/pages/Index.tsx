@@ -123,8 +123,14 @@ export default function Dashboard() {
     critical.length > 0 ? Math.round(((critical.length - criticalResidual.length) / critical.length) * 100) : 0;
 
   // Avance captura AMEF: folios con al menos 1 riesgo / total folios
+  // Excluye borradores nuevos sin riesgos del denominador si aplica
   const foliosConRiesgo = fols.filter((f) => risks.some((r) => r.folio_id === f.id));
   const avanceAMEF = fols.length > 0 ? Math.round((foliosConRiesgo.length / fols.length) * 100) : 0;
+
+  // % aprobados sobre folios activos (excluye borradores sin riesgos)
+  const foliosConActividad = fols.filter((f) => f.estado !== "Borrador" || risks.some((r) => r.folio_id === f.id));
+  const pctAprobados =
+    foliosConActividad.length > 0 ? Math.round((aprobados.length / foliosConActividad.length) * 100) : 0;
 
   // Semáforo general SGC
   const puntajeSGC = Math.round(
@@ -325,10 +331,34 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent className="space-y-2">
             {[
-              { label: "Aprobados", count: aprobados.length, color: "bg-green-500", text: "text-green-700" },
-              { label: "En Firma", count: enFirma.length, color: "bg-blue-500", text: "text-blue-700" },
-              { label: "Borrador", count: borradores.length, color: "bg-gray-400", text: "text-gray-600" },
-              { label: "Rechazados", count: rechazados.length, color: "bg-red-500", text: "text-red-700" },
+              {
+                label: "Aprobados",
+                count: aprobados.length,
+                color: "bg-green-500",
+                text: "text-green-700",
+                pct: pctAprobados,
+              },
+              {
+                label: "En Firma",
+                count: enFirma.length,
+                color: "bg-blue-500",
+                text: "text-blue-700",
+                pct: fols.length > 0 ? Math.round((enFirma.length / fols.length) * 100) : 0,
+              },
+              {
+                label: "Borrador",
+                count: borradores.length,
+                color: "bg-gray-400",
+                text: "text-gray-600",
+                pct: fols.length > 0 ? Math.round((borradores.length / fols.length) * 100) : 0,
+              },
+              {
+                label: "Rechazados",
+                count: rechazados.length,
+                color: "bg-red-500",
+                text: "text-red-700",
+                pct: fols.length > 0 ? Math.round((rechazados.length / fols.length) * 100) : 0,
+              },
             ].map((item) => (
               <div key={item.label} className="space-y-1">
                 <div className="flex justify-between text-xs">
@@ -337,7 +367,15 @@ export default function Dashboard() {
                     {item.count} folio{item.count !== 1 ? "s" : ""}
                   </span>
                 </div>
-                <ProgressBar value={item.count} max={fols.length} color={item.color} />
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all ${item.color}`}
+                      style={{ width: `${item.pct}%` }}
+                    />
+                  </div>
+                  <span className="text-xs w-8 text-right text-muted-foreground">{item.pct}%</span>
+                </div>
               </div>
             ))}
           </CardContent>
