@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Users, Bell, Pencil, UserPlus, Upload, X } from "lucide-react";
+import { Users, Bell, Pencil, UserPlus, Upload, X, KeyRound, Lock } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -166,7 +166,7 @@ function FirmaUpload({
 }
 
 export default function Configuracion() {
-  const { hasRole } = useAuth();
+  const { hasRole, user } = useAuth();
   const isAdmin = hasRole("admin") || hasRole("responsable_sanitario");
   const queryClient = useQueryClient();
 
@@ -184,6 +184,17 @@ export default function Configuracion() {
     role: "operador" as AppRole,
   });
   const [newFirmaFile, setNewFirmaFile] = useState<File | null>(null);
+
+  // Change own password state
+  const [pwDialogOpen, setPwDialogOpen] = useState(false);
+  const [pwForm, setPwForm] = useState({ current: "", newPw: "", confirm: "" });
+  const [pwLoading, setPwLoading] = useState(false);
+
+  // Admin reset password state
+  const [resetPwDialogOpen, setResetPwDialogOpen] = useState(false);
+  const [resetPwUser, setResetPwUser] = useState<UserWithRole | null>(null);
+  const [resetPwValue, setResetPwValue] = useState("");
+  const [resetPwLoading, setResetPwLoading] = useState(false);
 
   const { data: users = [], isLoading } = useQuery({
     queryKey: ["users-with-roles"],
@@ -308,6 +319,56 @@ export default function Configuracion() {
     createMutation.mutate({ ...newForm, firmaFile: newFirmaFile });
   };
 
+  // Change own password
+  const handleChangePassword = async () => {
+    if (!pwForm.newPw || !pwForm.confirm) {
+      toast.error("Completa todos los campos");
+      return;
+    }
+    if (pwForm.newPw.length < 6) {
+      toast.error("La contraseña debe tener al menos 6 caracteres");
+      return;
+    }
+    if (pwForm.newPw !== pwForm.confirm) {
+      toast.error("Las contraseñas no coinciden");
+      return;
+    }
+    setPwLoading(true);
+    const { error } = await supabase.auth.updateUser({ password: pwForm.newPw });
+    setPwLoading(false);
+    if (error) {
+      toast.error(error.message);
+    } else {
+      toast.success("Contraseña actualizada correctamente");
+      setPwDialogOpen(false);
+      setPwForm({ current: "", newPw: "", confirm: "" });
+    }
+  };
+
+  // Admin reset password for another user
+  const handleResetPassword = async () => {
+    if (!resetPwUser || !resetPwValue) return;
+    if (resetPwValue.length < 6) {
+      toast.error("La contraseña debe tener al menos 6 caracteres");
+      return;
+    }
+    setResetPwLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("reset-user-password", {
+        body: { user_id: resetPwUser.id, new_password: resetPwValue },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast.success(`Contraseña de ${resetPwUser.nombre} actualizada`);
+      setResetPwDialogOpen(false);
+      setResetPwValue("");
+      setResetPwUser(null);
+    } catch (e: any) {
+      toast.error(e.message || "Error al resetear contraseña");
+    }
+    setResetPwLoading(false);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -315,11 +376,16 @@ export default function Configuracion() {
           <h1 className="text-2xl font-bold">Configuración</h1>
           <p className="text-sm text-muted-foreground">Gestión de usuarios, roles y notificaciones</p>
         </div>
-        {isAdmin && (
-          <Button onClick={() => setNewDialogOpen(true)} className="gap-2">
-            <UserPlus className="h-4 w-4" /> Nuevo Usuario
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setPwDialogOpen(true)} className="gap-2">
+            <Lock className="h-4 w-4" /> Cambiar mi Contraseña
           </Button>
-        )}
+          {isAdmin && (
+            <Button onClick={() => setNewDialogOpen(true)} className="gap-2">
+              <UserPlus className="h-4 w-4" /> Nuevo Usuario
+            </Button>
+          )}
+        </div>
       </div>
 
       <Card>
@@ -366,9 +432,12 @@ export default function Configuracion() {
                       </Badge>
                     </td>
                     {isAdmin && (
-                      <td className="py-2">
+                      <td className="py-2 flex gap-1">
                         <Button variant="ghost" size="icon" onClick={() => openEdit(u)}>
                           <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => { setResetPwUser(u); setResetPwValue(""); setResetPwDialogOpen(true); }} title="Resetear contraseña">
+                          <KeyRound className="h-3.5 w-3.5" />
                         </Button>
                       </td>
                     )}
@@ -520,6 +589,70 @@ export default function Configuracion() {
             <Button variant="outline" onClick={() => setNewDialogOpen(false)}>Cancelar</Button>
             <Button onClick={handleCreate} disabled={createMutation.isPending}>
               {createMutation.isPending ? "Creando…" : "Crear Usuario"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Change own password dialog */}
+      <Dialog open={pwDialogOpen} onOpenChange={setPwDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Cambiar mi Contraseña</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div>
+              <label className="text-sm font-medium">Nueva contraseña *</label>
+              <Input
+                type="password"
+                value={pwForm.newPw}
+                onChange={(e) => setPwForm((f) => ({ ...f, newPw: e.target.value }))}
+                placeholder="Mínimo 6 caracteres"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Confirmar contraseña *</label>
+              <Input
+                type="password"
+                value={pwForm.confirm}
+                onChange={(e) => setPwForm((f) => ({ ...f, confirm: e.target.value }))}
+                placeholder="Repite la contraseña"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPwDialogOpen(false)}>Cancelar</Button>
+            <Button onClick={handleChangePassword} disabled={pwLoading}>
+              {pwLoading ? "Guardando…" : "Cambiar Contraseña"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Admin reset password dialog */}
+      <Dialog open={resetPwDialogOpen} onOpenChange={setResetPwDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Resetear Contraseña</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <p className="text-sm text-muted-foreground">
+              Asignar nueva contraseña para <strong>{resetPwUser?.nombre}</strong> ({resetPwUser?.email})
+            </p>
+            <div>
+              <label className="text-sm font-medium">Nueva contraseña *</label>
+              <Input
+                type="password"
+                value={resetPwValue}
+                onChange={(e) => setResetPwValue(e.target.value)}
+                placeholder="Mínimo 6 caracteres"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setResetPwDialogOpen(false)}>Cancelar</Button>
+            <Button onClick={handleResetPassword} disabled={resetPwLoading}>
+              {resetPwLoading ? "Guardando…" : "Resetear Contraseña"}
             </Button>
           </DialogFooter>
         </DialogContent>
