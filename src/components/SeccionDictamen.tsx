@@ -162,18 +162,57 @@ export function SeccionDictamen({ folio, riesgos, locked, onSaved }: Props) {
         {/* Conclusión actual */}
         <div className="flex items-center gap-8 border-t pt-3">
           <span className="font-semibold text-sm">CONCLUSIÓN:</span>
-          <span className="flex items-center gap-2 text-sm">
-            APROBADO{" "}
-            <span
-              className={`inline-block w-4 h-4 border rounded ${conclusion === "Aprobado" ? "bg-foreground" : ""}`}
-            />
-          </span>
-          <span className="flex items-center gap-2 text-sm">
-            RECHAZADO{" "}
-            <span
-              className={`inline-block w-4 h-4 border rounded ${conclusion === "Rechazado" ? "bg-foreground" : ""}`}
-            />
-          </span>
+          {esRS && folio.estado === "Borrador" ? (
+            // RS puede cambiar conclusión directamente si el folio está en borrador
+            <>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <div
+                  className={`w-4 h-4 border rounded cursor-pointer flex items-center justify-center ${
+                    conclusion === "Aprobado" ? "bg-foreground border-foreground" : "border-muted-foreground"
+                  }`}
+                  onClick={() => {
+                    supabase
+                      .from("folios")
+                      .update({ conclusion: "Aprobado" } as any)
+                      .eq("id", folio.id)
+                      .then(() => onSaved());
+                  }}
+                />
+                <span className="text-sm">APROBADO</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <div
+                  className={`w-4 h-4 border rounded cursor-pointer flex items-center justify-center ${
+                    conclusion === "Rechazado" ? "bg-foreground border-foreground" : "border-muted-foreground"
+                  }`}
+                  onClick={() => {
+                    supabase
+                      .from("folios")
+                      .update({ conclusion: "Rechazado" } as any)
+                      .eq("id", folio.id)
+                      .then(() => onSaved());
+                  }}
+                />
+                <span className="text-sm">RECHAZADO</span>
+              </label>
+            </>
+          ) : (
+            // Vista de solo lectura para otros roles
+            <>
+              <span className="flex items-center gap-2 text-sm">
+                APROBADO{" "}
+                <span
+                  className={`inline-block w-4 h-4 border rounded ${conclusion === "Aprobado" ? "bg-foreground" : ""}`}
+                />
+              </span>
+              <span className="flex items-center gap-2 text-sm">
+                RECHAZADO{" "}
+                <span
+                  className={`inline-block w-4 h-4 border rounded ${conclusion === "Rechazado" ? "bg-foreground" : ""}`}
+                />
+              </span>
+            </>
+          )}
         </div>
 
         {/* ── ZONA EXCLUSIVA RESPONSABLE SANITARIO ── */}
