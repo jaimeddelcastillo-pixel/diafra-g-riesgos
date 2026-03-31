@@ -684,7 +684,7 @@ export default function FolioDetail() {
         <SeccionRiesgos riesgos={riesgos} locked={locked} folioId={folio.id} />
 
         {/* Evidencias — pestaña documental para auditor */}
-        <SeccionEvidencias riesgos={riesgos} folioCodigo={folio.codigo} />
+        <SeccionEvidencias riesgos={riesgos} folioCodigo={folio.codigo} folioId={folio.id} />
 
         {/* Dictamen con zona exclusiva del RS */}
         <SeccionDictamen folio={folio} riesgos={riesgos} locked={locked} onSaved={handleRefresh} />
