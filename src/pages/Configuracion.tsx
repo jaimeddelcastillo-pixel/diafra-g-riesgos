@@ -319,8 +319,57 @@ export default function Configuracion() {
     createMutation.mutate({ ...newForm, firmaFile: newFirmaFile });
   };
 
+  // Change own password
+  const handleChangePassword = async () => {
+    if (!pwForm.newPw || !pwForm.confirm) {
+      toast.error("Completa todos los campos");
+      return;
+    }
+    if (pwForm.newPw.length < 6) {
+      toast.error("La contraseña debe tener al menos 6 caracteres");
+      return;
+    }
+    if (pwForm.newPw !== pwForm.confirm) {
+      toast.error("Las contraseñas no coinciden");
+      return;
+    }
+    setPwLoading(true);
+    const { error } = await supabase.auth.updateUser({ password: pwForm.newPw });
+    setPwLoading(false);
+    if (error) {
+      toast.error(error.message);
+    } else {
+      toast.success("Contraseña actualizada correctamente");
+      setPwDialogOpen(false);
+      setPwForm({ current: "", newPw: "", confirm: "" });
+    }
+  };
+
+  // Admin reset password for another user
+  const handleResetPassword = async () => {
+    if (!resetPwUser || !resetPwValue) return;
+    if (resetPwValue.length < 6) {
+      toast.error("La contraseña debe tener al menos 6 caracteres");
+      return;
+    }
+    setResetPwLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("reset-user-password", {
+        body: { user_id: resetPwUser.id, new_password: resetPwValue },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast.success(`Contraseña de ${resetPwUser.nombre} actualizada`);
+      setResetPwDialogOpen(false);
+      setResetPwValue("");
+      setResetPwUser(null);
+    } catch (e: any) {
+      toast.error(e.message || "Error al resetear contraseña");
+    }
+    setResetPwLoading(false);
+  };
+
   return (
-    <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Configuración</h1>
