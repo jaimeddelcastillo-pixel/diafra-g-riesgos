@@ -593,6 +593,70 @@ export default function Configuracion() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Change own password dialog */}
+      <Dialog open={pwDialogOpen} onOpenChange={setPwDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Cambiar mi Contraseña</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div>
+              <label className="text-sm font-medium">Nueva contraseña *</label>
+              <Input
+                type="password"
+                value={pwForm.newPw}
+                onChange={(e) => setPwForm((f) => ({ ...f, newPw: e.target.value }))}
+                placeholder="Mínimo 6 caracteres"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Confirmar contraseña *</label>
+              <Input
+                type="password"
+                value={pwForm.confirm}
+                onChange={(e) => setPwForm((f) => ({ ...f, confirm: e.target.value }))}
+                placeholder="Repite la contraseña"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPwDialogOpen(false)}>Cancelar</Button>
+            <Button onClick={handleChangePassword} disabled={pwLoading}>
+              {pwLoading ? "Guardando…" : "Cambiar Contraseña"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Admin reset password dialog */}
+      <Dialog open={resetPwDialogOpen} onOpenChange={setResetPwDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Resetear Contraseña</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <p className="text-sm text-muted-foreground">
+              Asignar nueva contraseña para <strong>{resetPwUser?.nombre}</strong> ({resetPwUser?.email})
+            </p>
+            <div>
+              <label className="text-sm font-medium">Nueva contraseña *</label>
+              <Input
+                type="password"
+                value={resetPwValue}
+                onChange={(e) => setResetPwValue(e.target.value)}
+                placeholder="Mínimo 6 caracteres"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setResetPwDialogOpen(false)}>Cancelar</Button>
+            <Button onClick={handleResetPassword} disabled={resetPwLoading}>
+              {resetPwLoading ? "Guardando…" : "Resetear Contraseña"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
