@@ -381,8 +381,13 @@ export function RiesgoFormDialog({ open, onClose, folioId, riesgo, nextNumeroId 
     setSaving(false);
   };
 
-  const fechaCompromisoDate = form.fecha_compromiso ? new Date(form.fecha_compromiso + "T12:00:00") : undefined;
-  const fechaEvidenciaDate = form.fecha_evidencia ? new Date(form.fecha_evidencia + "T12:00:00") : undefined;
+  const parseSafeDate = (val: string | null | undefined): Date | undefined => {
+    if (!val) return undefined;
+    const d = new Date(val + (val.length === 10 ? "T12:00:00" : ""));
+    return isNaN(d.getTime()) ? undefined : d;
+  };
+  const fechaCompromisoDate = parseSafeDate(form.fecha_compromiso);
+  const fechaEvidenciaDate = parseSafeDate(form.fecha_evidencia);
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
