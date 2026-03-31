@@ -122,10 +122,18 @@ export default function Dashboard() {
   const reduccionCriticos =
     critical.length > 0 ? Math.round(((critical.length - criticalResidual.length) / critical.length) * 100) : 0;
 
-  // Avance captura AMEF: folios con al menos 1 riesgo / total folios
-  // Excluye borradores nuevos sin riesgos del denominador si aplica
+  // Avance captura AMEF ponderado por estado del folio
+  // Aprobado = 100%, En Firma = 75%, Borrador con riesgos = 50%, Rechazado = 0%, Sin riesgos = 0%
   const foliosConRiesgo = fols.filter((f) => risks.some((r) => r.folio_id === f.id));
-  const avanceAMEF = fols.length > 0 ? Math.round((foliosConRiesgo.length / fols.length) * 100) : 0;
+  const puntosAMEF = fols.reduce((sum, f) => {
+    const tieneRiesgos = risks.some((r) => r.folio_id === f.id);
+    if (!tieneRiesgos) return sum + 0;
+    if (f.conclusion === "Aprobado") return sum + 100;
+    if (f.conclusion === "Rechazado") return sum + 0;
+    if (f.estado === "En Firma") return sum + 75;
+    return sum + 50; // Borrador con riesgos capturados
+  }, 0);
+  const avanceAMEF = fols.length > 0 ? Math.round(puntosAMEF / fols.length) : 0;
 
   // % aprobados sobre folios activos (excluye borradores sin riesgos)
   const foliosConActividad = fols.filter((f) => f.estado !== "Borrador" || risks.some((r) => r.folio_id === f.id));
@@ -301,7 +309,8 @@ export default function Dashboard() {
               color={avanceAMEF >= 80 ? "bg-green-500" : avanceAMEF >= 50 ? "bg-amber-500" : "bg-red-500"}
             />
             <p className="text-xs text-muted-foreground">
-              {foliosConRiesgo.length} de {fols.length} folios con riesgos capturados
+              {foliosConRiesgo.length} de {fols.length} folios con riesgos capturados · Aprobado=100% · En Firma=75% ·
+              Borrador=50% · Rechazado=0%
             </p>
 
             {/* Lista folios sin riesgos */}
