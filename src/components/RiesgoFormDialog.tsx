@@ -636,7 +636,7 @@ export function RiesgoFormDialog({ open, onClose, folioId, riesgo, nextNumeroId 
                       )}
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {form.fecha_evidencia ? format(fechaEvidenciaDate!, "PPP") : "Seleccionar fecha"}
+                      {fechaEvidenciaDate ? format(fechaEvidenciaDate, "PPP") : "Seleccionar fecha"}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
