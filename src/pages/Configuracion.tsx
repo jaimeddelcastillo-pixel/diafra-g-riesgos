@@ -376,11 +376,16 @@ export default function Configuracion() {
           <h1 className="text-2xl font-bold">Configuración</h1>
           <p className="text-sm text-muted-foreground">Gestión de usuarios, roles y notificaciones</p>
         </div>
-        {isAdmin && (
-          <Button onClick={() => setNewDialogOpen(true)} className="gap-2">
-            <UserPlus className="h-4 w-4" /> Nuevo Usuario
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setPwDialogOpen(true)} className="gap-2">
+            <Lock className="h-4 w-4" /> Cambiar mi Contraseña
           </Button>
-        )}
+          {isAdmin && (
+            <Button onClick={() => setNewDialogOpen(true)} className="gap-2">
+              <UserPlus className="h-4 w-4" /> Nuevo Usuario
+            </Button>
+          )}
+        </div>
       </div>
 
       <Card>
