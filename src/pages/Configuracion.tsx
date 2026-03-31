@@ -432,9 +432,12 @@ export default function Configuracion() {
                       </Badge>
                     </td>
                     {isAdmin && (
-                      <td className="py-2">
+                      <td className="py-2 flex gap-1">
                         <Button variant="ghost" size="icon" onClick={() => openEdit(u)}>
                           <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => { setResetPwUser(u); setResetPwValue(""); setResetPwDialogOpen(true); }} title="Resetear contraseña">
+                          <KeyRound className="h-3.5 w-3.5" />
                         </Button>
                       </td>
                     )}
