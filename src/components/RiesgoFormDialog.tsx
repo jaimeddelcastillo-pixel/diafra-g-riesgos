@@ -386,8 +386,19 @@ export function RiesgoFormDialog({ open, onClose, folioId, riesgo, nextNumeroId 
     setSaving(false);
   };
 
-  const fechaCompromisoDate = form.fecha_compromiso ? new Date(form.fecha_compromiso + "T12:00:00") : undefined;
-  const fechaEvidenciaDate = form.fecha_evidencia ? new Date(form.fecha_evidencia + "T12:00:00") : undefined;
+  // Validación defensiva de fechas — algunos riesgos tienen texto libre en fecha_evidencia
+  const parseFecha = (val: string | null | undefined): Date | undefined => {
+    if (!val) return undefined;
+    // Solo parsear si tiene formato yyyy-MM-dd
+    if (/^\d{4}-\d{2}-\d{2}$/.test(val)) {
+      const d = new Date(val + "T12:00:00");
+      return isNaN(d.getTime()) ? undefined : d;
+    }
+    return undefined;
+  };
+
+  const fechaCompromisoDate = parseFecha(form.fecha_compromiso);
+  const fechaEvidenciaDate = parseFecha(form.fecha_evidencia);
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
@@ -584,7 +595,9 @@ export function RiesgoFormDialog({ open, onClose, folioId, riesgo, nextNumeroId 
                       )}
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {form.fecha_compromiso ? format(fechaCompromisoDate!, "PPP") : "Seleccionar fecha"}
+                      {fechaCompromisoDate
+                        ? format(fechaCompromisoDate, "PPP")
+                        : form.fecha_compromiso || "Seleccionar fecha"}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
@@ -636,7 +649,9 @@ export function RiesgoFormDialog({ open, onClose, folioId, riesgo, nextNumeroId 
                       )}
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {form.fecha_evidencia ? format(fechaEvidenciaDate!, "PPP") : "Seleccionar fecha"}
+                      {fechaEvidenciaDate
+                        ? format(fechaEvidenciaDate, "PPP")
+                        : form.fecha_evidencia || "Seleccionar fecha"}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
