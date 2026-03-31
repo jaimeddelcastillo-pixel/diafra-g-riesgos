@@ -23,26 +23,39 @@ import autoTable from "jspdf-autotable";
 function exportarCSV(folios: any[], riesgosMap: Map<string, any[]>) {
   const filas: string[][] = [];
 
-  // Encabezado
   filas.push([
     "Folio",
     "Proceso / Equipo",
     "Origen",
     "Estado",
-    "Conclusión",
+    "Conclusion",
     "Fecha Inicio",
     "Fecha Cierre",
     "Total Riesgos",
-    "Riesgos Críticos",
-    "NPR Máximo",
-    "Acciones Pendientes",
+    "Riesgos Criticos",
+    "NPR Maximo",
+    "Nivel NPR",
+    "Acciones Sin Definir",
+    "Sin Responsable",
+    "Sin Evidencia",
   ]);
 
   folios.forEach((f) => {
     const riesgos = riesgosMap.get(f.id) || [];
     const criticos = riesgos.filter((r) => (r.npr ?? 0) > 150 || r.severidad >= 9).length;
     const nprMax = riesgos.length ? Math.max(...riesgos.map((r) => r.npr ?? 0)) : 0;
-    const accionesPendientes = riesgos.filter((r) => r.requiere_accion && !r.accion_implementada).length;
+    const nivel = getNPRLevel(nprMax);
+    const nivelTexto = nivel.label === "Crítico" ? "CRITICO" : nivel.label === "Mayor" ? "MAYOR" : "Menor";
+    const accionesSinDefinir = riesgos.filter(
+      (r) => ((r.npr ?? 0) > 150 || r.severidad >= 9) && !r.accion_propuesta,
+    ).length;
+    const sinResponsable = riesgos.filter((r) => r.accion_propuesta && !r.responsable).length;
+    const sinEvidencia = riesgos.filter(
+      (r) =>
+        ((r.npr ?? 0) > 150 || r.severidad >= 9) &&
+        r.accion_propuesta &&
+        (!(r as any).anexos || (r as any).anexos.length === 0),
+    ).length;
 
     filas.push([
       f.codigo,
@@ -51,15 +64,17 @@ function exportarCSV(folios: any[], riesgosMap: Map<string, any[]>) {
       f.estado,
       f.conclusion || "Pendiente",
       f.fecha_inicio,
-      f.fecha_cierre || "—",
+      f.fecha_cierre || "",
       String(riesgos.length),
       String(criticos),
       String(nprMax),
-      String(accionesPendientes),
+      nivelTexto,
+      accionesSinDefinir > 0 ? `PENDIENTE (${accionesSinDefinir})` : "OK",
+      sinResponsable > 0 ? `SIN ASIGNAR (${sinResponsable})` : "OK",
+      sinEvidencia > 0 ? `FALTA (${sinEvidencia})` : "OK",
     ]);
   });
 
-  // Construir contenido CSV con BOM para que Excel abra bien en español
   const bom = "\uFEFF";
   const csv = bom + filas.map((r) => r.map((c) => `"${c}"`).join(",")).join("\n");
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
@@ -116,7 +131,18 @@ function exportarPDF(folios: any[], riesgosMap: Map<string, any[]>) {
     const criticos = riesgos.filter((r) => (r.npr ?? 0) > 150 || r.severidad >= 9).length;
     const nprMax = riesgos.length ? Math.max(...riesgos.map((r) => r.npr ?? 0)) : 0;
     const nivel = getNPRLevel(nprMax);
-    const accionesPendientes = riesgos.filter((r) => r.requiere_accion && !r.accion_implementada).length;
+    // Sin emojis — texto plano compatible con jsPDF
+    const nivelTexto = nivel.label === "Crítico" ? "CRITICO" : nivel.label === "Mayor" ? "MAYOR" : "Menor";
+    const accionesSinDefinir = riesgos.filter(
+      (r) => ((r.npr ?? 0) > 150 || r.severidad >= 9) && !r.accion_propuesta,
+    ).length;
+    const sinResponsable = riesgos.filter((r) => r.accion_propuesta && !r.responsable).length;
+    const sinEvidencia = riesgos.filter(
+      (r) =>
+        ((r.npr ?? 0) > 150 || r.severidad >= 9) &&
+        r.accion_propuesta &&
+        (!(r as any).anexos || (r as any).anexos.length === 0),
+    ).length;
 
     return [
       f.codigo,
@@ -125,11 +151,13 @@ function exportarPDF(folios: any[], riesgosMap: Map<string, any[]>) {
       f.estado,
       f.conclusion || "Pendiente",
       f.fecha_inicio,
-      f.fecha_cierre || "—",
+      f.fecha_cierre || "",
       String(riesgos.length),
       String(criticos),
-      `${nivel.dot} ${nprMax}`,
-      accionesPendientes > 0 ? `⚠ ${accionesPendientes}` : "✓",
+      `${nprMax} (${nivelTexto})`,
+      accionesSinDefinir > 0 ? `PEND. (${accionesSinDefinir})` : "OK",
+      sinResponsable > 0 ? `S/ASIG (${sinResponsable})` : "OK",
+      sinEvidencia > 0 ? `FALTA (${sinEvidencia})` : "OK",
     ];
   });
 
@@ -141,34 +169,37 @@ function exportarPDF(folios: any[], riesgosMap: Map<string, any[]>) {
         "Proceso / Equipo",
         "Origen",
         "Estado",
-        "Conclusión",
+        "Conclusion",
         "F. Inicio",
         "F. Cierre",
         "Riesgos",
-        "Críticos",
-        "NPR Máx.",
-        "Acc. Pend.",
+        "Criticos",
+        "NPR Max.",
+        "Acc.",
+        "Resp.",
+        "Evid.",
       ],
     ],
     body: rows,
     theme: "grid",
-    styles: { fontSize: 6.5, cellPadding: 2, lineColor: [0, 0, 0], lineWidth: 0.2 },
-    headStyles: { fillColor: [30, 30, 60], textColor: [255, 255, 255], fontStyle: "bold", fontSize: 7 },
+    styles: { fontSize: 6, cellPadding: 2, lineColor: [0, 0, 0], lineWidth: 0.2 },
+    headStyles: { fillColor: [30, 30, 60], textColor: [255, 255, 255], fontStyle: "bold", fontSize: 6.5 },
     columnStyles: {
-      0: { cellWidth: 28, fontStyle: "bold" },
-      1: { cellWidth: 55 },
-      2: { cellWidth: 28 },
-      3: { cellWidth: 20 },
-      4: { cellWidth: 22 },
-      5: { cellWidth: 20 },
-      6: { cellWidth: 20 },
-      7: { cellWidth: 14, halign: "center" },
-      8: { cellWidth: 14, halign: "center" },
-      9: { cellWidth: 18, halign: "center" },
+      0: { cellWidth: 26, fontStyle: "bold" },
+      1: { cellWidth: 50 },
+      2: { cellWidth: 24 },
+      3: { cellWidth: 18 },
+      4: { cellWidth: 20 },
+      5: { cellWidth: 18 },
+      6: { cellWidth: 18 },
+      7: { cellWidth: 12, halign: "center" },
+      8: { cellWidth: 12, halign: "center" },
+      9: { cellWidth: 22, halign: "center" },
       10: { cellWidth: 18, halign: "center" },
+      11: { cellWidth: 18, halign: "center" },
+      12: { cellWidth: 18, halign: "center" },
     },
     didParseCell: (data) => {
-      // Colorear por estado
       if (data.column.index === 3 && data.section === "body") {
         const estado = data.cell.raw as string;
         if (estado === "Aprobado") data.cell.styles.textColor = [15, 110, 86];
@@ -176,16 +207,15 @@ function exportarPDF(folios: any[], riesgosMap: Map<string, any[]>) {
         if (estado === "En Firma") data.cell.styles.textColor = [30, 100, 200];
         if (estado === "Cerrado") data.cell.styles.textColor = [60, 60, 60];
       }
-      // Resaltar críticos
       if (data.column.index === 8 && data.section === "body") {
         const val = parseInt(data.cell.raw as string);
         if (val > 0) data.cell.styles.textColor = [180, 0, 0];
       }
-      // Acciones pendientes
-      if (data.column.index === 10 && data.section === "body") {
+      // Columnas de estado: rojo si hay problemas, verde si OK
+      if ([10, 11, 12].includes(data.column.index) && data.section === "body") {
         const val = data.cell.raw as string;
-        if (val.startsWith("⚠")) data.cell.styles.textColor = [180, 80, 0];
-        if (val === "✓") data.cell.styles.textColor = [15, 110, 86];
+        if (val === "OK") data.cell.styles.textColor = [15, 110, 86];
+        else data.cell.styles.textColor = [180, 0, 0];
       }
     },
     margin: { left: margin, right: margin },
