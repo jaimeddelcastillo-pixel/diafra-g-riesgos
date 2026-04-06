@@ -3,115 +3,121 @@ import autoTable from "jspdf-autotable";
 import type { Folio, Riesgo, FolioComite } from "@/hooks/useFolios";
 import { getNPRLevel } from "@/hooks/useFolios";
 
-// ─── Helpers de dibujo ────────────────────────────────────────────────────────
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
-// Checkbox dibujado con rect — no depende de fuentes Unicode
-function drawCheckbox(doc: jsPDF, x: number, y: number, checked: boolean) {
-  doc.setDrawColor(0);
-  doc.setLineWidth(0.3);
-  doc.rect(x, y, 3, 3);
-  if (checked) {
-    doc.setFillColor(0, 0, 0);
-    doc.rect(x + 0.5, y + 0.5, 2, 2, "F");
-  }
+function chk(checked: boolean): string {
+  return checked ? "(X)" : "( )";
 }
 
-// Círculo de semáforo dibujado con colores reales
-function drawSemaforoCircle(doc: jsPDF, x: number, y: number, r: number, color: [number, number, number]) {
-  doc.setFillColor(color[0], color[1], color[2]);
-  doc.setDrawColor(0);
-  doc.setLineWidth(0.2);
-  doc.circle(x, y, r, "FD");
+function getNPRText(npr: number, severidad: number): string {
+  const level = getNPRLevel(npr, severidad);
+  if (level.label === "Crítico") return `Crítico  ${npr}`;
+  if (level.label === "Mayor") return `Mayor  ${npr}`;
+  return `Menor  ${npr}`;
 }
 
 function getNPRColor(npr: number, severidad: number): [number, number, number] {
   const level = getNPRLevel(npr, severidad);
-  if (level.label === "Crítico") return [220, 53, 69]; // rojo
-  if (level.label === "Mayor") return [255, 193, 7]; // amarillo
-  return [40, 167, 69]; // verde
+  if (level.label === "Crítico") return [180, 0, 0];
+  if (level.label === "Mayor") return [160, 120, 0];
+  return [0, 130, 0];
 }
 
-export function generateFolioPDF(folio: Folio, riesgos: Riesgo[], comite: FolioComite[]) {
+export async function generateFolioPDF(folio: Folio, riesgos: Riesgo[], comite: FolioComite[]) {
   const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "letter" });
   const pageW = doc.internal.pageSize.getWidth();
   const pageH = doc.internal.pageSize.getHeight();
   const margin = 10;
   let pageNum = 0;
 
-  // ─── Encabezado y pie ──────────────────────────────────────────────────────
-  function addHeader() {
-    // Borde de encabezado
+  // Cargar logo desde carpeta pública
+  let logoData: string | null = null;
+  try {
+    const resp = await fetch("/logo-diafra.png");
+    if (resp.ok) {
+      const blob = await resp.blob();
+      logoData = await new Promise<string>((res) => {
+        const reader = new FileReader();
+        reader.onload = () => res(reader.result as string);
+        reader.readAsDataURL(blob);
+      });
+    }
+  } catch {
+    /* continúa sin logo */
+  }
+
+  // ─── Encabezado ─────────────────────────────────────────────────────────────
+  function addHeader(pageIndex: number, totalPages: number) {
     doc.setDrawColor(0);
     doc.setLineWidth(0.4);
-    doc.rect(margin, 5, pageW - 2 * margin, 18, "S");
-
-    // Columna izquierda: logo área
+    doc.rect(margin, 5, pageW - 2 * margin, 18);
     doc.setLineWidth(0.3);
-    doc.line(margin + 25, 5, margin + 25, 23);
+    doc.line(margin + 28, 5, margin + 28, 23);
+    doc.line(pageW - margin - 32, 5, pageW - margin - 32, 23);
 
-    // Logo texto DIAFRA (fallback sin imagen)
-    doc.setFontSize(7);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(15, 31, 61); // azul DIAFRA
-    doc.text("DIAFRA", margin + 3, 11);
-    doc.text("S.A. DE C.V.", margin + 2, 15);
-    doc.setFontSize(5);
-    doc.setFont("helvetica", "normal");
-    doc.text("Gestión de Calidad", margin + 1, 19);
+    if (logoData) {
+      doc.addImage(logoData, "PNG", margin + 1, 6.5, 24, 13);
+    } else {
+      doc.setFontSize(7.5);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(15, 31, 61);
+      doc.text("DIAFRA", margin + 3, 12);
+      doc.text("S.A. DE C.V.", margin + 2, 17);
+      doc.setFontSize(5.5);
+      doc.setFont("helvetica", "normal");
+      doc.text("Gestión de Calidad", margin + 1, 21);
+      doc.setTextColor(0);
+    }
+
     doc.setTextColor(0);
-
-    // Columna central: título
     doc.setFontSize(9);
     doc.setFont("helvetica", "bold");
     doc.text("DIAFRA S.A. DE C.V.", pageW / 2, 11, { align: "center" });
     doc.setFontSize(7);
     doc.setFont("helvetica", "italic");
-    doc.text("FORMATO — DEPARTAMENTO: SISTEMA DE GESTIÓN DE CALIDAD", pageW / 2, 15, { align: "center" });
+    doc.text("FORMATO — DEPARTAMENTO: SISTEMA DE GESTIÓN DE CALIDAD", pageW / 2, 16, { align: "center" });
     doc.setFont("helvetica", "bold");
     doc.setFontSize(8);
-    doc.text("ARCHIVO MAESTRO DE GESTIÓN DE RIESGOS", pageW / 2, 20, { align: "center" });
+    doc.text("ARCHIVO MAESTRO DE GESTIÓN DE RIESGOS", pageW / 2, 21, { align: "center" });
 
-    // Columna derecha: código y página
-    doc.line(pageW - margin - 30, 5, pageW - margin - 30, 23);
-    doc.setFontSize(6.5);
+    doc.setFontSize(7);
     doc.setFont("helvetica", "normal");
-    doc.text("FOR-SGC-11-01 (02)", pageW - margin - 15, 11, { align: "center" });
-    const pn = (doc as any).internal.getCurrentPageInfo().pageNumber;
-    const total = (doc as any).internal.getNumberOfPages();
-    doc.text(`Página ${pn} de ${total}`, pageW - margin - 15, 17, { align: "center" });
+    doc.text("FOR-SGC-11-01 (02)", pageW - margin - 16, 12, { align: "center" });
+    doc.text(`Página ${pageIndex} de ${totalPages}`, pageW - margin - 16, 18, { align: "center" });
   }
 
   function addFooter() {
     doc.setFontSize(5.5);
     doc.setFont("helvetica", "normal");
+    doc.setTextColor(80);
     doc.text(
       "Documento confidencial propiedad de Diafra S.A. de C.V., queda prohibido su uso, divulgación y/o reproducción total o parcial sin previa autorización.",
       pageW / 2,
       pageH - 3,
       { align: "center" },
     );
+    doc.setTextColor(0);
   }
 
   function newPage(): number {
     if (pageNum > 0) doc.addPage();
     pageNum++;
-    addHeader();
     addFooter();
-    return 28; // y inicial después del encabezado
+    return 28;
   }
 
-  // ─── PÁGINA 1: Descripción + Comité ───────────────────────────────────────
-  let y = newPage();
+  function sectionHeader(y: number, text: string): number {
+    doc.setFillColor(220, 220, 220);
+    doc.rect(margin, y, pageW - 2 * margin, 6, "FD");
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(8);
+    doc.text(text, margin + 3, y + 4.2);
+    return y + 7;
+  }
 
-  // Sección I
-  doc.setFillColor(220, 220, 220);
-  doc.rect(margin, y, pageW - 2 * margin, 6, "F");
-  doc.setDrawColor(0);
-  doc.rect(margin, y, pageW - 2 * margin, 6, "S");
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(8);
-  doc.text("I.  DESCRIPCIÓN", margin + 3, y + 4.2);
-  y += 7;
+  // ─── PÁGINA 1: Descripción + Comité ─────────────────────────────────────────
+  let y = newPage();
+  y = sectionHeader(y, "I.  DESCRIPCIÓN");
 
   autoTable(doc, {
     startY: y,
@@ -122,19 +128,19 @@ export function generateFolioPDF(folio: Folio, riesgos: Riesgo[], comite: FolioC
       ],
       [
         { content: "Proceso / Equipo\nAnalizado:", styles: { fontStyle: "bold", cellWidth: 32 } },
-        { content: folio.proceso_equipo, colSpan: 1 },
+        folio.proceso_equipo,
         { content: "Origen:", styles: { fontStyle: "bold", cellWidth: 18 } },
-        { content: folio.origen || "—" },
+        folio.origen || "—",
         { content: "Desviación:", styles: { fontStyle: "bold", cellWidth: 22 } },
-        { content: folio.desviacion_id || "—" },
+        folio.desviacion_id || "—",
       ],
       [
         { content: "Control de Cambios:", styles: { fontStyle: "bold", cellWidth: 32 } },
-        { content: folio.control_cambios_id || "—" },
+        folio.control_cambios_id || "—",
         { content: "Fecha Inicio:", styles: { fontStyle: "bold" } },
-        { content: folio.fecha_inicio },
+        folio.fecha_inicio,
         { content: "Fecha Cierre:", styles: { fontStyle: "bold" } },
-        { content: folio.fecha_cierre || "—" },
+        folio.fecha_cierre || "—",
       ],
       [
         { content: "Alcance:", styles: { fontStyle: "bold", cellWidth: 32 } },
@@ -147,29 +153,14 @@ export function generateFolioPDF(folio: Folio, riesgos: Riesgo[], comite: FolioC
   });
 
   y = (doc as any).lastAutoTable.finalY + 5;
+  y = sectionHeader(y, "II.  FORMACIÓN Y APROBACIÓN DEL COMITÉ TÉCNICO");
 
-  // Sección II - Comité
-  doc.setFillColor(220, 220, 220);
-  doc.rect(margin, y, pageW - 2 * margin, 6, "F");
-  doc.setDrawColor(0);
-  doc.rect(margin, y, pageW - 2 * margin, 6, "S");
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(8);
-  doc.text("II.  FORMACIÓN Y APROBACIÓN DEL COMITÉ TÉCNICO", margin + 3, y + 4.2);
-  y += 7;
-
-  // Tabla comité — FIRMA EN BLANCO (para firma física)
   autoTable(doc, {
     startY: y,
     head: [["NOMBRE", "CARGO", "RESPONSABILIDAD", "FIRMA"]],
-    body: comite.map((m) => [
-      m.nombre,
-      m.cargo,
-      m.responsabilidad,
-      "", // FIRMA EN BLANCO — se firma en físico después de imprimir
-    ]),
+    body: comite.map((m) => [m.nombre, m.cargo, m.responsabilidad, ""]),
     theme: "grid",
-    styles: { fontSize: 7, cellPadding: 3, lineColor: [0, 0, 0], lineWidth: 0.2, minCellHeight: 12 },
+    styles: { fontSize: 7, cellPadding: 3, lineColor: [0, 0, 0], lineWidth: 0.2, minCellHeight: 14 },
     headStyles: { fillColor: [220, 220, 220], textColor: [0, 0, 0], fontStyle: "bold", halign: "center" },
     columnStyles: {
       0: { cellWidth: 48 },
@@ -180,27 +171,35 @@ export function generateFolioPDF(folio: Folio, riesgos: Riesgo[], comite: FolioC
     margin: { left: margin, right: margin },
   });
 
-  // ─── PÁGINAS DE RIESGOS ────────────────────────────────────────────────────
-  const romanNums = ["III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII", "XIII", "XIV", "XV"];
+  // ─── PÁGINAS DE RIESGOS ──────────────────────────────────────────────────────
+  const romanNums = [
+    "III",
+    "IV",
+    "V",
+    "VI",
+    "VII",
+    "VIII",
+    "IX",
+    "X",
+    "XI",
+    "XII",
+    "XIII",
+    "XIV",
+    "XV",
+    "XVI",
+    "XVII",
+    "XVIII",
+    "XIX",
+    "XX",
+  ];
 
   riesgos.forEach((r, idx) => {
     y = newPage();
-    const roman = romanNums[idx] || `${idx + 3}`;
-
-    // Encabezado de sección
-    doc.setFillColor(220, 220, 220);
-    doc.rect(margin, y, pageW - 2 * margin, 6, "F");
-    doc.setDrawColor(0);
-    doc.rect(margin, y, pageW - 2 * margin, 6, "S");
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(8);
-    doc.text(`${roman}.  GESTIÓN DE RIESGOS`, margin + 3, y + 4.2);
-    y += 7;
+    y = sectionHeader(y, `${romanNums[idx] ?? idx + 3}.  GESTIÓN DE RIESGOS`);
 
     const npr = r.npr ?? r.severidad * r.ocurrencia * r.deteccion;
     const nprRes = r.npr_residual ?? r.sev_residual * r.ocu_residual * r.det_residual;
 
-    // Tabla de riesgo
     autoTable(doc, {
       startY: y,
       head: [
@@ -213,6 +212,7 @@ export function generateFolioPDF(folio: Folio, riesgos: Riesgo[], comite: FolioC
         ],
       ],
       body: [
+        // Fila 1: Etapa / S / Controles / Acción
         [
           {
             content: String(r.numero_id).padStart(2, "0"),
@@ -221,39 +221,51 @@ export function generateFolioPDF(folio: Folio, riesgos: Riesgo[], comite: FolioC
           },
           `Etapa del Proceso:\n${r.etapa_proceso}`,
           { content: "S:", styles: { fontStyle: "bold", halign: "right" } },
-          { content: String(r.severidad), styles: { fontStyle: "bold", halign: "center", fontSize: 10 } },
+          { content: String(r.severidad), styles: { fontStyle: "bold", halign: "center", fontSize: 11 } },
           `Controles Actuales:\n${r.controles_actuales || "—"}`,
           { content: `Acción Implementada:\n${r.accion_implementada || "—"}`, colSpan: 2 },
         ],
+        // Fila 2: Peligro / O / Requiere / Fecha
         [
           `Peligro / Modo de Falla:\n${r.peligro_modo_falla}`,
           { content: "O:", styles: { fontStyle: "bold", halign: "right" } },
-          { content: String(r.ocurrencia), styles: { halign: "center", fontSize: 10 } },
-          // ¿Requiere Acción? — texto limpio sin checkboxes Unicode
-          `¿Requiere Acción?\n   Si       No`,
+          { content: String(r.ocurrencia), styles: { halign: "center", fontSize: 11 } },
+          `¿Requiere Acción?\n${chk(r.requiere_accion === true)} Si    ${chk(r.requiere_accion === false)} No`,
           { content: `Fecha y Evidencia:\n${r.fecha_evidencia || "—"}`, colSpan: 2 },
         ],
+        // Fila 3: Causa / D / Acción propuesta / Residuales
         [
           `Causa Potencial:\n${r.causa_potencial}`,
           { content: "D:", styles: { fontStyle: "bold", halign: "right" } },
-          { content: String(r.deteccion), styles: { halign: "center", fontSize: 10 } },
+          { content: String(r.deteccion), styles: { halign: "center", fontSize: 11 } },
           `Acción Propuesta:\n${r.accion_propuesta || "—"}`,
           { content: `S: ${r.sev_residual}\nO: ${r.ocu_residual}\nD: ${r.det_residual}`, styles: { halign: "center" } },
           "",
         ],
+        // Fila 4: Efecto / NPR coloreado / Responsable / NPR Residual coloreado
         [
           `Efecto / Daño:\n${r.efecto_dano}`,
-          { content: `NPR: (S x O x D):\n${npr}`, colSpan: 2, styles: { halign: "center", fontStyle: "bold" } },
+          {
+            content: `NPR: (S x O x D):\n${getNPRText(npr, r.severidad)}`,
+            colSpan: 2,
+            styles: { halign: "center", fontStyle: "bold", textColor: getNPRColor(npr, r.severidad) },
+          },
           `Responsable:\n${r.responsable || "—"}`,
-          { content: `NPR RESIDUAL:\n${nprRes}`, colSpan: 2, styles: { halign: "center", fontStyle: "bold" } },
+          {
+            content: `NPR RESIDUAL:\n${getNPRText(nprRes, r.sev_residual)}`,
+            colSpan: 2,
+            styles: { halign: "center", fontStyle: "bold", textColor: getNPRColor(nprRes, r.sev_residual) },
+          },
         ],
+        // Fila 5: Leyenda / Fecha / Dictamen
         [
           "",
-          // Leyenda sin emojis
-          { content: "Critico (> 150 o S >= 9)\nMayor (60-149)\nMenor (< 60)", colSpan: 2, styles: { fontSize: 6 } },
+          { content: "Crítico (> 150 ó S >= 9)\nMayor (60-149)\nMenor (< 60)", colSpan: 2, styles: { fontSize: 6.5 } },
           `Fecha:\n${r.fecha_compromiso || "—"}`,
-          // Dictamen — texto limpio sin checkboxes Unicode
-          { content: `DICTAMEN:\n   Aceptable\n   No Aceptable`, colSpan: 2 },
+          {
+            content: `DICTAMEN:\n${chk(r.dictamen === "Aceptable")} Aceptable\n${chk(r.dictamen === "No Aceptable")} No Aceptable`,
+            colSpan: 2,
+          },
         ],
       ],
       theme: "grid",
@@ -264,136 +276,69 @@ export function generateFolioPDF(folio: Folio, riesgos: Riesgo[], comite: FolioC
         1: { cellWidth: 68 },
         2: { cellWidth: 8 },
         3: { cellWidth: 12 },
-        4: { cellWidth: 68 },
-        5: { cellWidth: 30 },
-        6: { cellWidth: 30 },
+        4: { cellWidth: 70 },
+        5: { cellWidth: 28 },
+        6: { cellWidth: 28 },
       },
       margin: { left: margin, right: margin },
-      didDrawCell: (data: any) => {
-        // Dibujar checkboxes como rectángulos reales
-        const { cell, row, column } = data;
-        const cx = cell.x;
-        const cy = cell.y;
-
-        // Fila ¿Requiere Acción? (row.index=1, col=4 en body)
-        if (row.section === "body" && row.index === 1 && column.index === 4) {
-          const x0 = cx + 4;
-          const y0 = cy + 10;
-          drawCheckbox(doc, x0, y0, r.requiere_accion === true);
-          drawCheckbox(doc, x0 + 12, y0, r.requiere_accion === false);
-        }
-
-        // Fila Dictamen (row.index=4, col=5)
-        if (row.section === "body" && row.index === 4 && column.index === 5) {
-          const x0 = cx + 4;
-          drawCheckbox(doc, x0, cy + 9, r.dictamen === "Aceptable");
-          drawCheckbox(doc, x0, cy + 14, r.dictamen === "No Aceptable");
-        }
-
-        // Semáforo NPR (row.index=3, col=2) — círculos de color
-        if (row.section === "body" && row.index === 3 && column.index === 2) {
-          const color = getNPRColor(npr, r.severidad);
-          drawSemaforoCircle(doc, cx + 6, cy + cell.height / 2, 2.5, color);
-        }
-
-        // Semáforo NPR Residual (row.index=3, col=5)
-        if (row.section === "body" && row.index === 3 && column.index === 5) {
-          const color = getNPRColor(nprRes, r.sev_residual);
-          drawSemaforoCircle(doc, cx + 6, cy + cell.height / 2, 2.5, color);
-        }
-
-        // Leyenda semáforo (row.index=4, col=2) — 3 círculos de colores
-        if (row.section === "body" && row.index === 4 && column.index === 2) {
-          drawSemaforoCircle(doc, cx + 4, cy + 5, 1.8, [220, 53, 69]);
-          drawSemaforoCircle(doc, cx + 4, cy + 10, 1.8, [255, 193, 7]);
-          drawSemaforoCircle(doc, cx + 4, cy + 15, 1.8, [40, 167, 69]);
-        }
-      },
     });
   });
 
-  // ─── PÁGINA DICTAMEN ───────────────────────────────────────────────────────
+  // ─── PÁGINA DICTAMEN ─────────────────────────────────────────────────────────
   y = newPage();
-  const dictamenRoman = romanNums[riesgos.length] || `${riesgos.length + 3}`;
-
-  doc.setFillColor(220, 220, 220);
-  doc.rect(margin, y, pageW - 2 * margin, 6, "F");
-  doc.setDrawColor(0);
-  doc.rect(margin, y, pageW - 2 * margin, 6, "S");
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(8);
-  doc.text(`${dictamenRoman}.  DICTAMEN DE BENEFICIO-RIESGO`, margin + 3, y + 4.2);
-  y += 10;
-
+  const dictamenRoman = romanNums[riesgos.length] ?? `${riesgos.length + 3}`;
   const hasNoAceptables = riesgos.some((r) => r.dictamen === "No Aceptable");
+  const conclusion = folio.conclusion || "";
 
-  // Línea ¿Existen riesgos NO ACEPTABLES?
+  y = sectionHeader(y, `${dictamenRoman}.  DICTAMEN DE BENEFICIO-RIESGO`);
+  y += 3;
+
+  // ¿Existen NO ACEPTABLES?
   doc.setDrawColor(0);
   doc.setLineWidth(0.3);
-  doc.rect(margin, y, pageW - 2 * margin, 8, "S");
+  doc.rect(margin, y, pageW - 2 * margin, 8);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(7.5);
-  doc.text("¿Existen riesgos residuales clasificados como NO ACEPTABLES o CONDICIONADOS?", margin + 3, y + 5);
-
-  const qx = margin + 190;
-  doc.text("SÍ", qx, y + 5);
-  drawCheckbox(doc, qx + 6, y + 2, hasNoAceptables);
-  doc.text("NO", qx + 18, y + 5);
-  drawCheckbox(doc, qx + 24, y + 2, !hasNoAceptables);
+  doc.text("¿Existen riesgos residuales clasificados como NO ACEPTABLES o CONDICIONADOS?", margin + 3, y + 5.5);
+  doc.text(`SÍ  ${chk(hasNoAceptables)}     NO  ${chk(!hasNoAceptables)}`, margin + 192, y + 5.5);
   y += 11;
 
   // Justificación técnica
-  doc.setDrawColor(0);
-  doc.setLineWidth(0.3);
-  doc.rect(margin, y, pageW - 2 * margin, 35, "S");
+  doc.rect(margin, y, pageW - 2 * margin, 35);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(7);
-  doc.text("JUSTIFICACIÓN TÉCNICA:", margin + 3, y + 4);
+  doc.text("JUSTIFICACIÓN TÉCNICA:", margin + 3, y + 4.5);
   doc.setFont("helvetica", "italic");
   doc.setFontSize(6);
   doc.text(
     "(Explicar por qué el beneficio médico supera el riesgo residual identificado, citando evidencia clínica o técnica).",
-    margin + 46,
-    y + 4,
+    margin + 47,
+    y + 4.5,
   );
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(7);
   const justText = folio.justificacion_tecnica || "";
   if (justText) {
-    const justLines = doc.splitTextToSize(justText, pageW - 2 * margin - 6);
-    doc.text(justLines, margin + 3, y + 9);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(7);
+    const lines = doc.splitTextToSize(justText, pageW - 2 * margin - 6);
+    doc.text(lines, margin + 3, y + 9);
   }
   y += 38;
 
   // Conclusión
   doc.setLineWidth(0.4);
-  doc.rect(margin, y, pageW - 2 * margin, 10, "S");
+  doc.rect(margin, y, pageW - 2 * margin, 10);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(9);
   doc.text("CONCLUSIÓN:", margin + 5, y + 7);
-
-  const conclusion = folio.conclusion || "";
   doc.setFontSize(8);
-  doc.text("APROBADO", margin + 65, y + 7);
-  drawCheckbox(doc, margin + 84, y + 4, conclusion === "Aprobado");
-  doc.text("RECHAZADO", margin + 140, y + 7);
-  drawCheckbox(doc, margin + 163, y + 4, conclusion === "Rechazado");
+  doc.text(`APROBADO   ${chk(conclusion === "Aprobado")}`, margin + 65, y + 7);
+  doc.text(`RECHAZADO   ${chk(conclusion === "Rechazado")}`, margin + 140, y + 7);
 
-  // Actualizar páginas en encabezados (re-render headers con total correcto)
+  // ─── Renderizar encabezados con total de páginas correcto ────────────────────
   const totalPgs = (doc as any).internal.getNumberOfPages();
   for (let i = 1; i <= totalPgs; i++) {
     doc.setPage(i);
-    // Actualizar número de páginas en encabezado
-    doc.setFillColor(255, 255, 255);
-    doc.rect(pageW - margin - 30, 5, 30, 18, "F");
-    doc.setDrawColor(0);
-    doc.setLineWidth(0.3);
-    doc.line(pageW - margin - 30, 5, pageW - margin - 30, 23);
-    doc.rect(pageW - margin - 30, 5, 30, 18, "S");
-    doc.setFontSize(6.5);
-    doc.setFont("helvetica", "normal");
-    doc.text("FOR-SGC-11-01 (02)", pageW - margin - 15, 11, { align: "center" });
-    doc.text(`Página ${i} de ${totalPgs}`, pageW - margin - 15, 17, { align: "center" });
+    addHeader(i, totalPgs);
   }
 
   doc.save(`${folio.codigo}_${folio.proceso_equipo.replace(/[^a-zA-Z0-9]/g, "_")}.pdf`);
