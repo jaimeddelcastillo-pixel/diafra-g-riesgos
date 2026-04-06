@@ -87,51 +87,98 @@ function exportarCSV(folios: any[], riesgosMap: Map<string, any[]>) {
 }
 
 // ─── Exportar a PDF ────────────────────────────────────────────────────────────
-function exportarPDF(folios: any[], riesgosMap: Map<string, any[]>) {
-  const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "letter" });
+async function exportarPDF(folios: any[], riesgosMap: Map<string, any[]>) {
+  // A4 landscape — 297mm × 210mm — más espacio que letter para 13 columnas
+  const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
   const pageW = doc.internal.pageSize.getWidth();
-  const margin = 10;
+  const pageH = doc.internal.pageSize.getHeight();
+  const margin = 8;
 
-  // Encabezado
-  doc.setFontSize(11);
-  doc.setFont("helvetica", "bold");
-  doc.text("DIAFRA S.A. DE C.V.", pageW / 2, 12, { align: "center" });
-  doc.setFontSize(8);
-  doc.setFont("helvetica", "normal");
-  doc.text("LISTADO DE FOLIOS — SISTEMA DE GESTIÓN DE RIESGOS FOR-SGC-11-01", pageW / 2, 18, { align: "center" });
-  doc.setFontSize(7);
-  doc.text(
-    `Generado: ${new Date().toLocaleDateString("es-MX", { day: "2-digit", month: "long", year: "numeric" })}`,
-    pageW / 2,
-    23,
-    { align: "center" },
-  );
-  doc.line(margin, 25, pageW - margin, 25);
+  // Cargar logo desde carpeta pública
+  let logoData: string | null = null;
+  try {
+    const resp = await fetch("/logo-diafra.png");
+    if (resp.ok) {
+      const blob = await resp.blob();
+      logoData = await new Promise<string>((res) => {
+        const reader = new FileReader();
+        reader.onload = () => res(reader.result as string);
+        reader.readAsDataURL(blob);
+      });
+    }
+  } catch {
+    /* continúa sin logo */
+  }
 
-  // Resumen ejecutivo
+  // ─── Encabezado y pie reutilizables ────────────────────────────────────────
+  function addHeader(pageIndex: number, totalPages: number) {
+    // Marco encabezado
+    doc.setDrawColor(0);
+    doc.setLineWidth(0.4);
+    doc.rect(margin, 4, pageW - 2 * margin, 18);
+    doc.setLineWidth(0.3);
+    doc.line(margin + 28, 4, margin + 28, 22);
+    doc.line(pageW - margin - 32, 4, pageW - margin - 32, 22);
+
+    // Logo
+    if (logoData) {
+      doc.addImage(logoData, "PNG", margin + 1, 5.5, 24, 13);
+    } else {
+      doc.setFontSize(7);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(15, 31, 61);
+      doc.text("DIAFRA", margin + 3, 11);
+      doc.text("S.A. DE C.V.", margin + 2, 16);
+      doc.setTextColor(0);
+    }
+
+    // Título central
+    doc.setTextColor(0);
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "bold");
+    doc.text("DIAFRA S.A. DE C.V.", pageW / 2, 10, { align: "center" });
+    doc.setFontSize(7);
+    doc.setFont("helvetica", "italic");
+    doc.text("FORMATO — DEPARTAMENTO: SISTEMA DE GESTIÓN DE CALIDAD", pageW / 2, 15, { align: "center" });
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(7.5);
+    doc.text("LISTADO DE FOLIOS — SISTEMA DE GESTIÓN DE RIESGOS", pageW / 2, 20, { align: "center" });
+
+    // Código y página (derecha)
+    doc.setFontSize(7);
+    doc.setFont("helvetica", "normal");
+    doc.text("FOR-SGC-11-01 (02)", pageW - margin - 16, 11, { align: "center" });
+    doc.text(`Página ${pageIndex} de ${totalPages}`, pageW - margin - 16, 17, { align: "center" });
+  }
+
+  function addFooter() {
+    doc.setFontSize(5.5);
+    doc.setFont("helvetica", "italic");
+    doc.setTextColor(80);
+    doc.text(
+      `Documento confidencial propiedad de Diafra S.A. de C.V. — FOR-SGC-11-01  |  Generado: ${new Date().toLocaleDateString("es-MX", { day: "2-digit", month: "long", year: "numeric" })}`,
+      pageW / 2,
+      pageH - 3,
+      { align: "center" },
+    );
+    doc.setTextColor(0);
+  }
+
+  // ─── Resumen ejecutivo ──────────────────────────────────────────────────────
   const totalFolios = folios.length;
-  const totalRiesgos = Array.from(riesgosMap.values()).flat().length;
-  const totalCriticos = Array.from(riesgosMap.values())
-    .flat()
-    .filter((r) => (r.npr ?? 0) > 150 || r.severidad >= 9).length;
+  const todosRiesgos = Array.from(riesgosMap.values()).flat();
+  const totalRiesgos = todosRiesgos.length;
+  const totalCriticos = todosRiesgos.filter((r) => (r.npr ?? 0) > 150 || r.severidad >= 9).length;
   const aprobados = folios.filter((f) => f.conclusion === "Aprobado").length;
+  const enFirma = folios.filter((f) => f.estado === "En Firma").length;
+  const borradores = folios.filter((f) => f.estado === "Borrador").length;
 
-  doc.setFontSize(8);
-  doc.setFont("helvetica", "bold");
-  doc.text(
-    `Resumen: ${totalFolios} folios · ${totalRiesgos} riesgos totales · ${totalCriticos} críticos · ${aprobados} aprobados`,
-    pageW / 2,
-    30,
-    { align: "center" },
-  );
-
-  // Tabla principal
+  // ─── Filas de datos ─────────────────────────────────────────────────────────
   const rows = folios.map((f) => {
     const riesgos = riesgosMap.get(f.id) || [];
     const criticos = riesgos.filter((r) => (r.npr ?? 0) > 150 || r.severidad >= 9).length;
     const nprMax = riesgos.length ? Math.max(...riesgos.map((r) => r.npr ?? 0)) : 0;
     const nivel = getNPRLevel(nprMax);
-    // Sin emojis — texto plano compatible con jsPDF
     const nivelTexto = nivel.label === "Crítico" ? "CRITICO" : nivel.label === "Mayor" ? "MAYOR" : "Menor";
     const accionesSinDefinir = riesgos.filter(
       (r) => ((r.npr ?? 0) > 150 || r.severidad >= 9) && !r.accion_propuesta,
@@ -154,80 +201,111 @@ function exportarPDF(folios: any[], riesgosMap: Map<string, any[]>) {
       f.fecha_cierre || "",
       String(riesgos.length),
       String(criticos),
-      `${nprMax} (${nivelTexto})`,
-      accionesSinDefinir > 0 ? `PEND. (${accionesSinDefinir})` : "OK",
-      sinResponsable > 0 ? `S/ASIG (${sinResponsable})` : "OK",
-      sinEvidencia > 0 ? `FALTA (${sinEvidencia})` : "OK",
+      `${nprMax}\n${nivelTexto}`,
+      accionesSinDefinir > 0 ? `PEND.\n(${accionesSinDefinir})` : "OK",
+      sinResponsable > 0 ? `S/ASIG\n(${sinResponsable})` : "OK",
+      sinEvidencia > 0 ? `FALTA\n(${sinEvidencia})` : "OK",
     ];
   });
 
+  // ─── Generar tabla (primera página) ────────────────────────────────────────
+  addFooter();
+
+  // Fila de resumen ejecutivo encima de la tabla
+  const startY = 28;
+  doc.setFontSize(7.5);
+  doc.setFont("helvetica", "bold");
+  doc.setFillColor(240, 240, 245);
+  doc.rect(margin, startY - 1, pageW - 2 * margin, 6, "F");
+  doc.setDrawColor(0);
+  doc.setLineWidth(0.2);
+  doc.rect(margin, startY - 1, pageW - 2 * margin, 6);
+  doc.text(
+    `Resumen:   ${totalFolios} folios   ·   ${totalRiesgos} riesgos totales   ·   ${totalCriticos} críticos   ·   ${aprobados} aprobados   ·   ${enFirma} en firma   ·   ${borradores} en borrador`,
+    pageW / 2,
+    startY + 3.5,
+    { align: "center" },
+  );
+
   autoTable(doc, {
-    startY: 34,
+    startY: startY + 7,
     head: [
       [
         "Folio",
         "Proceso / Equipo",
         "Origen",
         "Estado",
-        "Conclusion",
+        "Conclusión",
         "F. Inicio",
         "F. Cierre",
-        "Riesgos",
-        "Criticos",
-        "NPR Max.",
-        "Acc.",
-        "Resp.",
-        "Evid.",
+        "Total\nRiesgos",
+        "Críticos",
+        "NPR\nMáx.",
+        "Acc.\nS/Definir",
+        "Resp.\nS/Asignar",
+        "Evid.\nPendiente",
       ],
     ],
     body: rows,
     theme: "grid",
-    styles: { fontSize: 6, cellPadding: 2, lineColor: [0, 0, 0], lineWidth: 0.2 },
-    headStyles: { fillColor: [30, 30, 60], textColor: [255, 255, 255], fontStyle: "bold", fontSize: 6.5 },
+    styles: { fontSize: 6.5, cellPadding: 2, lineColor: [0, 0, 0], lineWidth: 0.2, overflow: "linebreak" },
+    headStyles: {
+      fillColor: [15, 31, 61],
+      textColor: [255, 255, 255],
+      fontStyle: "bold",
+      fontSize: 6.5,
+      halign: "center",
+      valign: "middle",
+    },
     columnStyles: {
       0: { cellWidth: 26, fontStyle: "bold" },
-      1: { cellWidth: 50 },
-      2: { cellWidth: 24 },
+      1: { cellWidth: 52 },
+      2: { cellWidth: 22 },
       3: { cellWidth: 18 },
       4: { cellWidth: 20 },
-      5: { cellWidth: 18 },
-      6: { cellWidth: 18 },
-      7: { cellWidth: 12, halign: "center" },
-      8: { cellWidth: 12, halign: "center" },
+      5: { cellWidth: 20 },
+      6: { cellWidth: 20 },
+      7: { cellWidth: 14, halign: "center" },
+      8: { cellWidth: 14, halign: "center" },
       9: { cellWidth: 22, halign: "center" },
-      10: { cellWidth: 18, halign: "center" },
-      11: { cellWidth: 18, halign: "center" },
-      12: { cellWidth: 18, halign: "center" },
+      10: { cellWidth: 20, halign: "center" },
+      11: { cellWidth: 20, halign: "center" },
+      12: { cellWidth: 20, halign: "center" },
     },
     didParseCell: (data) => {
       if (data.column.index === 3 && data.section === "body") {
-        const estado = data.cell.raw as string;
-        if (estado === "Aprobado") data.cell.styles.textColor = [15, 110, 86];
-        if (estado === "Borrador") data.cell.styles.textColor = [100, 100, 100];
-        if (estado === "En Firma") data.cell.styles.textColor = [30, 100, 200];
-        if (estado === "Cerrado") data.cell.styles.textColor = [60, 60, 60];
+        const e = data.cell.raw as string;
+        if (e === "Aprobado") data.cell.styles.textColor = [15, 110, 86];
+        if (e === "Borrador") data.cell.styles.textColor = [100, 100, 100];
+        if (e === "En Firma") data.cell.styles.textColor = [30, 100, 200];
+        if (e === "Rechazado") data.cell.styles.textColor = [180, 0, 0];
       }
       if (data.column.index === 8 && data.section === "body") {
-        const val = parseInt(data.cell.raw as string);
-        if (val > 0) data.cell.styles.textColor = [180, 0, 0];
+        if (parseInt(data.cell.raw as string) > 0) data.cell.styles.textColor = [180, 0, 0];
       }
-      // Columnas de estado: rojo si hay problemas, verde si OK
       if ([10, 11, 12].includes(data.column.index) && data.section === "body") {
         const val = data.cell.raw as string;
         if (val === "OK") data.cell.styles.textColor = [15, 110, 86];
         else data.cell.styles.textColor = [180, 0, 0];
       }
+      // Fondo suave para filas alternas
+      if (data.section === "body" && data.row.index % 2 === 1) {
+        data.cell.styles.fillColor = [250, 250, 252];
+      }
+    },
+    // Agregar encabezado y pie en cada página adicional
+    didDrawPage: (data) => {
+      addFooter();
     },
     margin: { left: margin, right: margin },
   });
 
-  // Pie de página
-  const pageH = doc.internal.pageSize.getHeight();
-  doc.setFontSize(6);
-  doc.setFont("helvetica", "italic");
-  doc.text("Documento confidencial propiedad de Diafra S.A. de C.V. — FOR-SGC-11-01", pageW / 2, pageH - 6, {
-    align: "center",
-  });
+  // Renderizar encabezados con total de páginas correcto
+  const totalPgs = (doc as any).internal.getNumberOfPages();
+  for (let i = 1; i <= totalPgs; i++) {
+    doc.setPage(i);
+    addHeader(i, totalPgs);
+  }
 
   doc.save(`DIAFRA_Listado_Folios_${new Date().toISOString().slice(0, 10)}.pdf`);
 }
