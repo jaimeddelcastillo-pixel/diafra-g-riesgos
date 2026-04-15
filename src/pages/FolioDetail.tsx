@@ -28,14 +28,13 @@ interface CheckItem {
 }
 
 function evaluarChecklistNOM241(folio: Folio, riesgos: Riesgo[], comite: FolioComite[]): CheckItem[] {
-  const f = folio as any;
   const items: CheckItem[] = [];
 
   // ── Folio ──
-  items.push({ id: "alcance", label: "Alcance del análisis capturado", ok: !!f.alcance?.trim(), critico: true });
-  items.push({ id: "modelo", label: "Número de modelo del dispositivo (§7.5.3)", ok: !!f.numero_modelo?.trim(), critico: true });
-  items.push({ id: "beneficio", label: "Beneficio clínico documentado (ISO 14971 §7)", ok: !!f.beneficio_clinico?.trim(), critico: true });
-  items.push({ id: "residual_global", label: "Evaluación de riesgo residual global (ISO 14971 §8)", ok: !!f.riesgo_residual_global?.trim(), critico: true });
+  items.push({ id: "alcance", label: "Alcance del análisis capturado", ok: !!folio.alcance?.trim(), critico: true });
+  items.push({ id: "modelo", label: "Número de modelo del dispositivo (§7.5.3)", ok: !!folio.numero_modelo?.trim(), critico: true });
+  items.push({ id: "beneficio", label: "Beneficio clínico documentado (ISO 14971 §7)", ok: !!folio.beneficio_clinico?.trim(), critico: true });
+  items.push({ id: "residual_global", label: "Evaluación de riesgo residual global (ISO 14971 §8)", ok: !!folio.riesgo_residual_global?.trim(), critico: true });
   items.push({ id: "comite", label: "Al menos un miembro en el comité", ok: comite.length > 0, critico: true });
   items.push({ id: "riesgos_count", label: "Al menos un riesgo analizado", ok: riesgos.length > 0, critico: true });
 
@@ -43,18 +42,17 @@ function evaluarChecklistNOM241(folio: Folio, riesgos: Riesgo[], comite: FolioCo
   let sinPeligro = 0, sinSituacion = 0, sinAccionResp = 0, sinFecha = 0, sinVerif = 0, alarpSinJust = 0, criticoSinEvidencia = 0;
 
   for (const r of riesgos) {
-    const rr = r as any;
-    if (!rr.peligro?.trim()) sinPeligro++;
-    if (!rr.situacion_peligrosa?.trim()) sinSituacion++;
+    if (!r.peligro?.trim()) sinPeligro++;
+    if (!r.situacion_peligrosa?.trim()) sinSituacion++;
     const npr = r.npr ?? 0;
     if (r.requiere_accion) {
       if (!r.responsable?.trim()) sinAccionResp++;
       if (!r.fecha_compromiso) sinFecha++;
     }
-    if (rr.accion_implementada?.trim() && !rr.verificado_por?.trim()) sinVerif++;
-    if (npr >= 125 && npr < 200 && r.dictamen === "Aceptable" && !rr.justificacion_aceptabilidad?.trim()) alarpSinJust++;
+    if (r.accion_implementada?.trim() && !r.verificado_por?.trim()) sinVerif++;
+    if (npr >= 125 && npr < 200 && r.dictamen === "Aceptable" && !r.justificacion_aceptabilidad?.trim()) alarpSinJust++;
     const esCritico = npr > 150 || r.severidad >= 9;
-    const tieneEvidencia = rr.anexos && (rr.anexos as any[]).length > 0;
+    const tieneEvidencia = r.anexos && (r.anexos as unknown[]).length > 0;
     if (esCritico && r.requiere_accion && !tieneEvidencia) criticoSinEvidencia++;
   }
 
@@ -67,8 +65,8 @@ function evaluarChecklistNOM241(folio: Folio, riesgos: Riesgo[], comite: FolioCo
   items.push({ id: "alarp", label: `Riesgos zona ALARP con justificación de aceptabilidad${alarpSinJust > 0 ? ` (${alarpSinJust} sin justificar)` : ""}`, ok: alarpSinJust === 0, critico: false });
 
   // ── Informativos ──
-  items.push({ id: "clase", label: "Clase del dispositivo especificada", ok: !!(folio as any).clase_dispositivo?.trim(), critico: false });
-  items.push({ id: "lote", label: "Número de lote / revisión especificado", ok: !!(folio as any).numero_lote?.trim(), critico: false });
+  items.push({ id: "clase", label: "Clase del dispositivo especificada", ok: !!folio.clase_dispositivo?.trim(), critico: false });
+  items.push({ id: "lote", label: "Número de lote / revisión especificado", ok: !!folio.numero_lote?.trim(), critico: false });
 
   return items;
 }
@@ -157,10 +155,10 @@ function SeccionDescripcion({ folio, locked, onSaved }: { folio: Folio; locked: 
     fecha_cierre: folio.fecha_cierre || "",
     alcance: folio.alcance || "",
     // Nuevos — trazabilidad y versión (NOM-241)
-    numero_version: (folio as any).numero_version || "1.0",
-    numero_modelo: (folio as any).numero_modelo || "",
-    numero_lote: (folio as any).numero_lote || "",
-    clase_dispositivo: (folio as any).clase_dispositivo || "",
+    numero_version: folio.numero_version || "1.0",
+    numero_modelo: folio.numero_modelo || "",
+    numero_lote: folio.numero_lote || "",
+    clase_dispositivo: folio.clase_dispositivo || "",
   });
 
   const handleSave = async () => {
@@ -179,7 +177,7 @@ function SeccionDescripcion({ folio, locked, onSaved }: { folio: Folio; locked: 
         numero_modelo: form.numero_modelo,
         numero_lote: form.numero_lote,
         clase_dispositivo: form.clase_dispositivo,
-      } as any)
+      })
       .eq("id", folio.id);
     setSaving(false);
     if (error) {
@@ -213,12 +211,12 @@ function SeccionDescripcion({ folio, locked, onSaved }: { folio: Folio; locked: 
           />
           <FormField
             label="Versión"
-            value={<span className="font-mono font-semibold text-primary">{(folio as any).numero_version || "1.0"}</span>}
+            value={<span className="font-mono font-semibold text-primary">{folio.numero_version || "1.0"}</span>}
             className="col-span-2"
           />
-          <FormField label="Modelo / Ref." value={(folio as any).numero_modelo} className="col-span-2" />
-          <FormField label="Lote / Rev." value={(folio as any).numero_lote} className="col-span-2" />
-          <FormField label="Clase" value={(folio as any).clase_dispositivo} className="col-span-2 border-r-0" />
+          <FormField label="Modelo / Ref." value={folio.numero_modelo} className="col-span-2" />
+          <FormField label="Lote / Rev." value={folio.numero_lote} className="col-span-2" />
+          <FormField label="Clase" value={folio.clase_dispositivo} className="col-span-2 border-r-0" />
         </div>
         <div className="grid grid-cols-12">
           <FormField label="Proceso / Equipo Analizado" value={folio.proceso_equipo} className="col-span-4" />
@@ -549,8 +547,8 @@ function SeccionRiesgoResidualGlobal({
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
   const [form, setForm] = useState({
-    beneficio_clinico: (folio as any).beneficio_clinico || "",
-    riesgo_residual_global: (folio as any).riesgo_residual_global || "",
+    beneficio_clinico: folio.beneficio_clinico || "",
+    riesgo_residual_global: folio.riesgo_residual_global || "",
   });
 
   const handleSave = async () => {
@@ -560,7 +558,7 @@ function SeccionRiesgoResidualGlobal({
       .update({
         beneficio_clinico: form.beneficio_clinico,
         riesgo_residual_global: form.riesgo_residual_global,
-      } as any)
+      })
       .eq("id", folio.id);
     setSaving(false);
     if (error) {
@@ -572,8 +570,8 @@ function SeccionRiesgoResidualGlobal({
     }
   };
 
-  const faltaBeneficio = !(folio as any).beneficio_clinico?.trim();
-  const faltaResidual = !(folio as any).riesgo_residual_global?.trim();
+  const faltaBeneficio = !folio.beneficio_clinico?.trim();
+  const faltaResidual = !folio.riesgo_residual_global?.trim();
 
   return (
     <div className="border rounded-md overflow-hidden relative">
@@ -638,7 +636,7 @@ function SeccionRiesgoResidualGlobal({
               Beneficio Clínico — ISO 14971 §7
             </p>
             <p className="text-sm whitespace-pre-line">
-              {(folio as any).beneficio_clinico || (
+              {folio.beneficio_clinico || (
                 <span className="text-muted-foreground/50 italic">Sin capturar — requerido antes de enviar a firma</span>
               )}
             </p>
@@ -648,7 +646,7 @@ function SeccionRiesgoResidualGlobal({
               Riesgo Residual Global — ISO 14971 §8
             </p>
             <p className="text-sm whitespace-pre-line">
-              {(folio as any).riesgo_residual_global || (
+              {folio.riesgo_residual_global || (
                 <span className="text-muted-foreground/50 italic">Sin capturar — requerido antes de enviar a firma</span>
               )}
             </p>
@@ -873,7 +871,7 @@ export default function FolioDetail() {
   const criticosSinEvidencia = riesgos.filter((r) => {
     const esCritico = (r.npr ?? 0) > 150 || r.severidad >= 9;
     const tieneAccion = !!r.accion_propuesta;
-    const tieneEvidencia = (r as any).anexos && ((r as any).anexos as any[]).length > 0;
+    const tieneEvidencia = r.anexos && (r.anexos as unknown[]).length > 0;
     return esCritico && tieneAccion && !tieneEvidencia;
   });
   const bloqueadoPorEvidencia = criticosSinEvidencia.length > 0;

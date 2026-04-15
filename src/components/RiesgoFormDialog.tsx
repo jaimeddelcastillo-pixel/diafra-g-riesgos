@@ -243,9 +243,9 @@ export function RiesgoFormDialog({ open, onClose, folioId, riesgo, nextNumeroId 
       return {
         // Tab 1 — Identificación
         etapa_proceso: riesgo.etapa_proceso,
-        peligro: (riesgo as any).peligro || "",
-        situacion_peligrosa: (riesgo as any).situacion_peligrosa || "",
-        secuencia_eventos: (riesgo as any).secuencia_eventos || "",
+        peligro: riesgo.peligro || "",
+        situacion_peligrosa: riesgo.situacion_peligrosa || "",
+        secuencia_eventos: riesgo.secuencia_eventos || "",
         peligro_modo_falla: riesgo.peligro_modo_falla,
         causa_potencial: riesgo.causa_potencial,
         efecto_dano: riesgo.efecto_dano,
@@ -254,25 +254,25 @@ export function RiesgoFormDialog({ open, onClose, folioId, riesgo, nextNumeroId 
         ocurrencia: riesgo.ocurrencia,
         deteccion: riesgo.deteccion,
         // Tab 3 — Controles
-        controles_prevencion: (riesgo as any).controles_prevencion || "",
-        controles_deteccion: (riesgo as any).controles_deteccion || "",
+        controles_prevencion: riesgo.controles_prevencion || "",
+        controles_deteccion: riesgo.controles_deteccion || "",
         controles_actuales: riesgo.controles_actuales || "",
         requiere_accion: riesgo.requiere_accion,
         accion_propuesta: riesgo.accion_propuesta || "",
         responsable: riesgo.responsable || "",
         fecha_compromiso: riesgo.fecha_compromiso || "",
-        justificacion_aceptabilidad: (riesgo as any).justificacion_aceptabilidad || "",
+        justificacion_aceptabilidad: riesgo.justificacion_aceptabilidad || "",
         // Tab 4 — Residual + Verificación
         accion_implementada: riesgo.accion_implementada || "",
         fecha_evidencia: riesgo.fecha_evidencia || "",
-        verificado_por: (riesgo as any).verificado_por || "",
-        fecha_verificacion: (riesgo as any).fecha_verificacion || "",
-        resultado_verificacion: (riesgo as any).resultado_verificacion || "",
+        verificado_por: riesgo.verificado_por || "",
+        fecha_verificacion: riesgo.fecha_verificacion || "",
+        resultado_verificacion: riesgo.resultado_verificacion || "",
         sev_residual: riesgo.sev_residual,
         ocu_residual: riesgo.ocu_residual,
         det_residual: riesgo.det_residual,
         dictamen: riesgo.dictamen as "Aceptable" | "No Aceptable" | "Pendiente",
-        anexos: ((riesgo as any).anexos as Anexo[] | null) || [],
+        anexos: (riesgo.anexos as Anexo[] | null) || [],
       };
     }
     return {
