@@ -19,6 +19,94 @@ import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { Constants } from "@/integrations/supabase/types";
 import { generateFolioPDF } from "@/lib/generateFolioPDF";
 
+// ─── Checklist NOM-241 / ISO 14971 ───────────────────────────────────────────
+interface CheckItem {
+  id: string;
+  label: string;
+  ok: boolean;
+  critico: boolean; // true = bloquea envío a firma
+}
+
+function evaluarChecklistNOM241(folio: Folio, riesgos: Riesgo[], comite: FolioComite[]): CheckItem[] {
+  const items: CheckItem[] = [];
+
+  // ── Folio ──
+  items.push({ id: "alcance", label: "Alcance del análisis capturado", ok: !!folio.alcance?.trim(), critico: true });
+  items.push({ id: "modelo", label: "Número de modelo del dispositivo (§7.5.3)", ok: !!folio.numero_modelo?.trim(), critico: true });
+  items.push({ id: "beneficio", label: "Beneficio clínico documentado (ISO 14971 §7)", ok: !!folio.beneficio_clinico?.trim(), critico: true });
+  items.push({ id: "residual_global", label: "Evaluación de riesgo residual global (ISO 14971 §8)", ok: !!folio.riesgo_residual_global?.trim(), critico: true });
+  items.push({ id: "comite", label: "Al menos un miembro en el comité", ok: comite.length > 0, critico: true });
+  items.push({ id: "riesgos_count", label: "Al menos un riesgo analizado", ok: riesgos.length > 0, critico: true });
+
+  // ── Por riesgo ──
+  let sinPeligro = 0, sinSituacion = 0, sinAccionResp = 0, sinFecha = 0, sinVerif = 0, alarpSinJust = 0, criticoSinEvidencia = 0;
+
+  for (const r of riesgos) {
+    if (!r.peligro?.trim()) sinPeligro++;
+    if (!r.situacion_peligrosa?.trim()) sinSituacion++;
+    const npr = r.npr ?? 0;
+    if (r.requiere_accion) {
+      if (!r.responsable?.trim()) sinAccionResp++;
+      if (!r.fecha_compromiso) sinFecha++;
+    }
+    if (r.accion_implementada?.trim() && !r.verificado_por?.trim()) sinVerif++;
+    if (npr >= 125 && npr < 200 && r.dictamen === "Aceptable" && !r.justificacion_aceptabilidad?.trim()) alarpSinJust++;
+    const esCritico = npr > 150 || r.severidad >= 9;
+    const tieneEvidencia = r.anexos && (r.anexos as unknown[]).length > 0;
+    if (esCritico && r.requiere_accion && !tieneEvidencia) criticoSinEvidencia++;
+  }
+
+  items.push({ id: "peligro", label: `Peligro (fuente) capturado en todos los riesgos${sinPeligro > 0 ? ` (${sinPeligro} pendiente${sinPeligro > 1 ? "s" : ""})` : ""}`, ok: sinPeligro === 0, critico: true });
+  items.push({ id: "situacion", label: `Situación peligrosa capturada en todos los riesgos${sinSituacion > 0 ? ` (${sinSituacion} pendiente${sinSituacion > 1 ? "s" : ""})` : ""}`, ok: sinSituacion === 0, critico: true });
+  items.push({ id: "responsable", label: `Acciones con responsable asignado${sinAccionResp > 0 ? ` (${sinAccionResp} sin asignar)` : ""}`, ok: sinAccionResp === 0, critico: true });
+  items.push({ id: "fecha", label: `Acciones con fecha de compromiso${sinFecha > 0 ? ` (${sinFecha} sin fecha)` : ""}`, ok: sinFecha === 0, critico: true });
+  items.push({ id: "evidencia_criticos", label: `Riesgos críticos con evidencia adjunta${criticoSinEvidencia > 0 ? ` (${criticoSinEvidencia} sin PDF)` : ""}`, ok: criticoSinEvidencia === 0, critico: true });
+  items.push({ id: "verificacion", label: `Acciones implementadas con verificación${sinVerif > 0 ? ` (${sinVerif} sin verificar)` : ""}`, ok: sinVerif === 0, critico: false });
+  items.push({ id: "alarp", label: `Riesgos zona ALARP con justificación de aceptabilidad${alarpSinJust > 0 ? ` (${alarpSinJust} sin justificar)` : ""}`, ok: alarpSinJust === 0, critico: false });
+
+  // ── Informativos ──
+  items.push({ id: "clase", label: "Clase del dispositivo especificada", ok: !!folio.clase_dispositivo?.trim(), critico: false });
+  items.push({ id: "lote", label: "Número de lote / revisión especificado", ok: !!folio.numero_lote?.trim(), critico: false });
+
+  return items;
+}
+
+function ChecklistNOM241({ folio, riesgos, comite }: { folio: Folio; riesgos: Riesgo[]; comite: FolioComite[] }) {
+  const items = evaluarChecklistNOM241(folio, riesgos, comite);
+  const pendientes = items.filter((i) => !i.ok);
+  const bloqueantes = pendientes.filter((i) => i.critico);
+
+  return (
+    <div className="border rounded-lg shadow-md bg-background p-4 w-80 space-y-3">
+      <div className="flex items-center justify-between">
+        <p className="text-xs font-bold">Checklist NOM-241 / ISO 14971</p>
+        {bloqueantes.length === 0 ? (
+          <span className="text-[10px] text-green-700 font-bold bg-green-50 border border-green-200 rounded px-1.5 py-0.5">
+            ✓ Listo para firma
+          </span>
+        ) : (
+          <span className="text-[10px] text-destructive font-bold bg-destructive/5 border border-destructive/20 rounded px-1.5 py-0.5">
+            {bloqueantes.length} bloqueante{bloqueantes.length > 1 ? "s" : ""}
+          </span>
+        )}
+      </div>
+      <div className="space-y-1 max-h-72 overflow-y-auto">
+        {items.map((item) => (
+          <div key={item.id} className={`flex items-start gap-1.5 text-[10px] rounded px-1.5 py-1 ${item.ok ? "text-muted-foreground" : item.critico ? "text-destructive bg-destructive/5" : "text-amber-700 bg-amber-50"}`}>
+            <span className="mt-px shrink-0">{item.ok ? "✓" : item.critico ? "✗" : "⚠"}</span>
+            <span>{item.label}</span>
+          </div>
+        ))}
+      </div>
+      {pendientes.length === 0 && (
+        <p className="text-[10px] text-green-700 text-center font-medium">
+          Todos los requisitos NOM-241 cumplidos
+        </p>
+      )}
+    </div>
+  );
+}
+
 function NPRBadge({ npr, severidad }: { npr: number; severidad: number }) {
   const level = getNPRLevel(npr, severidad);
   return (
@@ -66,6 +154,11 @@ function SeccionDescripcion({ folio, locked, onSaved }: { folio: Folio; locked: 
     fecha_inicio: folio.fecha_inicio,
     fecha_cierre: folio.fecha_cierre || "",
     alcance: folio.alcance || "",
+    // Nuevos — trazabilidad y versión (NOM-241)
+    numero_version: folio.numero_version || "1.0",
+    numero_modelo: folio.numero_modelo || "",
+    numero_lote: folio.numero_lote || "",
+    clase_dispositivo: folio.clase_dispositivo || "",
   });
 
   const handleSave = async () => {
@@ -80,6 +173,10 @@ function SeccionDescripcion({ folio, locked, onSaved }: { folio: Folio; locked: 
         fecha_inicio: form.fecha_inicio,
         fecha_cierre: form.fecha_cierre || null,
         alcance: form.alcance,
+        numero_version: form.numero_version,
+        numero_modelo: form.numero_modelo,
+        numero_lote: form.numero_lote,
+        clase_dispositivo: form.clase_dispositivo,
       })
       .eq("id", folio.id);
     setSaving(false);
@@ -106,12 +203,20 @@ function SeccionDescripcion({ folio, locked, onSaved }: { folio: Folio; locked: 
             <Pencil className="h-3.5 w-3.5" />
           </Button>
         )}
-        <div className="grid grid-cols-4 border-b">
+        <div className="grid grid-cols-12 border-b">
           <FormField
             label="Folio de Gestión"
             value={<span className="font-mono font-bold">{folio.codigo}</span>}
             className="col-span-4"
           />
+          <FormField
+            label="Versión"
+            value={<span className="font-mono font-semibold text-primary">{folio.numero_version || "1.0"}</span>}
+            className="col-span-2"
+          />
+          <FormField label="Modelo / Ref." value={folio.numero_modelo} className="col-span-2" />
+          <FormField label="Lote / Rev." value={folio.numero_lote} className="col-span-2" />
+          <FormField label="Clase" value={folio.clase_dispositivo} className="col-span-2 border-r-0" />
         </div>
         <div className="grid grid-cols-12">
           <FormField label="Proceso / Equipo Analizado" value={folio.proceso_equipo} className="col-span-4" />
@@ -199,6 +304,52 @@ function SeccionDescripcion({ folio, locked, onSaved }: { folio: Folio; locked: 
           <label className="text-[10px] font-semibold text-muted-foreground uppercase">Alcance</label>
           <Textarea value={form.alcance} onChange={(e) => setForm({ ...form, alcance: e.target.value })} rows={3} />
         </div>
+        {/* Trazabilidad NOM-241 §7.5.3 */}
+        <div className="border-t pt-3">
+          <p className="text-[10px] font-semibold text-muted-foreground uppercase mb-2">
+            Trazabilidad del Dispositivo — NOM-241 §7.5.3
+          </p>
+          <div className="grid grid-cols-4 gap-3">
+            <div className="space-y-1">
+              <label className="text-[10px] font-semibold text-muted-foreground uppercase">Versión Doc.</label>
+              <Input
+                value={form.numero_version}
+                onChange={(e) => setForm({ ...form, numero_version: e.target.value })}
+                placeholder="1.0"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-[10px] font-semibold text-muted-foreground uppercase">Modelo / Referencia</label>
+              <Input
+                value={form.numero_modelo}
+                onChange={(e) => setForm({ ...form, numero_modelo: e.target.value })}
+                placeholder="MOD-001"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-[10px] font-semibold text-muted-foreground uppercase">Lote / Revisión</label>
+              <Input
+                value={form.numero_lote}
+                onChange={(e) => setForm({ ...form, numero_lote: e.target.value })}
+                placeholder="L-2026-001"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-[10px] font-semibold text-muted-foreground uppercase">Clase Dispositivo</label>
+              <Select
+                value={form.clase_dispositivo}
+                onValueChange={(v) => setForm({ ...form, clase_dispositivo: v })}
+              >
+                <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Clase I">Clase I — Bajo riesgo</SelectItem>
+                  <SelectItem value="Clase II">Clase II — Riesgo moderado</SelectItem>
+                  <SelectItem value="Clase III">Clase III — Alto riesgo</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </div>
         <div className="flex justify-end gap-2">
           <Button variant="outline" size="sm" onClick={() => setEditing(false)} className="gap-1">
             <X className="h-3 w-3" /> Cancelar
@@ -228,6 +379,10 @@ function SeccionComite({
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [firmando, setFirmando] = useState(false);
+  const [showFirmaModal, setShowFirmaModal] = useState(false);
+
+  const TEXTO_COMPROMISO =
+    "Declaro bajo protesta de decir verdad que he revisado el contenido íntegro de este Análisis de Gestión de Riesgos, que la información es correcta y completa conforme a la NOM-241-SSA1-2025 e ISO 14971:2019, y que mi firma electrónica registrada en este sistema tiene el mismo valor legal que mi firma autógrafa.";
 
   const { data: profiles } = useQuery({
     queryKey: ["profiles-firmas"],
@@ -248,10 +403,11 @@ function SeccionComite({
   };
 
   const handleFirmar = async () => {
+    setShowFirmaModal(false);
     setFirmando(true);
     try {
       const { data, error } = await supabase.functions.invoke("folio-workflow", {
-        body: { accion: "firmar", folio_id: folioId },
+        body: { accion: "firmar", folio_id: folioId, texto_compromiso: TEXTO_COMPROMISO },
       });
 
       if (error || data?.error) throw new Error(error?.message || data?.error);
@@ -330,7 +486,7 @@ function SeccionComite({
                       </span>
                     </div>
                   ) : puedeFiremar ? (
-                    <Button size="sm" className="h-7 text-[10px] gap-1" onClick={handleFirmar} disabled={firmando}>
+                    <Button size="sm" className="h-7 text-[10px] gap-1" onClick={() => setShowFirmaModal(true)} disabled={firmando}>
                       <FileSignature className="h-3 w-3" />
                       {firmando ? "Firmando..." : "Firmar"}
                     </Button>
@@ -345,6 +501,158 @@ function SeccionComite({
           })}
         </tbody>
       </table>
+
+      {/* Modal de confirmación de firma electrónica — NOM-241 / 21 CFR Part 11 */}
+      {showFirmaModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-background border rounded-lg shadow-xl max-w-lg w-full mx-4 p-6 space-y-4">
+            <div className="flex items-center gap-2">
+              <FileSignature className="h-5 w-5 text-primary" />
+              <h3 className="font-bold text-base">Confirmación de Firma Electrónica</h3>
+            </div>
+            <div className="bg-muted/50 rounded-md p-3 text-xs text-muted-foreground border-l-4 border-primary">
+              <p className="font-semibold text-foreground mb-1">Declaración de firma — NOM-241-SSA1-2025</p>
+              <p>{TEXTO_COMPROMISO}</p>
+            </div>
+            <div className="bg-amber-50 border border-amber-200 rounded-md p-3 text-xs text-amber-800">
+              <strong>Importante:</strong> Esta firma electrónica tiene el mismo valor legal que su firma autógrafa y quedará registrada con fecha, hora e IP conforme a los requisitos de trazabilidad.
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="outline" size="sm" onClick={() => setShowFirmaModal(false)}>
+                Cancelar
+              </Button>
+              <Button size="sm" onClick={handleFirmar} className="gap-1">
+                <FileSignature className="h-3.5 w-3.5" />
+                Acepto y Firmo
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Sección Riesgo Residual Global (ISO 14971 §7 / §8) ──────────────────────
+function SeccionRiesgoResidualGlobal({
+  folio,
+  locked,
+  onSaved,
+}: {
+  folio: Folio;
+  locked: boolean;
+  onSaved: () => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const { toast } = useToast();
+  const [form, setForm] = useState({
+    beneficio_clinico: folio.beneficio_clinico || "",
+    riesgo_residual_global: folio.riesgo_residual_global || "",
+  });
+
+  const handleSave = async () => {
+    setSaving(true);
+    const { error } = await supabase
+      .from("folios")
+      .update({
+        beneficio_clinico: form.beneficio_clinico,
+        riesgo_residual_global: form.riesgo_residual_global,
+      })
+      .eq("id", folio.id);
+    setSaving(false);
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Evaluación global guardada" });
+      setEditing(false);
+      onSaved();
+    }
+  };
+
+  const faltaBeneficio = !folio.beneficio_clinico?.trim();
+  const faltaResidual = !folio.riesgo_residual_global?.trim();
+
+  return (
+    <div className="border rounded-md overflow-hidden relative">
+      <SectionHeader number="V" title="EVALUACIÓN GLOBAL DE RIESGO-BENEFICIO — ISO 14971 §7/§8" />
+      {!locked && (
+        <Button
+          variant="ghost"
+          size="icon"
+          className="absolute top-1 right-1 h-7 w-7"
+          onClick={() => setEditing(!editing)}
+        >
+          <Pencil className="h-3.5 w-3.5" />
+        </Button>
+      )}
+
+      {/* Alertas de completitud */}
+      {(faltaBeneficio || faltaResidual) && (
+        <div className="px-4 py-2 bg-destructive/5 border-b flex items-center gap-2 text-xs text-destructive">
+          <span className="font-bold">⚠ NOM-241:</span>
+          {faltaBeneficio && <span>Beneficio clínico requerido.</span>}
+          {faltaResidual && <span>Evaluación de riesgo residual global requerida.</span>}
+        </div>
+      )}
+
+      {editing ? (
+        <div className="p-4 space-y-3">
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-semibold text-muted-foreground uppercase">
+              Beneficio Clínico del Dispositivo — ISO 14971 §7
+            </label>
+            <Textarea
+              value={form.beneficio_clinico}
+              onChange={(e) => setForm({ ...form, beneficio_clinico: e.target.value })}
+              rows={3}
+              placeholder="Describa el beneficio clínico que justifica el uso del dispositivo y los riesgos residuales aceptados."
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-semibold text-muted-foreground uppercase">
+              Evaluación del Riesgo Residual Global — ISO 14971 §8
+            </label>
+            <Textarea
+              value={form.riesgo_residual_global}
+              onChange={(e) => setForm({ ...form, riesgo_residual_global: e.target.value })}
+              rows={4}
+              placeholder="Ejemplo: El riesgo residual global del dispositivo es aceptable. Se identificaron N riesgos, de los cuales X son Aceptables y Y requirieron acción. Los beneficios clínicos superan los riesgos residuales conforme a ISO 14971 §8."
+            />
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" size="sm" onClick={() => setEditing(false)} className="gap-1">
+              <X className="h-3 w-3" /> Cancelar
+            </Button>
+            <Button size="sm" onClick={handleSave} disabled={saving} className="gap-1">
+              <Save className="h-3 w-3" /> {saving ? "Guardando..." : "Guardar"}
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-2">
+          <div className="border-r border-b p-3">
+            <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wide mb-1">
+              Beneficio Clínico — ISO 14971 §7
+            </p>
+            <p className="text-sm whitespace-pre-line">
+              {folio.beneficio_clinico || (
+                <span className="text-muted-foreground/50 italic">Sin capturar — requerido antes de enviar a firma</span>
+              )}
+            </p>
+          </div>
+          <div className="border-b p-3">
+            <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wide mb-1">
+              Riesgo Residual Global — ISO 14971 §8
+            </p>
+            <p className="text-sm whitespace-pre-line">
+              {folio.riesgo_residual_global || (
+                <span className="text-muted-foreground/50 italic">Sin capturar — requerido antes de enviar a firma</span>
+              )}
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -540,8 +848,8 @@ export default function FolioDetail() {
 
   const isAdmin = hasRole("admin") || hasRole("responsable_sanitario");
 
-  // Estado para el botón Enviar a Firma
   const [enviandoFirma, setEnviandoFirma] = useState(false);
+  const [showChecklist, setShowChecklist] = useState(false);
 
   if (isLoading) {
     return (
@@ -563,7 +871,7 @@ export default function FolioDetail() {
   const criticosSinEvidencia = riesgos.filter((r) => {
     const esCritico = (r.npr ?? 0) > 150 || r.severidad >= 9;
     const tieneAccion = !!r.accion_propuesta;
-    const tieneEvidencia = (r as any).anexos && ((r as any).anexos as any[]).length > 0;
+    const tieneEvidencia = r.anexos && (r.anexos as unknown[]).length > 0;
     return esCritico && tieneAccion && !tieneEvidencia;
   });
   const bloqueadoPorEvidencia = criticosSinEvidencia.length > 0;
@@ -584,14 +892,27 @@ export default function FolioDetail() {
         },
       });
 
-      if (error || result?.error) {
-        throw new Error(error?.message || result?.error);
+      if (error) throw new Error(error.message);
+
+      // El backend retorna errores NOM-241 con código 422
+      if (result?.errores_nom241) {
+        const errores: string[] = result.errores_nom241;
+        toast({
+          title: "⛔ Folio incompleto — NOM-241",
+          description: `${errores.length} requisito${errores.length > 1 ? "s" : ""} pendiente${errores.length > 1 ? "s" : ""}. Revisa el checklist.`,
+          variant: "destructive",
+        });
+        setShowChecklist(true);
+        return;
       }
+
+      if (result?.error) throw new Error(result.error);
 
       toast({
         title: "📨 Folio enviado a firma",
         description: "Se notificó a los miembros del comité por correo",
       });
+      setShowChecklist(false);
       handleRefresh();
     } catch (err: any) {
       toast({
@@ -605,6 +926,11 @@ export default function FolioDetail() {
   };
 
   return (
+    <>
+      {/* Overlay para cerrar checklist al hacer clic fuera */}
+      {showChecklist && (
+        <div className="fixed inset-0 z-40" onClick={() => setShowChecklist(false)} />
+      )}
     <div className="space-y-5 max-w-[1400px] mx-auto">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -631,30 +957,48 @@ export default function FolioDetail() {
             <Printer className="h-3 w-3" /> Generar PDF
           </Button>
 
-          {/* Botón Enviar a Firma — bloqueado si hay críticos sin evidencia */}
+          {/* Botón Enviar a Firma + Checklist NOM-241 */}
           {folio.estado === "Borrador" && (
-            <div className="flex flex-col items-end gap-1">
-              <Button
-                size="sm"
-                className="gap-1 text-xs"
-                onClick={handleEnviarAFirma}
-                disabled={enviandoFirma || comite.length === 0 || bloqueadoPorEvidencia}
-                title={
-                  bloqueadoPorEvidencia
-                    ? `${criticosSinEvidencia.length} riesgo(s) crítico(s) sin evidencia adjunta`
-                    : comite.length === 0
-                      ? "Agrega miembros al comité primero"
-                      : ""
-                }
-              >
-                <FileSignature className="h-3 w-3" />
-                {enviandoFirma ? "Enviando..." : "Enviar a Firma"}
-              </Button>
-              {bloqueadoPorEvidencia && (
-                <p className="text-[10px] text-destructive font-medium text-right max-w-[220px]">
-                  ⛔ {criticosSinEvidencia.length} crítico{criticosSinEvidencia.length > 1 ? "s" : ""} sin evidencia —
-                  adjunta PDF en sección IV
-                </p>
+            <div className="relative flex flex-col items-end gap-1">
+              <div className="flex items-center gap-1">
+                {/* Botón checklist */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1 text-xs"
+                  onClick={() => setShowChecklist((v) => !v)}
+                  title="Ver checklist de requisitos NOM-241"
+                >
+                  {(() => {
+                    const items = evaluarChecklistNOM241(folio, riesgos, comite);
+                    const bloqueantes = items.filter((i) => !i.ok && i.critico).length;
+                    const advertencias = items.filter((i) => !i.ok && !i.critico).length;
+                    return bloqueantes > 0
+                      ? <span className="text-destructive font-bold">⛔ {bloqueantes}</span>
+                      : advertencias > 0
+                        ? <span className="text-amber-600 font-bold">⚠ {advertencias}</span>
+                        : <span className="text-green-700 font-bold">✓</span>;
+                  })()}
+                  NOM-241
+                </Button>
+                {/* Botón enviar */}
+                <Button
+                  size="sm"
+                  className="gap-1 text-xs"
+                  onClick={handleEnviarAFirma}
+                  disabled={enviandoFirma || comite.length === 0}
+                  title={comite.length === 0 ? "Agrega miembros al comité primero" : ""}
+                >
+                  <FileSignature className="h-3 w-3" />
+                  {enviandoFirma ? "Enviando..." : "Enviar a Firma"}
+                </Button>
+              </div>
+
+              {/* Popover del checklist */}
+              {showChecklist && (
+                <div className="absolute top-9 right-0 z-50">
+                  <ChecklistNOM241 folio={folio} riesgos={riesgos} comite={comite} />
+                </div>
               )}
             </div>
           )}
@@ -686,6 +1030,9 @@ export default function FolioDetail() {
         {/* Evidencias — pestaña documental para auditor */}
         <SeccionEvidencias riesgos={riesgos} folioCodigo={folio.codigo} folioId={folio.id} />
 
+        {/* Evaluación global de riesgo-beneficio — ISO 14971 §7/§8 */}
+        <SeccionRiesgoResidualGlobal folio={folio} locked={locked} onSaved={handleRefresh} />
+
         {/* Dictamen con zona exclusiva del RS */}
         <SeccionDictamen folio={folio} riesgos={riesgos} locked={locked} onSaved={handleRefresh} />
 
@@ -698,5 +1045,6 @@ export default function FolioDetail() {
         </div>
       </div>
     </div>
+    </>
   );
 }
