@@ -210,8 +210,8 @@ export type Database = {
       }
       folio_versiones: {
         Row: {
-          created_at: string
           creado_por: string | null
+          created_at: string
           folio_id: string
           id: string
           motivo_revision: string
@@ -220,8 +220,8 @@ export type Database = {
           version: string
         }
         Insert: {
-          created_at?: string
           creado_por?: string | null
+          created_at?: string
           folio_id: string
           id?: string
           motivo_revision?: string
@@ -230,8 +230,8 @@ export type Database = {
           version: string
         }
         Update: {
-          created_at?: string
           creado_por?: string | null
+          created_at?: string
           folio_id?: string
           id?: string
           motivo_revision?: string
