@@ -8,7 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, Upload, FileText, X, HelpCircle, ChevronDown, ChevronUp } from "lucide-react";
+import { CalendarIcon, Upload, FileText, X, HelpCircle, ChevronDown, ChevronUp, ShieldCheck, Settings, FlaskConical } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -234,25 +235,39 @@ export function RiesgoFormDialog({ open, onClose, folioId, riesgo, nextNumeroId 
   const { data: profiles } = useProfiles();
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [activeTab, setActiveTab] = useState("identificacion");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [form, setForm] = useState(() => {
     if (riesgo) {
       return {
+        // Tab 1 — Identificación
         etapa_proceso: riesgo.etapa_proceso,
+        peligro: (riesgo as any).peligro || "",
+        situacion_peligrosa: (riesgo as any).situacion_peligrosa || "",
+        secuencia_eventos: (riesgo as any).secuencia_eventos || "",
         peligro_modo_falla: riesgo.peligro_modo_falla,
         causa_potencial: riesgo.causa_potencial,
         efecto_dano: riesgo.efecto_dano,
+        // Tab 2 — Evaluación inicial
         severidad: riesgo.severidad,
         ocurrencia: riesgo.ocurrencia,
         deteccion: riesgo.deteccion,
+        // Tab 3 — Controles
+        controles_prevencion: (riesgo as any).controles_prevencion || "",
+        controles_deteccion: (riesgo as any).controles_deteccion || "",
         controles_actuales: riesgo.controles_actuales || "",
         requiere_accion: riesgo.requiere_accion,
         accion_propuesta: riesgo.accion_propuesta || "",
         responsable: riesgo.responsable || "",
         fecha_compromiso: riesgo.fecha_compromiso || "",
+        justificacion_aceptabilidad: (riesgo as any).justificacion_aceptabilidad || "",
+        // Tab 4 — Residual + Verificación
         accion_implementada: riesgo.accion_implementada || "",
         fecha_evidencia: riesgo.fecha_evidencia || "",
+        verificado_por: (riesgo as any).verificado_por || "",
+        fecha_verificacion: (riesgo as any).fecha_verificacion || "",
+        resultado_verificacion: (riesgo as any).resultado_verificacion || "",
         sev_residual: riesgo.sev_residual,
         ocu_residual: riesgo.ocu_residual,
         det_residual: riesgo.det_residual,
@@ -261,20 +276,33 @@ export function RiesgoFormDialog({ open, onClose, folioId, riesgo, nextNumeroId 
       };
     }
     return {
+      // Tab 1 — Identificación
       etapa_proceso: "",
+      peligro: "",
+      situacion_peligrosa: "",
+      secuencia_eventos: "",
       peligro_modo_falla: "",
       causa_potencial: "",
       efecto_dano: "",
+      // Tab 2 — Evaluación inicial
       severidad: 1,
       ocurrencia: 1,
       deteccion: 1,
+      // Tab 3 — Controles
+      controles_prevencion: "",
+      controles_deteccion: "",
       controles_actuales: "",
       requiere_accion: false,
       accion_propuesta: "",
       responsable: "",
       fecha_compromiso: "",
+      justificacion_aceptabilidad: "",
+      // Tab 4 — Residual + Verificación
       accion_implementada: "",
       fecha_evidencia: "",
+      verificado_por: "",
+      fecha_verificacion: "",
+      resultado_verificacion: "",
       sev_residual: 1,
       ocu_residual: 1,
       det_residual: 1,
@@ -347,20 +375,33 @@ export function RiesgoFormDialog({ open, onClose, folioId, riesgo, nextNumeroId 
     setSaving(true);
     const payload: any = {
       folio_id: folioId,
+      // Tab 1 — Identificación
       etapa_proceso: form.etapa_proceso.trim(),
+      peligro: form.peligro.trim(),
+      situacion_peligrosa: form.situacion_peligrosa.trim(),
+      secuencia_eventos: form.secuencia_eventos.trim(),
       peligro_modo_falla: form.peligro_modo_falla.trim(),
       causa_potencial: form.causa_potencial.trim(),
       efecto_dano: form.efecto_dano.trim(),
+      // Tab 2 — Evaluación inicial
       severidad: form.severidad,
       ocurrencia: form.ocurrencia,
       deteccion: form.deteccion,
+      // Tab 3 — Controles
+      controles_prevencion: form.controles_prevencion.trim(),
+      controles_deteccion: form.controles_deteccion.trim(),
       controles_actuales: form.controles_actuales.trim(),
       requiere_accion: form.requiere_accion || needsAction,
       accion_propuesta: form.accion_propuesta.trim(),
       responsable: form.responsable.trim(),
       fecha_compromiso: form.fecha_compromiso || null,
+      justificacion_aceptabilidad: form.justificacion_aceptabilidad.trim(),
+      // Tab 4 — Residual + Verificación
       accion_implementada: form.accion_implementada.trim(),
       fecha_evidencia: form.fecha_evidencia.trim(),
+      verificado_por: form.verificado_por.trim(),
+      fecha_verificacion: form.fecha_verificacion || null,
+      resultado_verificacion: form.resultado_verificacion.trim(),
       sev_residual: form.sev_residual,
       ocu_residual: form.ocu_residual,
       det_residual: form.det_residual,
@@ -402,20 +443,43 @@ export function RiesgoFormDialog({ open, onClose, folioId, riesgo, nextNumeroId 
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
+        <DialogHeader className="pb-2">
           <DialogTitle>
             {isEdit ? "Editar Riesgo" : "Agregar Riesgo"} — ID{" "}
             {String(isEdit ? riesgo!.numero_id : nextNumeroId).padStart(2, "0")}
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-6">
-          {/* ── Sección 1: Identificación ── */}
-          <div>
-            <h4 className="text-xs font-bold text-muted-foreground mb-3 uppercase tracking-wide">
-              1. Identificación de Peligro y Falla
-            </h4>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
+          <TabsList className="grid grid-cols-4 w-full shrink-0">
+            <TabsTrigger value="identificacion" className="gap-1.5 text-xs">
+              <ShieldCheck className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">1. Identificación</span>
+              <span className="sm:hidden">1</span>
+            </TabsTrigger>
+            <TabsTrigger value="evaluacion" className="gap-1.5 text-xs">
+              <FlaskConical className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">2. Evaluación</span>
+              <span className="sm:hidden">2</span>
+            </TabsTrigger>
+            <TabsTrigger value="controles" className="gap-1.5 text-xs">
+              <Settings className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">3. Controles</span>
+              <span className="sm:hidden">3</span>
+            </TabsTrigger>
+            <TabsTrigger value="residual" className="gap-1.5 text-xs">
+              <HelpCircle className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">4. Residual</span>
+              <span className="sm:hidden">4</span>
+            </TabsTrigger>
+          </TabsList>
+
+          {/* ── Tab 1: Identificación (ISO 14971 §5.4) ── */}
+          <TabsContent value="identificacion" className="flex-1 overflow-y-auto space-y-3 pt-3">
+            <p className="text-[10px] text-muted-foreground bg-muted/40 rounded px-2 py-1">
+              ISO 14971 §5.4 — Identifique el peligro fuente, la secuencia de eventos y el modo de falla.
+            </p>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label className="text-xs">Etapa del Proceso *</Label>
@@ -426,7 +490,36 @@ export function RiesgoFormDialog({ open, onClose, folioId, riesgo, nextNumeroId 
                 />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs">Peligro / Modo de Falla *</Label>
+                <Label className="text-xs">
+                  Peligro (fuente) *{" "}
+                  <span className="text-muted-foreground font-normal normal-case">(energía, condición, agente)</span>
+                </Label>
+                <Input
+                  value={form.peligro}
+                  onChange={(e) => update("peligro", e.target.value)}
+                  placeholder="Ej: Energía eléctrica descontrolada"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Situación Peligrosa *</Label>
+                <Textarea
+                  value={form.situacion_peligrosa}
+                  onChange={(e) => update("situacion_peligrosa", e.target.value)}
+                  rows={2}
+                  placeholder="Circunstancia en que el peligro puede causar daño"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Secuencia de Eventos</Label>
+                <Textarea
+                  value={form.secuencia_eventos}
+                  onChange={(e) => update("secuencia_eventos", e.target.value)}
+                  rows={2}
+                  placeholder="Cadena de eventos que lleva al daño"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Modo de Falla *</Label>
                 <Input
                   value={form.peligro_modo_falla}
                   onChange={(e) => update("peligro_modo_falla", e.target.value)}
@@ -438,123 +531,135 @@ export function RiesgoFormDialog({ open, onClose, folioId, riesgo, nextNumeroId 
                 <Textarea
                   value={form.causa_potencial}
                   onChange={(e) => update("causa_potencial", e.target.value)}
-                  rows={3}
+                  rows={2}
                   placeholder="Escriba cada causa en una línea separada"
                 />
               </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs">Efecto / Daño</Label>
+              <div className="space-y-1.5 col-span-2">
+                <Label className="text-xs">Efecto / Daño Potencial</Label>
                 <Textarea
                   value={form.efecto_dano}
                   onChange={(e) => update("efecto_dano", e.target.value)}
-                  rows={3}
-                  placeholder="Escriba cada efecto en una línea separada"
+                  rows={2}
+                  placeholder="Describa el daño que puede sufrir el paciente u operador"
                 />
               </div>
             </div>
-          </div>
+            <div className="flex justify-end pt-2">
+              <Button size="sm" onClick={() => setActiveTab("evaluacion")}>
+                Siguiente: Evaluación →
+              </Button>
+            </div>
+          </TabsContent>
 
-          {/* ── Sección 2: Evaluación Inicial con catálogos inline ── */}
-          <div>
-            <h4 className="text-xs font-bold text-muted-foreground mb-3 uppercase tracking-wide">
-              2. Evaluación Inicial
-            </h4>
+          {/* ── Tab 2: Evaluación Inicial ── */}
+          <TabsContent value="evaluacion" className="flex-1 overflow-y-auto space-y-3 pt-3">
+            <p className="text-[10px] text-muted-foreground bg-muted/40 rounded px-2 py-1">
+              ISO 14971 §6.1 — Evalúe la probabilidad de daño (S × O × D = NPR).
+            </p>
             <div className="grid grid-cols-4 gap-3">
-              {/* Severidad */}
-              <div className="space-y-1.5 col-span-1">
+              <div className="space-y-1.5">
                 <Label className="text-xs">Severidad (S)</Label>
                 <Select value={String(form.severidad)} onValueChange={(v) => update("severidad", Number(v))}>
                   <SelectTrigger className={form.severidad >= 9 ? "border-destructive text-destructive" : ""}>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {SCORES.map((s) => (
-                      <SelectItem key={s} value={String(s)}>
-                        {s}
-                      </SelectItem>
-                    ))}
+                    {SCORES.map((s) => <SelectItem key={s} value={String(s)}>{s}</SelectItem>)}
                   </SelectContent>
                 </Select>
                 <CatalogoInline tipo="severidad" valorActual={form.severidad} />
               </div>
-
-              {/* Ocurrencia */}
-              <div className="space-y-1.5 col-span-1">
+              <div className="space-y-1.5">
                 <Label className="text-xs">Ocurrencia (O)</Label>
                 <Select value={String(form.ocurrencia)} onValueChange={(v) => update("ocurrencia", Number(v))}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {SCORES.map((s) => (
-                      <SelectItem key={s} value={String(s)}>
-                        {s}
-                      </SelectItem>
-                    ))}
+                    {SCORES.map((s) => <SelectItem key={s} value={String(s)}>{s}</SelectItem>)}
                   </SelectContent>
                 </Select>
                 <CatalogoInline tipo="ocurrencia" valorActual={form.ocurrencia} />
               </div>
-
-              {/* Detección */}
-              <div className="space-y-1.5 col-span-1">
+              <div className="space-y-1.5">
                 <Label className="text-xs">Detección (D)</Label>
                 <Select value={String(form.deteccion)} onValueChange={(v) => update("deteccion", Number(v))}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {SCORES.map((s) => (
-                      <SelectItem key={s} value={String(s)}>
-                        {s}
-                      </SelectItem>
-                    ))}
+                    {SCORES.map((s) => <SelectItem key={s} value={String(s)}>{s}</SelectItem>)}
                   </SelectContent>
                 </Select>
                 <CatalogoInline tipo="deteccion" valorActual={form.deteccion} />
               </div>
-
-              {/* NPR Inicial */}
-              <div className="space-y-1.5 col-span-1">
+              <div className="space-y-1.5">
                 <Label className="text-xs">NPR Inicial</Label>
-                <div
-                  className={`h-10 rounded-md border flex items-center justify-center font-bold text-lg ${
-                    nprLevel.label === "Crítico"
-                      ? "bg-destructive/10 text-destructive border-destructive"
-                      : nprLevel.label === "Mayor"
-                        ? "bg-warning/10 text-warning border-warning"
-                        : "bg-success/10 text-success border-success"
-                  }`}
-                >
+                <div className={`h-10 rounded-md border flex items-center justify-center font-bold text-lg ${
+                  nprLevel.label === "Crítico" ? "bg-destructive/10 text-destructive border-destructive"
+                    : nprLevel.label === "Mayor" ? "bg-warning/10 text-warning border-warning"
+                    : "bg-success/10 text-success border-success"
+                }`}>
                   {npr}
                 </div>
-                <p className="text-[10px] text-center">
-                  {nprLevel.dot} {nprLevel.label}
-                </p>
+                <p className="text-[10px] text-center">{nprLevel.dot} {nprLevel.label}</p>
               </div>
             </div>
-
             {needsAction && (
-              <p className="text-xs text-destructive font-medium mt-2">
-                ⚠ NPR Crítico o S ≥ 9 — se requiere Acción Propuesta obligatoriamente.
+              <p className="text-xs text-destructive font-medium">
+                ⚠ NPR Crítico o S ≥ 9 — se requiere Acción Propuesta en la pestaña Controles.
               </p>
             )}
-          </div>
+            <div className="flex justify-between pt-2">
+              <Button size="sm" variant="outline" onClick={() => setActiveTab("identificacion")}>
+                ← Anterior
+              </Button>
+              <Button size="sm" onClick={() => setActiveTab("controles")}>
+                Siguiente: Controles →
+              </Button>
+            </div>
+          </TabsContent>
 
-          {/* ── Sección 3: Controles ── */}
-          <div>
-            <h4 className="text-xs font-bold text-muted-foreground mb-3 uppercase tracking-wide">
-              3. Controles y Gestión
-            </h4>
+          {/* ── Tab 3: Controles (ISO 14971 §6.2) ── */}
+          <TabsContent value="controles" className="flex-1 overflow-y-auto space-y-3 pt-3">
+            <p className="text-[10px] text-muted-foreground bg-muted/40 rounded px-2 py-1">
+              ISO 14971 §6.2 — Documente los controles de prevención y detección existentes, y las acciones propuestas.
+            </p>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label className="text-xs">Controles Actuales</Label>
+                <Label className="text-xs">Controles de Prevención</Label>
+                <Textarea
+                  value={form.controles_prevencion}
+                  onChange={(e) => update("controles_prevencion", e.target.value)}
+                  rows={3}
+                  placeholder="Controles que reducen la probabilidad de ocurrencia"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Controles de Detección</Label>
+                <Textarea
+                  value={form.controles_deteccion}
+                  onChange={(e) => update("controles_deteccion", e.target.value)}
+                  rows={3}
+                  placeholder="Controles que permiten detectar el fallo antes de que cause daño"
+                />
+              </div>
+              <div className="space-y-1.5 col-span-2">
+                <Label className="text-xs">Controles Actuales (resumen)</Label>
                 <Textarea
                   value={form.controles_actuales}
                   onChange={(e) => update("controles_actuales", e.target.value)}
-                  rows={3}
-                  placeholder="Escriba cada control en una línea separada"
+                  rows={2}
+                  placeholder="Resumen de todos los controles existentes"
                 />
+              </div>
+              <div className="space-y-1.5 col-span-2 flex items-center gap-2 border rounded-md p-2">
+                <Switch
+                  checked={form.requiere_accion || needsAction}
+                  onCheckedChange={(v) => update("requiere_accion", v)}
+                  disabled={needsAction}
+                />
+                <Label className="text-xs cursor-pointer">
+                  ¿Requiere acción de mejora?
+                  {needsAction && <span className="text-destructive ml-1">(obligatorio por NPR/S)</span>}
+                </Label>
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs">
@@ -565,14 +670,92 @@ export function RiesgoFormDialog({ open, onClose, folioId, riesgo, nextNumeroId 
                   onChange={(e) => update("accion_propuesta", e.target.value)}
                   rows={3}
                   className={needsAction && !form.accion_propuesta ? "border-destructive" : ""}
-                  placeholder="Escriba cada acción en una línea separada"
+                  placeholder="Describa la acción de mejora propuesta"
+                />
+              </div>
+              <div className="space-y-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Responsable</Label>
+                  <Select value={form.responsable} onValueChange={(v) => update("responsable", v)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccionar responsable" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {profiles?.map((p) => (
+                        <SelectItem key={p.id} value={p.nombre}>
+                          {p.nombre} {p.cargo ? `— ${p.cargo}` : ""}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Fecha Compromiso</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className={cn("w-full justify-start text-left font-normal text-xs", !form.fecha_compromiso && "text-muted-foreground")}>
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {fechaCompromisoDate ? format(fechaCompromisoDate, "PPP") : form.fecha_compromiso || "Seleccionar fecha"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar mode="single" selected={fechaCompromisoDate} onSelect={(d) => update("fecha_compromiso", d ? format(d, "yyyy-MM-dd") : "")} initialFocus className={cn("p-3 pointer-events-auto")} />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              </div>
+              <div className="space-y-1.5 col-span-2">
+                <Label className="text-xs">
+                  Justificación de Aceptabilidad{" "}
+                  <span className="text-muted-foreground font-normal normal-case">(ALARP — ISO 14971 §7)</span>
+                </Label>
+                <Textarea
+                  value={form.justificacion_aceptabilidad}
+                  onChange={(e) => update("justificacion_aceptabilidad", e.target.value)}
+                  rows={2}
+                  placeholder="Si el riesgo es tolerable sin acción adicional, justifique por qué el beneficio supera el riesgo residual"
+                />
+              </div>
+            </div>
+            <div className="flex justify-between pt-2">
+              <Button size="sm" variant="outline" onClick={() => setActiveTab("evaluacion")}>
+                ← Anterior
+              </Button>
+              <Button size="sm" onClick={() => setActiveTab("residual")}>
+                Siguiente: Residual →
+              </Button>
+            </div>
+          </TabsContent>
+
+          {/* ── Tab 4: Evaluación Residual + Verificación (ISO 14971 §6.5 / §8) ── */}
+          <TabsContent value="residual" className="flex-1 overflow-y-auto space-y-3 pt-3">
+            <p className="text-[10px] text-muted-foreground bg-muted/40 rounded px-2 py-1">
+              ISO 14971 §6.5 / §8 — Registre la acción implementada, su verificación y la evaluación residual.
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs">Acción Implementada</Label>
+                <Textarea
+                  value={form.accion_implementada}
+                  onChange={(e) => update("accion_implementada", e.target.value)}
+                  rows={3}
+                  placeholder="Describa la acción que se implementó"
                 />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs">Responsable</Label>
-                <Select value={form.responsable} onValueChange={(v) => update("responsable", v)}>
+                <Label className="text-xs">Resultado de Verificación</Label>
+                <Textarea
+                  value={form.resultado_verificacion}
+                  onChange={(e) => update("resultado_verificacion", e.target.value)}
+                  rows={3}
+                  placeholder="Evidencia de que la acción fue efectiva"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Verificado por</Label>
+                <Select value={form.verificado_por} onValueChange={(v) => update("verificado_por", v)}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar responsable" />
+                    <SelectValue placeholder="Seleccionar verificador" />
                   </SelectTrigger>
                   <SelectContent>
                     {profiles?.map((p) => (
@@ -584,217 +767,101 @@ export function RiesgoFormDialog({ open, onClose, folioId, riesgo, nextNumeroId 
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs">Fecha Compromiso</Label>
+                <Label className="text-xs">Fecha de Verificación</Label>
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn(
-                        "w-full justify-start text-left font-normal",
-                        !form.fecha_compromiso && "text-muted-foreground",
-                      )}
-                    >
+                    <Button variant="outline" className={cn("w-full justify-start text-left font-normal text-xs", !form.fecha_verificacion && "text-muted-foreground")}>
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {fechaCompromisoDate
-                        ? format(fechaCompromisoDate, "PPP")
-                        : form.fecha_compromiso || "Seleccionar fecha"}
+                      {parseFecha(form.fecha_verificacion) ? format(parseFecha(form.fecha_verificacion)!, "PPP") : form.fecha_verificacion || "Seleccionar fecha"}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={fechaCompromisoDate}
-                      onSelect={(d) => update("fecha_compromiso", d ? format(d, "yyyy-MM-dd") : "")}
-                      initialFocus
-                      className={cn("p-3 pointer-events-auto")}
-                    />
+                    <Calendar mode="single" selected={parseFecha(form.fecha_verificacion)} onSelect={(d) => update("fecha_verificacion", d ? format(d, "yyyy-MM-dd") : "")} initialFocus className={cn("p-3 pointer-events-auto")} />
                   </PopoverContent>
                 </Popover>
-              </div>
-              <div className="flex items-center gap-2 col-span-2">
-                <Switch
-                  checked={form.requiere_accion || needsAction}
-                  onCheckedChange={(v) => update("requiere_accion", v)}
-                  disabled={needsAction}
-                />
-                <Label className="text-xs">¿Requiere Acción?</Label>
-              </div>
-            </div>
-          </div>
-
-          {/* ── Sección 4: Residual con catálogos inline ── */}
-          <div>
-            <h4 className="text-xs font-bold text-muted-foreground mb-3 uppercase tracking-wide">
-              4. Evaluación Final (Residual)
-            </h4>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label className="text-xs">Acción Implementada</Label>
-                <Textarea
-                  value={form.accion_implementada}
-                  onChange={(e) => update("accion_implementada", e.target.value)}
-                  rows={3}
-                  placeholder="Escriba cada acción implementada en una línea separada"
-                />
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs">Fecha de Evidencia</Label>
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn(
-                        "w-full justify-start text-left font-normal",
-                        !form.fecha_evidencia && "text-muted-foreground",
-                      )}
-                    >
+                    <Button variant="outline" className={cn("w-full justify-start text-left font-normal text-xs", !form.fecha_evidencia && "text-muted-foreground")}>
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {fechaEvidenciaDate
-                        ? format(fechaEvidenciaDate, "PPP")
-                        : form.fecha_evidencia || "Seleccionar fecha"}
+                      {fechaEvidenciaDate ? format(fechaEvidenciaDate, "PPP") : form.fecha_evidencia || "Seleccionar fecha"}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={fechaEvidenciaDate}
-                      onSelect={(d) => update("fecha_evidencia", d ? format(d, "yyyy-MM-dd") : "")}
-                      initialFocus
-                      className={cn("p-3 pointer-events-auto")}
-                    />
+                    <Calendar mode="single" selected={fechaEvidenciaDate} onSelect={(d) => update("fecha_evidencia", d ? format(d, "yyyy-MM-dd") : "")} initialFocus className={cn("p-3 pointer-events-auto")} />
                   </PopoverContent>
                 </Popover>
               </div>
-            </div>
-
-            {/* Anexos */}
-            <div className="mt-3 space-y-2">
-              <Label className="text-xs">ANEXOS — Evidencia (PDF)</Label>
-              <div className="flex items-center gap-2">
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".pdf"
-                  multiple
-                  className="hidden"
-                  onChange={handleFileUpload}
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="gap-1 text-xs"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={uploading}
-                >
-                  <Upload className="h-3 w-3" />
-                  {uploading ? "Subiendo..." : "Adjuntar PDF"}
-                </Button>
-              </div>
-              {form.anexos.length > 0 && (
-                <div className="space-y-1">
-                  {form.anexos.map((a, i) => (
-                    <div key={i} className="flex items-center gap-2 text-xs bg-muted/50 rounded px-2 py-1">
-                      <FileText className="h-3 w-3 text-muted-foreground" />
-                      <span className="truncate flex-1">{a.name}</span>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="h-5 w-5"
-                        onClick={() => removeAnexo(i)}
-                      >
-                        <X className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  ))}
+              <div className="space-y-1.5">
+                <Label className="text-xs">ANEXOS — Evidencia (PDF)</Label>
+                <div className="flex items-center gap-2">
+                  <input ref={fileInputRef} type="file" accept=".pdf" multiple className="hidden" onChange={handleFileUpload} />
+                  <Button type="button" variant="outline" size="sm" className="gap-1 text-xs" onClick={() => fileInputRef.current?.click()} disabled={uploading}>
+                    <Upload className="h-3 w-3" />
+                    {uploading ? "Subiendo..." : "Adjuntar PDF"}
+                  </Button>
                 </div>
-              )}
+                {form.anexos.length > 0 && (
+                  <div className="space-y-1">
+                    {form.anexos.map((a, i) => (
+                      <div key={i} className="flex items-center gap-2 text-xs bg-muted/50 rounded px-2 py-1">
+                        <FileText className="h-3 w-3 text-muted-foreground" />
+                        <span className="truncate flex-1">{a.name}</span>
+                        <Button type="button" variant="ghost" size="icon" className="h-5 w-5" onClick={() => removeAnexo(i)}>
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
 
-            {/* S' O' D' Residual con catálogos */}
-            <div className="grid grid-cols-4 gap-3 mt-3">
-              {/* S' residual */}
+            {/* S' O' D' Residual */}
+            <div className="grid grid-cols-4 gap-3">
               <div className="space-y-1.5">
                 <Label className="text-xs">S' Residual</Label>
                 <Select value={String(form.sev_residual)} onValueChange={(v) => update("sev_residual", Number(v))}>
-                  <SelectTrigger className={form.sev_residual >= 9 ? "border-destructive text-destructive" : ""}>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {SCORES.map((s) => (
-                      <SelectItem key={s} value={String(s)}>
-                        {s}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
+                  <SelectTrigger className={form.sev_residual >= 9 ? "border-destructive text-destructive" : ""}><SelectValue /></SelectTrigger>
+                  <SelectContent>{SCORES.map((s) => <SelectItem key={s} value={String(s)}>{s}</SelectItem>)}</SelectContent>
                 </Select>
                 <CatalogoInline tipo="severidad" valorActual={form.sev_residual} />
               </div>
-
-              {/* O' residual */}
               <div className="space-y-1.5">
                 <Label className="text-xs">O' Residual</Label>
                 <Select value={String(form.ocu_residual)} onValueChange={(v) => update("ocu_residual", Number(v))}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {SCORES.map((s) => (
-                      <SelectItem key={s} value={String(s)}>
-                        {s}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>{SCORES.map((s) => <SelectItem key={s} value={String(s)}>{s}</SelectItem>)}</SelectContent>
                 </Select>
                 <CatalogoInline tipo="ocurrencia" valorActual={form.ocu_residual} />
               </div>
-
-              {/* D' residual */}
               <div className="space-y-1.5">
                 <Label className="text-xs">D' Residual</Label>
                 <Select value={String(form.det_residual)} onValueChange={(v) => update("det_residual", Number(v))}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {SCORES.map((s) => (
-                      <SelectItem key={s} value={String(s)}>
-                        {s}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>{SCORES.map((s) => <SelectItem key={s} value={String(s)}>{s}</SelectItem>)}</SelectContent>
                 </Select>
                 <CatalogoInline tipo="deteccion" valorActual={form.det_residual} />
               </div>
-
-              {/* NPR Residual */}
               <div className="space-y-1.5">
                 <Label className="text-xs">NPR Residual</Label>
-                <div
-                  className={`h-10 rounded-md border flex items-center justify-center font-bold text-lg ${
-                    nprResLevel.label === "Crítico"
-                      ? "bg-destructive/10 text-destructive border-destructive"
-                      : nprResLevel.label === "Mayor"
-                        ? "bg-warning/10 text-warning border-warning"
-                        : "bg-success/10 text-success border-success"
-                  }`}
-                >
+                <div className={`h-10 rounded-md border flex items-center justify-center font-bold text-lg ${
+                  nprResLevel.label === "Crítico" ? "bg-destructive/10 text-destructive border-destructive"
+                    : nprResLevel.label === "Mayor" ? "bg-warning/10 text-warning border-warning"
+                    : "bg-success/10 text-success border-success"
+                }`}>
                   {nprResidual}
                 </div>
-                <p className="text-[10px] text-center">
-                  {nprResLevel.dot} {nprResLevel.label}
-                </p>
+                <p className="text-[10px] text-center">{nprResLevel.dot} {nprResLevel.label}</p>
               </div>
             </div>
 
-            {/* Dictamen */}
-            <div className="mt-3 space-y-1.5">
+            <div className="space-y-1.5">
               <Label className="text-xs">Dictamen</Label>
               <Select value={form.dictamen} onValueChange={(v) => update("dictamen", v)}>
-                <SelectTrigger className="w-48">
-                  <SelectValue />
-                </SelectTrigger>
+                <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="Pendiente">Pendiente</SelectItem>
                   <SelectItem value="Aceptable">Aceptable</SelectItem>
@@ -802,17 +869,20 @@ export function RiesgoFormDialog({ open, onClose, folioId, riesgo, nextNumeroId 
                 </SelectContent>
               </Select>
             </div>
-          </div>
 
-          <div className="flex justify-end gap-2 pt-2 border-t">
-            <Button variant="outline" onClick={onClose}>
-              Cancelar
-            </Button>
-            <Button onClick={handleSave} disabled={saving}>
-              {saving ? "Guardando..." : isEdit ? "Actualizar" : "Agregar Riesgo"}
-            </Button>
-          </div>
-        </div>
+            <div className="flex justify-between pt-2 border-t">
+              <Button size="sm" variant="outline" onClick={() => setActiveTab("controles")}>
+                ← Anterior
+              </Button>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={onClose}>Cancelar</Button>
+                <Button size="sm" onClick={handleSave} disabled={saving}>
+                  {saving ? "Guardando..." : isEdit ? "Actualizar" : "Agregar Riesgo"}
+                </Button>
+              </div>
+            </div>
+          </TabsContent>
+        </Tabs>
       </DialogContent>
     </Dialog>
   );
