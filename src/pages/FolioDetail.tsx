@@ -838,23 +838,23 @@ function SeccionRiesgos({ riesgos, locked, folioId }: { riesgos: Riesgo[]; locke
           </span>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-[11px] min-w-[1300px]">
+          <table className="w-full text-[11px] min-w-[1800px]">
             <thead>
               <tr className="bg-muted/50">
                 <th rowSpan={2} className="border-r border-b p-2 text-center font-bold w-10">
                   ID
                 </th>
-                <th colSpan={4} className="border-r border-b p-2 text-center font-bold">
-                  1. IDENTIFICACIÓN DE PELIGRO Y FALLA
+                <th colSpan={6} className="border-r border-b p-2 text-center font-bold">
+                  1. IDENTIFICACIÓN ISO 14971 §5
                 </th>
                 <th colSpan={4} className="border-r border-b p-2 text-center font-bold">
                   2. EVALUACIÓN INICIAL
                 </th>
-                <th colSpan={4} className="border-r border-b p-2 text-center font-bold">
-                  3. CONTROLES Y GESTIÓN
+                <th colSpan={5} className="border-r border-b p-2 text-center font-bold">
+                  3. CONTROLES Y GESTIÓN ISO 14971 §6
                 </th>
-                <th colSpan={5} className={`border-b p-2 text-center font-bold ${!locked ? "border-r" : ""}`}>
-                  4. EVALUACIÓN FINAL (RESIDUAL)
+                <th colSpan={6} className={`border-b p-2 text-center font-bold ${!locked ? "border-r" : ""}`}>
+                  4. EVALUACIÓN FINAL (RESIDUAL) + VERIFICACIÓN
                 </th>
                 {!locked && (
                   <th rowSpan={2} className="border-b p-2 text-center font-bold w-16">
@@ -863,23 +863,28 @@ function SeccionRiesgos({ riesgos, locked, folioId }: { riesgos: Riesgo[]; locke
                 )}
               </tr>
               <tr className="bg-muted/30 text-[10px] text-muted-foreground">
-                <th className="border-r border-b p-1.5">Etapa</th>
-                <th className="border-r border-b p-1.5">Peligro / Modo de Falla</th>
-                <th className="border-r border-b p-1.5">Causa Potencial</th>
-                <th className="border-r border-b p-1.5">Efecto / Daño</th>
+                <th className="border-r border-b p-1.5 min-w-[90px]">Etapa</th>
+                <th className="border-r border-b p-1.5 min-w-[110px]">Peligro (fuente)</th>
+                <th className="border-r border-b p-1.5 min-w-[110px]">Situación Peligrosa</th>
+                <th className="border-r border-b p-1.5 min-w-[130px]">Modo de Falla</th>
+                <th className="border-r border-b p-1.5 min-w-[110px]">Causa Potencial</th>
+                <th className="border-r border-b p-1.5 min-w-[110px]">Efecto / Daño</th>
                 <th className="border-r border-b p-1.5 text-center w-8">S</th>
                 <th className="border-r border-b p-1.5 text-center w-8">O</th>
                 <th className="border-r border-b p-1.5 text-center w-8">D</th>
                 <th className="border-r border-b p-1.5 text-center w-14">NPR</th>
-                <th className="border-r border-b p-1.5">Controles Actuales</th>
-                <th className="border-r border-b p-1.5">Acción Propuesta</th>
-                <th className="border-r border-b p-1.5">Responsable</th>
-                <th className="border-r border-b p-1.5">Fecha</th>
-                <th className="border-r border-b p-1.5">Acción Implementada</th>
+                <th className="border-r border-b p-1.5 min-w-[110px]">Controles Actuales</th>
+                <th className="border-r border-b p-1.5 min-w-[110px]">Prevención</th>
+                <th className="border-r border-b p-1.5 min-w-[110px]">Detección</th>
+                <th className="border-r border-b p-1.5 min-w-[130px]">Acción Propuesta</th>
+                <th className="border-r border-b p-1.5 min-w-[90px]">Responsable / Fecha</th>
+                <th className="border-r border-b p-1.5 min-w-[110px]">Acción Implementada</th>
                 <th className="border-r border-b p-1.5 text-center w-8">S'</th>
                 <th className="border-r border-b p-1.5 text-center w-8">O'</th>
                 <th className="border-r border-b p-1.5 text-center w-8">D'</th>
-                <th className={`border-b p-1.5 text-center w-14 ${!locked ? "border-r" : ""}`}>NPR'</th>
+                <th className="border-r border-b p-1.5 text-center w-14">NPR'</th>
+                <th className="border-r border-b p-1.5 min-w-[90px]">Verificación</th>
+                <th className={`border-b p-1.5 text-center w-16 ${!locked ? "border-r" : ""}`}>Dictamen</th>
               </tr>
             </thead>
             <tbody>
@@ -897,13 +902,19 @@ function SeccionRiesgos({ riesgos, locked, folioId }: { riesgos: Riesgo[]; locke
                     <td className="border-r p-1.5 text-center font-mono font-bold">
                       {String(r.numero_id).padStart(2, "0")}
                     </td>
-                    <td className="border-r p-1.5">{r.etapa_proceso}</td>
-                    <td className="border-r p-1.5 max-w-[160px] whitespace-pre-line">{r.peligro_modo_falla}</td>
-                    <td className="border-r p-1.5 max-w-[140px] whitespace-pre-line">{r.causa_potencial}</td>
-                    <td className="border-r p-1.5 max-w-[140px] whitespace-pre-line">{r.efecto_dano}</td>
-                    <td
-                      className={`border-r p-1.5 text-center font-bold ${r.severidad >= 9 ? "text-destructive bg-destructive/10" : ""}`}
-                    >
+                    {/* Grupo 1: Identificación ISO 14971 */}
+                    <td className="border-r p-1.5 max-w-[90px] whitespace-pre-line">{r.etapa_proceso}</td>
+                    <td className="border-r p-1.5 max-w-[110px] whitespace-pre-line">
+                      {r.peligro || <span className="text-muted-foreground/50 italic text-[9px]">Sin capturar</span>}
+                    </td>
+                    <td className="border-r p-1.5 max-w-[110px] whitespace-pre-line">
+                      {r.situacion_peligrosa || <span className="text-muted-foreground/50 italic text-[9px]">Sin capturar</span>}
+                    </td>
+                    <td className="border-r p-1.5 max-w-[130px] whitespace-pre-line">{r.peligro_modo_falla}</td>
+                    <td className="border-r p-1.5 max-w-[110px] whitespace-pre-line">{r.causa_potencial}</td>
+                    <td className="border-r p-1.5 max-w-[110px] whitespace-pre-line">{r.efecto_dano}</td>
+                    {/* Grupo 2: Evaluación inicial */}
+                    <td className={`border-r p-1.5 text-center font-bold ${r.severidad >= 9 ? "text-destructive bg-destructive/10" : ""}`}>
                       {r.severidad}
                     </td>
                     <td className="border-r p-1.5 text-center">{r.ocurrencia}</td>
@@ -911,21 +922,38 @@ function SeccionRiesgos({ riesgos, locked, folioId }: { riesgos: Riesgo[]; locke
                     <td className="border-r p-1.5 text-center">
                       <NPRBadge npr={npr} severidad={r.severidad} />
                     </td>
-                    <td className="border-r p-1.5 max-w-[130px] whitespace-pre-line">{r.controles_actuales}</td>
-                    <td className="border-r p-1.5 max-w-[160px] whitespace-pre-line">
+                    {/* Grupo 3: Controles */}
+                    <td className="border-r p-1.5 max-w-[110px] whitespace-pre-line">{r.controles_actuales || <span className="text-muted-foreground">—</span>}</td>
+                    <td className="border-r p-1.5 max-w-[110px] whitespace-pre-line">
+                      {r.controles_prevencion || <span className="text-muted-foreground/50 italic text-[9px]">Sin capturar</span>}
+                    </td>
+                    <td className="border-r p-1.5 max-w-[110px] whitespace-pre-line">
+                      {r.controles_deteccion || <span className="text-muted-foreground/50 italic text-[9px]">Sin capturar</span>}
+                    </td>
+                    <td className="border-r p-1.5 max-w-[130px] whitespace-pre-line">
                       {r.accion_propuesta ||
                         (needsAction && <span className="text-destructive font-bold">⚠ REQUERIDO</span>)}
                     </td>
-                    <td className="border-r p-1.5">{r.responsable}</td>
-                    <td className="border-r p-1.5 text-[10px]">{r.fecha_compromiso}</td>
-                    <td className="border-r p-1.5 max-w-[140px] whitespace-pre-line">
+                    <td className="border-r p-1.5 text-[10px]">
+                      <div>{r.responsable || <span className="text-muted-foreground">—</span>}</div>
+                      <div className="text-muted-foreground">{r.fecha_compromiso || ""}</div>
+                    </td>
+                    {/* Grupo 4: Residual + Verificación */}
+                    <td className="border-r p-1.5 max-w-[110px] whitespace-pre-line">
                       {r.accion_implementada || <span className="text-muted-foreground">—</span>}
                     </td>
                     <td className="border-r p-1.5 text-center">{r.sev_residual}</td>
                     <td className="border-r p-1.5 text-center">{r.ocu_residual}</td>
                     <td className="border-r p-1.5 text-center">{r.det_residual}</td>
-                    <td className={`p-1.5 text-center ${!locked ? "border-r" : ""}`}>
+                    <td className="border-r p-1.5 text-center">
                       <NPRBadge npr={nprRes} severidad={r.sev_residual} />
+                    </td>
+                    <td className="border-r p-1.5 text-[10px]">
+                      <div>{r.verificado_por || <span className="text-muted-foreground">—</span>}</div>
+                      <div className="text-muted-foreground text-[9px]">{r.resultado_verificacion || ""}</div>
+                    </td>
+                    <td className={`p-1.5 text-center text-[10px] font-semibold ${!locked ? "border-r" : ""} ${r.dictamen === "No Aceptable" ? "text-destructive" : r.dictamen === "Aceptable" ? "text-green-700" : "text-amber-600"}`}>
+                      {r.dictamen}
                     </td>
                     {!locked && (
                       <td className="p-1 text-center" onClick={(e) => e.stopPropagation()}>
