@@ -66,6 +66,11 @@ function SeccionDescripcion({ folio, locked, onSaved }: { folio: Folio; locked: 
     fecha_inicio: folio.fecha_inicio,
     fecha_cierre: folio.fecha_cierre || "",
     alcance: folio.alcance || "",
+    // Nuevos — trazabilidad y versión (NOM-241)
+    numero_version: (folio as any).numero_version || "1.0",
+    numero_modelo: (folio as any).numero_modelo || "",
+    numero_lote: (folio as any).numero_lote || "",
+    clase_dispositivo: (folio as any).clase_dispositivo || "",
   });
 
   const handleSave = async () => {
@@ -80,7 +85,11 @@ function SeccionDescripcion({ folio, locked, onSaved }: { folio: Folio; locked: 
         fecha_inicio: form.fecha_inicio,
         fecha_cierre: form.fecha_cierre || null,
         alcance: form.alcance,
-      })
+        numero_version: form.numero_version,
+        numero_modelo: form.numero_modelo,
+        numero_lote: form.numero_lote,
+        clase_dispositivo: form.clase_dispositivo,
+      } as any)
       .eq("id", folio.id);
     setSaving(false);
     if (error) {
@@ -106,12 +115,20 @@ function SeccionDescripcion({ folio, locked, onSaved }: { folio: Folio; locked: 
             <Pencil className="h-3.5 w-3.5" />
           </Button>
         )}
-        <div className="grid grid-cols-4 border-b">
+        <div className="grid grid-cols-12 border-b">
           <FormField
             label="Folio de Gestión"
             value={<span className="font-mono font-bold">{folio.codigo}</span>}
             className="col-span-4"
           />
+          <FormField
+            label="Versión"
+            value={<span className="font-mono font-semibold text-primary">{(folio as any).numero_version || "1.0"}</span>}
+            className="col-span-2"
+          />
+          <FormField label="Modelo / Ref." value={(folio as any).numero_modelo} className="col-span-2" />
+          <FormField label="Lote / Rev." value={(folio as any).numero_lote} className="col-span-2" />
+          <FormField label="Clase" value={(folio as any).clase_dispositivo} className="col-span-2 border-r-0" />
         </div>
         <div className="grid grid-cols-12">
           <FormField label="Proceso / Equipo Analizado" value={folio.proceso_equipo} className="col-span-4" />
@@ -199,6 +216,52 @@ function SeccionDescripcion({ folio, locked, onSaved }: { folio: Folio; locked: 
           <label className="text-[10px] font-semibold text-muted-foreground uppercase">Alcance</label>
           <Textarea value={form.alcance} onChange={(e) => setForm({ ...form, alcance: e.target.value })} rows={3} />
         </div>
+        {/* Trazabilidad NOM-241 §7.5.3 */}
+        <div className="border-t pt-3">
+          <p className="text-[10px] font-semibold text-muted-foreground uppercase mb-2">
+            Trazabilidad del Dispositivo — NOM-241 §7.5.3
+          </p>
+          <div className="grid grid-cols-4 gap-3">
+            <div className="space-y-1">
+              <label className="text-[10px] font-semibold text-muted-foreground uppercase">Versión Doc.</label>
+              <Input
+                value={form.numero_version}
+                onChange={(e) => setForm({ ...form, numero_version: e.target.value })}
+                placeholder="1.0"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-[10px] font-semibold text-muted-foreground uppercase">Modelo / Referencia</label>
+              <Input
+                value={form.numero_modelo}
+                onChange={(e) => setForm({ ...form, numero_modelo: e.target.value })}
+                placeholder="MOD-001"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-[10px] font-semibold text-muted-foreground uppercase">Lote / Revisión</label>
+              <Input
+                value={form.numero_lote}
+                onChange={(e) => setForm({ ...form, numero_lote: e.target.value })}
+                placeholder="L-2026-001"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-[10px] font-semibold text-muted-foreground uppercase">Clase Dispositivo</label>
+              <Select
+                value={form.clase_dispositivo}
+                onValueChange={(v) => setForm({ ...form, clase_dispositivo: v })}
+              >
+                <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Clase I">Clase I — Bajo riesgo</SelectItem>
+                  <SelectItem value="Clase II">Clase II — Riesgo moderado</SelectItem>
+                  <SelectItem value="Clase III">Clase III — Alto riesgo</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </div>
         <div className="flex justify-end gap-2">
           <Button variant="outline" size="sm" onClick={() => setEditing(false)} className="gap-1">
             <X className="h-3 w-3" /> Cancelar
@@ -228,6 +291,10 @@ function SeccionComite({
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [firmando, setFirmando] = useState(false);
+  const [showFirmaModal, setShowFirmaModal] = useState(false);
+
+  const TEXTO_COMPROMISO =
+    "Declaro bajo protesta de decir verdad que he revisado el contenido íntegro de este Análisis de Gestión de Riesgos, que la información es correcta y completa conforme a la NOM-241-SSA1-2025 e ISO 14971:2019, y que mi firma electrónica registrada en este sistema tiene el mismo valor legal que mi firma autógrafa.";
 
   const { data: profiles } = useQuery({
     queryKey: ["profiles-firmas"],
@@ -248,10 +315,11 @@ function SeccionComite({
   };
 
   const handleFirmar = async () => {
+    setShowFirmaModal(false);
     setFirmando(true);
     try {
       const { data, error } = await supabase.functions.invoke("folio-workflow", {
-        body: { accion: "firmar", folio_id: folioId },
+        body: { accion: "firmar", folio_id: folioId, texto_compromiso: TEXTO_COMPROMISO },
       });
 
       if (error || data?.error) throw new Error(error?.message || data?.error);
@@ -330,7 +398,7 @@ function SeccionComite({
                       </span>
                     </div>
                   ) : puedeFiremar ? (
-                    <Button size="sm" className="h-7 text-[10px] gap-1" onClick={handleFirmar} disabled={firmando}>
+                    <Button size="sm" className="h-7 text-[10px] gap-1" onClick={() => setShowFirmaModal(true)} disabled={firmando}>
                       <FileSignature className="h-3 w-3" />
                       {firmando ? "Firmando..." : "Firmar"}
                     </Button>
@@ -345,6 +413,158 @@ function SeccionComite({
           })}
         </tbody>
       </table>
+
+      {/* Modal de confirmación de firma electrónica — NOM-241 / 21 CFR Part 11 */}
+      {showFirmaModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-background border rounded-lg shadow-xl max-w-lg w-full mx-4 p-6 space-y-4">
+            <div className="flex items-center gap-2">
+              <FileSignature className="h-5 w-5 text-primary" />
+              <h3 className="font-bold text-base">Confirmación de Firma Electrónica</h3>
+            </div>
+            <div className="bg-muted/50 rounded-md p-3 text-xs text-muted-foreground border-l-4 border-primary">
+              <p className="font-semibold text-foreground mb-1">Declaración de firma — NOM-241-SSA1-2025</p>
+              <p>{TEXTO_COMPROMISO}</p>
+            </div>
+            <div className="bg-amber-50 border border-amber-200 rounded-md p-3 text-xs text-amber-800">
+              <strong>Importante:</strong> Esta firma electrónica tiene el mismo valor legal que su firma autógrafa y quedará registrada con fecha, hora e IP conforme a los requisitos de trazabilidad.
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="outline" size="sm" onClick={() => setShowFirmaModal(false)}>
+                Cancelar
+              </Button>
+              <Button size="sm" onClick={handleFirmar} className="gap-1">
+                <FileSignature className="h-3.5 w-3.5" />
+                Acepto y Firmo
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Sección Riesgo Residual Global (ISO 14971 §7 / §8) ──────────────────────
+function SeccionRiesgoResidualGlobal({
+  folio,
+  locked,
+  onSaved,
+}: {
+  folio: Folio;
+  locked: boolean;
+  onSaved: () => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const { toast } = useToast();
+  const [form, setForm] = useState({
+    beneficio_clinico: (folio as any).beneficio_clinico || "",
+    riesgo_residual_global: (folio as any).riesgo_residual_global || "",
+  });
+
+  const handleSave = async () => {
+    setSaving(true);
+    const { error } = await supabase
+      .from("folios")
+      .update({
+        beneficio_clinico: form.beneficio_clinico,
+        riesgo_residual_global: form.riesgo_residual_global,
+      } as any)
+      .eq("id", folio.id);
+    setSaving(false);
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Evaluación global guardada" });
+      setEditing(false);
+      onSaved();
+    }
+  };
+
+  const faltaBeneficio = !(folio as any).beneficio_clinico?.trim();
+  const faltaResidual = !(folio as any).riesgo_residual_global?.trim();
+
+  return (
+    <div className="border rounded-md overflow-hidden relative">
+      <SectionHeader number="V" title="EVALUACIÓN GLOBAL DE RIESGO-BENEFICIO — ISO 14971 §7/§8" />
+      {!locked && (
+        <Button
+          variant="ghost"
+          size="icon"
+          className="absolute top-1 right-1 h-7 w-7"
+          onClick={() => setEditing(!editing)}
+        >
+          <Pencil className="h-3.5 w-3.5" />
+        </Button>
+      )}
+
+      {/* Alertas de completitud */}
+      {(faltaBeneficio || faltaResidual) && (
+        <div className="px-4 py-2 bg-destructive/5 border-b flex items-center gap-2 text-xs text-destructive">
+          <span className="font-bold">⚠ NOM-241:</span>
+          {faltaBeneficio && <span>Beneficio clínico requerido.</span>}
+          {faltaResidual && <span>Evaluación de riesgo residual global requerida.</span>}
+        </div>
+      )}
+
+      {editing ? (
+        <div className="p-4 space-y-3">
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-semibold text-muted-foreground uppercase">
+              Beneficio Clínico del Dispositivo — ISO 14971 §7
+            </label>
+            <Textarea
+              value={form.beneficio_clinico}
+              onChange={(e) => setForm({ ...form, beneficio_clinico: e.target.value })}
+              rows={3}
+              placeholder="Describa el beneficio clínico que justifica el uso del dispositivo y los riesgos residuales aceptados."
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-semibold text-muted-foreground uppercase">
+              Evaluación del Riesgo Residual Global — ISO 14971 §8
+            </label>
+            <Textarea
+              value={form.riesgo_residual_global}
+              onChange={(e) => setForm({ ...form, riesgo_residual_global: e.target.value })}
+              rows={4}
+              placeholder="Ejemplo: El riesgo residual global del dispositivo es aceptable. Se identificaron N riesgos, de los cuales X son Aceptables y Y requirieron acción. Los beneficios clínicos superan los riesgos residuales conforme a ISO 14971 §8."
+            />
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" size="sm" onClick={() => setEditing(false)} className="gap-1">
+              <X className="h-3 w-3" /> Cancelar
+            </Button>
+            <Button size="sm" onClick={handleSave} disabled={saving} className="gap-1">
+              <Save className="h-3 w-3" /> {saving ? "Guardando..." : "Guardar"}
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-2">
+          <div className="border-r border-b p-3">
+            <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wide mb-1">
+              Beneficio Clínico — ISO 14971 §7
+            </p>
+            <p className="text-sm whitespace-pre-line">
+              {(folio as any).beneficio_clinico || (
+                <span className="text-muted-foreground/50 italic">Sin capturar — requerido antes de enviar a firma</span>
+              )}
+            </p>
+          </div>
+          <div className="border-b p-3">
+            <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wide mb-1">
+              Riesgo Residual Global — ISO 14971 §8
+            </p>
+            <p className="text-sm whitespace-pre-line">
+              {(folio as any).riesgo_residual_global || (
+                <span className="text-muted-foreground/50 italic">Sin capturar — requerido antes de enviar a firma</span>
+              )}
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -685,6 +905,9 @@ export default function FolioDetail() {
 
         {/* Evidencias — pestaña documental para auditor */}
         <SeccionEvidencias riesgos={riesgos} folioCodigo={folio.codigo} folioId={folio.id} />
+
+        {/* Evaluación global de riesgo-beneficio — ISO 14971 §7/§8 */}
+        <SeccionRiesgoResidualGlobal folio={folio} locked={locked} onSaved={handleRefresh} />
 
         {/* Dictamen con zona exclusiva del RS */}
         <SeccionDictamen folio={folio} riesgos={riesgos} locked={locked} onSaved={handleRefresh} />
