@@ -144,9 +144,13 @@ export type Database = {
           fecha_firma: string | null
           firmado: boolean
           folio_id: string
+          hash_documento: string
           id: string
+          ip_firma: string
           nombre: string
           responsabilidad: string
+          texto_compromiso: string
+          user_agent: string
           user_id: string | null
         }
         Insert: {
@@ -155,9 +159,13 @@ export type Database = {
           fecha_firma?: string | null
           firmado?: boolean
           folio_id: string
+          hash_documento?: string
           id?: string
+          ip_firma?: string
           nombre: string
           responsabilidad: string
+          texto_compromiso?: string
+          user_agent?: string
           user_id?: string | null
         }
         Update: {
@@ -166,9 +174,13 @@ export type Database = {
           fecha_firma?: string | null
           firmado?: boolean
           folio_id?: string
+          hash_documento?: string
           id?: string
+          ip_firma?: string
           nombre?: string
           responsabilidad?: string
+          texto_compromiso?: string
+          user_agent?: string
           user_id?: string | null
         }
         Relationships: [
@@ -196,9 +208,52 @@ export type Database = {
         }
         Relationships: []
       }
+      folio_versiones: {
+        Row: {
+          creado_por: string | null
+          created_at: string
+          folio_id: string
+          id: string
+          motivo_revision: string
+          snapshot_folio: Json
+          snapshot_riesgos: Json
+          version: string
+        }
+        Insert: {
+          creado_por?: string | null
+          created_at?: string
+          folio_id: string
+          id?: string
+          motivo_revision?: string
+          snapshot_folio: Json
+          snapshot_riesgos?: Json
+          version: string
+        }
+        Update: {
+          creado_por?: string | null
+          created_at?: string
+          folio_id?: string
+          id?: string
+          motivo_revision?: string
+          snapshot_folio?: Json
+          snapshot_riesgos?: Json
+          version?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "folio_versiones_folio_id_fkey"
+            columns: ["folio_id"]
+            isOneToOne: false
+            referencedRelation: "folios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       folios: {
         Row: {
           alcance: string | null
+          beneficio_clinico: string
+          clase_dispositivo: string
           codigo: string
           conclusion: string | null
           control_cambios_id: string | null
@@ -210,12 +265,19 @@ export type Database = {
           fecha_inicio: string
           id: string
           justificacion_tecnica: string | null
+          normas_aplicables: string[]
+          numero_lote: string
+          numero_modelo: string
+          numero_version: string
           origen: Database["public"]["Enums"]["origen_riesgo"]
           proceso_equipo: string
+          riesgo_residual_global: string
           updated_at: string
         }
         Insert: {
           alcance?: string | null
+          beneficio_clinico?: string
+          clase_dispositivo?: string
           codigo: string
           conclusion?: string | null
           control_cambios_id?: string | null
@@ -227,12 +289,19 @@ export type Database = {
           fecha_inicio?: string
           id?: string
           justificacion_tecnica?: string | null
+          normas_aplicables?: string[]
+          numero_lote?: string
+          numero_modelo?: string
+          numero_version?: string
           origen: Database["public"]["Enums"]["origen_riesgo"]
           proceso_equipo: string
+          riesgo_residual_global?: string
           updated_at?: string
         }
         Update: {
           alcance?: string | null
+          beneficio_clinico?: string
+          clase_dispositivo?: string
           codigo?: string
           conclusion?: string | null
           control_cambios_id?: string | null
@@ -244,8 +313,13 @@ export type Database = {
           fecha_inicio?: string
           id?: string
           justificacion_tecnica?: string | null
+          normas_aplicables?: string[]
+          numero_lote?: string
+          numero_modelo?: string
+          numero_version?: string
           origen?: Database["public"]["Enums"]["origen_riesgo"]
           proceso_equipo?: string
+          riesgo_residual_global?: string
           updated_at?: string
         }
         Relationships: []
@@ -287,6 +361,8 @@ export type Database = {
           anexos: Json | null
           causa_potencial: string
           controles_actuales: string | null
+          controles_deteccion: string
+          controles_prevencion: string
           created_at: string
           det_residual: number
           deteccion: number
@@ -295,19 +371,26 @@ export type Database = {
           etapa_proceso: string
           fecha_compromiso: string | null
           fecha_evidencia: string | null
+          fecha_verificacion: string | null
           folio_id: string
           id: string
+          justificacion_aceptabilidad: string
           npr: number | null
           npr_residual: number | null
           numero_id: number
           ocu_residual: number
           ocurrencia: number
+          peligro: string
           peligro_modo_falla: string
           requiere_accion: boolean
           responsable: string | null
+          resultado_verificacion: string
+          secuencia_eventos: string
           sev_residual: number
           severidad: number
+          situacion_peligrosa: string
           updated_at: string
+          verificado_por: string
         }
         Insert: {
           accion_implementada?: string | null
@@ -315,6 +398,8 @@ export type Database = {
           anexos?: Json | null
           causa_potencial?: string
           controles_actuales?: string | null
+          controles_deteccion?: string
+          controles_prevencion?: string
           created_at?: string
           det_residual?: number
           deteccion?: number
@@ -323,19 +408,26 @@ export type Database = {
           etapa_proceso?: string
           fecha_compromiso?: string | null
           fecha_evidencia?: string | null
+          fecha_verificacion?: string | null
           folio_id: string
           id?: string
+          justificacion_aceptabilidad?: string
           npr?: number | null
           npr_residual?: number | null
           numero_id?: number
           ocu_residual?: number
           ocurrencia?: number
+          peligro?: string
           peligro_modo_falla?: string
           requiere_accion?: boolean
           responsable?: string | null
+          resultado_verificacion?: string
+          secuencia_eventos?: string
           sev_residual?: number
           severidad?: number
+          situacion_peligrosa?: string
           updated_at?: string
+          verificado_por?: string
         }
         Update: {
           accion_implementada?: string | null
@@ -343,6 +435,8 @@ export type Database = {
           anexos?: Json | null
           causa_potencial?: string
           controles_actuales?: string | null
+          controles_deteccion?: string
+          controles_prevencion?: string
           created_at?: string
           det_residual?: number
           deteccion?: number
@@ -351,19 +445,26 @@ export type Database = {
           etapa_proceso?: string
           fecha_compromiso?: string | null
           fecha_evidencia?: string | null
+          fecha_verificacion?: string | null
           folio_id?: string
           id?: string
+          justificacion_aceptabilidad?: string
           npr?: number | null
           npr_residual?: number | null
           numero_id?: number
           ocu_residual?: number
           ocurrencia?: number
+          peligro?: string
           peligro_modo_falla?: string
           requiere_accion?: boolean
           responsable?: string | null
+          resultado_verificacion?: string
+          secuencia_eventos?: string
           sev_residual?: number
           severidad?: number
+          situacion_peligrosa?: string
           updated_at?: string
+          verificado_por?: string
         }
         Relationships: [
           {
@@ -422,6 +523,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      archivar_version_folio: {
+        Args: { p_folio_id: string; p_motivo?: string }
+        Returns: string
+      }
       delete_email: {
         Args: { message_id: number; queue_name: string }
         Returns: boolean
