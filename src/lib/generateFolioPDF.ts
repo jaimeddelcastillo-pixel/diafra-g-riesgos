@@ -217,39 +217,39 @@ export async function generateFolioPDF(folio: Folio, riesgos: Riesgo[], comite: 
         ],
       ],
       body: [
-        // Fila 1: Peligro (fuente) / S / Controles Actuales / Acción Implementada
+        // Fila 1: Etapa del Proceso (primera — es lo que se identifica primero)
         [
           {
             content: String(r.numero_id).padStart(2, "0"),
             rowSpan: 6,
             styles: { halign: "center", valign: "middle", fontSize: 14, fontStyle: "bold" },
           },
-          `Peligro (fuente):\n${rr.peligro || "—"}`,
+          `Etapa del Proceso:\n${r.etapa_proceso}`,
           { content: "S:", styles: { fontStyle: "bold", halign: "right" } },
           { content: String(r.severidad), styles: { fontStyle: "bold", halign: "center", fontSize: 11 } },
           `Controles Actuales:\n${r.controles_actuales || "—"}`,
           { content: `Acción Implementada:\n${r.accion_implementada || "—"}`, colSpan: 2 },
         ],
-        // Fila 2: Situación Peligrosa / O / Controles Prevención / Fecha y Evidencia
+        // Fila 2: Peligro (fuente) / O / Controles Prevención / Fecha y Evidencia
         [
-          `Situación Peligrosa:\n${rr.situacion_peligrosa || "—"}`,
+          `Peligro (fuente):\n${rr.peligro || "—"}`,
           { content: "O:", styles: { fontStyle: "bold", halign: "right" } },
           { content: String(r.ocurrencia), styles: { halign: "center", fontSize: 11 } },
           `Controles de Prevención:\n${rr.controles_prevencion || "—"}`,
           { content: `Fecha y Evidencia:\n${r.fecha_evidencia || "—"}`, colSpan: 2 },
         ],
-        // Fila 3: Secuencia de Eventos / D / Controles Detección / S'O'D'
+        // Fila 3: Situación Peligrosa / D / Controles Detección / S'O'D'
         [
-          `Secuencia de Eventos:\n${rr.secuencia_eventos || "—"}`,
+          `Situación Peligrosa:\n${rr.situacion_peligrosa || "—"}`,
           { content: "D:", styles: { fontStyle: "bold", halign: "right" } },
           { content: String(r.deteccion), styles: { halign: "center", fontSize: 11 } },
           `Controles de Detección:\n${rr.controles_deteccion || "—"}`,
           { content: `S': ${r.sev_residual}\nO': ${r.ocu_residual}\nD': ${r.det_residual}`, styles: { halign: "center" } },
           "",
         ],
-        // Fila 4: Modo de Falla + Causa / NPR / Acción Propuesta + Responsable + Fecha / NPR Residual
+        // Fila 4: Secuencia Eventos + Modo de Falla + Causa / NPR / Acción Propuesta + Resp + Fecha / NPR Residual
         [
-          `Modo de Falla:\n${r.peligro_modo_falla}\n\nCausa:\n${r.causa_potencial}`,
+          `Secuencia de Eventos:\n${rr.secuencia_eventos || "—"}\n\nModo de Falla:\n${r.peligro_modo_falla}\n\nCausa:\n${r.causa_potencial}`,
           {
             content: `NPR: (S × O × D)\n${getNPRText(npr, r.severidad)}`,
             colSpan: 2,
@@ -272,16 +272,14 @@ export async function generateFolioPDF(folio: Folio, riesgos: Riesgo[], comite: 
             colSpan: 2,
           },
         ],
-        // Fila 6: Etapa / ¿Requiere Acción? / Justificación ALARP / (vacío)
+        // Fila 6: ¿Requiere Acción? / Justificación ALARP
         [
-          `Etapa del Proceso:\n${r.etapa_proceso}`,
+          `¿Requiere Acción?  ${chk(r.requiere_accion)} Sí   ${chk(!r.requiere_accion)} No`,
           {
-            content: `¿Requiere Acción?  ${chk(r.requiere_accion)} Sí   ${chk(!r.requiere_accion)} No`,
+            content: `Justificación de Aceptabilidad:\n${rr.justificacion_aceptabilidad || "—"}`,
             colSpan: 2,
-            styles: { fontSize: 6.5 },
           },
-          `Justificación de Aceptabilidad:\n${rr.justificacion_aceptabilidad || "—"}`,
-          { content: "", colSpan: 2 },
+          { content: "", colSpan: 3 },
         ],
       ],
       theme: "grid",
