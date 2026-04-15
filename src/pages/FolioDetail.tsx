@@ -391,7 +391,7 @@ function SeccionComite({
   const { data: profiles } = useQuery({
     queryKey: ["profiles-firmas"],
     queryFn: async () => {
-      const { data } = await supabase.from("profiles").select("id, nombre, firma_url");
+      const { data } = await supabase.from("profiles").select("id, nombre, cargo, firma_url");
       return data || [];
     },
   });
@@ -583,9 +583,43 @@ function SeccionComite({
           ) : (
             <div className="space-y-2 py-1">
               <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">Nuevo Miembro</p>
+
+              {/* Selector de usuario registrado — auto-rellena nombre y cargo */}
+              <div>
+                <label className="text-[10px] text-muted-foreground font-medium">
+                  Usuario del sistema <span className="text-primary">(selecciona para auto-rellenar nombre y cargo)</span>
+                </label>
+                <select
+                  className="w-full border rounded px-2 py-1 text-xs mt-0.5 bg-background"
+                  value={nuevoMiembro.user_id}
+                  onChange={(e) => {
+                    const uid = e.target.value;
+                    const perfil = profiles?.find((p: any) => p.id === uid);
+                    setNuevoMiembro({
+                      ...nuevoMiembro,
+                      user_id: uid,
+                      nombre: perfil ? perfil.nombre : nuevoMiembro.nombre,
+                      cargo: perfil ? (perfil.cargo || "") : nuevoMiembro.cargo,
+                    });
+                  }}
+                >
+                  <option value="">— Miembro externo / sin cuenta en el sistema —</option>
+                  {profiles?.map((p: any) => (
+                    <option key={p.id} value={p.id}>
+                      {p.nombre}{p.cargo ? ` — ${p.cargo}` : ""}
+                    </option>
+                  ))}
+                </select>
+                {nuevoMiembro.user_id && (
+                  <p className="text-[10px] text-green-700 mt-0.5">
+                    ✓ Vinculado — podrá firmar digitalmente desde su cuenta
+                  </p>
+                )}
+              </div>
+
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="text-[10px] text-muted-foreground">Nombre *</label>
+                  <label className="text-[10px] text-muted-foreground">Nombre completo *</label>
                   <input
                     type="text"
                     className="w-full border rounded px-2 py-1 text-xs mt-0.5"
@@ -614,19 +648,6 @@ function SeccionComite({
                   value={nuevoMiembro.responsabilidad}
                   onChange={(e) => setNuevoMiembro({ ...nuevoMiembro, responsabilidad: e.target.value })}
                 />
-              </div>
-              <div>
-                <label className="text-[10px] text-muted-foreground">Usuario del sistema (opcional — para firma digital)</label>
-                <select
-                  className="w-full border rounded px-2 py-1 text-xs mt-0.5 bg-background"
-                  value={nuevoMiembro.user_id}
-                  onChange={(e) => setNuevoMiembro({ ...nuevoMiembro, user_id: e.target.value })}
-                >
-                  <option value="">— Sin vincular a usuario —</option>
-                  {profiles?.map((p: any) => (
-                    <option key={p.id} value={p.id}>{p.nombre}</option>
-                  ))}
-                </select>
               </div>
               <div className="flex gap-2 pt-1">
                 <Button size="sm" className="text-xs gap-1" onClick={handleAgregarMiembro} disabled={saving}>
