@@ -19,6 +19,96 @@ import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { Constants } from "@/integrations/supabase/types";
 import { generateFolioPDF } from "@/lib/generateFolioPDF";
 
+// ─── Checklist NOM-241 / ISO 14971 ───────────────────────────────────────────
+interface CheckItem {
+  id: string;
+  label: string;
+  ok: boolean;
+  critico: boolean; // true = bloquea envío a firma
+}
+
+function evaluarChecklistNOM241(folio: Folio, riesgos: Riesgo[], comite: FolioComite[]): CheckItem[] {
+  const f = folio as any;
+  const items: CheckItem[] = [];
+
+  // ── Folio ──
+  items.push({ id: "alcance", label: "Alcance del análisis capturado", ok: !!f.alcance?.trim(), critico: true });
+  items.push({ id: "modelo", label: "Número de modelo del dispositivo (§7.5.3)", ok: !!f.numero_modelo?.trim(), critico: true });
+  items.push({ id: "beneficio", label: "Beneficio clínico documentado (ISO 14971 §7)", ok: !!f.beneficio_clinico?.trim(), critico: true });
+  items.push({ id: "residual_global", label: "Evaluación de riesgo residual global (ISO 14971 §8)", ok: !!f.riesgo_residual_global?.trim(), critico: true });
+  items.push({ id: "comite", label: "Al menos un miembro en el comité", ok: comite.length > 0, critico: true });
+  items.push({ id: "riesgos_count", label: "Al menos un riesgo analizado", ok: riesgos.length > 0, critico: true });
+
+  // ── Por riesgo ──
+  let sinPeligro = 0, sinSituacion = 0, sinAccionResp = 0, sinFecha = 0, sinVerif = 0, alarpSinJust = 0, criticoSinEvidencia = 0;
+
+  for (const r of riesgos) {
+    const rr = r as any;
+    if (!rr.peligro?.trim()) sinPeligro++;
+    if (!rr.situacion_peligrosa?.trim()) sinSituacion++;
+    const npr = r.npr ?? 0;
+    if (r.requiere_accion) {
+      if (!r.responsable?.trim()) sinAccionResp++;
+      if (!r.fecha_compromiso) sinFecha++;
+    }
+    if (rr.accion_implementada?.trim() && !rr.verificado_por?.trim()) sinVerif++;
+    if (npr >= 125 && npr < 200 && r.dictamen === "Aceptable" && !rr.justificacion_aceptabilidad?.trim()) alarpSinJust++;
+    const esCritico = npr > 150 || r.severidad >= 9;
+    const tieneEvidencia = rr.anexos && (rr.anexos as any[]).length > 0;
+    if (esCritico && r.requiere_accion && !tieneEvidencia) criticoSinEvidencia++;
+  }
+
+  items.push({ id: "peligro", label: `Peligro (fuente) capturado en todos los riesgos${sinPeligro > 0 ? ` (${sinPeligro} pendiente${sinPeligro > 1 ? "s" : ""})` : ""}`, ok: sinPeligro === 0, critico: true });
+  items.push({ id: "situacion", label: `Situación peligrosa capturada en todos los riesgos${sinSituacion > 0 ? ` (${sinSituacion} pendiente${sinSituacion > 1 ? "s" : ""})` : ""}`, ok: sinSituacion === 0, critico: true });
+  items.push({ id: "responsable", label: `Acciones con responsable asignado${sinAccionResp > 0 ? ` (${sinAccionResp} sin asignar)` : ""}`, ok: sinAccionResp === 0, critico: true });
+  items.push({ id: "fecha", label: `Acciones con fecha de compromiso${sinFecha > 0 ? ` (${sinFecha} sin fecha)` : ""}`, ok: sinFecha === 0, critico: true });
+  items.push({ id: "evidencia_criticos", label: `Riesgos críticos con evidencia adjunta${criticoSinEvidencia > 0 ? ` (${criticoSinEvidencia} sin PDF)` : ""}`, ok: criticoSinEvidencia === 0, critico: true });
+  items.push({ id: "verificacion", label: `Acciones implementadas con verificación${sinVerif > 0 ? ` (${sinVerif} sin verificar)` : ""}`, ok: sinVerif === 0, critico: false });
+  items.push({ id: "alarp", label: `Riesgos zona ALARP con justificación de aceptabilidad${alarpSinJust > 0 ? ` (${alarpSinJust} sin justificar)` : ""}`, ok: alarpSinJust === 0, critico: false });
+
+  // ── Informativos ──
+  items.push({ id: "clase", label: "Clase del dispositivo especificada", ok: !!(folio as any).clase_dispositivo?.trim(), critico: false });
+  items.push({ id: "lote", label: "Número de lote / revisión especificado", ok: !!(folio as any).numero_lote?.trim(), critico: false });
+
+  return items;
+}
+
+function ChecklistNOM241({ folio, riesgos, comite }: { folio: Folio; riesgos: Riesgo[]; comite: FolioComite[] }) {
+  const items = evaluarChecklistNOM241(folio, riesgos, comite);
+  const pendientes = items.filter((i) => !i.ok);
+  const bloqueantes = pendientes.filter((i) => i.critico);
+
+  return (
+    <div className="border rounded-lg shadow-md bg-background p-4 w-80 space-y-3">
+      <div className="flex items-center justify-between">
+        <p className="text-xs font-bold">Checklist NOM-241 / ISO 14971</p>
+        {bloqueantes.length === 0 ? (
+          <span className="text-[10px] text-green-700 font-bold bg-green-50 border border-green-200 rounded px-1.5 py-0.5">
+            ✓ Listo para firma
+          </span>
+        ) : (
+          <span className="text-[10px] text-destructive font-bold bg-destructive/5 border border-destructive/20 rounded px-1.5 py-0.5">
+            {bloqueantes.length} bloqueante{bloqueantes.length > 1 ? "s" : ""}
+          </span>
+        )}
+      </div>
+      <div className="space-y-1 max-h-72 overflow-y-auto">
+        {items.map((item) => (
+          <div key={item.id} className={`flex items-start gap-1.5 text-[10px] rounded px-1.5 py-1 ${item.ok ? "text-muted-foreground" : item.critico ? "text-destructive bg-destructive/5" : "text-amber-700 bg-amber-50"}`}>
+            <span className="mt-px shrink-0">{item.ok ? "✓" : item.critico ? "✗" : "⚠"}</span>
+            <span>{item.label}</span>
+          </div>
+        ))}
+      </div>
+      {pendientes.length === 0 && (
+        <p className="text-[10px] text-green-700 text-center font-medium">
+          Todos los requisitos NOM-241 cumplidos
+        </p>
+      )}
+    </div>
+  );
+}
+
 function NPRBadge({ npr, severidad }: { npr: number; severidad: number }) {
   const level = getNPRLevel(npr, severidad);
   return (
@@ -760,8 +850,8 @@ export default function FolioDetail() {
 
   const isAdmin = hasRole("admin") || hasRole("responsable_sanitario");
 
-  // Estado para el botón Enviar a Firma
   const [enviandoFirma, setEnviandoFirma] = useState(false);
+  const [showChecklist, setShowChecklist] = useState(false);
 
   if (isLoading) {
     return (
@@ -804,14 +894,27 @@ export default function FolioDetail() {
         },
       });
 
-      if (error || result?.error) {
-        throw new Error(error?.message || result?.error);
+      if (error) throw new Error(error.message);
+
+      // El backend retorna errores NOM-241 con código 422
+      if (result?.errores_nom241) {
+        const errores: string[] = result.errores_nom241;
+        toast({
+          title: "⛔ Folio incompleto — NOM-241",
+          description: `${errores.length} requisito${errores.length > 1 ? "s" : ""} pendiente${errores.length > 1 ? "s" : ""}. Revisa el checklist.`,
+          variant: "destructive",
+        });
+        setShowChecklist(true);
+        return;
       }
+
+      if (result?.error) throw new Error(result.error);
 
       toast({
         title: "📨 Folio enviado a firma",
         description: "Se notificó a los miembros del comité por correo",
       });
+      setShowChecklist(false);
       handleRefresh();
     } catch (err: any) {
       toast({
@@ -825,6 +928,11 @@ export default function FolioDetail() {
   };
 
   return (
+    <>
+      {/* Overlay para cerrar checklist al hacer clic fuera */}
+      {showChecklist && (
+        <div className="fixed inset-0 z-40" onClick={() => setShowChecklist(false)} />
+      )}
     <div className="space-y-5 max-w-[1400px] mx-auto">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -851,30 +959,48 @@ export default function FolioDetail() {
             <Printer className="h-3 w-3" /> Generar PDF
           </Button>
 
-          {/* Botón Enviar a Firma — bloqueado si hay críticos sin evidencia */}
+          {/* Botón Enviar a Firma + Checklist NOM-241 */}
           {folio.estado === "Borrador" && (
-            <div className="flex flex-col items-end gap-1">
-              <Button
-                size="sm"
-                className="gap-1 text-xs"
-                onClick={handleEnviarAFirma}
-                disabled={enviandoFirma || comite.length === 0 || bloqueadoPorEvidencia}
-                title={
-                  bloqueadoPorEvidencia
-                    ? `${criticosSinEvidencia.length} riesgo(s) crítico(s) sin evidencia adjunta`
-                    : comite.length === 0
-                      ? "Agrega miembros al comité primero"
-                      : ""
-                }
-              >
-                <FileSignature className="h-3 w-3" />
-                {enviandoFirma ? "Enviando..." : "Enviar a Firma"}
-              </Button>
-              {bloqueadoPorEvidencia && (
-                <p className="text-[10px] text-destructive font-medium text-right max-w-[220px]">
-                  ⛔ {criticosSinEvidencia.length} crítico{criticosSinEvidencia.length > 1 ? "s" : ""} sin evidencia —
-                  adjunta PDF en sección IV
-                </p>
+            <div className="relative flex flex-col items-end gap-1">
+              <div className="flex items-center gap-1">
+                {/* Botón checklist */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1 text-xs"
+                  onClick={() => setShowChecklist((v) => !v)}
+                  title="Ver checklist de requisitos NOM-241"
+                >
+                  {(() => {
+                    const items = evaluarChecklistNOM241(folio, riesgos, comite);
+                    const bloqueantes = items.filter((i) => !i.ok && i.critico).length;
+                    const advertencias = items.filter((i) => !i.ok && !i.critico).length;
+                    return bloqueantes > 0
+                      ? <span className="text-destructive font-bold">⛔ {bloqueantes}</span>
+                      : advertencias > 0
+                        ? <span className="text-amber-600 font-bold">⚠ {advertencias}</span>
+                        : <span className="text-green-700 font-bold">✓</span>;
+                  })()}
+                  NOM-241
+                </Button>
+                {/* Botón enviar */}
+                <Button
+                  size="sm"
+                  className="gap-1 text-xs"
+                  onClick={handleEnviarAFirma}
+                  disabled={enviandoFirma || comite.length === 0}
+                  title={comite.length === 0 ? "Agrega miembros al comité primero" : ""}
+                >
+                  <FileSignature className="h-3 w-3" />
+                  {enviandoFirma ? "Enviando..." : "Enviar a Firma"}
+                </Button>
+              </div>
+
+              {/* Popover del checklist */}
+              {showChecklist && (
+                <div className="absolute top-9 right-0 z-50">
+                  <ChecklistNOM241 folio={folio} riesgos={riesgos} comite={comite} />
+                </div>
               )}
             </div>
           )}
@@ -921,5 +1047,6 @@ export default function FolioDetail() {
         </div>
       </div>
     </div>
+    </>
   );
 }
