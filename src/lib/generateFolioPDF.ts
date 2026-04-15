@@ -124,23 +124,35 @@ export async function generateFolioPDF(folio: Folio, riesgos: Riesgo[], comite: 
     body: [
       [
         { content: "Folio de Gestión:", styles: { fontStyle: "bold", cellWidth: 32 } },
-        { content: folio.codigo, colSpan: 5, styles: { fontStyle: "bold", fontSize: 9 } },
+        { content: folio.codigo, styles: { fontStyle: "bold", fontSize: 9 } },
+        { content: "Versión:", styles: { fontStyle: "bold", cellWidth: 20 } },
+        { content: folio.numero_version || "1.0", styles: { fontStyle: "bold" } },
+        { content: "Clase Dispositivo:", styles: { fontStyle: "bold", cellWidth: 30 } },
+        { content: folio.clase_dispositivo || "—" },
       ],
       [
         { content: "Proceso / Equipo\nAnalizado:", styles: { fontStyle: "bold", cellWidth: 32 } },
         folio.proceso_equipo,
-        { content: "Origen:", styles: { fontStyle: "bold", cellWidth: 18 } },
+        { content: "Origen:", styles: { fontStyle: "bold", cellWidth: 20 } },
         folio.origen || "—",
-        { content: "Desviación:", styles: { fontStyle: "bold", cellWidth: 22 } },
+        { content: "Desviación:", styles: { fontStyle: "bold", cellWidth: 30 } },
         folio.desviacion_id || "—",
       ],
       [
-        { content: "Control de Cambios:", styles: { fontStyle: "bold", cellWidth: 32 } },
+        { content: "Número de Modelo:", styles: { fontStyle: "bold", cellWidth: 32 } },
+        folio.numero_modelo || "—",
+        { content: "Número de Lote:", styles: { fontStyle: "bold", cellWidth: 20 } },
+        folio.numero_lote || "—",
+        { content: "Control de Cambios:", styles: { fontStyle: "bold", cellWidth: 30 } },
         folio.control_cambios_id || "—",
-        { content: "Fecha Inicio:", styles: { fontStyle: "bold" } },
+      ],
+      [
+        { content: "Fecha Inicio:", styles: { fontStyle: "bold", cellWidth: 32 } },
         folio.fecha_inicio,
-        { content: "Fecha Cierre:", styles: { fontStyle: "bold" } },
+        { content: "Fecha Cierre:", styles: { fontStyle: "bold", cellWidth: 20 } },
         folio.fecha_cierre || "—",
+        { content: "Estado:", styles: { fontStyle: "bold", cellWidth: 30 } },
+        folio.estado,
       ],
       [
         { content: "Alcance:", styles: { fontStyle: "bold", cellWidth: 32 } },
@@ -157,115 +169,119 @@ export async function generateFolioPDF(folio: Folio, riesgos: Riesgo[], comite: 
 
   autoTable(doc, {
     startY: y,
-    head: [["NOMBRE", "CARGO", "RESPONSABILIDAD", "FIRMA"]],
-    body: comite.map((m) => [m.nombre, m.cargo, m.responsabilidad, ""]),
+    head: [["NOMBRE", "CARGO", "RESPONSABILIDAD", "FIRMA", "FECHA FIRMA"]],
+    body: comite.map((m) => [
+      m.nombre,
+      m.cargo,
+      m.responsabilidad,
+      m.firmado ? "✓ Firmado" : "Pendiente",
+      m.fecha_firma ? new Date(m.fecha_firma).toLocaleDateString("es-MX") : "—",
+    ]),
     theme: "grid",
-    styles: { fontSize: 7, cellPadding: 3, lineColor: [0, 0, 0], lineWidth: 0.2, minCellHeight: 14 },
+    styles: { fontSize: 7, cellPadding: 3, lineColor: [0, 0, 0], lineWidth: 0.2, minCellHeight: 12 },
     headStyles: { fillColor: [220, 220, 220], textColor: [0, 0, 0], fontStyle: "bold", halign: "center" },
     columnStyles: {
       0: { cellWidth: 48 },
-      1: { cellWidth: 45 },
-      2: { cellWidth: 120 },
-      3: { cellWidth: 35, halign: "center" },
+      1: { cellWidth: 40 },
+      2: { cellWidth: 110 },
+      3: { cellWidth: 28, halign: "center" },
+      4: { cellWidth: 28, halign: "center" },
     },
     margin: { left: margin, right: margin },
   });
 
-  // ─── PÁGINAS DE RIESGOS ──────────────────────────────────────────────────────
-  const romanNums = [
-    "III",
-    "IV",
-    "V",
-    "VI",
-    "VII",
-    "VIII",
-    "IX",
-    "X",
-    "XI",
-    "XII",
-    "XIII",
-    "XIV",
-    "XV",
-    "XVI",
-    "XVII",
-    "XVIII",
-    "XIX",
-    "XX",
-  ];
-
+  // ─── PÁGINAS DE RIESGOS (SECCIÓN III) ───────────────────────────────────────
   riesgos.forEach((r, idx) => {
     y = newPage();
-    y = sectionHeader(y, `${romanNums[idx] ?? idx + 3}.  GESTIÓN DE RIESGOS`);
 
+    const rr = r as any; // acceder a campos ISO 14971 extras
     const npr = r.npr ?? r.severidad * r.ocurrencia * r.deteccion;
     const nprRes = r.npr_residual ?? r.sev_residual * r.ocu_residual * r.det_residual;
+
+    // Encabezado de sección — siempre III, con contador de riesgo
+    const riesgoLabel =
+      riesgos.length > 1
+        ? `III.  GESTIÓN DE RIESGOS — Riesgo ${idx + 1} de ${riesgos.length}`
+        : "III.  GESTIÓN DE RIESGOS";
+    y = sectionHeader(y, riesgoLabel);
 
     autoTable(doc, {
       startY: y,
       head: [
         [
           { content: "ID", styles: { halign: "center", valign: "middle" } },
-          { content: "1. IDENTIFICACIÓN DE PELIGRO Y FALLA", styles: { halign: "center" } },
-          { content: "2. EVALUACIÓN\nINICIAL", colSpan: 2, styles: { halign: "center" } },
-          { content: "3. CONTROLES Y GESTIÓN", styles: { halign: "center" } },
-          { content: "4. EVALUACIÓN FINAL (RESIDUAL)", colSpan: 2, styles: { halign: "center" } },
+          { content: "IDENTIFICACIÓN DE PELIGRO (ISO 14971 §5)", styles: { halign: "center" } },
+          { content: "EVALUACIÓN\nINICIAL", colSpan: 2, styles: { halign: "center" } },
+          { content: "CONTROLES Y GESTIÓN (ISO 14971 §6)", styles: { halign: "center" } },
+          { content: "EVALUACIÓN RESIDUAL", colSpan: 2, styles: { halign: "center" } },
         ],
       ],
       body: [
-        // Fila 1: Etapa / S / Controles / Acción
+        // Fila 1: Peligro (fuente) / S / Controles Actuales / Acción Implementada
         [
           {
             content: String(r.numero_id).padStart(2, "0"),
-            rowSpan: 5,
+            rowSpan: 6,
             styles: { halign: "center", valign: "middle", fontSize: 14, fontStyle: "bold" },
           },
-          `Etapa del Proceso:\n${r.etapa_proceso}`,
+          `Peligro (fuente):\n${rr.peligro || "—"}`,
           { content: "S:", styles: { fontStyle: "bold", halign: "right" } },
           { content: String(r.severidad), styles: { fontStyle: "bold", halign: "center", fontSize: 11 } },
           `Controles Actuales:\n${r.controles_actuales || "—"}`,
           { content: `Acción Implementada:\n${r.accion_implementada || "—"}`, colSpan: 2 },
         ],
-        // Fila 2: Peligro / O / Requiere / Fecha
+        // Fila 2: Situación Peligrosa / O / Controles Prevención / Fecha y Evidencia
         [
-          `Peligro / Modo de Falla:\n${r.peligro_modo_falla}`,
+          `Situación Peligrosa:\n${rr.situacion_peligrosa || "—"}`,
           { content: "O:", styles: { fontStyle: "bold", halign: "right" } },
           { content: String(r.ocurrencia), styles: { halign: "center", fontSize: 11 } },
-          `¿Requiere Acción?\n${chk(r.requiere_accion === true)} Si    ${chk(r.requiere_accion === false)} No`,
+          `Controles de Prevención:\n${rr.controles_prevencion || "—"}`,
           { content: `Fecha y Evidencia:\n${r.fecha_evidencia || "—"}`, colSpan: 2 },
         ],
-        // Fila 3: Causa / D / Acción propuesta / Residuales
+        // Fila 3: Secuencia de Eventos / D / Controles Detección / S'O'D'
         [
-          `Causa Potencial:\n${r.causa_potencial}`,
+          `Secuencia de Eventos:\n${rr.secuencia_eventos || "—"}`,
           { content: "D:", styles: { fontStyle: "bold", halign: "right" } },
           { content: String(r.deteccion), styles: { halign: "center", fontSize: 11 } },
-          `Acción Propuesta:\n${r.accion_propuesta || "—"}`,
-          { content: `S: ${r.sev_residual}\nO: ${r.ocu_residual}\nD: ${r.det_residual}`, styles: { halign: "center" } },
+          `Controles de Detección:\n${rr.controles_deteccion || "—"}`,
+          { content: `S': ${r.sev_residual}\nO': ${r.ocu_residual}\nD': ${r.det_residual}`, styles: { halign: "center" } },
           "",
         ],
-        // Fila 4: Efecto / NPR coloreado / Responsable / NPR Residual coloreado
+        // Fila 4: Modo de Falla + Causa / NPR / Acción Propuesta + Responsable + Fecha / NPR Residual
         [
-          `Efecto / Daño:\n${r.efecto_dano}`,
+          `Modo de Falla:\n${r.peligro_modo_falla}\n\nCausa:\n${r.causa_potencial}`,
           {
-            content: `NPR: (S x O x D):\n${getNPRText(npr, r.severidad)}`,
+            content: `NPR: (S × O × D)\n${getNPRText(npr, r.severidad)}`,
             colSpan: 2,
             styles: { halign: "center", fontStyle: "bold", textColor: getNPRColor(npr, r.severidad) },
           },
-          `Responsable:\n${r.responsable || "—"}`,
+          `Acción Propuesta:\n${r.accion_propuesta || "—"}\n\nResponsable: ${r.responsable || "—"}\nFecha: ${r.fecha_compromiso || "—"}`,
           {
             content: `NPR RESIDUAL:\n${getNPRText(nprRes, r.sev_residual)}`,
             colSpan: 2,
             styles: { halign: "center", fontStyle: "bold", textColor: getNPRColor(nprRes, r.sev_residual) },
           },
         ],
-        // Fila 5: Leyenda / Fecha / Dictamen
+        // Fila 5: Efecto / Daño / Leyenda / Verificación / Dictamen
         [
-          "",
-          { content: "Crítico (> 150 ó S >= 9)\nMayor (60-149)\nMenor (< 60)", colSpan: 2, styles: { fontSize: 6.5 } },
-          `Fecha:\n${r.fecha_compromiso || "—"}`,
+          `Efecto / Daño:\n${r.efecto_dano}`,
+          { content: "Crítico (>150 ó S≥9)\nMayor (60-149)\nMenor (<60)", colSpan: 2, styles: { fontSize: 6.5 } },
+          `Verificado por: ${rr.verificado_por || "—"}\nFecha: ${rr.fecha_verificacion || "—"}\nResultado: ${rr.resultado_verificacion || "—"}`,
           {
             content: `DICTAMEN:\n${chk(r.dictamen === "Aceptable")} Aceptable\n${chk(r.dictamen === "No Aceptable")} No Aceptable`,
             colSpan: 2,
           },
+        ],
+        // Fila 6: Etapa / ¿Requiere Acción? / Justificación ALARP / (vacío)
+        [
+          `Etapa del Proceso:\n${r.etapa_proceso}`,
+          {
+            content: `¿Requiere Acción?  ${chk(r.requiere_accion)} Sí   ${chk(!r.requiere_accion)} No`,
+            colSpan: 2,
+            styles: { fontSize: 6.5 },
+          },
+          `Justificación de Aceptabilidad:\n${rr.justificacion_aceptabilidad || "—"}`,
+          { content: "", colSpan: 2 },
         ],
       ],
       theme: "grid",
@@ -273,10 +289,10 @@ export async function generateFolioPDF(folio: Folio, riesgos: Riesgo[], comite: 
       headStyles: { fillColor: [220, 220, 220], textColor: [0, 0, 0], fontStyle: "bold", fontSize: 7 },
       columnStyles: {
         0: { cellWidth: 12 },
-        1: { cellWidth: 68 },
+        1: { cellWidth: 66 },
         2: { cellWidth: 8 },
         3: { cellWidth: 12 },
-        4: { cellWidth: 70 },
+        4: { cellWidth: 68 },
         5: { cellWidth: 28 },
         6: { cellWidth: 28 },
       },
@@ -284,14 +300,76 @@ export async function generateFolioPDF(folio: Folio, riesgos: Riesgo[], comite: 
     });
   });
 
-  // ─── PÁGINA DICTAMEN ─────────────────────────────────────────────────────────
+  // ─── SECCIÓN IV: EVIDENCIAS (listado) ────────────────────────────────────────
+  const riesgosConAnexos = riesgos.filter((r) => {
+    const anexos = (r as any).anexos;
+    return anexos && Array.isArray(anexos) && anexos.length > 0;
+  });
+
   y = newPage();
-  const dictamenRoman = romanNums[riesgos.length] ?? `${riesgos.length + 3}`;
+  y = sectionHeader(y, "IV.  EVIDENCIAS Y DOCUMENTACIÓN SOPORTE");
+
+  if (riesgosConAnexos.length === 0) {
+    doc.setFontSize(7);
+    doc.setFont("helvetica", "italic");
+    doc.setTextColor(120);
+    doc.text("Sin evidencias adjuntas registradas en el sistema.", margin + 5, y + 5);
+    doc.setTextColor(0);
+    y += 12;
+  } else {
+    autoTable(doc, {
+      startY: y,
+      head: [["RIESGO ID", "NOMBRE DEL ARCHIVO", "TIPO"]],
+      body: riesgosConAnexos.flatMap((r) => {
+        const anexos = (r as any).anexos as { nombre?: string; url?: string; tipo?: string }[];
+        return anexos.map((a) => [
+          `Riesgo ${String(r.numero_id).padStart(2, "0")}`,
+          a.nombre || a.url || "—",
+          a.tipo || "PDF",
+        ]);
+      }),
+      theme: "grid",
+      styles: { fontSize: 7, cellPadding: 2, lineColor: [0, 0, 0], lineWidth: 0.2 },
+      headStyles: { fillColor: [220, 220, 220], textColor: [0, 0, 0], fontStyle: "bold", halign: "center" },
+      columnStyles: { 0: { cellWidth: 30, halign: "center" }, 1: { cellWidth: 160 }, 2: { cellWidth: 30, halign: "center" } },
+      margin: { left: margin, right: margin },
+    });
+    y = (doc as any).lastAutoTable.finalY + 5;
+  }
+
+  // ─── SECCIÓN V: EVALUACIÓN GLOBAL DE RIESGO-BENEFICIO ───────────────────────
+  y = sectionHeader(y, "V.  EVALUACIÓN GLOBAL DE RIESGO-BENEFICIO — ISO 14971 §7 / §8");
+
+  autoTable(doc, {
+    startY: y,
+    body: [
+      [
+        { content: "Beneficio Clínico Documentado (ISO 14971 §7):", styles: { fontStyle: "bold", cellWidth: 72 } },
+        { content: folio.beneficio_clinico || "Sin capturar", styles: { textColor: folio.beneficio_clinico ? [0,0,0] : [160,0,0] } },
+      ],
+      [
+        { content: "Evaluación de Riesgo Residual Global (ISO 14971 §8):", styles: { fontStyle: "bold", cellWidth: 72 } },
+        { content: folio.riesgo_residual_global || "Sin capturar", styles: { textColor: folio.riesgo_residual_global ? [0,0,0] : [160,0,0] } },
+      ],
+    ],
+    theme: "grid",
+    styles: { fontSize: 7, cellPadding: 3, lineColor: [0, 0, 0], lineWidth: 0.2, overflow: "linebreak" },
+    margin: { left: margin, right: margin },
+  });
+
+  y = (doc as any).lastAutoTable.finalY + 5;
+
+  // Check if we need a new page for section VI
+  if (y > pageH - 80) {
+    y = newPage();
+  }
+
+  // ─── SECCIÓN VI: DICTAMEN ────────────────────────────────────────────────────
+  y = sectionHeader(y, "VI.  DICTAMEN DE BENEFICIO-RIESGO");
+  y += 3;
+
   const hasNoAceptables = riesgos.some((r) => r.dictamen === "No Aceptable");
   const conclusion = folio.conclusion || "";
-
-  y = sectionHeader(y, `${dictamenRoman}.  DICTAMEN DE BENEFICIO-RIESGO`);
-  y += 3;
 
   // ¿Existen NO ACEPTABLES?
   doc.setDrawColor(0);

@@ -380,6 +380,10 @@ function SeccionComite({
   const queryClient = useQueryClient();
   const [firmando, setFirmando] = useState(false);
   const [showFirmaModal, setShowFirmaModal] = useState(false);
+  // Estado para agregar nuevo miembro
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [nuevoMiembro, setNuevoMiembro] = useState({ nombre: "", cargo: "", responsabilidad: "", user_id: "" });
 
   const TEXTO_COMPROMISO =
     "Declaro bajo protesta de decir verdad que he revisado el contenido íntegro de este Análisis de Gestión de Riesgos, que la información es correcta y completa conforme a la NOM-241-SSA1-2025 e ISO 14971:2019, y que mi firma electrónica registrada en este sistema tiene el mismo valor legal que mi firma autógrafa.";
@@ -400,6 +404,43 @@ function SeccionComite({
       return data.publicUrl;
     }
     return null;
+  };
+
+  const handleAgregarMiembro = async () => {
+    if (!nuevoMiembro.nombre.trim() || !nuevoMiembro.cargo.trim() || !nuevoMiembro.responsabilidad.trim()) {
+      toast({ title: "Completa todos los campos requeridos", variant: "destructive" });
+      return;
+    }
+    setSaving(true);
+    const payload: Record<string, string> = {
+      folio_id: folioId,
+      nombre: nuevoMiembro.nombre.trim(),
+      cargo: nuevoMiembro.cargo.trim(),
+      responsabilidad: nuevoMiembro.responsabilidad.trim(),
+    };
+    if (nuevoMiembro.user_id) payload.user_id = nuevoMiembro.user_id;
+    const { error } = await supabase.from("folio_comite").insert(payload);
+    setSaving(false);
+    if (error) {
+      toast({ title: "Error al agregar miembro", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Miembro agregado al comité" });
+      setNuevoMiembro({ nombre: "", cargo: "", responsabilidad: "", user_id: "" });
+      setShowAddForm(false);
+      queryClient.invalidateQueries({ queryKey: ["folio", folioId] });
+      onSaved();
+    }
+  };
+
+  const handleEliminarMiembro = async (miembroId: string) => {
+    const { error } = await supabase.from("folio_comite").delete().eq("id", miembroId);
+    if (error) {
+      toast({ title: "Error al eliminar miembro", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Miembro eliminado" });
+      queryClient.invalidateQueries({ queryKey: ["folio", folioId] });
+      onSaved();
+    }
   };
 
   const handleFirmar = async () => {
@@ -457,9 +498,10 @@ function SeccionComite({
         <thead>
           <tr className="bg-muted/50 border-b">
             <th className="text-left p-2 font-semibold text-[11px] text-muted-foreground w-[22%]">NOMBRE</th>
-            <th className="text-left p-2 font-semibold text-[11px] text-muted-foreground w-[22%]">CARGO</th>
-            <th className="text-left p-2 font-semibold text-[11px] text-muted-foreground w-[34%]">RESPONSABILIDAD</th>
-            <th className="text-center p-2 font-semibold text-[11px] text-muted-foreground w-[22%]">FIRMA</th>
+            <th className="text-left p-2 font-semibold text-[11px] text-muted-foreground w-[18%]">CARGO</th>
+            <th className="text-left p-2 font-semibold text-[11px] text-muted-foreground">RESPONSABILIDAD</th>
+            <th className="text-center p-2 font-semibold text-[11px] text-muted-foreground w-[20%]">FIRMA</th>
+            {folioEstado === "Borrador" && <th className="w-[40px]"></th>}
           </tr>
         </thead>
         <tbody>
@@ -496,11 +538,114 @@ function SeccionComite({
                     </span>
                   )}
                 </td>
+                {/* Botón eliminar — solo en Borrador */}
+                {folioEstado === "Borrador" && (
+                  <td className="p-1 text-center w-[40px]">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6 text-destructive hover:bg-destructive/10"
+                      onClick={() => handleEliminarMiembro(m.id)}
+                      title="Eliminar miembro"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  </td>
+                )}
               </tr>
             );
           })}
+
+          {/* Fila vacía si no hay miembros */}
+          {comite.length === 0 && (
+            <tr>
+              <td colSpan={folioEstado === "Borrador" ? 5 : 4} className="p-4 text-center text-xs text-muted-foreground italic">
+                Sin miembros en el comité. Agrega al menos un miembro antes de enviar a firma.
+              </td>
+            </tr>
+          )}
         </tbody>
       </table>
+
+      {/* Botón Agregar Miembro — solo en Borrador */}
+      {folioEstado === "Borrador" && (
+        <div className="border-t px-3 py-2">
+          {!showAddForm ? (
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1 text-xs"
+              onClick={() => setShowAddForm(true)}
+            >
+              <Plus className="h-3 w-3" />
+              Agregar Miembro al Comité
+            </Button>
+          ) : (
+            <div className="space-y-2 py-1">
+              <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">Nuevo Miembro</p>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-[10px] text-muted-foreground">Nombre *</label>
+                  <input
+                    type="text"
+                    className="w-full border rounded px-2 py-1 text-xs mt-0.5"
+                    placeholder="Nombre completo"
+                    value={nuevoMiembro.nombre}
+                    onChange={(e) => setNuevoMiembro({ ...nuevoMiembro, nombre: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] text-muted-foreground">Cargo *</label>
+                  <input
+                    type="text"
+                    className="w-full border rounded px-2 py-1 text-xs mt-0.5"
+                    placeholder="Ej. Director Técnico"
+                    value={nuevoMiembro.cargo}
+                    onChange={(e) => setNuevoMiembro({ ...nuevoMiembro, cargo: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="text-[10px] text-muted-foreground">Responsabilidad en el análisis *</label>
+                <input
+                  type="text"
+                  className="w-full border rounded px-2 py-1 text-xs mt-0.5"
+                  placeholder="Ej. Revisión y aprobación del análisis de riesgos"
+                  value={nuevoMiembro.responsabilidad}
+                  onChange={(e) => setNuevoMiembro({ ...nuevoMiembro, responsabilidad: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="text-[10px] text-muted-foreground">Usuario del sistema (opcional — para firma digital)</label>
+                <select
+                  className="w-full border rounded px-2 py-1 text-xs mt-0.5 bg-background"
+                  value={nuevoMiembro.user_id}
+                  onChange={(e) => setNuevoMiembro({ ...nuevoMiembro, user_id: e.target.value })}
+                >
+                  <option value="">— Sin vincular a usuario —</option>
+                  {profiles?.map((p: any) => (
+                    <option key={p.id} value={p.id}>{p.nombre}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex gap-2 pt-1">
+                <Button size="sm" className="text-xs gap-1" onClick={handleAgregarMiembro} disabled={saving}>
+                  <Plus className="h-3 w-3" />
+                  {saving ? "Guardando..." : "Agregar"}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="text-xs"
+                  onClick={() => { setShowAddForm(false); setNuevoMiembro({ nombre: "", cargo: "", responsabilidad: "", user_id: "" }); }}
+                >
+                  Cancelar
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Modal de confirmación de firma electrónica — NOM-241 / 21 CFR Part 11 */}
       {showFirmaModal && (
