@@ -36,16 +36,16 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Verify admin role
+    // Verify admin role in org_members and get org_id
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
-    const { data: roleData } = await adminClient
-      .from("user_roles")
-      .select("role")
+    const { data: callerMember } = await adminClient
+      .from("org_members")
+      .select("role, org_id")
       .eq("user_id", caller.id)
-      .in("role", ["admin", "responsable_sanitario"])
+      .eq("role", "admin")
       .maybeSingle();
 
-    if (!roleData) {
+    if (!callerMember) {
       return new Response(JSON.stringify({ error: "Se requiere rol de administrador" }), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -64,6 +64,21 @@ Deno.serve(async (req) => {
     if (new_password.length < 6) {
       return new Response(JSON.stringify({ error: "La contraseña debe tener al menos 6 caracteres" }), {
         status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Verify target user belongs to same org as caller
+    const { data: targetMember } = await adminClient
+      .from("org_members")
+      .select("org_id")
+      .eq("user_id", user_id)
+      .eq("org_id", callerMember.org_id)
+      .maybeSingle();
+
+    if (!targetMember) {
+      return new Response(JSON.stringify({ error: "Usuario no pertenece a tu organización" }), {
+        status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
