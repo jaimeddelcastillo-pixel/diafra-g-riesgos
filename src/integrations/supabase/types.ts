@@ -20,6 +20,7 @@ export type Database = {
           created_at: string
           id: string
           ip: string | null
+          org_id: string | null
           registro_id: string
           tabla: string
           user_id: string | null
@@ -31,6 +32,7 @@ export type Database = {
           created_at?: string
           id?: string
           ip?: string | null
+          org_id?: string | null
           registro_id: string
           tabla: string
           user_id?: string | null
@@ -42,6 +44,7 @@ export type Database = {
           created_at?: string
           id?: string
           ip?: string | null
+          org_id?: string | null
           registro_id?: string
           tabla?: string
           user_id?: string | null
@@ -196,17 +199,28 @@ export type Database = {
       folio_sequence: {
         Row: {
           last_number: number
+          org_id: string
           year: number
         }
         Insert: {
           last_number?: number
+          org_id: string
           year: number
         }
         Update: {
           last_number?: number
+          org_id?: string
           year?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "folio_sequence_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       folio_versiones: {
         Row: {
@@ -269,6 +283,7 @@ export type Database = {
           numero_lote: string
           numero_modelo: string
           numero_version: string
+          org_id: string
           origen: Database["public"]["Enums"]["origen_riesgo"]
           proceso_equipo: string
           riesgo_residual_global: string
@@ -293,6 +308,7 @@ export type Database = {
           numero_lote?: string
           numero_modelo?: string
           numero_version?: string
+          org_id: string
           origen: Database["public"]["Enums"]["origen_riesgo"]
           proceso_equipo: string
           riesgo_residual_global?: string
@@ -317,9 +333,92 @@ export type Database = {
           numero_lote?: string
           numero_modelo?: string
           numero_version?: string
+          org_id?: string
           origen?: Database["public"]["Enums"]["origen_riesgo"]
           proceso_equipo?: string
           riesgo_residual_global?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "folios_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      org_members: {
+        Row: {
+          created_at: string
+          id: string
+          org_id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          org_id: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          org_id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "org_members_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organizations: {
+        Row: {
+          activo: boolean
+          created_at: string
+          descripcion: string
+          id: string
+          logo_url: string
+          max_users: number
+          nombre: string
+          plan: string
+          slug: string
+          trial_expires_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          activo?: boolean
+          created_at?: string
+          descripcion?: string
+          id?: string
+          logo_url?: string
+          max_users?: number
+          nombre: string
+          plan?: string
+          slug: string
+          trial_expires_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          activo?: boolean
+          created_at?: string
+          descripcion?: string
+          id?: string
+          logo_url?: string
+          max_users?: number
+          nombre?: string
+          plan?: string
+          slug?: string
+          trial_expires_at?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -535,6 +634,7 @@ export type Database = {
         Args: { payload: Json; queue_name: string }
         Returns: number
       }
+      get_user_org_id: { Args: Record<PropertyKey, never>; Returns: string | null }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -542,6 +642,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_super_admin: { Args: Record<PropertyKey, never>; Returns: boolean }
       move_to_dlq: {
         Args: {
           dlq_name: string
@@ -569,6 +670,7 @@ export type Database = {
         | "operador"
         | "lectura"
         | "responsable_sanitario"
+        | "super_admin"
       dictamen_tipo: "Aceptable" | "No Aceptable" | "Pendiente"
       estado_folio: "Borrador" | "En Firma" | "Aprobado" | "Cerrado"
       origen_riesgo:
