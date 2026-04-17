@@ -1,6 +1,7 @@
 import { LayoutDashboard, FolderOpen, Settings, BookOpen } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
 import {
   Sidebar,
   SidebarContent,
@@ -26,6 +27,7 @@ export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const location = useLocation();
+  const { org } = useAuth();
 
   return (
     <Sidebar collapsible="icon">
@@ -41,9 +43,11 @@ export function AppSidebar() {
             <path d="M27 30.5L30.5 34L36 27" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
           {!collapsed && (
-            <div>
+            <div className="min-w-0">
               <h1 className="text-sm font-bold text-sidebar-foreground tracking-wide">TRACEA</h1>
-              <p className="text-[10px] text-sidebar-foreground/60 leading-tight">Gestión de Riesgos</p>
+              <p className="text-[10px] text-sidebar-foreground/60 leading-tight truncate max-w-[120px]">
+                {org?.nombre ?? "Gestión de Riesgos"}
+              </p>
             </div>
           )}
         </div>

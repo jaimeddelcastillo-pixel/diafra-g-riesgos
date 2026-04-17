@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { Navigate } from "react-router-dom";
+import { Navigate, Link } from "react-router-dom";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -89,12 +89,13 @@ export default function Login() {
             <Button type="submit" className="w-full" disabled={submitting}>
               {submitting ? "Procesando..." : isSignUp ? "Crear Cuenta" : "Iniciar Sesión"}
             </Button>
-            <p className="text-center text-sm text-muted-foreground">
-              {isSignUp ? "¿Ya tienes cuenta?" : "¿No tienes cuenta?"}{" "}
-              <button type="button" className="text-primary underline" onClick={() => setIsSignUp(!isSignUp)}>
-                {isSignUp ? "Iniciar Sesión" : "Registrarse"}
-              </button>
-            </p>
+            <div className="space-y-2 text-center">
+              <p className="text-sm text-muted-foreground">
+                <Link to="/register" className="text-primary underline font-medium">
+                  ¿Nueva empresa? Crear cuenta →
+                </Link>
+              </p>
+            </div>
           </form>
         </CardContent>
       </Card>
