@@ -4,7 +4,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Shield } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -56,12 +55,19 @@ export default function Login() {
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-sm">
         <CardHeader className="text-center space-y-3">
-          <div className="mx-auto h-14 w-14 rounded-xl bg-primary flex items-center justify-center">
-            <Shield className="h-8 w-8 text-primary-foreground" />
+          <div className="mx-auto h-14 w-14 flex items-center justify-center">
+            <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" className="h-14 w-14">
+              <rect x="1" y="1" width="17" height="17" rx="3" fill="#042C53"/>
+              <rect x="22" y="1" width="17" height="17" rx="3" fill="#185FA5"/>
+              <rect x="1" y="22" width="17" height="17" rx="3" fill="#185FA5"/>
+              <rect x="22" y="22" width="17" height="17" rx="3" fill="#8587E8"/>
+              <path d="M18 18L22 22" stroke="#8587E8" strokeWidth="2" strokeDasharray="2.5 2" strokeLinecap="round"/>
+              <path d="M27 30.5L30.5 34L36 27" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
           </div>
           <div>
-            <CardTitle className="text-xl tracking-wide">DIAFRA</CardTitle>
-            <p className="text-xs text-muted-foreground mt-1">Sistema de Gestión de Riesgos · ISO 14971</p>
+            <CardTitle className="text-xl tracking-wide">TRACEA</CardTitle>
+            <p className="text-xs text-muted-foreground mt-1">Plataforma de Gestión de Riesgos · ISO 14971</p>
           </div>
         </CardHeader>
         <CardContent>
@@ -74,7 +80,7 @@ export default function Login() {
             )}
             <div className="space-y-2">
               <Label htmlFor="email">Correo electrónico</Label>
-              <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="usuario@diafra.mx" required />
+              <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="usuario@tracea.mx" required />
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">Contraseña</Label>

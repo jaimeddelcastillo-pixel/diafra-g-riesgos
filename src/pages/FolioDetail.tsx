@@ -1137,7 +1137,7 @@ export default function FolioDetail() {
               <Badge className={`text-[10px] ${getEstadoStyle(folio.estado)}`}>{folio.estado}</Badge>
               {locked && <Lock className="h-3.5 w-3.5 text-muted-foreground" />}
             </div>
-            <p className="text-xs text-muted-foreground">FOR-SGC-11-01 · DIAFRA S.A. DE C.V.</p>
+            <p className="text-xs text-muted-foreground">FOR-SGC-11-01 · TRACEA</p>
           </div>
         </div>
 
@@ -1209,7 +1209,7 @@ export default function FolioDetail() {
 
       <div className="bg-card rounded-lg shadow-sm border p-6 space-y-5 print:shadow-none print:border-none">
         <div className="text-center border-b pb-4">
-          <h2 className="text-base font-bold tracking-wide">DIAFRA S.A. DE C.V.</h2>
+          <h2 className="text-base font-bold tracking-wide">TRACEA</h2>
           <p className="text-xs text-muted-foreground italic">FORMATO — DEPARTAMENTO: SISTEMA DE GESTIÓN DE CALIDAD</p>
           <p className="text-sm font-semibold mt-1">ARCHIVO MAESTRO DE GESTIÓN DE RIESGOS</p>
         </div>

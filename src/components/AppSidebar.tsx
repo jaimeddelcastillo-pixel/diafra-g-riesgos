@@ -1,4 +1,4 @@
-import { LayoutDashboard, FolderOpen, Settings, Shield, BookOpen } from "lucide-react";
+import { LayoutDashboard, FolderOpen, Settings, BookOpen } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import {
@@ -18,7 +18,7 @@ const navItems = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard },
   { title: "Mis Folios", url: "/folios", icon: FolderOpen },
   { title: "Catálogos", url: "/catalogos", icon: BookOpen },
-  { title: "Auditoría", url: "/auditoria", icon: Shield },
+  { title: "Auditoría", url: "/auditoria", icon: Settings },
   { title: "Configuración", url: "/configuracion", icon: Settings },
 ];
 
@@ -31,12 +31,18 @@ export function AppSidebar() {
     <Sidebar collapsible="icon">
       <SidebarHeader className="p-4">
         <div className="flex items-center gap-3">
-          <div className="h-8 w-8 rounded-lg bg-sidebar-primary flex items-center justify-center flex-shrink-0">
-            <Shield className="h-5 w-5 text-sidebar-primary-foreground" />
-          </div>
+          {/* TRACEA Logo — 4 bloques 2×2 con checkmark */}
+          <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 flex-shrink-0">
+            <rect x="1" y="1" width="17" height="17" rx="3" fill="white" fillOpacity="0.15"/>
+            <rect x="22" y="1" width="17" height="17" rx="3" fill="#185FA5"/>
+            <rect x="1" y="22" width="17" height="17" rx="3" fill="#185FA5"/>
+            <rect x="22" y="22" width="17" height="17" rx="3" fill="#8587E8"/>
+            <path d="M18 18L22 22" stroke="#8587E8" strokeWidth="2" strokeDasharray="2.5 2" strokeLinecap="round"/>
+            <path d="M27 30.5L30.5 34L36 27" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
           {!collapsed && (
             <div>
-              <h1 className="text-sm font-bold text-sidebar-foreground tracking-wide">DIAFRA</h1>
+              <h1 className="text-sm font-bold text-sidebar-foreground tracking-wide">TRACEA</h1>
               <p className="text-[10px] text-sidebar-foreground/60 leading-tight">Gestión de Riesgos</p>
             </div>
           )}

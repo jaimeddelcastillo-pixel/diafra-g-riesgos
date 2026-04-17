@@ -81,7 +81,7 @@ function exportarCSV(folios: any[], riesgosMap: Map<string, any[]>) {
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
-  link.download = `DIAFRA_Listado_Folios_${new Date().toISOString().slice(0, 10)}.csv`;
+  link.download = `TRACEA_Listado_Folios_${new Date().toISOString().slice(0, 10)}.csv`;
   link.click();
   URL.revokeObjectURL(url);
 }
@@ -97,7 +97,7 @@ async function exportarPDF(folios: any[], riesgosMap: Map<string, any[]>) {
   // Cargar logo desde carpeta pública
   let logoData: string | null = null;
   try {
-    const resp = await fetch("/logo-diafra.png");
+    const resp = await fetch("/logo-tracea.png");
     if (resp.ok) {
       const blob = await resp.blob();
       logoData = await new Promise<string>((res) => {
@@ -127,8 +127,7 @@ async function exportarPDF(folios: any[], riesgosMap: Map<string, any[]>) {
       doc.setFontSize(7);
       doc.setFont("helvetica", "bold");
       doc.setTextColor(15, 31, 61);
-      doc.text("DIAFRA", margin + 3, 11);
-      doc.text("S.A. DE C.V.", margin + 2, 16);
+      doc.text("TRACEA", margin + 3, 11);
       doc.setTextColor(0);
     }
 
@@ -136,7 +135,7 @@ async function exportarPDF(folios: any[], riesgosMap: Map<string, any[]>) {
     doc.setTextColor(0);
     doc.setFontSize(9);
     doc.setFont("helvetica", "bold");
-    doc.text("DIAFRA S.A. DE C.V.", pageW / 2, 10, { align: "center" });
+    doc.text("TRACEA", pageW / 2, 10, { align: "center" });
     doc.setFontSize(7);
     doc.setFont("helvetica", "italic");
     doc.text("FORMATO — DEPARTAMENTO: SISTEMA DE GESTIÓN DE CALIDAD", pageW / 2, 15, { align: "center" });
@@ -307,7 +306,7 @@ async function exportarPDF(folios: any[], riesgosMap: Map<string, any[]>) {
     addHeader(i, totalPgs);
   }
 
-  doc.save(`DIAFRA_Listado_Folios_${new Date().toISOString().slice(0, 10)}.pdf`);
+  doc.save(`TRACEA_Listado_Folios_${new Date().toISOString().slice(0, 10)}.pdf`);
 }
 
 // ─── Formulario nuevo folio ───────────────────────────────────────────────────
