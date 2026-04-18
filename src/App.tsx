@@ -11,6 +11,7 @@ import FolioDetail from "./pages/FolioDetail";
 import Auditoria from "./pages/Auditoria";
 import Catalogos from "./pages/Catalogos";
 import Configuracion from "./pages/Configuracion";
+import Admin from "./pages/Admin";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import NotFound from "./pages/NotFound";
@@ -34,6 +35,7 @@ const App = () => (
               <Route path="/auditoria" element={<Auditoria />} />
               <Route path="/catalogos" element={<Catalogos />} />
               <Route path="/configuracion" element={<Configuracion />} />
+              <Route path="/admin" element={<Admin />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
