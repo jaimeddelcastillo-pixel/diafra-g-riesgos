@@ -20,6 +20,7 @@ const roleLabels: Record<AppRole, string> = {
   operador: "Operador",
   lectura: "Lectura",
   responsable_sanitario: "Responsable Sanitario",
+  super_admin: "Super Admin",
 };
 
 const rolStyles: Record<AppRole, string> = {
@@ -28,6 +29,7 @@ const rolStyles: Record<AppRole, string> = {
   comite_tecnico: "bg-accent/10 text-accent",
   lectura: "bg-muted text-muted-foreground",
   responsable_sanitario: "bg-destructive/10 text-destructive",
+  super_admin: "bg-primary text-primary-foreground",
 };
 
 interface UserWithRole {
