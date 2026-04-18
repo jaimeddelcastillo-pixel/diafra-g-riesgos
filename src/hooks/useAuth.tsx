@@ -66,10 +66,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             if (memberData) {
               const role = memberData.role as AppRole;
               setOrgRole(role);
-              setRoles([role]);
               setOrgId(memberData.org_id);
               const orgData = memberData.organizations as any;
               if (orgData) setOrg(orgData);
+
+              // super_admin vive en user_roles aunque el usuario tenga org_members
+              const { data: saData } = await supabase
+                .from("user_roles")
+                .select("role")
+                .eq("user_id", session.user.id)
+                .eq("role", "super_admin")
+                .maybeSingle();
+              setRoles(saData ? [role, "super_admin"] : [role]);
             } else {
               // Fallback legacy: leer user_roles si aún no migrado
               const { data: rolesData } = await supabase
