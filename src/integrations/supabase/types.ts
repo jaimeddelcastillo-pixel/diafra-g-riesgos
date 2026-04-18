@@ -14,6 +14,21 @@ export type Database = {
   }
   public: {
     Tables: {
+      _folio_seq_backup: {
+        Row: {
+          last_number: number | null
+          year: number | null
+        }
+        Insert: {
+          last_number?: number | null
+          year?: number | null
+        }
+        Update: {
+          last_number?: number | null
+          year?: number | null
+        }
+        Relationships: []
+      }
       audit_trail: {
         Row: {
           accion: string
@@ -51,7 +66,15 @@ export type Database = {
           valor_anterior?: Json | null
           valor_nuevo?: Json | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "audit_trail_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       email_send_log: {
         Row: {
@@ -308,7 +331,7 @@ export type Database = {
           numero_lote?: string
           numero_modelo?: string
           numero_version?: string
-          org_id: string
+          org_id?: string
           origen: Database["public"]["Enums"]["origen_riesgo"]
           proceso_equipo: string
           riesgo_residual_global?: string
@@ -634,7 +657,7 @@ export type Database = {
         Args: { payload: Json; queue_name: string }
         Returns: number
       }
-      get_user_org_id: { Args: Record<PropertyKey, never>; Returns: string | null }
+      get_user_org_id: { Args: never; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -642,7 +665,7 @@ export type Database = {
         }
         Returns: boolean
       }
-      is_super_admin: { Args: Record<PropertyKey, never>; Returns: boolean }
+      is_super_admin: { Args: never; Returns: boolean }
       move_to_dlq: {
         Args: {
           dlq_name: string
@@ -812,6 +835,7 @@ export const Constants = {
         "operador",
         "lectura",
         "responsable_sanitario",
+        "super_admin",
       ],
       dictamen_tipo: ["Aceptable", "No Aceptable", "Pendiente"],
       estado_folio: ["Borrador", "En Firma", "Aprobado", "Cerrado"],
