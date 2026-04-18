@@ -37,20 +37,36 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Verificar rol admin
+    // Verificar rol admin en org_members y obtener org_id
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
-    const { data: roleData } = await adminClient
-      .from("user_roles")
-      .select("role")
+    const { data: callerMember } = await adminClient
+      .from("org_members")
+      .select("role, org_id, organizations(max_users)")
       .eq("user_id", caller.id)
-      .in("role", ["admin", "responsable_sanitario"])
+      .eq("role", "admin")
       .maybeSingle();
 
-    if (!roleData) {
+    if (!callerMember) {
       return new Response(JSON.stringify({ error: "Se requiere rol de administrador" }), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    }
+
+    const callerOrgId = callerMember.org_id;
+    const maxUsers = (callerMember.organizations as any)?.max_users ?? 5;
+
+    // Verificar límite de usuarios de la org
+    const { count: currentUsers } = await adminClient
+      .from("org_members")
+      .select("*", { count: "exact" })
+      .eq("org_id", callerOrgId);
+
+    if ((currentUsers ?? 0) >= maxUsers) {
+      return new Response(
+        JSON.stringify({ error: `Límite de usuarios alcanzado (máx. ${maxUsers})` }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
     }
 
     const { email, password, nombre, cargo, role } = await req.json();
@@ -62,12 +78,10 @@ Deno.serve(async (req) => {
       });
     }
 
-    // FIX 1: email_confirm: true para que Supabase envíe el correo de confirmación
-    // (requiere SMTP externo configurado en el dashboard de Supabase)
     const { data: newUser, error: createError } = await adminClient.auth.admin.createUser({
       email,
       password,
-      email_confirm: true, // ← cambiado de false a true
+      email_confirm: true,
       user_metadata: { nombre },
     });
 
@@ -86,30 +100,14 @@ Deno.serve(async (req) => {
       .update({ cargo: cargo || "", nombre })
       .eq("id", userId);
 
-    // FIX 2: UPSERT en lugar de UPDATE
-    // El trigger on_auth_user_created ya insertó 'operador'.
-    // Con UPDATE + eq("user_id") el filtro sí encuentra el registro,
-    // pero si el role actual ES operador y quieres operador no hay problema;
-    // si quieres otro rol, el UPDATE funciona — el bug real es que la condición
-    // `role !== "operador"` omitía el update para usuarios con rol operador.
-    // Solución: siempre hacer UPSERT para garantizar el rol correcto sin importar
-    // qué insertó el trigger.
+    // Insertar en org_members de la misma org del caller
     const targetRole = role || "operador";
-    const { error: rErr } = await adminClient.from("user_roles").upsert(
-      { user_id: userId, role: targetRole },
-      { onConflict: "user_id,role" }, // ← UPSERT: inserta o actualiza
-    );
+    const { error: memberError } = await adminClient
+      .from("org_members")
+      .insert({ org_id: callerOrgId, user_id: userId, role: targetRole });
 
-    // Si el trigger ya insertó 'operador' y queremos otro rol,
-    // necesitamos eliminar el registro anterior y re-insertar
-    if (!rErr && targetRole !== "operador") {
-      // Eliminar el rol 'operador' insertado por el trigger
-      await adminClient
-        .from("user_roles")
-        .delete()
-        .eq("user_id", userId)
-        .eq("role", "operador")
-        .neq("role", targetRole); // no borrar si el target ES operador
+    if (memberError) {
+      console.error("Error inserting org_member:", memberError.message);
     }
 
     return new Response(JSON.stringify({ success: true, user: { id: userId } }), {

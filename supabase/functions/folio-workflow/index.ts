@@ -157,25 +157,31 @@ Deno.serve(async (req) => {
   const body = await req.json();
   const { accion, folio_id, motivo } = body;
 
+  // Get caller's org membership
+  const { data: callerMember } = await admin
+    .from("org_members")
+    .select("org_id, role")
+    .eq("user_id", user.id)
+    .maybeSingle();
+  const callerOrgId = callerMember?.org_id ?? null;
+  const callerRole = callerMember?.role ?? null;
+
   // ─── ACCIÓN 1: Enviar folio a firma ──────────────────────────────────────────
   if (accion === "enviar-a-firma") {
     const { data: folio, error: fErr } = await admin
       .from("folios")
-      .select("id, codigo, proceso_equipo, estado, created_by")
+      .select("id, codigo, proceso_equipo, estado, created_by, org_id")
       .eq("id", folio_id)
       .single();
 
     if (fErr || !folio) return json({ error: "Folio no encontrado" }, 404);
+    if (folio.org_id !== callerOrgId) return json({ error: "Sin permiso para este folio" }, 403);
     if (folio.estado !== "Borrador") return json({ error: "El folio no está en Borrador" }, 400);
 
     if (folio.created_by !== user.id) {
-      const { data: rol } = await admin
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", user.id)
-        .in("role", ["admin", "responsable_sanitario"])
-        .maybeSingle();
-      if (!rol) return json({ error: "Sin permiso para enviar este folio" }, 403);
+      if (!["admin", "responsable_sanitario"].includes(callerRole ?? "")) {
+        return json({ error: "Sin permiso para enviar este folio" }, 403);
+      }
     }
 
     // ── Validación NOM-241 antes de enviar ─────────────────────────────────
@@ -209,7 +215,7 @@ Deno.serve(async (req) => {
 
         await enviarCorreo(admin, {
           to: perfil.email,
-          subject: `[DIAFRA] Solicitud de firma — ${folio.codigo}`,
+          subject: `[TRACEA] Solicitud de firma — ${folio.codigo}`,
           html: plantillaFirma({
             nombre: perfil.nombre || miembro.nombre,
             folio_codigo: folio.codigo,
@@ -237,10 +243,11 @@ Deno.serve(async (req) => {
 
     const { data: folio } = await admin
       .from("folios")
-      .select("codigo, proceso_equipo, estado")
+      .select("codigo, proceso_equipo, estado, org_id")
       .eq("id", folio_id)
       .single();
 
+    if (folio?.org_id !== callerOrgId) return json({ error: "Sin permiso para este folio" }, 403);
     if (folio?.estado !== "En Firma") {
       return json({ error: "El folio no está en estado En Firma" }, 400);
     }
@@ -271,8 +278,9 @@ Deno.serve(async (req) => {
 
     if (todosOk) {
       const { data: rsRoles } = await admin
-        .from("user_roles")
+        .from("org_members")
         .select("user_id")
+        .eq("org_id", folio?.org_id)
         .eq("role", "responsable_sanitario");
 
       for (const rs of rsRoles || []) {
@@ -285,7 +293,7 @@ Deno.serve(async (req) => {
         if (!rsPerfil?.email) continue;
         await enviarCorreo(admin, {
           to: rsPerfil.email,
-          subject: `[DIAFRA] ✅ Folio listo para dictamen — ${folio.codigo}`,
+          subject: `[TRACEA] ✅ Folio listo para dictamen — ${folio.codigo}`,
           html: plantillaListoParaDictamen({
             nombre: rsPerfil.nombre,
             folio_codigo: folio.codigo,
@@ -310,22 +318,18 @@ Deno.serve(async (req) => {
   if (accion === "dictamen") {
     const { conclusion } = body;
 
-    const { data: esRS } = await admin
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", user.id)
-      .eq("role", "responsable_sanitario")
-      .maybeSingle();
-
-    if (!esRS) return json({ error: "Solo el Responsable Sanitario puede emitir dictamen" }, 403);
+    if (callerRole !== "responsable_sanitario") {
+      return json({ error: "Solo el Responsable Sanitario puede emitir dictamen" }, 403);
+    }
 
     const { data: folio } = await admin
       .from("folios")
-      .select("codigo, proceso_equipo, estado, created_by, numero_version")
+      .select("codigo, proceso_equipo, estado, created_by, numero_version, org_id")
       .eq("id", folio_id)
       .single();
 
     if (!folio) return json({ error: "Folio no encontrado" }, 404);
+    if (folio.org_id !== callerOrgId) return json({ error: "Sin permiso para este folio" }, 403);
     if (folio.estado !== "En Firma") return json({ error: "El folio no está en estado En Firma" }, 400);
 
     const nuevoEstado = conclusion === "Aprobado" ? "Aprobado" : "Borrador";
@@ -353,7 +357,7 @@ Deno.serve(async (req) => {
       if (capturista?.email) {
         await enviarCorreo(admin, {
           to: capturista.email,
-          subject: `[DIAFRA] ${conclusion === "Aprobado" ? "✅ Aprobado" : "⚠ Requiere corrección"} — ${folio.codigo}`,
+          subject: `[TRACEA] ${conclusion === "Aprobado" ? "✅ Aprobado" : "⚠ Requiere corrección"} — ${folio.codigo}`,
           html: plantillaDictamen({
             nombre: capturista.nombre,
             folio_codigo: folio.codigo,
@@ -374,24 +378,19 @@ Deno.serve(async (req) => {
   if (accion === "reabrir") {
     const { data: folio } = await admin
       .from("folios")
-      .select("estado, codigo")
+      .select("estado, codigo, org_id")
       .eq("id", folio_id)
       .single();
 
     if (!folio) return json({ error: "Folio no encontrado" }, 404);
+    if (folio.org_id !== callerOrgId) return json({ error: "Sin permiso para este folio" }, 403);
     if (!["Aprobado", "Cerrado"].includes(folio.estado)) {
       return json({ error: "Solo se pueden reabrir folios Aprobados o Cerrados" }, 400);
     }
 
-    // Solo admin puede reabrir
-    const { data: esAdmin } = await admin
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", user.id)
-      .in("role", ["admin", "responsable_sanitario"])
-      .maybeSingle();
-
-    if (!esAdmin) return json({ error: "Solo admin o RS puede reabrir un folio aprobado" }, 403);
+    if (!["admin", "responsable_sanitario"].includes(callerRole ?? "")) {
+      return json({ error: "Solo admin o RS puede reabrir un folio aprobado" }, 403);
+    }
 
     const versionArchivada = await admin.rpc("archivar_version_folio", {
       p_folio_id: folio_id,
@@ -448,7 +447,7 @@ async function enviarCorreo(
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      from: "DIAFRA SGC <noreply@diafra.mx>",
+      from: "TRACEA <noreply@tracea.mx>",
       to,
       subject,
       html,
@@ -461,9 +460,9 @@ async function enviarCorreo(
 function plantillaFirma({ nombre, folio_codigo, proceso, link }: any) {
   return `
 <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto">
-  <div style="background:#0f1f3d;padding:20px;text-align:center">
-    <h2 style="color:#fff;margin:0">DIAFRA S.A. de C.V.</h2>
-    <p style="color:#aac;margin:4px 0 0;font-size:13px">Sistema de Gestión de Calidad</p>
+  <div style="background:#042C53;padding:20px;text-align:center">
+    <h2 style="color:#fff;margin:0">TRACEA</h2>
+    <p style="color:#aac;margin:4px 0 0;font-size:13px">Plataforma de Gestión de Riesgos</p>
   </div>
   <div style="padding:28px;background:#f9f9f9">
     <p style="margin:0 0 16px">Estimado(a) <strong>${nombre}</strong>,</p>
@@ -476,14 +475,14 @@ function plantillaFirma({ nombre, folio_codigo, proceso, link }: any) {
       <strong>Importante:</strong> Al firmar, usted declara haber revisado el contenido íntegro y que su firma electrónica tiene el mismo valor legal que su firma autógrafa conforme a la NOM-241-SSA1-2025.
     </div>
     <div style="text-align:center;margin:24px 0">
-      <a href="${link}" style="background:#0f1f3d;color:#fff;padding:12px 28px;border-radius:6px;text-decoration:none;font-weight:bold">
+      <a href="${link}" style="background:#042C53;color:#fff;padding:12px 28px;border-radius:6px;text-decoration:none;font-weight:bold">
         Ver y Firmar Folio
       </a>
     </div>
     <p style="color:#888;font-size:12px">Si no puedes hacer clic, copia esta URL: ${link}</p>
   </div>
   <div style="background:#eee;padding:12px;text-align:center;font-size:11px;color:#888">
-    FOR-SGC-11-01 · DIAFRA S.A. de C.V. · Documento confidencial
+    FOR-SGC-11-01 · TRACEA · Documento confidencial
   </div>
 </div>`;
 }
@@ -491,9 +490,9 @@ function plantillaFirma({ nombre, folio_codigo, proceso, link }: any) {
 function plantillaListoParaDictamen({ nombre, folio_codigo, proceso, link }: any) {
   return `
 <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto">
-  <div style="background:#0f1f3d;padding:20px;text-align:center">
-    <h2 style="color:#fff;margin:0">DIAFRA S.A. de C.V.</h2>
-    <p style="color:#aac;margin:4px 0 0;font-size:13px">Sistema de Gestión de Calidad</p>
+  <div style="background:#042C53;padding:20px;text-align:center">
+    <h2 style="color:#fff;margin:0">TRACEA</h2>
+    <p style="color:#aac;margin:4px 0 0;font-size:13px">Plataforma de Gestión de Riesgos</p>
   </div>
   <div style="padding:28px;background:#f9f9f9">
     <p style="margin:0 0 16px">Estimado(a) <strong>${nombre}</strong>,</p>
@@ -512,7 +511,7 @@ function plantillaListoParaDictamen({ nombre, folio_codigo, proceso, link }: any
     </div>
   </div>
   <div style="background:#eee;padding:12px;text-align:center;font-size:11px;color:#888">
-    FOR-SGC-11-01 · DIAFRA S.A. de C.V. · Documento confidencial
+    FOR-SGC-11-01 · TRACEA · Documento confidencial
   </div>
 </div>`;
 }
@@ -521,9 +520,9 @@ function plantillaDictamen({ nombre, folio_codigo, proceso, conclusion, motivo, 
   const aprobado = conclusion === "Aprobado";
   return `
 <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto">
-  <div style="background:#0f1f3d;padding:20px;text-align:center">
-    <h2 style="color:#fff;margin:0">DIAFRA S.A. de C.V.</h2>
-    <p style="color:#aac;margin:4px 0 0;font-size:13px">Sistema de Gestión de Calidad</p>
+  <div style="background:#042C53;padding:20px;text-align:center">
+    <h2 style="color:#fff;margin:0">TRACEA</h2>
+    <p style="color:#aac;margin:4px 0 0;font-size:13px">Plataforma de Gestión de Riesgos</p>
   </div>
   <div style="padding:28px;background:#f9f9f9">
     <p style="margin:0 0 16px">Estimado(a) <strong>${nombre}</strong>,</p>
@@ -541,13 +540,13 @@ function plantillaDictamen({ nombre, folio_codigo, proceso, conclusion, motivo, 
     </div>
     ${!aprobado ? `<p style="color:#666;font-size:13px">Se ha archivado la versión ${version} del documento. Se ha creado una nueva revisión para corrección.</p>` : ""}
     <div style="text-align:center;margin:24px 0">
-      <a href="${link}" style="background:#0f1f3d;color:#fff;padding:12px 28px;border-radius:6px;text-decoration:none;font-weight:bold">
+      <a href="${link}" style="background:#042C53;color:#fff;padding:12px 28px;border-radius:6px;text-decoration:none;font-weight:bold">
         Ver Folio
       </a>
     </div>
   </div>
   <div style="background:#eee;padding:12px;text-align:center;font-size:11px;color:#888">
-    FOR-SGC-11-01 · DIAFRA S.A. de C.V. · Documento confidencial
+    FOR-SGC-11-01 · TRACEA · Documento confidencial
   </div>
 </div>`;
 }

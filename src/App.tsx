@@ -12,6 +12,7 @@ import Auditoria from "./pages/Auditoria";
 import Catalogos from "./pages/Catalogos";
 import Configuracion from "./pages/Configuracion";
 import Login from "./pages/Login";
+import Register from "./pages/Register";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -25,6 +26,7 @@ const App = () => (
         <AuthProvider>
           <Routes>
             <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
             <Route element={<AppLayout />}>
               <Route path="/" element={<Index />} />
               <Route path="/folios" element={<Folios />} />

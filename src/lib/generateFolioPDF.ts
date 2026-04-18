@@ -33,7 +33,7 @@ export async function generateFolioPDF(folio: Folio, riesgos: Riesgo[], comite: 
   // Cargar logo desde carpeta pública
   let logoData: string | null = null;
   try {
-    const resp = await fetch("/logo-diafra.png");
+    const resp = await fetch("/logo-tracea.png");
     if (resp.ok) {
       const blob = await resp.blob();
       logoData = await new Promise<string>((res) => {
@@ -61,18 +61,17 @@ export async function generateFolioPDF(folio: Folio, riesgos: Riesgo[], comite: 
       doc.setFontSize(7.5);
       doc.setFont("helvetica", "bold");
       doc.setTextColor(15, 31, 61);
-      doc.text("DIAFRA", margin + 3, 12);
-      doc.text("S.A. DE C.V.", margin + 2, 17);
+      doc.text("TRACEA", margin + 3, 12);
       doc.setFontSize(5.5);
       doc.setFont("helvetica", "normal");
-      doc.text("Gestión de Calidad", margin + 1, 21);
+      doc.text("Gestión de Riesgos", margin + 1, 18);
       doc.setTextColor(0);
     }
 
     doc.setTextColor(0);
     doc.setFontSize(9);
     doc.setFont("helvetica", "bold");
-    doc.text("DIAFRA S.A. DE C.V.", pageW / 2, 11, { align: "center" });
+    doc.text("TRACEA", pageW / 2, 11, { align: "center" });
     doc.setFontSize(7);
     doc.setFont("helvetica", "italic");
     doc.text("FORMATO — DEPARTAMENTO: SISTEMA DE GESTIÓN DE CALIDAD", pageW / 2, 16, { align: "center" });
@@ -91,7 +90,7 @@ export async function generateFolioPDF(folio: Folio, riesgos: Riesgo[], comite: 
     doc.setFont("helvetica", "normal");
     doc.setTextColor(80);
     doc.text(
-      "Documento confidencial propiedad de Diafra S.A. de C.V., queda prohibido su uso, divulgación y/o reproducción total o parcial sin previa autorización.",
+      "Documento confidencial propiedad de TRACEA. Queda prohibido su uso, divulgación y/o reproducción total o parcial sin previa autorización.",
       pageW / 2,
       pageH - 3,
       { align: "center" },

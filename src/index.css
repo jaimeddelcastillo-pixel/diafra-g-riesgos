@@ -13,16 +13,16 @@
     --popover: 0 0% 100%;
     --popover-foreground: 215 25% 15%;
 
-    --primary: 210 60% 25%;
+    --primary: 210 91% 17%;          /* TRACEA Navy #042C53 */
     --primary-foreground: 210 20% 98%;
 
     --secondary: 210 15% 93%;
-    --secondary-foreground: 210 60% 25%;
+    --secondary-foreground: 210 91% 17%;
 
     --muted: 210 15% 93%;
     --muted-foreground: 215 12% 50%;
 
-    --accent: 174 60% 40%;
+    --accent: 210 75% 37%;            /* TRACEA Cobalt #185FA5 */
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 72% 51%;
@@ -30,18 +30,18 @@
 
     --border: 214 20% 88%;
     --input: 214 20% 88%;
-    --ring: 210 60% 25%;
+    --ring: 210 91% 17%;
 
     --radius: 0.5rem;
 
-    --sidebar-background: 210 60% 20%;
+    --sidebar-background: 210 91% 17%;  /* TRACEA Navy #042C53 */
     --sidebar-foreground: 210 20% 90%;
-    --sidebar-primary: 174 60% 50%;
+    --sidebar-primary: 239 68% 72%;     /* TRACEA Celeste #8587E8 */
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 210 50% 28%;
+    --sidebar-accent: 210 75% 27%;      /* Cobalt oscuro para hover */
     --sidebar-accent-foreground: 210 20% 95%;
-    --sidebar-border: 210 40% 30%;
-    --sidebar-ring: 174 60% 50%;
+    --sidebar-border: 210 60% 25%;
+    --sidebar-ring: 239 68% 72%;
 
     --warning: 38 92% 50%;
     --warning-foreground: 0 0% 100%;
