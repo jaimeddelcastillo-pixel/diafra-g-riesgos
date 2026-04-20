@@ -23,7 +23,14 @@ Deno.serve(async (req) => {
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-  const admin = createClient(supabaseUrl, serviceKey);
+
+  // Opciones requeridas para que service_role bypasee RLS en Edge Functions
+  const admin = createClient(supabaseUrl, serviceKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+  });
 
   let body: any;
   try {
@@ -78,7 +85,10 @@ Deno.serve(async (req) => {
     .select()
     .single();
 
-  if (orgErr) return json({ error: orgErr.message }, 500);
+  if (orgErr) {
+    console.error("org insert error:", orgErr);
+    return json({ error: orgErr.message }, 500);
+  }
 
   // Vincular usuario como admin de la org
   const { error: memberErr } = await admin
@@ -86,6 +96,7 @@ Deno.serve(async (req) => {
     .insert({ org_id: org.id, user_id, role: "admin" });
 
   if (memberErr) {
+    console.error("org_members insert error:", memberErr);
     // Rollback: eliminar la org recién creada
     await admin.from("organizations").delete().eq("id", org.id);
     return json({ error: memberErr.message }, 500);
