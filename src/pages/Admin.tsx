@@ -546,6 +546,19 @@ export default function Admin() {
                         variant="ghost"
                         size="icon"
                         className="h-7 w-7"
+                        title="Editar usuario"
+                        onClick={() => {
+                          setEditUserTarget(u);
+                          setEditUserForm({ nombre: u.nombre, cargo: u.cargo ?? "" });
+                          setEditUserOpen(true);
+                        }}
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
                         title="Resetear contraseña"
                         onClick={() => { setResetPwUser(u); setResetPwValue(""); setResetPwOpen(true); }}
                       >
