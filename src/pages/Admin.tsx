@@ -610,6 +610,31 @@ export default function Admin() {
         </DialogContent>
       </Dialog>
 
+      {/* ── Dialog eliminar usuario TRACEA ── */}
+      <Dialog open={deleteUserOpen} onOpenChange={setDeleteUserOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Eliminar usuario</DialogTitle></DialogHeader>
+          <div className="space-y-3 py-2">
+            <p className="text-sm">
+              ¿Confirmas eliminar a <strong>{deleteUserTarget?.nombre}</strong> ({deleteUserTarget?.email})?
+            </p>
+            <p className="text-xs text-destructive">
+              Esta acción es irreversible. Se eliminarán su cuenta de acceso, perfil y rol.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteUserOpen(false)}>Cancelar</Button>
+            <Button
+              variant="destructive"
+              onClick={() => deleteUserTarget && deleteTraceaMutation.mutate(deleteUserTarget.id)}
+              disabled={deleteTraceaMutation.isPending}
+            >
+              {deleteTraceaMutation.isPending ? "Eliminando…" : "Eliminar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* ── Dialog editar ── */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
