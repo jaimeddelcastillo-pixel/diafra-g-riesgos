@@ -3,6 +3,7 @@
 // Corre con service role — bypasea RLS para consultar todas las orgs.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { createRemoteJWKSet, jwtVerify } from "https://esm.sh/jose@5.9.6";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -18,6 +19,15 @@ function json(data: unknown, status = 200) {
   });
 }
 
+async function verifyAccessToken(token: string, supabaseUrl: string) {
+  const JWKS = createRemoteJWKSet(new URL(`${supabaseUrl}/auth/v1/.well-known/jwks.json`));
+  const { payload } = await jwtVerify(token, JWKS, {
+    issuer: `${supabaseUrl}/auth/v1`,
+    audience: "authenticated",
+  });
+  return payload;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -26,24 +36,28 @@ Deno.serve(async (req) => {
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-
   const admin = createClient(supabaseUrl, serviceKey, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
 
-  // Verificar que el caller es super_admin (validar JWT con service role)
+  // Verificar JWT por firma y luego autorizar por rol
   const token = authHeader.replace(/^Bearer\s+/i, "");
-  const { data: userData, error: userErr } = await admin.auth.getUser(token);
-  if (userErr || !userData?.user) {
-    console.error("getUser error:", userErr);
+  let userId: string;
+  try {
+    const payload = await verifyAccessToken(token, supabaseUrl);
+    if (typeof payload.sub !== "string") {
+      return json({ error: "No autorizado" }, 401);
+    }
+    userId = payload.sub;
+  } catch (error) {
+    console.error("jwtVerify error:", error);
     return json({ error: "No autorizado" }, 401);
   }
-  const user = userData.user;
 
   const { data: saCheck } = await admin
     .from("user_roles")
     .select("role")
-    .eq("user_id", user.id)
+    .eq("user_id", userId)
     .eq("role", "super_admin")
     .maybeSingle();
   if (!saCheck) return json({ error: "Se requiere rol super_admin" }, 403);
