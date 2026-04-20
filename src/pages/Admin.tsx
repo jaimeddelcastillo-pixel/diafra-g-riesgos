@@ -531,6 +531,15 @@ export default function Admin() {
                       >
                         <KeyRound className="h-3.5 w-3.5" />
                       </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
+                        title="Eliminar usuario"
+                        onClick={() => { setDeleteUserTarget(u); setDeleteUserOpen(true); }}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
                     </td>
                   </tr>
                 ))}
