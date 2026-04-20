@@ -26,24 +26,29 @@ Deno.serve(async (req) => {
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
 
   const admin = createClient(supabaseUrl, serviceKey, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
 
-  // Verificar que el caller es super_admin (validar JWT con service role)
+  // Verificar JWT del caller y luego autorizar por rol
   const token = authHeader.replace(/^Bearer\s+/i, "");
-  const { data: userData, error: userErr } = await admin.auth.getUser(token);
-  if (userErr || !userData?.user) {
-    console.error("getUser error:", userErr);
+  const authClient = createClient(supabaseUrl, anonKey, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+  const { data: claimsData, error: claimsErr } = await authClient.auth.getClaims(token);
+  const userId = claimsData?.claims?.sub;
+
+  if (claimsErr || typeof userId !== "string") {
+    console.error("getClaims error:", claimsErr);
     return json({ error: "No autorizado" }, 401);
   }
-  const user = userData.user;
 
   const { data: saCheck } = await admin
     .from("user_roles")
     .select("role")
-    .eq("user_id", user.id)
+    .eq("user_id", userId)
     .eq("role", "super_admin")
     .maybeSingle();
   if (!saCheck) return json({ error: "Se requiere rol super_admin" }, 403);
