@@ -23,18 +23,15 @@ Deno.serve(async (req) => {
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
-
-    // Verificar autenticación del caller
-    const callerClient = createClient(supabaseUrl, anonKey, {
-      global: { headers: { Authorization: authHeader } },
-    });
-    const { data: { user: caller } } = await callerClient.auth.getUser();
-    if (!caller) return json({ error: "No autorizado" }, 401);
-
     const adminClient = createClient(supabaseUrl, serviceRoleKey, {
       auth: { autoRefreshToken: false, persistSession: false },
     });
+
+    // Verificar autenticación del caller pasando el token explícito al admin client
+    const token = authHeader.replace(/^Bearer\s+/i, "");
+    const { data: userData, error: userErr } = await adminClient.auth.getUser(token);
+    if (userErr || !userData?.user) return json({ error: "No autorizado" }, 401);
+    const caller = userData.user;
 
     // ¿Es super_admin?
     const { data: saRow } = await adminClient
