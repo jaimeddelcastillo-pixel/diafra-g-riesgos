@@ -17,7 +17,8 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Navigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -81,6 +82,10 @@ function ProgressBar({ value, max, color = "bg-primary" }: { value: number; max:
 // ─── Dashboard principal ──────────────────────────────────────────────────────
 export default function Dashboard() {
   const navigate = useNavigate();
+  const { isSuperAdmin, loading } = useAuth();
+
+  if (!loading && isSuperAdmin()) return <Navigate to="/admin" replace />;
+
   const { data: folios, isLoading: loadingFolios } = useFolios();
   const { data: allRisks, isLoading: loadingRisks } = useAllRiesgos();
 
