@@ -13,7 +13,7 @@ import { Switch } from "@/components/ui/switch";
 import {
   Building2, Pencil, LogIn, AlertTriangle, Clock,
   Users, FileText, CheckCircle2, ChevronDown, ChevronUp,
-  UserPlus, KeyRound, ShieldCheck,
+  UserPlus, KeyRound, ShieldCheck, Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
 
