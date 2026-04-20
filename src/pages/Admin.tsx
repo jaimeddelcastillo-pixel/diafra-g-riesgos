@@ -122,6 +122,8 @@ export default function Admin() {
   const [resetPwOpen, setResetPwOpen] = useState(false);
   const [resetPwUser, setResetPwUser] = useState<TraceaUser | null>(null);
   const [resetPwValue, setResetPwValue] = useState("");
+  const [deleteUserOpen, setDeleteUserOpen] = useState(false);
+  const [deleteUserTarget, setDeleteUserTarget] = useState<TraceaUser | null>(null);
 
   if (!isSuperAdmin()) return <Navigate to="/" replace />;
 
@@ -235,6 +237,23 @@ export default function Admin() {
       setResetPwOpen(false);
       setResetPwValue("");
       setResetPwUser(null);
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const deleteTraceaMutation = useMutation({
+    mutationFn: async (user_id: string) => {
+      const { data, error } = await supabase.functions.invoke("delete-user", {
+        body: { user_id },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+    },
+    onSuccess: () => {
+      refetchTracea();
+      toast.success("Usuario eliminado.");
+      setDeleteUserOpen(false);
+      setDeleteUserTarget(null);
     },
     onError: (e: any) => toast.error(e.message),
   });
