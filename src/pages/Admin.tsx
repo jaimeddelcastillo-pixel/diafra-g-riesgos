@@ -124,6 +124,9 @@ export default function Admin() {
   const [resetPwValue, setResetPwValue] = useState("");
   const [deleteUserOpen, setDeleteUserOpen] = useState(false);
   const [deleteUserTarget, setDeleteUserTarget] = useState<TraceaUser | null>(null);
+  const [editUserOpen, setEditUserOpen] = useState(false);
+  const [editUserTarget, setEditUserTarget] = useState<TraceaUser | null>(null);
+  const [editUserForm, setEditUserForm] = useState({ nombre: "", cargo: "" });
 
   if (!isSuperAdmin()) return <Navigate to="/" replace />;
 
@@ -254,6 +257,23 @@ export default function Admin() {
       toast.success("Usuario eliminado.");
       setDeleteUserOpen(false);
       setDeleteUserTarget(null);
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const updateTraceaMutation = useMutation({
+    mutationFn: async ({ id, nombre, cargo }: { id: string; nombre: string; cargo: string }) => {
+      const { error } = await supabase
+        .from("profiles")
+        .update({ nombre, cargo })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      refetchTracea();
+      toast.success("Usuario actualizado.");
+      setEditUserOpen(false);
+      setEditUserTarget(null);
     },
     onError: (e: any) => toast.error(e.message),
   });
@@ -526,6 +546,19 @@ export default function Admin() {
                         variant="ghost"
                         size="icon"
                         className="h-7 w-7"
+                        title="Editar usuario"
+                        onClick={() => {
+                          setEditUserTarget(u);
+                          setEditUserForm({ nombre: u.nombre, cargo: u.cargo ?? "" });
+                          setEditUserOpen(true);
+                        }}
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
                         title="Resetear contraseña"
                         onClick={() => { setResetPwUser(u); setResetPwValue(""); setResetPwOpen(true); }}
                       >
@@ -630,6 +663,50 @@ export default function Admin() {
               disabled={deleteTraceaMutation.isPending}
             >
               {deleteTraceaMutation.isPending ? "Eliminando…" : "Eliminar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Dialog editar usuario TRACEA ── */}
+      <Dialog open={editUserOpen} onOpenChange={setEditUserOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Editar usuario TRACEA</DialogTitle></DialogHeader>
+          <div className="space-y-4 py-2">
+            <p className="text-xs text-muted-foreground">
+              {editUserTarget?.email}
+            </p>
+            <div>
+              <label className="text-sm font-medium">Nombre completo *</label>
+              <Input
+                value={editUserForm.nombre}
+                onChange={(e) => setEditUserForm((f) => ({ ...f, nombre: e.target.value }))}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Cargo</label>
+              <Input
+                value={editUserForm.cargo}
+                onChange={(e) => setEditUserForm((f) => ({ ...f, cargo: e.target.value }))}
+                placeholder="Consultor, Asesor…"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditUserOpen(false)}>Cancelar</Button>
+            <Button
+              onClick={() => {
+                if (!editUserTarget) return;
+                if (!editUserForm.nombre.trim()) { toast.error("El nombre es obligatorio"); return; }
+                updateTraceaMutation.mutate({
+                  id: editUserTarget.id,
+                  nombre: editUserForm.nombre.trim(),
+                  cargo: editUserForm.cargo.trim(),
+                });
+              }}
+              disabled={updateTraceaMutation.isPending}
+            >
+              {updateTraceaMutation.isPending ? "Guardando…" : "Guardar"}
             </Button>
           </DialogFooter>
         </DialogContent>
