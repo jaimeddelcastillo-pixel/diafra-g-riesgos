@@ -3,6 +3,7 @@
 // Corre con service role — bypasea RLS para consultar todas las orgs.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { createRemoteJWKSet, jwtVerify } from "npm:jose@5.9.6";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -18,6 +19,15 @@ function json(data: unknown, status = 200) {
   });
 }
 
+async function verifyAccessToken(token: string, supabaseUrl: string) {
+  const JWKS = createRemoteJWKSet(new URL(`${supabaseUrl}/auth/v1/.well-known/jwks.json`));
+  const { payload } = await jwtVerify(token, JWKS, {
+    issuer: `${supabaseUrl}/auth/v1`,
+    audience: "authenticated",
+  });
+  return payload;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -26,22 +36,21 @@ Deno.serve(async (req) => {
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-  const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
-
   const admin = createClient(supabaseUrl, serviceKey, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
 
-  // Verificar JWT del caller y luego autorizar por rol
+  // Verificar JWT por firma y luego autorizar por rol
   const token = authHeader.replace(/^Bearer\s+/i, "");
-  const authClient = createClient(supabaseUrl, anonKey, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  });
-  const { data: claimsData, error: claimsErr } = await authClient.auth.getClaims(token);
-  const userId = claimsData?.claims?.sub;
-
-  if (claimsErr || typeof userId !== "string") {
-    console.error("getClaims error:", claimsErr);
+  let userId: string;
+  try {
+    const payload = await verifyAccessToken(token, supabaseUrl);
+    if (typeof payload.sub !== "string") {
+      return json({ error: "No autorizado" }, 401);
+    }
+    userId = payload.sub;
+  } catch (error) {
+    console.error("jwtVerify error:", error);
     return json({ error: "No autorizado" }, 401);
   }
 
