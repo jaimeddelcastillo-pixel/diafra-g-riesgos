@@ -26,16 +26,19 @@ Deno.serve(async (req) => {
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-  const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
 
-  // Verificar que el caller es super_admin
-  const callerClient = createClient(supabaseUrl, anonKey, {
-    global: { headers: { Authorization: authHeader } },
+  const admin = createClient(supabaseUrl, serviceKey, {
+    auth: { autoRefreshToken: false, persistSession: false },
   });
-  const { data: { user } } = await callerClient.auth.getUser();
-  if (!user) return json({ error: "No autorizado" }, 401);
 
-  const admin = createClient(supabaseUrl, serviceKey);
+  // Verificar que el caller es super_admin (validar JWT con service role)
+  const token = authHeader.replace(/^Bearer\s+/i, "");
+  const { data: userData, error: userErr } = await admin.auth.getUser(token);
+  if (userErr || !userData?.user) {
+    console.error("getUser error:", userErr);
+    return json({ error: "No autorizado" }, 401);
+  }
+  const user = userData.user;
 
   const { data: saCheck } = await admin
     .from("user_roles")
