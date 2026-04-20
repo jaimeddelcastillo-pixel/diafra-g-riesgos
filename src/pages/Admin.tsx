@@ -13,7 +13,7 @@ import { Switch } from "@/components/ui/switch";
 import {
   Building2, Pencil, LogIn, AlertTriangle, Clock,
   Users, FileText, CheckCircle2, ChevronDown, ChevronUp,
-  UserPlus, KeyRound, ShieldCheck,
+  UserPlus, KeyRound, ShieldCheck, Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -122,6 +122,8 @@ export default function Admin() {
   const [resetPwOpen, setResetPwOpen] = useState(false);
   const [resetPwUser, setResetPwUser] = useState<TraceaUser | null>(null);
   const [resetPwValue, setResetPwValue] = useState("");
+  const [deleteUserOpen, setDeleteUserOpen] = useState(false);
+  const [deleteUserTarget, setDeleteUserTarget] = useState<TraceaUser | null>(null);
 
   if (!isSuperAdmin()) return <Navigate to="/" replace />;
 
@@ -235,6 +237,23 @@ export default function Admin() {
       setResetPwOpen(false);
       setResetPwValue("");
       setResetPwUser(null);
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const deleteTraceaMutation = useMutation({
+    mutationFn: async (user_id: string) => {
+      const { data, error } = await supabase.functions.invoke("delete-user", {
+        body: { user_id },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+    },
+    onSuccess: () => {
+      refetchTracea();
+      toast.success("Usuario eliminado.");
+      setDeleteUserOpen(false);
+      setDeleteUserTarget(null);
     },
     onError: (e: any) => toast.error(e.message),
   });
@@ -512,6 +531,15 @@ export default function Admin() {
                       >
                         <KeyRound className="h-3.5 w-3.5" />
                       </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
+                        title="Eliminar usuario"
+                        onClick={() => { setDeleteUserTarget(u); setDeleteUserOpen(true); }}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
                     </td>
                   </tr>
                 ))}
@@ -577,6 +605,31 @@ export default function Admin() {
               resetTraceaPwMutation.mutate({ user_id: resetPwUser.id, new_password: resetPwValue });
             }} disabled={resetTraceaPwMutation.isPending}>
               {resetTraceaPwMutation.isPending ? "Guardando…" : "Resetear"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Dialog eliminar usuario TRACEA ── */}
+      <Dialog open={deleteUserOpen} onOpenChange={setDeleteUserOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Eliminar usuario</DialogTitle></DialogHeader>
+          <div className="space-y-3 py-2">
+            <p className="text-sm">
+              ¿Confirmas eliminar a <strong>{deleteUserTarget?.nombre}</strong> ({deleteUserTarget?.email})?
+            </p>
+            <p className="text-xs text-destructive">
+              Esta acción es irreversible. Se eliminarán su cuenta de acceso, perfil y rol.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteUserOpen(false)}>Cancelar</Button>
+            <Button
+              variant="destructive"
+              onClick={() => deleteUserTarget && deleteTraceaMutation.mutate(deleteUserTarget.id)}
+              disabled={deleteTraceaMutation.isPending}
+            >
+              {deleteTraceaMutation.isPending ? "Eliminando…" : "Eliminar"}
             </Button>
           </DialogFooter>
         </DialogContent>
