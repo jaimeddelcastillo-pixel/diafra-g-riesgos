@@ -261,6 +261,23 @@ export default function Admin() {
     onError: (e: any) => toast.error(e.message),
   });
 
+  const updateTraceaMutation = useMutation({
+    mutationFn: async ({ id, nombre, cargo }: { id: string; nombre: string; cargo: string }) => {
+      const { error } = await supabase
+        .from("profiles")
+        .update({ nombre, cargo })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      refetchTracea();
+      toast.success("Usuario actualizado.");
+      setEditUserOpen(false);
+      setEditUserTarget(null);
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
   const metrics = data?.metrics;
   const orgs = data?.orgs ?? [];
   const alertas = data?.alertas;
