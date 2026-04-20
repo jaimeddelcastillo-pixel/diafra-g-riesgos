@@ -58,7 +58,7 @@ export default function Register() {
   const handleRegister = async () => {
     setSubmitting(true);
     try {
-      // 1. Crear usuario en auth
+      // 1. Crear usuario en auth (envía correo de confirmación si está configurado)
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
         password,
@@ -67,21 +67,17 @@ export default function Register() {
       if (authError) throw authError;
       if (!authData.user) throw new Error("No se pudo crear el usuario");
 
-      const userId = authData.user.id;
-
-      // 2. Crear organización
-      const { data: orgData, error: orgError } = await supabase
-        .from("organizations")
-        .insert({ nombre: orgNombre.trim(), slug: orgSlug.trim(), plan: "trial" })
-        .select()
-        .single();
-      if (orgError) throw orgError;
-
-      // 3. Vincular usuario como admin de la org
-      const { error: memberError } = await supabase
-        .from("org_members")
-        .insert({ org_id: orgData.id, user_id: userId, role: "admin" });
-      if (memberError) throw memberError;
+      // 2. Crear org + org_member via Edge Function con service role
+      //    (evita problemas de RLS cuando la sesión aún no está confirmada)
+      const { data: fnData, error: fnError } = await supabase.functions.invoke("register-org", {
+        body: {
+          user_id: authData.user.id,
+          org_nombre: orgNombre.trim(),
+          org_slug: orgSlug.trim(),
+        },
+      });
+      if (fnError) throw fnError;
+      if (fnData?.error) throw new Error(fnData.error);
 
       setStep(3);
     } catch (err: any) {
