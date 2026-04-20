@@ -13,8 +13,17 @@ import { Switch } from "@/components/ui/switch";
 import {
   Building2, Pencil, LogIn, AlertTriangle, Clock,
   Users, FileText, CheckCircle2, ChevronDown, ChevronUp,
+  UserPlus, KeyRound, ShieldCheck,
 } from "lucide-react";
 import { toast } from "sonner";
+
+interface TraceaUser {
+  id: string;
+  nombre: string;
+  email: string;
+  cargo: string | null;
+  role: string;
+}
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -107,6 +116,13 @@ export default function Admin() {
   const [editForm, setEditForm] = useState({ plan: "", trial_expires_at: "", max_users: 5 });
   const [dialogOpen, setDialogOpen] = useState(false);
 
+  // ── Equipo TRACEA ──
+  const [newTraceaOpen, setNewTraceaOpen] = useState(false);
+  const [newTraceaForm, setNewTraceaForm] = useState({ nombre: "", email: "", password: "", cargo: "" });
+  const [resetPwOpen, setResetPwOpen] = useState(false);
+  const [resetPwUser, setResetPwUser] = useState<TraceaUser | null>(null);
+  const [resetPwValue, setResetPwValue] = useState("");
+
   if (!isSuperAdmin()) return <Navigate to="/" replace />;
 
   const { data, isLoading } = useQuery<AdminData>({
@@ -171,6 +187,57 @@ export default function Admin() {
       max_users: Math.max(1, Number(editForm.max_users)),
     });
   };
+
+  // Query usuarios TRACEA (en user_roles, no tienen org)
+  const { data: traceaUsers = [], refetch: refetchTracea } = useQuery<TraceaUser[]>({
+    queryKey: ["tracea-users"],
+    queryFn: async () => {
+      const { data: roles, error: rErr } = await supabase.from("user_roles").select("user_id, role");
+      if (rErr) throw rErr;
+      const { data: profiles, error: pErr } = await supabase.from("profiles").select("id, nombre, email, cargo");
+      if (pErr) throw pErr;
+      const profileMap = new Map((profiles || []).map((p) => [p.id, p]));
+      return (roles || []).map((r) => {
+        const p = profileMap.get(r.user_id);
+        return { id: r.user_id, nombre: p?.nombre ?? "Sin nombre", email: p?.email ?? "", cargo: p?.cargo ?? null, role: r.role };
+      });
+    },
+  });
+
+  const createTraceaMutation = useMutation({
+    mutationFn: async (form: typeof newTraceaForm) => {
+      const { data, error } = await supabase.functions.invoke("create-user", {
+        body: { email: form.email, password: form.password, nombre: form.nombre, cargo: form.cargo, role: "super_admin", org_id: null },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data;
+    },
+    onSuccess: () => {
+      refetchTracea();
+      toast.success("Usuario TRACEA creado.");
+      setNewTraceaOpen(false);
+      setNewTraceaForm({ nombre: "", email: "", password: "", cargo: "" });
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const resetTraceaPwMutation = useMutation({
+    mutationFn: async ({ user_id, new_password }: { user_id: string; new_password: string }) => {
+      const { data, error } = await supabase.functions.invoke("reset-user-password", {
+        body: { user_id, new_password },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+    },
+    onSuccess: () => {
+      toast.success("Contraseña actualizada.");
+      setResetPwOpen(false);
+      setResetPwValue("");
+      setResetPwUser(null);
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
 
   const metrics = data?.metrics;
   const orgs = data?.orgs ?? [];
@@ -399,6 +466,121 @@ export default function Admin() {
           )}
         </CardContent>
       </Card>
+
+      {/* ── Equipo TRACEA ── */}
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base flex items-center gap-2">
+              <ShieldCheck className="h-4 w-4 text-primary" /> Equipo TRACEA
+            </CardTitle>
+            <Button size="sm" className="gap-1 h-8" onClick={() => setNewTraceaOpen(true)}>
+              <UserPlus className="h-3.5 w-3.5" /> Nuevo
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {traceaUsers.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Sin usuarios registrados.</p>
+          ) : (
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b text-muted-foreground text-xs uppercase tracking-wide">
+                  <th className="text-left pb-2 font-medium">Nombre</th>
+                  <th className="text-left pb-2 font-medium">Correo</th>
+                  <th className="text-left pb-2 font-medium">Cargo</th>
+                  <th className="text-left pb-2 font-medium">Rol</th>
+                  <th className="text-left pb-2 font-medium">Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {traceaUsers.map((u) => (
+                  <tr key={u.id} className="border-b last:border-0">
+                    <td className="py-2 font-medium">{u.nombre}</td>
+                    <td className="py-2 text-xs text-muted-foreground">{u.email}</td>
+                    <td className="py-2 text-xs text-muted-foreground">{u.cargo || "—"}</td>
+                    <td className="py-2">
+                      <Badge variant="outline" className="text-[10px]">{u.role}</Badge>
+                    </td>
+                    <td className="py-2">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        title="Resetear contraseña"
+                        onClick={() => { setResetPwUser(u); setResetPwValue(""); setResetPwOpen(true); }}
+                      >
+                        <KeyRound className="h-3.5 w-3.5" />
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* ── Dialog nuevo usuario TRACEA ── */}
+      <Dialog open={newTraceaOpen} onOpenChange={setNewTraceaOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Nuevo usuario TRACEA</DialogTitle></DialogHeader>
+          <div className="space-y-4 py-2">
+            <div>
+              <label className="text-sm font-medium">Nombre completo *</label>
+              <Input value={newTraceaForm.nombre} onChange={(e) => setNewTraceaForm((f) => ({ ...f, nombre: e.target.value }))} placeholder="Nombre del colaborador" />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Correo electrónico *</label>
+              <Input type="email" value={newTraceaForm.email} onChange={(e) => setNewTraceaForm((f) => ({ ...f, email: e.target.value }))} placeholder="colaborador@tracea.com.mx" />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Contraseña temporal *</label>
+              <Input type="password" value={newTraceaForm.password} onChange={(e) => setNewTraceaForm((f) => ({ ...f, password: e.target.value }))} placeholder="Mínimo 6 caracteres" />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Cargo</label>
+              <Input value={newTraceaForm.cargo} onChange={(e) => setNewTraceaForm((f) => ({ ...f, cargo: e.target.value }))} placeholder="Consultor, Asesor…" />
+            </div>
+            <p className="text-xs text-muted-foreground">Se creará con rol <strong>super_admin</strong>. Podrá acceder a todas las empresas.</p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setNewTraceaOpen(false)}>Cancelar</Button>
+            <Button onClick={() => {
+              if (!newTraceaForm.nombre || !newTraceaForm.email || !newTraceaForm.password) { toast.error("Completa los campos obligatorios"); return; }
+              if (newTraceaForm.password.length < 6) { toast.error("Contraseña mínimo 6 caracteres"); return; }
+              createTraceaMutation.mutate(newTraceaForm);
+            }} disabled={createTraceaMutation.isPending}>
+              {createTraceaMutation.isPending ? "Creando…" : "Crear Usuario"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Dialog resetear contraseña TRACEA ── */}
+      <Dialog open={resetPwOpen} onOpenChange={setResetPwOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Resetear Contraseña</DialogTitle></DialogHeader>
+          <div className="space-y-4 py-2">
+            <p className="text-sm text-muted-foreground">
+              Nueva contraseña para <strong>{resetPwUser?.nombre}</strong> ({resetPwUser?.email})
+            </p>
+            <div>
+              <label className="text-sm font-medium">Nueva contraseña *</label>
+              <Input type="password" value={resetPwValue} onChange={(e) => setResetPwValue(e.target.value)} placeholder="Mínimo 6 caracteres" />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setResetPwOpen(false)}>Cancelar</Button>
+            <Button onClick={() => {
+              if (!resetPwUser || resetPwValue.length < 6) { toast.error("Contraseña mínimo 6 caracteres"); return; }
+              resetTraceaPwMutation.mutate({ user_id: resetPwUser.id, new_password: resetPwValue });
+            }} disabled={resetTraceaPwMutation.isPending}>
+              {resetTraceaPwMutation.isPending ? "Guardando…" : "Resetear"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* ── Dialog editar ── */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
