@@ -4,7 +4,7 @@ import type { User, Session } from "@supabase/supabase-js";
 
 type AppRole = "admin" | "comite_tecnico" | "operador" | "lectura" | "responsable_sanitario" | "super_admin";
 
-interface OrgInfo {
+export interface OrgInfo {
   id: string;
   nombre: string;
   slug: string;
@@ -23,8 +23,12 @@ interface AuthContextType {
   org: OrgInfo | null;
   orgRole: AppRole | null;
   loading: boolean;
+  isImpersonating: boolean;
+  impersonatedOrg: OrgInfo | null;
   hasRole: (role: AppRole) => boolean;
   isSuperAdmin: () => boolean;
+  startImpersonation: (org: OrgInfo) => void;
+  stopImpersonation: () => void;
   signOut: () => Promise<void>;
 }
 
@@ -35,10 +39,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<AuthContextType["profile"]>(null);
   const [roles, setRoles] = useState<AppRole[]>([]);
-  const [orgId, setOrgId] = useState<string | null>(null);
-  const [org, setOrg] = useState<OrgInfo | null>(null);
+  const [_orgId, setOrgId] = useState<string | null>(null);
+  const [_org, setOrg] = useState<OrgInfo | null>(null);
   const [orgRole, setOrgRole] = useState<AppRole | null>(null);
   const [loading, setLoading] = useState(true);
+  const [impersonatedOrg, setImpersonatedOrg] = useState<OrgInfo | null>(null);
+
+  // Cuando impersona, orgId y org reflejan la org del cliente transparentemente
+  const orgId = impersonatedOrg?.id ?? _orgId;
+  const org = impersonatedOrg ?? _org;
+  const isImpersonating = impersonatedOrg !== null;
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -56,7 +66,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               .single();
             setProfile(profileData);
 
-            // Org membership (nuevo sistema multi-tenant)
+            // Org membership (sistema multi-tenant)
             const { data: memberData } = await supabase
               .from("org_members")
               .select("role, org_id, organizations(id, nombre, slug, plan, activo, max_users, trial_expires_at)")
@@ -79,7 +89,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 .maybeSingle();
               setRoles(saData ? [role, "super_admin"] : [role]);
             } else {
-              // Fallback legacy: leer user_roles si aún no migrado
+              // Fallback: leer user_roles si no tiene org_members (super_admin sin org propia)
               const { data: rolesData } = await supabase
                 .from("user_roles")
                 .select("role")
@@ -98,6 +108,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setOrgId(null);
           setOrg(null);
           setOrgRole(null);
+          setImpersonatedOrg(null);
           setLoading(false);
         }
       }
@@ -115,7 +126,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const isSuperAdmin = () => roles.includes("super_admin");
 
+  const startImpersonation = (org: OrgInfo) => setImpersonatedOrg(org);
+  const stopImpersonation = () => setImpersonatedOrg(null);
+
   const signOut = async () => {
+    setImpersonatedOrg(null);
     await supabase.auth.signOut();
   };
 
@@ -123,7 +138,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     <AuthContext.Provider value={{
       user, session, profile, roles,
       orgId, org, orgRole,
-      loading, hasRole, isSuperAdmin, signOut,
+      loading,
+      isImpersonating, impersonatedOrg,
+      hasRole, isSuperAdmin,
+      startImpersonation, stopImpersonation,
+      signOut,
     }}>
       {children}
     </AuthContext.Provider>
