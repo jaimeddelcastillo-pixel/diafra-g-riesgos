@@ -82,12 +82,12 @@ function ProgressBar({ value, max, color = "bg-primary" }: { value: number; max:
 // ─── Dashboard principal ──────────────────────────────────────────────────────
 export default function Dashboard() {
   const navigate = useNavigate();
-  const { isSuperAdmin, loading } = useAuth();
+  const { isSuperAdmin, isImpersonating, loading } = useAuth();
 
   const { data: folios, isLoading: loadingFolios } = useFolios();
   const { data: allRisks, isLoading: loadingRisks } = useAllRiesgos();
 
-  if (!loading && isSuperAdmin()) return <Navigate to="/admin" replace />;
+  if (!loading && isSuperAdmin() && !isImpersonating) return <Navigate to="/admin" replace />;
 
   const risks = allRisks || [];
   const fols = folios || [];

@@ -1,6 +1,6 @@
-import { LayoutDashboard, FolderOpen, Settings, BookOpen, ShieldCheck } from "lucide-react";
+import { LayoutDashboard, FolderOpen, Settings, BookOpen, ShieldCheck, LogOut } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import {
   Sidebar,
@@ -15,7 +15,11 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 
-const navItems = [
+const adminNavItems = [
+  { title: "Panel TRACEA", url: "/admin", icon: ShieldCheck },
+];
+
+const orgNavItems = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard },
   { title: "Mis Folios", url: "/folios", icon: FolderOpen },
   { title: "Catálogos", url: "/catalogos", icon: BookOpen },
@@ -27,13 +31,19 @@ export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const location = useLocation();
-  const { org, isSuperAdmin } = useAuth();
+  const navigate = useNavigate();
+  const { org, isSuperAdmin, isImpersonating, stopImpersonation } = useAuth();
+
+  const showOrgNav = !isSuperAdmin() || isImpersonating;
+  const showAdminNav = isSuperAdmin() && !isImpersonating;
+
+  const navItems = showOrgNav ? orgNavItems : adminNavItems;
+  const orgLabel = isImpersonating ? org?.nombre : (showAdminNav ? "Panel TRACEA" : (org?.nombre ?? "Gestión de Riesgos"));
 
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader className="p-4">
         <div className="flex items-center gap-3">
-          {/* TRACEA Logo — 4 bloques 2×2 con checkmark */}
           <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 flex-shrink-0">
             <rect x="1" y="1" width="17" height="17" rx="3" fill="white" fillOpacity="0.15"/>
             <rect x="22" y="1" width="17" height="17" rx="3" fill="#185FA5"/>
@@ -46,12 +56,13 @@ export function AppSidebar() {
             <div className="min-w-0">
               <h1 className="text-sm font-bold text-sidebar-foreground tracking-wide">TRACEA</h1>
               <p className="text-[10px] text-sidebar-foreground/60 leading-tight truncate max-w-[120px]">
-                {org?.nombre ?? "Gestión de Riesgos"}
+                {orgLabel}
               </p>
             </div>
           )}
         </div>
       </SidebarHeader>
+
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupLabel className="text-sidebar-foreground/50 text-[10px] uppercase tracking-widest">
@@ -64,7 +75,7 @@ export function AppSidebar() {
                   <SidebarMenuButton asChild>
                     <NavLink
                       to={item.url}
-                      end={item.url === "/"}
+                      end={item.url === "/" || item.url === "/admin"}
                       className="hover:bg-sidebar-accent/50"
                       activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
                     >
@@ -77,23 +88,19 @@ export function AppSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
-        {isSuperAdmin() && (
+
+        {/* Salir de la empresa impersonada */}
+        {isImpersonating && (
           <SidebarGroup>
-            <SidebarGroupLabel className="text-sidebar-foreground/50 text-[10px] uppercase tracking-widest">
-              {!collapsed && "Sistema"}
-            </SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild>
-                    <NavLink
-                      to="/admin"
-                      className="hover:bg-sidebar-accent/50"
-                      activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
-                    >
-                      <ShieldCheck className="mr-2 h-4 w-4" />
-                      {!collapsed && <span>Administración</span>}
-                    </NavLink>
+                  <SidebarMenuButton
+                    className="hover:bg-sidebar-accent/50 text-amber-400 hover:text-amber-300 cursor-pointer"
+                    onClick={() => { stopImpersonation(); navigate("/admin"); }}
+                  >
+                    <LogOut className="mr-2 h-4 w-4" />
+                    {!collapsed && <span>Salir de empresa</span>}
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               </SidebarMenu>

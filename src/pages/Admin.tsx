@@ -98,7 +98,7 @@ function KPI({ label, value, icon: Icon, color }: {
 // ─── Componente principal ─────────────────────────────────────────────────────
 
 export default function Admin() {
-  const { isSuperAdmin } = useAuth();
+  const { isSuperAdmin, startImpersonation } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
@@ -376,7 +376,7 @@ export default function Admin() {
                               variant="default"
                               size="sm"
                               className="h-7 text-xs gap-1"
-                              onClick={() => navigate(`/admin/org/${org.id}`)}
+                              onClick={() => { startImpersonation(org); navigate("/"); }}
                             >
                               <LogIn className="h-3 w-3" /> Entrar
                             </Button>
