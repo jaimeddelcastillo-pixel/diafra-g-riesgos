@@ -183,12 +183,12 @@ Deno.serve(async (req) => {
     const messageIds = Array.from(
       new Set(
         messages
-          .map((msg) =>
+          .map((msg: EmailQueueMessage) =>
             msg?.message?.message_id && typeof msg.message.message_id === 'string'
               ? msg.message.message_id
               : null
           )
-          .filter((id): id is string => Boolean(id))
+          .filter((id: string | null): id is string => Boolean(id))
       )
     )
     const failedAttemptsByMessageId = new Map<string, number>()
@@ -295,12 +295,13 @@ Deno.serve(async (req) => {
         )
 
         // Log success
-        await supabase.from('email_send_log').insert({
+        const successLog: TablesInsert<'email_send_log'> = {
           message_id: payload.message_id,
           template_name: payload.label || queue,
-          recipient_email: payload.to,
+          recipient_email: payload.to || '',
           status: 'sent',
-        })
+        }
+        await supabase.from('email_send_log').insert(successLog)
 
         // Delete from queue
         const { error: delError } = await supabase.rpc('delete_email', {
@@ -322,13 +323,14 @@ Deno.serve(async (req) => {
         })
 
         if (isRateLimited(error)) {
-          await supabase.from('email_send_log').insert({
+          const rateLimitLog: TablesInsert<'email_send_log'> = {
             message_id: payload.message_id,
             template_name: payload.label || queue,
-            recipient_email: payload.to,
+            recipient_email: payload.to || '',
             status: 'rate_limited',
             error_message: errorMsg.slice(0, 1000),
-          })
+          }
+          await supabase.from('email_send_log').insert(rateLimitLog)
 
           const retryAfterSecs = getRetryAfterSeconds(error)
           await supabase
@@ -359,13 +361,14 @@ Deno.serve(async (req) => {
         }
 
         // Log non-429 failures to track real retry attempts.
-        await supabase.from('email_send_log').insert({
+        const failedLog: TablesInsert<'email_send_log'> = {
           message_id: payload.message_id,
           template_name: payload.label || queue,
-          recipient_email: payload.to,
+          recipient_email: payload.to || '',
           status: 'failed',
           error_message: errorMsg.slice(0, 1000),
-        })
+        }
+        await supabase.from('email_send_log').insert(failedLog)
         if (payload?.message_id && typeof payload.message_id === 'string') {
           failedAttemptsByMessageId.set(payload.message_id, failedAttempts + 1)
         }
