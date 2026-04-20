@@ -84,10 +84,10 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const { isSuperAdmin, loading } = useAuth();
 
-  if (!loading && isSuperAdmin()) return <Navigate to="/admin" replace />;
-
   const { data: folios, isLoading: loadingFolios } = useFolios();
   const { data: allRisks, isLoading: loadingRisks } = useAllRiesgos();
+
+  if (!loading && isSuperAdmin()) return <Navigate to="/admin" replace />;
 
   const risks = allRisks || [];
   const fols = folios || [];
