@@ -12,6 +12,7 @@ import Auditoria from "./pages/Auditoria";
 import Catalogos from "./pages/Catalogos";
 import Configuracion from "./pages/Configuracion";
 import Admin from "./pages/Admin";
+import AdminOrg from "./pages/AdminOrg";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import NotFound from "./pages/NotFound";
@@ -36,6 +37,7 @@ const App = () => (
               <Route path="/catalogos" element={<Catalogos />} />
               <Route path="/configuracion" element={<Configuracion />} />
               <Route path="/admin" element={<Admin />} />
+              <Route path="/admin/org/:id" element={<AdminOrg />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>

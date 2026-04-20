@@ -45,9 +45,15 @@ Deno.serve(async (req) => {
     .maybeSingle();
   if (!saCheck) return json({ error: "Se requiere rol super_admin" }, 403);
 
-  // Obtener org_id específico si se pasa como query param (?org_id=...)
+  // Obtener org_id desde query param o body
   const url = new URL(req.url);
-  const filterOrgId = url.searchParams.get("org_id") ?? null;
+  let filterOrgId = url.searchParams.get("org_id") ?? null;
+  if (!filterOrgId && req.method === "POST") {
+    try {
+      const body = await req.json().catch(() => ({}));
+      filterOrgId = body?.org_id ?? null;
+    } catch { /* sin body */ }
+  }
 
   try {
     // ── Organizaciones ──────────────────────────────────────────────────────────
