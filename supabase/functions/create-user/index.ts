@@ -4,120 +4,124 @@ const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
+function json(data: unknown, status = 200) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
+  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
-      return new Response(JSON.stringify({ error: "No autorizado" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    if (!authHeader) return json({ error: "No autorizado" }, 401);
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
 
-    // Verificar que el caller esté autenticado
-    const callerClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!, {
+    // Verificar que el caller está autenticado
+    const callerClient = createClient(supabaseUrl, anonKey, {
       global: { headers: { Authorization: authHeader } },
     });
-    const {
-      data: { user: caller },
-    } = await callerClient.auth.getUser();
-    if (!caller) {
-      return new Response(JSON.stringify({ error: "No autorizado" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    const { data: { user: caller } } = await callerClient.auth.getUser();
+    if (!caller) return json({ error: "No autorizado" }, 401);
 
-    // Verificar rol admin en org_members y obtener org_id
-    const adminClient = createClient(supabaseUrl, serviceRoleKey);
-    const { data: callerMember } = await adminClient
-      .from("org_members")
-      .select("role, org_id, organizations(max_users)")
+    const adminClient = createClient(supabaseUrl, serviceRoleKey, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
+
+    // ¿Es super_admin?
+    const { data: saRow } = await adminClient
+      .from("user_roles")
+      .select("role")
       .eq("user_id", caller.id)
-      .eq("role", "admin")
+      .eq("role", "super_admin")
       .maybeSingle();
+    const isSuperAdmin = !!saRow;
 
-    if (!callerMember) {
-      return new Response(JSON.stringify({ error: "Se requiere rol de administrador" }), {
-        status: 403,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    let orgIdToUse: string | null = null;
+
+    if (isSuperAdmin) {
+      // Super admin puede indicar cualquier org_id, o null para crear usuario TRACEA
+      const body = await req.json();
+      var { email, password, nombre, cargo, role, org_id } = body ?? {};
+      orgIdToUse = org_id ?? null;
+    } else {
+      // Admin de org: debe tener org_members.role = admin
+      const { data: callerMember } = await adminClient
+        .from("org_members")
+        .select("role, org_id, organizations(max_users)")
+        .eq("user_id", caller.id)
+        .eq("role", "admin")
+        .maybeSingle();
+
+      if (!callerMember) return json({ error: "Se requiere rol de administrador" }, 403);
+
+      orgIdToUse = callerMember.org_id;
+      const maxUsers = (callerMember.organizations as any)?.max_users ?? 5;
+
+      const { count: currentUsers } = await adminClient
+        .from("org_members")
+        .select("*", { count: "exact" })
+        .eq("org_id", orgIdToUse);
+
+      if ((currentUsers ?? 0) >= maxUsers) {
+        return json({ error: `Límite de usuarios alcanzado (máx. ${maxUsers})` }, 403);
+      }
+
+      const body = await req.json();
+      var { email, password, nombre, cargo, role } = body ?? {};
     }
-
-    const callerOrgId = callerMember.org_id;
-    const maxUsers = (callerMember.organizations as any)?.max_users ?? 5;
-
-    // Verificar límite de usuarios de la org
-    const { count: currentUsers } = await adminClient
-      .from("org_members")
-      .select("*", { count: "exact" })
-      .eq("org_id", callerOrgId);
-
-    if ((currentUsers ?? 0) >= maxUsers) {
-      return new Response(
-        JSON.stringify({ error: `Límite de usuarios alcanzado (máx. ${maxUsers})` }),
-        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
-    }
-
-    const { email, password, nombre, cargo, role } = await req.json();
 
     if (!email || !password || !nombre) {
-      return new Response(JSON.stringify({ error: "Faltan campos obligatorios (email, password, nombre)" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return json({ error: "Faltan campos obligatorios: email, password, nombre" }, 400);
     }
 
+    // Crear usuario en auth
     const { data: newUser, error: createError } = await adminClient.auth.admin.createUser({
       email,
       password,
       email_confirm: true,
       user_metadata: { nombre },
     });
-
-    if (createError) {
-      return new Response(JSON.stringify({ error: createError.message }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    if (createError) return json({ error: createError.message }, 400);
 
     const userId = newUser.user.id;
 
-    // Actualizar perfil con nombre y cargo
+    // Actualizar perfil
     await adminClient
       .from("profiles")
-      .update({ cargo: cargo || "", nombre })
+      .update({ nombre, cargo: cargo || "" })
       .eq("id", userId);
 
-    // Insertar en org_members de la misma org del caller
-    const targetRole = role || "operador";
-    const { error: memberError } = await adminClient
-      .from("org_members")
-      .insert({ org_id: callerOrgId, user_id: userId, role: targetRole });
-
-    if (memberError) {
-      console.error("Error inserting org_member:", memberError.message);
+    if (orgIdToUse) {
+      // Usuario de organización → org_members
+      const { error: memberError } = await adminClient
+        .from("org_members")
+        .insert({ org_id: orgIdToUse, user_id: userId, role: role || "operador" });
+      if (memberError) {
+        await adminClient.auth.admin.deleteUser(userId);
+        return json({ error: memberError.message }, 500);
+      }
+    } else {
+      // Usuario TRACEA → user_roles (sin org)
+      const { error: roleError } = await adminClient
+        .from("user_roles")
+        .insert({ user_id: userId, role: role || "super_admin" });
+      if (roleError) {
+        await adminClient.auth.admin.deleteUser(userId);
+        return json({ error: roleError.message }, 500);
+      }
     }
 
-    return new Response(JSON.stringify({ success: true, user: { id: userId } }), {
-      status: 200,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return json({ success: true, user: { id: userId } });
+  } catch (err: any) {
+    return json({ error: err.message }, 500);
   }
 });
