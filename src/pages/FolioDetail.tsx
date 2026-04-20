@@ -412,14 +412,20 @@ function SeccionComite({
       return;
     }
     setSaving(true);
-    const payload: Record<string, string> = {
+    const payload: {
+      folio_id: string;
+      nombre: string;
+      cargo: string;
+      responsabilidad: string;
+      user_id?: string;
+    } = {
       folio_id: folioId,
       nombre: nuevoMiembro.nombre.trim(),
       cargo: nuevoMiembro.cargo.trim(),
       responsabilidad: nuevoMiembro.responsabilidad.trim(),
     };
     if (nuevoMiembro.user_id) payload.user_id = nuevoMiembro.user_id;
-    const { error } = await supabase.from("folio_comite").insert(payload);
+    const { error } = await supabase.from("folio_comite").insert([payload]);
     setSaving(false);
     if (error) {
       toast({ title: "Error al agregar miembro", description: error.message, variant: "destructive" });

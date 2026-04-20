@@ -272,7 +272,7 @@ export function RiesgoFormDialog({ open, onClose, folioId, riesgo, nextNumeroId 
         ocu_residual: riesgo.ocu_residual,
         det_residual: riesgo.det_residual,
         dictamen: riesgo.dictamen as "Aceptable" | "No Aceptable" | "Pendiente",
-        anexos: (riesgo.anexos as Anexo[] | null) || [],
+        anexos: (riesgo.anexos as unknown as Anexo[]) || [],
       };
     }
     return {
