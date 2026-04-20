@@ -73,10 +73,18 @@ Deno.serve(async (req) => {
     // Limpiar referencias antes de borrar (cascade no garantizado en todas las tablas)
     await admin.from("org_members").delete().eq("user_id", user_id);
     await admin.from("user_roles").delete().eq("user_id", user_id);
+    // Anular referencias en tablas que apuntan a auth.users pero no tienen ON DELETE
+    await admin.from("folios").update({ created_by: null }).eq("created_by", user_id);
+    await admin.from("folio_comite").update({ user_id: null }).eq("user_id", user_id);
+    await admin.from("folio_versiones").update({ creado_por: null }).eq("creado_por", user_id);
+    await admin.from("audit_trail").update({ user_id: null }).eq("user_id", user_id);
     await admin.from("profiles").delete().eq("id", user_id);
 
     const { error: delError } = await admin.auth.admin.deleteUser(user_id);
-    if (delError) return json({ error: delError.message }, 400);
+    if (delError) {
+      console.error("deleteUser error:", delError);
+      return json({ error: `No se pudo eliminar: ${delError.message}` }, 400);
+    }
 
     return json({ success: true });
   } catch (err: any) {
