@@ -668,6 +668,50 @@ export default function Admin() {
         </DialogContent>
       </Dialog>
 
+      {/* ── Dialog editar usuario TRACEA ── */}
+      <Dialog open={editUserOpen} onOpenChange={setEditUserOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Editar usuario TRACEA</DialogTitle></DialogHeader>
+          <div className="space-y-4 py-2">
+            <p className="text-xs text-muted-foreground">
+              {editUserTarget?.email}
+            </p>
+            <div>
+              <label className="text-sm font-medium">Nombre completo *</label>
+              <Input
+                value={editUserForm.nombre}
+                onChange={(e) => setEditUserForm((f) => ({ ...f, nombre: e.target.value }))}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Cargo</label>
+              <Input
+                value={editUserForm.cargo}
+                onChange={(e) => setEditUserForm((f) => ({ ...f, cargo: e.target.value }))}
+                placeholder="Consultor, Asesor…"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditUserOpen(false)}>Cancelar</Button>
+            <Button
+              onClick={() => {
+                if (!editUserTarget) return;
+                if (!editUserForm.nombre.trim()) { toast.error("El nombre es obligatorio"); return; }
+                updateTraceaMutation.mutate({
+                  id: editUserTarget.id,
+                  nombre: editUserForm.nombre.trim(),
+                  cargo: editUserForm.cargo.trim(),
+                });
+              }}
+              disabled={updateTraceaMutation.isPending}
+            >
+              {updateTraceaMutation.isPending ? "Guardando…" : "Guardar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* ── Dialog editar ── */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
