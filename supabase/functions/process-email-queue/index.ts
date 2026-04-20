@@ -1,5 +1,6 @@
 import { sendLovableEmail } from 'npm:@lovable.dev/email-js'
-import { createClient } from 'npm:@supabase/supabase-js@2'
+import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2'
+import type { Database, TablesInsert } from '../../../src/integrations/supabase/types.ts'
 
 const MAX_RETRIES = 5
 const DEFAULT_BATCH_SIZE = 10
@@ -52,26 +53,51 @@ function parseJwtClaims(token: string): Record<string, unknown> | null {
   }
 }
 
+type QueueName = 'auth_emails' | 'transactional_emails'
+
+type EmailQueuePayload = {
+  message_id?: string
+  label?: string
+  to?: string
+  queued_at?: string
+  run_id?: string
+  from?: string
+  sender_domain?: string
+  subject?: string
+  html?: string
+  text?: string
+  purpose?: string
+  idempotency_key?: string
+  unsubscribe_token?: string
+}
+
+type EmailQueueMessage = {
+  msg_id: number
+  read_ct: number
+  message: EmailQueuePayload
+}
+
 // Move a message to the dead letter queue and log the reason.
 async function moveToDlq(
-  supabase: ReturnType<typeof createClient>,
-  queue: string,
-  msg: { msg_id: number; message: Record<string, unknown> },
+  supabase: SupabaseClient<Database>,
+  queue: QueueName,
+  msg: EmailQueueMessage,
   reason: string
 ): Promise<void> {
   const payload = msg.message
-  await supabase.from('email_send_log').insert({
+  const logEntry: TablesInsert<'email_send_log'> = {
     message_id: payload.message_id,
-    template_name: (payload.label || queue) as string,
-    recipient_email: payload.to,
+    template_name: payload.label || queue,
+    recipient_email: payload.to || '',
     status: 'dlq',
     error_message: reason,
-  })
+  }
+  await supabase.from('email_send_log').insert(logEntry)
   const { error } = await supabase.rpc('move_to_dlq', {
     source_queue: queue,
     dlq_name: `${queue}_dlq`,
     message_id: msg.msg_id,
-    payload,
+    payload: payload as Database['public']['Functions']['move_to_dlq']['Args']['payload'],
   })
   if (error) {
     console.error('Failed to move message to DLQ', { queue, msg_id: msg.msg_id, reason, error })
