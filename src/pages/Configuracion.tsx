@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Users, Bell, Pencil, UserPlus, Upload, X, KeyRound, Lock } from "lucide-react";
+import { Users, Bell, Pencil, UserPlus, Upload, X, KeyRound, Lock, Mail } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -306,6 +306,20 @@ export default function Configuracion() {
     setResetPwLoading(false);
   };
 
+  const handleSendWelcome = async (u: OrgUser) => {
+    const t = toast.loading(`Enviando bienvenida a ${u.email}…`);
+    try {
+      const { data, error } = await supabase.functions.invoke("send-welcome-email", {
+        body: { target_user_id: u.id },
+      });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
+      toast.success(`Correo de bienvenida enviado a ${u.email}`, { id: t });
+    } catch (e: any) {
+      toast.error(e?.message || "No se pudo enviar el correo", { id: t });
+    }
+  };
+
   if (!orgId) {
     return (
       <div className="space-y-6">
@@ -383,6 +397,9 @@ export default function Configuracion() {
                           </Button>
                           <Button variant="ghost" size="icon" className="h-7 w-7" title="Resetear contraseña" onClick={() => { setResetPwUser(u); setResetPwValue(""); setResetPwDialogOpen(true); }}>
                             <KeyRound className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-7 w-7" title="Reenviar correo de bienvenida" onClick={() => handleSendWelcome(u)}>
+                            <Mail className="h-3.5 w-3.5" />
                           </Button>
                         </div>
                       </td>
