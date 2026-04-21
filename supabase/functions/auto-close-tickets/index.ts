@@ -50,12 +50,8 @@ Deno.serve(async (req) => {
       try {
         await supabase.functions.invoke("ticket-notify", {
           body: {
-            event: "auto_closed",
+            evento: "auto_cerrado",
             ticket_id: ticket.id,
-            recipient_email: ticket.created_by_email,
-            recipient_name: ticket.created_by_nombre,
-            ticket_codigo: ticket.codigo,
-            ticket_asunto: ticket.asunto,
           },
         });
       } catch (e) {
