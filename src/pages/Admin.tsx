@@ -15,7 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   Building2, Pencil, LogIn, AlertTriangle, Clock,
   Users, FileText, CheckCircle2, ChevronDown, ChevronUp,
-  UserPlus, KeyRound, ShieldCheck, Trash2,
+  UserPlus, KeyRound, ShieldCheck, Trash2, Mail,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -619,6 +619,27 @@ export default function Admin() {
                         onClick={() => { setResetPwUser(u); setResetPwValue(""); setResetPwOpen(true); }}
                       >
                         <KeyRound className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        title="Reenviar correo de bienvenida"
+                        onClick={async () => {
+                          const t = toast.loading(`Enviando bienvenida a ${u.email}…`);
+                          try {
+                            const { data, error } = await supabase.functions.invoke("send-welcome-email", {
+                              body: { target_user_id: u.id },
+                            });
+                            if (error) throw error;
+                            if ((data as any)?.error) throw new Error((data as any).error);
+                            toast.success(`Correo enviado a ${u.email}`, { id: t });
+                          } catch (e: any) {
+                            toast.error(e?.message || "No se pudo enviar el correo", { id: t });
+                          }
+                        }}
+                      >
+                        <Mail className="h-3.5 w-3.5" />
                       </Button>
                       <Button
                         variant="ghost"
