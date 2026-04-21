@@ -81,6 +81,8 @@ Deno.serve(async (req) => {
       slug: org_slug.trim(),
       plan: "trial",
       activo: true,
+      // Trial estándar SaaS: 14 días desde el alta
+      trial_expires_at: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
     })
     .select()
     .single();
