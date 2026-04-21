@@ -17,6 +17,7 @@ import AdminTickets from "./pages/AdminTickets";
 import Soporte from "./pages/Soporte";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import Unsubscribe from "./pages/Unsubscribe";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -31,6 +32,7 @@ const App = () => (
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/unsubscribe" element={<Unsubscribe />} />
             <Route element={<AppLayout />}>
               <Route path="/" element={<Index />} />
               <Route path="/folios" element={<Folios />} />
