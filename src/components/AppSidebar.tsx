@@ -1,4 +1,4 @@
-import { LayoutDashboard, FolderOpen, Settings, BookOpen, ShieldCheck, LogOut } from "lucide-react";
+import { LayoutDashboard, FolderOpen, Settings, BookOpen, ShieldCheck, LogOut, LifeBuoy } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -32,12 +32,18 @@ export function AppSidebar() {
   const collapsed = state === "collapsed";
   const location = useLocation();
   const navigate = useNavigate();
-  const { org, isSuperAdmin, isImpersonating, stopImpersonation } = useAuth();
+  const { org, isSuperAdmin, isImpersonating, stopImpersonation, hasRole } = useAuth();
 
   const showOrgNav = !isSuperAdmin() || isImpersonating;
   const showAdminNav = isSuperAdmin() && !isImpersonating;
 
-  const navItems = showOrgNav ? orgNavItems : adminNavItems;
+  // Solo admin y responsable_sanitario ven "Ayuda"
+  const puedeAyuda = hasRole("admin") || hasRole("responsable_sanitario");
+  const navItems = showOrgNav
+    ? (puedeAyuda
+        ? [...orgNavItems, { title: "Ayuda", url: "/soporte", icon: LifeBuoy }]
+        : orgNavItems)
+    : adminNavItems;
   const orgLabel = isImpersonating ? org?.nombre : (showAdminNav ? "Panel TRACEA" : (org?.nombre ?? "Gestión de Riesgos"));
 
   return (
