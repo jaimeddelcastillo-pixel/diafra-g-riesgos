@@ -172,20 +172,36 @@ export default function Configuracion() {
     queryKey: ["org-users", orgId],
     enabled: !!orgId,
     queryFn: async () => {
-      const { data, error } = await supabase
+      // 1) Obtener miembros de la organización
+      const { data: members, error: mErr } = await supabase
         .from("org_members")
-        .select("user_id, role, profiles(id, nombre, email, cargo, firma_url)")
+        .select("user_id, role")
         .eq("org_id", orgId!);
-      if (error) throw error;
+      if (mErr) throw mErr;
+      if (!members || members.length === 0) return [];
 
-      return (data || []).map((m: any) => ({
-        id: m.profiles?.id ?? m.user_id,
-        nombre: m.profiles?.nombre ?? "Sin nombre",
-        email: m.profiles?.email ?? "",
-        cargo: m.profiles?.cargo ?? null,
-        firma_url: m.profiles?.firma_url ?? null,
-        role: m.role as AppRole,
-      }));
+      // 2) Obtener sus perfiles (no hay FK declarada entre org_members y profiles,
+      //    por lo que el join embebido de PostgREST falla; hacemos dos consultas)
+      const userIds = members.map((m: any) => m.user_id);
+      const { data: profiles, error: pErr } = await supabase
+        .from("profiles")
+        .select("id, nombre, email, cargo, firma_url")
+        .in("id", userIds);
+      if (pErr) throw pErr;
+
+      const profileMap = new Map((profiles || []).map((p: any) => [p.id, p]));
+
+      return members.map((m: any) => {
+        const p: any = profileMap.get(m.user_id);
+        return {
+          id: m.user_id,
+          nombre: p?.nombre ?? "Sin nombre",
+          email: p?.email ?? "",
+          cargo: p?.cargo ?? null,
+          firma_url: p?.firma_url ?? null,
+          role: m.role as AppRole,
+        };
+      });
     },
   });
 
