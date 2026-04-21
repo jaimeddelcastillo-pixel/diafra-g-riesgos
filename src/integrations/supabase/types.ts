@@ -372,6 +372,56 @@ export type Database = {
           },
         ]
       }
+      impersonation_logs: {
+        Row: {
+          created_at: string
+          ended_at: string | null
+          id: string
+          ip: string | null
+          motivo: string
+          org_id: string
+          org_nombre: string
+          started_at: string
+          super_admin_email: string
+          super_admin_id: string
+          user_agent: string | null
+        }
+        Insert: {
+          created_at?: string
+          ended_at?: string | null
+          id?: string
+          ip?: string | null
+          motivo: string
+          org_id: string
+          org_nombre: string
+          started_at?: string
+          super_admin_email: string
+          super_admin_id: string
+          user_agent?: string | null
+        }
+        Update: {
+          created_at?: string
+          ended_at?: string | null
+          id?: string
+          ip?: string | null
+          motivo?: string
+          org_id?: string
+          org_nombre?: string
+          started_at?: string
+          super_admin_email?: string
+          super_admin_id?: string
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "impersonation_logs_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       org_members: {
         Row: {
           created_at: string
