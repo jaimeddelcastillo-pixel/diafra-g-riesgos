@@ -82,8 +82,6 @@ export default function AdminTickets() {
   const [filtroSLA, setFiltroSLA] = useState<string>("all");
   const [busqueda, setBusqueda] = useState("");
 
-  if (!isSuperAdmin()) return <Navigate to="/" replace />;
-
   const { data: tickets = [], isLoading } = useQuery<TicketRow[]>({
     queryKey: ["admin-tickets"],
     queryFn: async () => {
@@ -161,6 +159,8 @@ export default function AdminTickets() {
     const avgResolHrs = resolCount ? resolMs / resolCount / 3_600_000 : 0;
     return { abiertos, vencidos, avgRespHrs, avgResolHrs };
   }, [tickets]);
+
+  if (!isSuperAdmin()) return <Navigate to="/" replace />;
 
   return (
     <div className="space-y-6">
