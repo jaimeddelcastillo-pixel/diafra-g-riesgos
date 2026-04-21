@@ -115,28 +115,33 @@ Deno.serve(async (req) => {
     const rolDB = (targetMember?.role as string) ?? "";
     const rolHumano = rolLabelMap[rolDB] ?? "";
 
-    // Disparar plantilla transaccional usando el SDK (maneja auth correctamente)
-    const { data: sendData, error: sendErr } = await admin.functions.invoke(
-      "send-transactional-email",
-      {
-        body: {
-          templateName: "bienvenida-usuario",
-          recipientEmail,
-          idempotencyKey: `welcome-${target_user_id}-${Date.now()}`,
-          templateData: {
-            nombre: targetProfile?.nombre ?? "",
-            organizacion: orgNombre ?? "",
-            rol: rolHumano,
-            setupUrl,
-            loginUrl: `${APP_URL}/login`,
-          },
-        },
+    // Disparar plantilla transaccional. Reenviamos el JWT del caller
+    // (super_admin/admin) para pasar verify_jwt del gateway.
+    const sendRes = await fetch(`${supabaseUrl}/functions/v1/send-transactional-email`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: authHeader,
+        apikey: anonKey,
       },
-    );
+      body: JSON.stringify({
+        templateName: "bienvenida-usuario",
+        recipientEmail,
+        idempotencyKey: `welcome-${target_user_id}-${Date.now()}`,
+        templateData: {
+          nombre: targetProfile?.nombre ?? "",
+          organizacion: orgNombre ?? "",
+          rol: rolHumano,
+          setupUrl,
+          loginUrl: `${APP_URL}/login`,
+        },
+      }),
+    });
 
-    if (sendErr) {
-      console.error("send-transactional-email failed:", sendErr);
-      return json({ error: "Error enviando correo", detail: String(sendErr?.message ?? sendErr) }, 502);
+    if (!sendRes.ok) {
+      const errTxt = await sendRes.text();
+      console.error("send-transactional-email failed:", sendRes.status, errTxt);
+      return json({ error: "Error enviando correo", detail: errTxt }, 502);
     }
 
     return json({
