@@ -27,8 +27,8 @@ interface AuthContextType {
   impersonatedOrg: OrgInfo | null;
   hasRole: (role: AppRole) => boolean;
   isSuperAdmin: () => boolean;
-  startImpersonation: (org: OrgInfo) => void;
-  stopImpersonation: () => void;
+  startImpersonation: (org: OrgInfo, motivo: string) => Promise<void>;
+  stopImpersonation: () => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -44,6 +44,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [orgRole, setOrgRole] = useState<AppRole | null>(null);
   const [loading, setLoading] = useState(true);
   const [impersonatedOrg, setImpersonatedOrg] = useState<OrgInfo | null>(null);
+  const [impersonationLogId, setImpersonationLogId] = useState<string | null>(null);
 
   // Cuando impersona, orgId y org reflejan la org del cliente transparentemente
   const orgId = impersonatedOrg?.id ?? _orgId;
@@ -126,10 +127,49 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const isSuperAdmin = () => roles.includes("super_admin");
 
-  const startImpersonation = (org: OrgInfo) => setImpersonatedOrg(org);
-  const stopImpersonation = () => setImpersonatedOrg(null);
+  const startImpersonation = async (org: OrgInfo, motivo: string) => {
+    if (!user) return;
+    // Registrar inicio de impersonación (auditoría ISO 27001)
+    const ua = typeof navigator !== "undefined" ? navigator.userAgent : "";
+    const { data, error } = await supabase
+      .from("impersonation_logs")
+      .insert({
+        super_admin_id: user.id,
+        super_admin_email: user.email ?? "",
+        org_id: org.id,
+        org_nombre: org.nombre,
+        motivo: motivo.trim(),
+        user_agent: ua,
+      })
+      .select("id")
+      .single();
+    if (error) {
+      console.error("Error registrando impersonación:", error);
+      throw error;
+    }
+    setImpersonationLogId(data.id);
+    setImpersonatedOrg(org);
+  };
+
+  const stopImpersonation = async () => {
+    if (impersonationLogId) {
+      await supabase
+        .from("impersonation_logs")
+        .update({ ended_at: new Date().toISOString() })
+        .eq("id", impersonationLogId);
+    }
+    setImpersonationLogId(null);
+    setImpersonatedOrg(null);
+  };
 
   const signOut = async () => {
+    if (impersonationLogId) {
+      await supabase
+        .from("impersonation_logs")
+        .update({ ended_at: new Date().toISOString() })
+        .eq("id", impersonationLogId);
+      setImpersonationLogId(null);
+    }
     setImpersonatedOrg(null);
     await supabase.auth.signOut();
   };
