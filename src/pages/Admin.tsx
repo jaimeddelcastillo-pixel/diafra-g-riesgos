@@ -519,7 +519,7 @@ export default function Admin() {
                               variant="default"
                               size="sm"
                               className="h-7 text-xs gap-1"
-                              onClick={() => { startImpersonation(org); navigate("/"); }}
+                              onClick={() => { setImperOrg(org); setImperMotivo(""); }}
                             >
                               <LogIn className="h-3 w-3" /> Entrar
                             </Button>
