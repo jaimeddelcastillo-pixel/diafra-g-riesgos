@@ -794,6 +794,47 @@ export default function Admin() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* ── Dialog: Motivo de Impersonación (Modelo B - ISO 27001) ── */}
+      <Dialog open={!!imperOrg} onOpenChange={(open) => { if (!open) { setImperOrg(null); setImperMotivo(""); } }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ShieldCheck className="h-5 w-5 text-amber-500" />
+              Acceso a {imperOrg?.nombre}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <div className="rounded-md bg-amber-500/10 border border-amber-500/30 p-3 text-xs text-foreground">
+              <strong>Acceso auditado.</strong> Esta acción quedará registrada de forma permanente
+              con tu identidad, hora de inicio y de fin. El administrador de la organización
+              podrá ver este acceso.
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="motivo">Motivo del acceso *</Label>
+              <Textarea
+                id="motivo"
+                placeholder="Ej: Ticket #123 — error al firmar folio GR-2026-005"
+                value={imperMotivo}
+                onChange={(e) => setImperMotivo(e.target.value)}
+                rows={3}
+                autoFocus
+              />
+              <p className="text-[11px] text-muted-foreground">
+                Mínimo 10 caracteres. Sé específico (ticket, folio, problema).
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setImperOrg(null); setImperMotivo(""); }}>
+              Cancelar
+            </Button>
+            <Button onClick={confirmImpersonation} disabled={imperLoading || imperMotivo.trim().length < 10}>
+              {imperLoading ? "Registrando…" : "Acceder y registrar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
