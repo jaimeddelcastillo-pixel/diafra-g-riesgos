@@ -384,6 +384,7 @@ export type Database = {
           started_at: string
           super_admin_email: string
           super_admin_id: string
+          ticket_id: string | null
           user_agent: string | null
         }
         Insert: {
@@ -397,6 +398,7 @@ export type Database = {
           started_at?: string
           super_admin_email: string
           super_admin_id: string
+          ticket_id?: string | null
           user_agent?: string | null
         }
         Update: {
@@ -410,6 +412,7 @@ export type Database = {
           started_at?: string
           super_admin_email?: string
           super_admin_id?: string
+          ticket_id?: string | null
           user_agent?: string | null
         }
         Relationships: [
@@ -418,6 +421,13 @@ export type Database = {
             columns: ["org_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "impersonation_logs_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "tickets"
             referencedColumns: ["id"]
           },
         ]

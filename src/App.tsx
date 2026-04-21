@@ -13,6 +13,7 @@ import Catalogos from "./pages/Catalogos";
 import Configuracion from "./pages/Configuracion";
 import Admin from "./pages/Admin";
 import AdminOrg from "./pages/AdminOrg";
+import AdminTickets from "./pages/AdminTickets";
 import Soporte from "./pages/Soporte";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
@@ -39,6 +40,7 @@ const App = () => (
               <Route path="/configuracion" element={<Configuracion />} />
               <Route path="/admin" element={<Admin />} />
               <Route path="/admin/org/:id" element={<AdminOrg />} />
+              <Route path="/admin/tickets" element={<AdminTickets />} />
               <Route path="/soporte" element={<Soporte />} />
               <Route path="/soporte/:id" element={<Soporte />} />
             </Route>

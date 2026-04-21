@@ -117,6 +117,23 @@ export default function Admin() {
   const [imperOrg, setImperOrg] = useState<OrgStats | null>(null);
   const [imperMotivo, setImperMotivo] = useState("");
   const [imperLoading, setImperLoading] = useState(false);
+  const [imperTicketId, setImperTicketId] = useState<string>("");
+
+  // Tickets abiertos de la org seleccionada (para vincular)
+  const { data: ticketsOrg = [] } = useQuery({
+    queryKey: ["tickets-org", imperOrg?.id],
+    enabled: !!imperOrg?.id,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("tickets")
+        .select("id, codigo, asunto, prioridad, estado")
+        .eq("org_id", imperOrg!.id)
+        .neq("estado", "Cerrado")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
 
   const confirmImpersonation = async () => {
     if (!imperOrg) return;
@@ -137,9 +154,11 @@ export default function Admin() {
           trial_expires_at: imperOrg.trial_expires_at,
         },
         imperMotivo,
+        imperTicketId || null,
       );
       setImperOrg(null);
       setImperMotivo("");
+      setImperTicketId("");
       navigate("/");
     } catch (e: any) {
       toast.error("No se pudo registrar la impersonación: " + (e?.message ?? "error"));
@@ -796,7 +815,7 @@ export default function Admin() {
       </Dialog>
 
       {/* ── Dialog: Motivo de Impersonación (Modelo B - ISO 27001) ── */}
-      <Dialog open={!!imperOrg} onOpenChange={(open) => { if (!open) { setImperOrg(null); setImperMotivo(""); } }}>
+      <Dialog open={!!imperOrg} onOpenChange={(open) => { if (!open) { setImperOrg(null); setImperMotivo(""); setImperTicketId(""); } }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -810,6 +829,38 @@ export default function Admin() {
               con tu identidad, hora de inicio y de fin. El administrador de la organización
               podrá ver este acceso.
             </div>
+            {ticketsOrg.length > 0 && (
+              <div className="space-y-2">
+                <Label htmlFor="ticket">Vincular a un ticket abierto (recomendado)</Label>
+                <Select
+                  value={imperTicketId || "none"}
+                  onValueChange={(v) => {
+                    if (v === "none") {
+                      setImperTicketId("");
+                    } else {
+                      setImperTicketId(v);
+                      const t = ticketsOrg.find((x: any) => x.id === v);
+                      if (t) setImperMotivo(`${t.codigo} — ${t.asunto}`);
+                    }
+                  }}
+                >
+                  <SelectTrigger id="ticket">
+                    <SelectValue placeholder="Selecciona un ticket…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Sin ticket — motivo manual</SelectItem>
+                    {ticketsOrg.map((t: any) => (
+                      <SelectItem key={t.id} value={t.id}>
+                        {t.codigo} • {t.prioridad} — {t.asunto}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-[11px] text-muted-foreground">
+                  Vincular el acceso al ticket cierra el círculo de trazabilidad ISO 27001 y deja una nota interna automática.
+                </p>
+              </div>
+            )}
             <div className="space-y-2">
               <Label htmlFor="motivo">Motivo del acceso *</Label>
               <Textarea
@@ -826,7 +877,7 @@ export default function Admin() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => { setImperOrg(null); setImperMotivo(""); }}>
+            <Button variant="outline" onClick={() => { setImperOrg(null); setImperMotivo(""); setImperTicketId(""); }}>
               Cancelar
             </Button>
             <Button onClick={confirmImpersonation} disabled={imperLoading || imperMotivo.trim().length < 10}>

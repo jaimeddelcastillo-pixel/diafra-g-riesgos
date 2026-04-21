@@ -18,7 +18,7 @@ const FROM = "TRACEA Soporte <soporte@notify.diafra.mx>";
 const APP_URL = Deno.env.get("APP_URL") ?? "https://diafra-g-riesgos.lovable.app";
 
 interface ReqBody {
-  evento: "ticket_creado" | "respuesta_soporte" | "estado_cambiado";
+  evento: "ticket_creado" | "respuesta_soporte" | "estado_cambiado" | "auto_cerrado";
   ticket_id: string;
   mensaje?: string;
   estado_nuevo?: string;
@@ -108,6 +108,21 @@ Deno.serve(async (req) => {
           `,
           ctaUrl: ticketUrl,
           ctaLabel: "Ver ticket",
+        });
+        break;
+
+      case "auto_cerrado":
+        to = ticket.created_by_email;
+        subject = `[${ticket.codigo}] Ticket cerrado automáticamente`;
+        html = renderEmail({
+          titulo: `Ticket cerrado por inactividad`,
+          subtitulo: `${ticket.codigo} • ${escape(ticket.asunto)}`,
+          cuerpo: `
+            <p>Tu ticket permaneció en estado <strong>Resuelto</strong> sin actividad por más de 7 días, por lo que se cerró automáticamente.</p>
+            <p style="font-size:13px;color:#475569">Si el problema persiste o necesitas reabrirlo, crea un nuevo ticket referenciando el folio <strong>${ticket.codigo}</strong>.</p>
+          `,
+          ctaUrl: `${APP_URL}/soporte`,
+          ctaLabel: "Crear nuevo ticket",
         });
         break;
     }

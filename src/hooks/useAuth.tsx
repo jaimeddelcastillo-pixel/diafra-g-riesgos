@@ -27,7 +27,7 @@ interface AuthContextType {
   impersonatedOrg: OrgInfo | null;
   hasRole: (role: AppRole) => boolean;
   isSuperAdmin: () => boolean;
-  startImpersonation: (org: OrgInfo, motivo: string) => Promise<void>;
+  startImpersonation: (org: OrgInfo, motivo: string, ticketId?: string | null) => Promise<void>;
   stopImpersonation: () => Promise<void>;
   signOut: () => Promise<void>;
 }
@@ -127,7 +127,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const isSuperAdmin = () => roles.includes("super_admin");
 
-  const startImpersonation = async (org: OrgInfo, motivo: string) => {
+  const startImpersonation = async (org: OrgInfo, motivo: string, ticketId?: string | null) => {
     if (!user) return;
     // Registrar inicio de impersonación (auditoría ISO 27001)
     const ua = typeof navigator !== "undefined" ? navigator.userAgent : "";
@@ -140,6 +140,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         org_nombre: org.nombre,
         motivo: motivo.trim(),
         user_agent: ua,
+        ticket_id: ticketId ?? null,
       })
       .select("id")
       .single();
@@ -149,6 +150,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     setImpersonationLogId(data.id);
     setImpersonatedOrg(org);
+
+    // Si hay ticket vinculado, agregar nota interna automática
+    if (ticketId) {
+      try {
+        await supabase.from("ticket_mensajes").insert({
+          ticket_id: ticketId,
+          autor_id: user.id,
+          autor_nombre: "Sistema TRACEA",
+          autor_email: user.email ?? "",
+          mensaje: `🔐 Soporte inició sesión de acceso a la organización "${org.nombre}" para atender este ticket.\nMotivo registrado: ${motivo.trim()}`,
+          es_interno: true,
+          es_soporte: true,
+        });
+      } catch (e) {
+        console.error("No se pudo registrar nota de impersonación:", e);
+      }
+    }
   };
 
   const stopImpersonation = async () => {
