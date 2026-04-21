@@ -10,6 +10,8 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Building2, Pencil, LogIn, AlertTriangle, Clock,
   Users, FileText, CheckCircle2, ChevronDown, ChevronUp,
@@ -110,6 +112,41 @@ export default function Admin() {
   const { isSuperAdmin, startImpersonation } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+
+  // Modal de motivo de impersonación (Modelo B - ISO 27001)
+  const [imperOrg, setImperOrg] = useState<OrgStats | null>(null);
+  const [imperMotivo, setImperMotivo] = useState("");
+  const [imperLoading, setImperLoading] = useState(false);
+
+  const confirmImpersonation = async () => {
+    if (!imperOrg) return;
+    if (imperMotivo.trim().length < 10) {
+      toast.error("Describe el motivo (mínimo 10 caracteres)");
+      return;
+    }
+    setImperLoading(true);
+    try {
+      await startImpersonation(
+        {
+          id: imperOrg.id,
+          nombre: imperOrg.nombre,
+          slug: imperOrg.slug,
+          plan: imperOrg.plan,
+          activo: imperOrg.activo,
+          max_users: imperOrg.max_users,
+          trial_expires_at: imperOrg.trial_expires_at,
+        },
+        imperMotivo,
+      );
+      setImperOrg(null);
+      setImperMotivo("");
+      navigate("/");
+    } catch (e: any) {
+      toast.error("No se pudo registrar la impersonación: " + (e?.message ?? "error"));
+    } finally {
+      setImperLoading(false);
+    }
+  };
 
   const [alertasOpen, setAlertasOpen] = useState(true);
   const [editOrg, setEditOrg] = useState<OrgStats | null>(null);
@@ -482,7 +519,7 @@ export default function Admin() {
                               variant="default"
                               size="sm"
                               className="h-7 text-xs gap-1"
-                              onClick={() => { startImpersonation(org); navigate("/"); }}
+                              onClick={() => { setImperOrg(org); setImperMotivo(""); }}
                             >
                               <LogIn className="h-3 w-3" /> Entrar
                             </Button>
@@ -753,6 +790,47 @@ export default function Admin() {
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
             <Button onClick={handleSave} disabled={updateOrgMutation.isPending}>
               {updateOrgMutation.isPending ? "Guardando…" : "Guardar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Dialog: Motivo de Impersonación (Modelo B - ISO 27001) ── */}
+      <Dialog open={!!imperOrg} onOpenChange={(open) => { if (!open) { setImperOrg(null); setImperMotivo(""); } }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ShieldCheck className="h-5 w-5 text-amber-500" />
+              Acceso a {imperOrg?.nombre}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <div className="rounded-md bg-amber-500/10 border border-amber-500/30 p-3 text-xs text-foreground">
+              <strong>Acceso auditado.</strong> Esta acción quedará registrada de forma permanente
+              con tu identidad, hora de inicio y de fin. El administrador de la organización
+              podrá ver este acceso.
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="motivo">Motivo del acceso *</Label>
+              <Textarea
+                id="motivo"
+                placeholder="Ej: Ticket #123 — error al firmar folio GR-2026-005"
+                value={imperMotivo}
+                onChange={(e) => setImperMotivo(e.target.value)}
+                rows={3}
+                autoFocus
+              />
+              <p className="text-[11px] text-muted-foreground">
+                Mínimo 10 caracteres. Sé específico (ticket, folio, problema).
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setImperOrg(null); setImperMotivo(""); }}>
+              Cancelar
+            </Button>
+            <Button onClick={confirmImpersonation} disabled={imperLoading || imperMotivo.trim().length < 10}>
+              {imperLoading ? "Registrando…" : "Acceder y registrar"}
             </Button>
           </DialogFooter>
         </DialogContent>
