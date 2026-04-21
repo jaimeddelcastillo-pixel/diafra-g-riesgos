@@ -672,6 +672,163 @@ export type Database = {
         }
         Relationships: []
       }
+      ticket_mensajes: {
+        Row: {
+          autor_email: string
+          autor_id: string
+          autor_nombre: string
+          created_at: string
+          es_interno: boolean
+          es_soporte: boolean
+          id: string
+          mensaje: string
+          ticket_id: string
+        }
+        Insert: {
+          autor_email: string
+          autor_id: string
+          autor_nombre: string
+          created_at?: string
+          es_interno?: boolean
+          es_soporte?: boolean
+          id?: string
+          mensaje: string
+          ticket_id: string
+        }
+        Update: {
+          autor_email?: string
+          autor_id?: string
+          autor_nombre?: string
+          created_at?: string
+          es_interno?: boolean
+          es_soporte?: boolean
+          id?: string
+          mensaje?: string
+          ticket_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ticket_mensajes_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ticket_sequence: {
+        Row: {
+          last_number: number
+          org_id: string
+          year: number
+        }
+        Insert: {
+          last_number?: number
+          org_id: string
+          year: number
+        }
+        Update: {
+          last_number?: number
+          org_id?: string
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ticket_sequence_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tickets: {
+        Row: {
+          asignado_a: string | null
+          asignado_a_email: string | null
+          asunto: string
+          categoria: Database["public"]["Enums"]["ticket_categoria"]
+          cerrado_at: string | null
+          codigo: string
+          created_at: string
+          created_by: string
+          created_by_email: string
+          created_by_nombre: string
+          descripcion: string
+          estado: Database["public"]["Enums"]["ticket_estado"]
+          id: string
+          impersonation_log_id: string | null
+          org_id: string
+          primera_respuesta_at: string | null
+          prioridad: Database["public"]["Enums"]["ticket_prioridad"]
+          resuelto_at: string | null
+          sla_resolucion_at: string
+          sla_respuesta_at: string
+          updated_at: string
+        }
+        Insert: {
+          asignado_a?: string | null
+          asignado_a_email?: string | null
+          asunto: string
+          categoria?: Database["public"]["Enums"]["ticket_categoria"]
+          cerrado_at?: string | null
+          codigo: string
+          created_at?: string
+          created_by: string
+          created_by_email: string
+          created_by_nombre: string
+          descripcion: string
+          estado?: Database["public"]["Enums"]["ticket_estado"]
+          id?: string
+          impersonation_log_id?: string | null
+          org_id: string
+          primera_respuesta_at?: string | null
+          prioridad?: Database["public"]["Enums"]["ticket_prioridad"]
+          resuelto_at?: string | null
+          sla_resolucion_at: string
+          sla_respuesta_at: string
+          updated_at?: string
+        }
+        Update: {
+          asignado_a?: string | null
+          asignado_a_email?: string | null
+          asunto?: string
+          categoria?: Database["public"]["Enums"]["ticket_categoria"]
+          cerrado_at?: string | null
+          codigo?: string
+          created_at?: string
+          created_by?: string
+          created_by_email?: string
+          created_by_nombre?: string
+          descripcion?: string
+          estado?: Database["public"]["Enums"]["ticket_estado"]
+          id?: string
+          impersonation_log_id?: string | null
+          org_id?: string
+          primera_respuesta_at?: string | null
+          prioridad?: Database["public"]["Enums"]["ticket_prioridad"]
+          resuelto_at?: string | null
+          sla_resolucion_at?: string
+          sla_respuesta_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tickets_impersonation_log_id_fkey"
+            columns: ["impersonation_log_id"]
+            isOneToOne: false
+            referencedRelation: "impersonation_logs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tickets_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           id: string
@@ -726,6 +883,7 @@ export type Database = {
         Returns: number
       }
       next_folio_code: { Args: never; Returns: string }
+      next_ticket_code: { Args: { p_org_id: string }; Returns: string }
       read_email_batch: {
         Args: { batch_size: number; queue_name: string; vt: number }
         Returns: {
@@ -752,6 +910,20 @@ export type Database = {
         | "Queja / Devolución"
         | "Desviación"
         | "Control de Cambios"
+      ticket_categoria:
+        | "Bug"
+        | "Consulta"
+        | "Solicitud de Mejora"
+        | "Capacitación"
+        | "Acceso"
+        | "Otro"
+      ticket_estado:
+        | "Abierto"
+        | "En Atención"
+        | "Esperando Cliente"
+        | "Resuelto"
+        | "Cerrado"
+      ticket_prioridad: "Baja" | "Normal" | "Alta" | "Crítica"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -896,6 +1068,22 @@ export const Constants = {
         "Desviación",
         "Control de Cambios",
       ],
+      ticket_categoria: [
+        "Bug",
+        "Consulta",
+        "Solicitud de Mejora",
+        "Capacitación",
+        "Acceso",
+        "Otro",
+      ],
+      ticket_estado: [
+        "Abierto",
+        "En Atención",
+        "Esperando Cliente",
+        "Resuelto",
+        "Cerrado",
+      ],
+      ticket_prioridad: ["Baja", "Normal", "Alta", "Crítica"],
     },
   },
 } as const
