@@ -113,6 +113,41 @@ export default function Admin() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
+  // Modal de motivo de impersonación (Modelo B - ISO 27001)
+  const [imperOrg, setImperOrg] = useState<OrgStats | null>(null);
+  const [imperMotivo, setImperMotivo] = useState("");
+  const [imperLoading, setImperLoading] = useState(false);
+
+  const confirmImpersonation = async () => {
+    if (!imperOrg) return;
+    if (imperMotivo.trim().length < 10) {
+      toast.error("Describe el motivo (mínimo 10 caracteres)");
+      return;
+    }
+    setImperLoading(true);
+    try {
+      await startImpersonation(
+        {
+          id: imperOrg.id,
+          nombre: imperOrg.nombre,
+          slug: imperOrg.slug,
+          plan: imperOrg.plan,
+          activo: imperOrg.activo,
+          max_users: imperOrg.max_users,
+          trial_expires_at: imperOrg.trial_expires_at,
+        },
+        imperMotivo,
+      );
+      setImperOrg(null);
+      setImperMotivo("");
+      navigate("/");
+    } catch (e: any) {
+      toast.error("No se pudo registrar la impersonación: " + (e?.message ?? "error"));
+    } finally {
+      setImperLoading(false);
+    }
+  };
+
   const [alertasOpen, setAlertasOpen] = useState(true);
   const [editOrg, setEditOrg] = useState<OrgStats | null>(null);
   const [editForm, setEditForm] = useState({ plan: "", trial_expires_at: "", max_users: 5 });
