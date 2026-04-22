@@ -300,6 +300,7 @@ Deno.serve(async (req) => {
     const { data: todosOk } = await admin.rpc("todos_firmaron", { p_folio_id: folio_id });
 
     if (todosOk) {
+      const orgInfo = await getOrgInfo(admin, folio?.org_id);
       const { data: rsRoles } = await admin
         .from("org_members")
         .select("user_id")
@@ -316,12 +317,13 @@ Deno.serve(async (req) => {
         if (!rsPerfil?.email) continue;
         await enviarCorreo(admin, {
           to: rsPerfil.email,
-          subject: `[TRACEA] ✅ Folio listo para dictamen — ${folio.codigo}`,
+          subject: `[${orgInfo.org_nombre}] ✅ Folio listo para dictamen — ${folio.codigo}`,
           html: plantillaListoParaDictamen({
             nombre: rsPerfil.nombre,
             folio_codigo: folio.codigo,
             proceso: folio.proceso_equipo,
             link: `${APP_URL}/folios/${folio_id}`,
+            ...orgInfo,
           }),
         });
       }
@@ -378,9 +380,10 @@ Deno.serve(async (req) => {
         .single();
 
       if (capturista?.email) {
+        const orgInfo = await getOrgInfo(admin, folio.org_id);
         await enviarCorreo(admin, {
           to: capturista.email,
-          subject: `[TRACEA] ${conclusion === "Aprobado" ? "✅ Aprobado" : "⚠ Requiere corrección"} — ${folio.codigo}`,
+          subject: `[${orgInfo.org_nombre}] ${conclusion === "Aprobado" ? "✅ Aprobado" : "⚠ Requiere corrección"} — ${folio.codigo}`,
           html: plantillaDictamen({
             nombre: capturista.nombre,
             folio_codigo: folio.codigo,
@@ -389,6 +392,7 @@ Deno.serve(async (req) => {
             motivo: motivo || "",
             version: folio.numero_version,
             link: `${APP_URL}/folios/${folio_id}`,
+            ...orgInfo,
           }),
         });
       }
