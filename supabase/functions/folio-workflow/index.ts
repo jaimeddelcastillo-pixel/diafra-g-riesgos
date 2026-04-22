@@ -20,6 +20,26 @@ const APP_URL = Deno.env.get("APP_URL") ?? "https://tu-app.lovable.app";
 const TEXTO_COMPROMISO =
   "Declaro bajo protesta de decir verdad que he revisado el contenido íntegro de este Análisis de Gestión de Riesgos, que la información es correcta y completa conforme a la NOM-241-SSA1-2025 e ISO 14971:2019, y que mi firma electrónica registrada en este sistema tiene el mismo valor legal que mi firma autógrafa.";
 
+// ─── Helper: datos identificativos de la organización del folio ─────────────
+async function getOrgInfo(
+  admin: ReturnType<typeof createClient>,
+  org_id: string | null | undefined,
+): Promise<{ org_nombre: string; codigo_formato: string; version_formato: string }> {
+  const fallback = { org_nombre: "TRACEA", codigo_formato: "FOR-SGC-11-01", version_formato: "01" };
+  if (!org_id) return fallback;
+  const { data } = await admin
+    .from("organizations")
+    .select("nombre, codigo_formato, version_formato")
+    .eq("id", org_id)
+    .maybeSingle();
+  if (!data) return fallback;
+  return {
+    org_nombre: (data as any).nombre || fallback.org_nombre,
+    codigo_formato: (data as any).codigo_formato || fallback.codigo_formato,
+    version_formato: (data as any).version_formato || fallback.version_formato,
+  };
+}
+
 // ─── Validación de completitud NOM-241 ───────────────────────────────────────
 interface ValidacionResult {
   valido: boolean;
