@@ -98,7 +98,8 @@ async function exportarPDF(folios: any[], riesgosMap: Map<string, any[]>) {
   let logoData: string | null = null;
   try {
     const resp = await fetch("/logo-tracea.png");
-    if (resp.ok) {
+    const ct = resp.headers.get("content-type") || "";
+    if (resp.ok && ct.includes("image/png")) {
       const blob = await resp.blob();
       logoData = await new Promise<string>((res) => {
         const reader = new FileReader();
