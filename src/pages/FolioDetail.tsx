@@ -1396,6 +1396,14 @@ export default function FolioDetail() {
         {/* Dictamen con zona exclusiva del RS */}
         <SeccionDictamen folio={folio} riesgos={riesgos} locked={locked} onSaved={handleRefresh} />
 
+        {/* VII. Control de Cambios — historial de versiones */}
+        <SeccionVersiones
+          folioId={folio.id}
+          numeroVersion={folio.numero_version}
+          canEdit={isAdmin}
+          onSaved={handleRefresh}
+        />
+
         <div className="text-center pt-3 border-t">
           <p className="text-[10px] text-muted-foreground">FOR-SGC-11-01 (02)</p>
           <p className="text-[9px] text-muted-foreground">
