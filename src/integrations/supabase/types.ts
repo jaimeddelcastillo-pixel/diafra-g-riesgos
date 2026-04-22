@@ -467,6 +467,7 @@ export type Database = {
       organizations: {
         Row: {
           activo: boolean
+          codigo_formato: string
           created_at: string
           descripcion: string
           id: string
@@ -477,9 +478,11 @@ export type Database = {
           slug: string
           trial_expires_at: string | null
           updated_at: string
+          version_formato: string
         }
         Insert: {
           activo?: boolean
+          codigo_formato?: string
           created_at?: string
           descripcion?: string
           id?: string
@@ -490,9 +493,11 @@ export type Database = {
           slug: string
           trial_expires_at?: string | null
           updated_at?: string
+          version_formato?: string
         }
         Update: {
           activo?: boolean
+          codigo_formato?: string
           created_at?: string
           descripcion?: string
           id?: string
@@ -503,6 +508,7 @@ export type Database = {
           slug?: string
           trial_expires_at?: string | null
           updated_at?: string
+          version_formato?: string
         }
         Relationships: []
       }

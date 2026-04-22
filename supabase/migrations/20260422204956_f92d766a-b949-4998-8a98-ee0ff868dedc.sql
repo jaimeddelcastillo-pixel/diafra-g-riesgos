@@ -1,0 +1,3 @@
+ALTER TABLE public.organizations
+  ADD COLUMN IF NOT EXISTS codigo_formato TEXT NOT NULL DEFAULT 'FOR-SGC-11-01',
+  ADD COLUMN IF NOT EXISTS version_formato TEXT NOT NULL DEFAULT '02';
