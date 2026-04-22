@@ -10,6 +10,7 @@ import Folios from "./pages/Folios";
 import FolioDetail from "./pages/FolioDetail";
 import Auditoria from "./pages/Auditoria";
 import Catalogos from "./pages/Catalogos";
+import Recursos from "./pages/Recursos";
 import Configuracion from "./pages/Configuracion";
 import Admin from "./pages/Admin";
 import AdminOrg from "./pages/AdminOrg";
@@ -39,6 +40,7 @@ const App = () => (
               <Route path="/folios/:id" element={<FolioDetail />} />
               <Route path="/auditoria" element={<Auditoria />} />
               <Route path="/catalogos" element={<Catalogos />} />
+              <Route path="/recursos" element={<Recursos />} />
               <Route path="/configuracion" element={<Configuracion />} />
               <Route path="/admin" element={<Admin />} />
               <Route path="/admin/org/:id" element={<AdminOrg />} />

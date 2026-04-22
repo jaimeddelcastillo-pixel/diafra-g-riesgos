@@ -432,6 +432,59 @@ export type Database = {
           },
         ]
       }
+      org_documentos: {
+        Row: {
+          creado_por: string | null
+          created_at: string
+          id: string
+          mime_type: string | null
+          nombre: string
+          org_id: string
+          size_bytes: number | null
+          storage_path: string
+          tipo: string
+          updated_at: string
+          usar_en_ia: boolean
+          version: string
+        }
+        Insert: {
+          creado_por?: string | null
+          created_at?: string
+          id?: string
+          mime_type?: string | null
+          nombre: string
+          org_id: string
+          size_bytes?: number | null
+          storage_path: string
+          tipo: string
+          updated_at?: string
+          usar_en_ia?: boolean
+          version?: string
+        }
+        Update: {
+          creado_por?: string | null
+          created_at?: string
+          id?: string
+          mime_type?: string | null
+          nombre?: string
+          org_id?: string
+          size_bytes?: number | null
+          storage_path?: string
+          tipo?: string
+          updated_at?: string
+          usar_en_ia?: boolean
+          version?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "org_documentos_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       org_members: {
         Row: {
           created_at: string
