@@ -11,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { OrgLogoCard } from "@/components/OrgLogoCard";
+import { OrgFormatoCard } from "@/components/OrgFormatoCard";
 import type { Database } from "@/integrations/supabase/types";
 
 type AppRole = Database["public"]["Enums"]["app_role"];
@@ -425,6 +426,8 @@ export default function Configuracion() {
       </Card>
 
       <OrgLogoCard />
+
+      <OrgFormatoCard />
 
       {/* Edit User Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
