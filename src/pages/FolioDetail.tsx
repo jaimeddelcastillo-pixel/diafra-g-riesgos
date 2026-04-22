@@ -1037,6 +1037,166 @@ function SeccionRiesgos({ riesgos, locked, folioId }: { riesgos: Riesgo[]; locke
   );
 }
 
+// ─── Sección VII — Control de Cambios (versiones del folio) ──────────────────
+function SeccionVersiones({
+  folioId,
+  numeroVersion,
+  canEdit,
+  onSaved,
+}: {
+  folioId: string;
+  numeroVersion: string;
+  canEdit: boolean;
+  onSaved: () => void;
+}) {
+  const { toast } = useToast();
+  const [motivo, setMotivo] = useState("");
+  const [archivando, setArchivando] = useState(false);
+
+  const { data: versiones, refetch } = useQuery({
+    queryKey: ["folio-versiones", folioId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("folio_versiones")
+        .select("id, version, motivo_revision, created_at, creado_por")
+        .eq("folio_id", folioId)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const creadoresIds = Array.from(
+    new Set((versiones || []).map((v) => v.creado_por).filter(Boolean) as string[]),
+  );
+
+  const { data: creadores } = useQuery({
+    queryKey: ["folio-versiones-creadores", folioId, creadoresIds.join(",")],
+    enabled: creadoresIds.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, nombre")
+        .in("id", creadoresIds);
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const nombrePorId = new Map<string, string>(
+    (creadores || []).map((c) => [c.id, c.nombre]),
+  );
+
+  const handleArchivar = async () => {
+    if (!motivo.trim()) {
+      toast({
+        title: "Motivo requerido",
+        description: "Describe brevemente el cambio realizado.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setArchivando(true);
+    const { error } = await supabase.rpc("archivar_version_folio", {
+      p_folio_id: folioId,
+      p_motivo: motivo.trim(),
+    });
+    setArchivando(false);
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+      return;
+    }
+    toast({
+      title: "Versión archivada",
+      description: `Se archivó la versión ${numeroVersion} y se incrementó el número de versión.`,
+    });
+    setMotivo("");
+    refetch();
+    onSaved();
+  };
+
+  return (
+    <div className="border rounded-md overflow-hidden">
+      <SectionHeader number="VII" title="CONTROL DE CAMBIOS — Historial de versiones del folio" />
+
+      {/* Tabla de versiones */}
+      <div className="overflow-x-auto">
+        <table className="w-full text-xs">
+          <thead className="bg-muted/40 border-b">
+            <tr>
+              <th className="text-left px-3 py-2 font-semibold w-20">Versión</th>
+              <th className="text-left px-3 py-2 font-semibold w-32">Fecha</th>
+              <th className="text-left px-3 py-2 font-semibold">Motivo de revisión</th>
+              <th className="text-left px-3 py-2 font-semibold w-44">Realizado por</th>
+            </tr>
+          </thead>
+          <tbody>
+            {(versiones || []).length === 0 && (
+              <tr>
+                <td colSpan={4} className="px-3 py-4 text-center text-muted-foreground italic">
+                  Sin versiones archivadas. La versión actual es <strong>{numeroVersion}</strong>.
+                </td>
+              </tr>
+            )}
+            {(versiones || []).map((v) => (
+              <tr key={v.id} className="border-b last:border-b-0 align-top">
+                <td className="px-3 py-2 font-mono">{v.version}</td>
+                <td className="px-3 py-2 text-muted-foreground">
+                  {new Date(v.created_at).toLocaleDateString("es-MX", {
+                    year: "numeric",
+                    month: "short",
+                    day: "2-digit",
+                  })}
+                </td>
+                <td className="px-3 py-2 whitespace-pre-line">
+                  {v.motivo_revision?.trim() || (
+                    <span className="text-muted-foreground/60 italic">Sin descripción</span>
+                  )}
+                </td>
+                <td className="px-3 py-2 text-muted-foreground">
+                  {(v.creado_por && nombrePorId.get(v.creado_por)) || "—"}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Captura de nueva versión */}
+      {canEdit && (
+        <div className="border-t bg-muted/20 p-3 space-y-2">
+          <div className="flex items-center justify-between">
+            <p className="text-[11px] font-semibold uppercase text-muted-foreground">
+              Archivar nueva versión
+            </p>
+            <span className="text-[10px] text-muted-foreground">
+              Versión actual: <strong className="font-mono">{numeroVersion}</strong> →
+              se incrementará automáticamente al archivar
+            </span>
+          </div>
+          <Textarea
+            value={motivo}
+            onChange={(e) => setMotivo(e.target.value)}
+            rows={2}
+            placeholder="Describe el cambio realizado en esta revisión (ej: Se agregó riesgo R-05 por queja CL-2025-12)."
+          />
+          <div className="flex justify-end">
+            <Button
+              size="sm"
+              className="gap-1 text-xs"
+              onClick={handleArchivar}
+              disabled={archivando || !motivo.trim()}
+            >
+              <History className="h-3 w-3" />
+              {archivando ? "Archivando..." : "Archivar versión"}
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Componente principal ─────────────────────────────────────────────────────
 export default function FolioDetail() {
   const { id } = useParams();
