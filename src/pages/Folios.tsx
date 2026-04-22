@@ -91,7 +91,12 @@ function exportarCSV(folios: any[], riesgosMap: Map<string, any[]>) {
 async function exportarPDF(
   folios: any[],
   riesgosMap: Map<string, any[]>,
-  org?: { nombre?: string | null; logo_url?: string | null } | null,
+  org?: {
+    nombre?: string | null;
+    logo_url?: string | null;
+    codigo_formato?: string | null;
+    version_formato?: string | null;
+  } | null,
 ) {
   // A4 landscape — 297mm × 210mm — más espacio que letter para 13 columnas
   const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
@@ -103,6 +108,9 @@ async function exportarPDF(
   const orgLogo = await fetchOrgLogoDataUrl(org?.logo_url);
   const orgNombre = (org?.nombre || "").trim();
   const orgNombreUpper = (orgNombre || "ORGANIZACIÓN").toUpperCase();
+  const codigoFormato = (org?.codigo_formato || "FOR-SGC-11-01").trim();
+  const versionFormato = (org?.version_formato || "01").trim();
+  const codigoLabel = `${codigoFormato} (${versionFormato})`;
 
   // ─── Encabezado y pie reutilizables ────────────────────────────────────────
   function addHeader(pageIndex: number, totalPages: number) {
@@ -140,7 +148,7 @@ async function exportarPDF(
     // Código y página (derecha)
     doc.setFontSize(7);
     doc.setFont("helvetica", "normal");
-    doc.text("FOR-SGC-11-01 (02)", pageW - margin - 16, 11, { align: "center" });
+    doc.text(codigoLabel, pageW - margin - 16, 11, { align: "center" });
     doc.text(`Página ${pageIndex} de ${totalPages}`, pageW - margin - 16, 17, { align: "center" });
   }
 

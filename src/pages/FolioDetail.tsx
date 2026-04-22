@@ -1303,7 +1303,11 @@ export default function FolioDetail() {
               <Badge className={`text-[10px] ${getEstadoStyle(folio.estado)}`}>{folio.estado}</Badge>
               {locked && <Lock className="h-3.5 w-3.5 text-muted-foreground" />}
             </div>
-            <p className="text-xs text-muted-foreground">FOR-SGC-11-01 · TRACEA</p>
+            <p className="text-xs text-muted-foreground">
+              {(org as any)?.codigo_formato || "FOR-SGC-11-01"}
+              {(org as any)?.version_formato ? ` (${(org as any).version_formato})` : ""}
+              {org?.nombre ? ` · ${org.nombre}` : ""}
+            </p>
           </div>
         </div>
 
@@ -1375,7 +1379,7 @@ export default function FolioDetail() {
 
       <div className="bg-card rounded-lg shadow-sm border p-6 space-y-5 print:shadow-none print:border-none">
         <div className="text-center border-b pb-4">
-          <h2 className="text-base font-bold tracking-wide">TRACEA</h2>
+          <h2 className="text-base font-bold tracking-wide">{org?.nombre || "—"}</h2>
           <p className="text-xs text-muted-foreground italic">FORMATO — DEPARTAMENTO: SISTEMA DE GESTIÓN DE CALIDAD</p>
           <p className="text-sm font-semibold mt-1">ARCHIVO MAESTRO DE GESTIÓN DE RIESGOS</p>
         </div>
@@ -1405,9 +1409,12 @@ export default function FolioDetail() {
         />
 
         <div className="text-center pt-3 border-t">
-          <p className="text-[10px] text-muted-foreground">FOR-SGC-11-01 (02)</p>
+          <p className="text-[10px] text-muted-foreground">
+            {(org as any)?.codigo_formato || "FOR-SGC-11-01"} (
+            {(org as any)?.version_formato || "01"})
+          </p>
           <p className="text-[9px] text-muted-foreground">
-            Documento confidencial propiedad de Diafra S.A. de C.V., queda prohibido su uso, divulgación y/o
+            Documento confidencial propiedad de {org?.nombre || "la organización"}. Queda prohibido su uso, divulgación y/o
             reproducción total o parcial sin previa autorización.
           </p>
         </div>

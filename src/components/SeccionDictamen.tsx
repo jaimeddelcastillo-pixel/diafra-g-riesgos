@@ -34,6 +34,11 @@ export function SeccionDictamen({ folio, riesgos, locked, onSaved }: Props) {
   const { hasRole } = useAuth();
 
   const esRS = hasRole("responsable_sanitario");
+  const esAdmin = hasRole("admin");
+  // Admin y RS pueden editar la conclusión siempre, salvo cuando el folio
+  // ya está cerrado (estado "Cerrado") — durante "Aprobado" siguen pudiendo
+  // corregirla porque el sistema permite reabrir/rectificar.
+  const puedeEditarConclusion = (esAdmin || esRS) && folio.estado !== "Cerrado";
   const hasNoAceptables = riesgos.some((r) => r.dictamen === "No Aceptable");
 
   const [justificacion, setJustificacion] = useState((folio as any).justificacion_tecnica || "");
@@ -103,8 +108,8 @@ export function SeccionDictamen({ folio, riesgos, locked, onSaved }: Props) {
       <SectionHeader number="V" title="DICTAMEN DE BENEFICIO-RIESGO" />
 
       <div className="p-4 space-y-4">
-        {/* Pregunta riesgos no aceptables */}
-        <div className="flex items-center gap-4 text-sm">
+        {/* Pregunta riesgos no aceptables — calculada automáticamente */}
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
           <span className="font-semibold">
             ¿Existen riesgos residuales clasificados como NO ACEPTABLES o CONDICIONADOS?
           </span>
@@ -113,6 +118,9 @@ export function SeccionDictamen({ folio, riesgos, locked, onSaved }: Props) {
           </span>
           <span className="flex items-center gap-1">
             NO <span className={`inline-block w-4 h-4 border rounded ${!hasNoAceptables ? "bg-foreground" : ""}`} />
+          </span>
+          <span className="text-[10px] text-muted-foreground italic">
+            (calculado automáticamente a partir del dictamen de cada riesgo)
           </span>
         </div>
 
@@ -162,8 +170,8 @@ export function SeccionDictamen({ folio, riesgos, locked, onSaved }: Props) {
         {/* Conclusión actual */}
         <div className="flex items-center gap-8 border-t pt-3">
           <span className="font-semibold text-sm">CONCLUSIÓN:</span>
-          {esRS && folio.estado === "Borrador" ? (
-            // RS puede cambiar conclusión directamente si el folio está en borrador
+          {puedeEditarConclusion ? (
+            // Admin y Responsable Sanitario pueden cambiar la conclusión
             <>
               <label className="flex items-center gap-2 cursor-pointer">
                 <div
@@ -195,6 +203,9 @@ export function SeccionDictamen({ folio, riesgos, locked, onSaved }: Props) {
                 />
                 <span className="text-sm">RECHAZADO</span>
               </label>
+              <span className="text-[10px] text-muted-foreground italic ml-2">
+                (editable por Admin y Responsable Sanitario)
+              </span>
             </>
           ) : (
             // Vista de solo lectura para otros roles

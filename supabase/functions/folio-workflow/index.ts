@@ -20,6 +20,26 @@ const APP_URL = Deno.env.get("APP_URL") ?? "https://tu-app.lovable.app";
 const TEXTO_COMPROMISO =
   "Declaro bajo protesta de decir verdad que he revisado el contenido íntegro de este Análisis de Gestión de Riesgos, que la información es correcta y completa conforme a la NOM-241-SSA1-2025 e ISO 14971:2019, y que mi firma electrónica registrada en este sistema tiene el mismo valor legal que mi firma autógrafa.";
 
+// ─── Helper: datos identificativos de la organización del folio ─────────────
+async function getOrgInfo(
+  admin: ReturnType<typeof createClient>,
+  org_id: string | null | undefined,
+): Promise<{ org_nombre: string; codigo_formato: string; version_formato: string }> {
+  const fallback = { org_nombre: "TRACEA", codigo_formato: "FOR-SGC-11-01", version_formato: "01" };
+  if (!org_id) return fallback;
+  const { data } = await admin
+    .from("organizations")
+    .select("nombre, codigo_formato, version_formato")
+    .eq("id", org_id)
+    .maybeSingle();
+  if (!data) return fallback;
+  return {
+    org_nombre: (data as any).nombre || fallback.org_nombre,
+    codigo_formato: (data as any).codigo_formato || fallback.codigo_formato,
+    version_formato: (data as any).version_formato || fallback.version_formato,
+  };
+}
+
 // ─── Validación de completitud NOM-241 ───────────────────────────────────────
 interface ValidacionResult {
   valido: boolean;
@@ -203,6 +223,8 @@ Deno.serve(async (req) => {
       .select("id, nombre, cargo, user_id")
       .eq("folio_id", folio_id);
 
+    const orgInfo = await getOrgInfo(admin, folio.org_id);
+
     if (comite && comite.length > 0) {
       for (const miembro of comite) {
         if (!miembro.user_id) continue;
@@ -215,12 +237,13 @@ Deno.serve(async (req) => {
 
         await enviarCorreo(admin, {
           to: perfil.email,
-          subject: `[TRACEA] Solicitud de firma — ${folio.codigo}`,
+          subject: `[${orgInfo.org_nombre}] Solicitud de firma — ${folio.codigo}`,
           html: plantillaFirma({
             nombre: perfil.nombre || miembro.nombre,
             folio_codigo: folio.codigo,
             proceso: folio.proceso_equipo,
             link: `${APP_URL}/folios/${folio_id}`,
+            ...orgInfo,
           }),
         });
       }
@@ -277,6 +300,7 @@ Deno.serve(async (req) => {
     const { data: todosOk } = await admin.rpc("todos_firmaron", { p_folio_id: folio_id });
 
     if (todosOk) {
+      const orgInfo = await getOrgInfo(admin, folio?.org_id);
       const { data: rsRoles } = await admin
         .from("org_members")
         .select("user_id")
@@ -293,12 +317,13 @@ Deno.serve(async (req) => {
         if (!rsPerfil?.email) continue;
         await enviarCorreo(admin, {
           to: rsPerfil.email,
-          subject: `[TRACEA] ✅ Folio listo para dictamen — ${folio.codigo}`,
+          subject: `[${orgInfo.org_nombre}] ✅ Folio listo para dictamen — ${folio.codigo}`,
           html: plantillaListoParaDictamen({
             nombre: rsPerfil.nombre,
             folio_codigo: folio.codigo,
             proceso: folio.proceso_equipo,
             link: `${APP_URL}/folios/${folio_id}`,
+            ...orgInfo,
           }),
         });
       }
@@ -355,9 +380,10 @@ Deno.serve(async (req) => {
         .single();
 
       if (capturista?.email) {
+        const orgInfo = await getOrgInfo(admin, folio.org_id);
         await enviarCorreo(admin, {
           to: capturista.email,
-          subject: `[TRACEA] ${conclusion === "Aprobado" ? "✅ Aprobado" : "⚠ Requiere corrección"} — ${folio.codigo}`,
+          subject: `[${orgInfo.org_nombre}] ${conclusion === "Aprobado" ? "✅ Aprobado" : "⚠ Requiere corrección"} — ${folio.codigo}`,
           html: plantillaDictamen({
             nombre: capturista.nombre,
             folio_codigo: folio.codigo,
@@ -366,6 +392,7 @@ Deno.serve(async (req) => {
             motivo: motivo || "",
             version: folio.numero_version,
             link: `${APP_URL}/folios/${folio_id}`,
+            ...orgInfo,
           }),
         });
       }
@@ -457,11 +484,17 @@ async function enviarCorreo(
 
 // ─── Plantillas de correo ──────────────────────────────────────────────────────
 
-function plantillaFirma({ nombre, folio_codigo, proceso, link }: any) {
+function footerLinea(org_nombre?: string, codigo_formato?: string, version_formato?: string) {
+  const code = `${codigo_formato || "FOR-SGC-11-01"} (${version_formato || "01"})`;
+  const name = (org_nombre || "Organización").trim();
+  return `${code} · ${name} · Documento confidencial`;
+}
+
+function plantillaFirma({ nombre, folio_codigo, proceso, link, org_nombre, codigo_formato, version_formato }: any) {
   return `
 <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto">
   <div style="background:#042C53;padding:20px;text-align:center">
-    <h2 style="color:#fff;margin:0">TRACEA</h2>
+    <h2 style="color:#fff;margin:0">${(org_nombre || "TRACEA").toUpperCase()}</h2>
     <p style="color:#aac;margin:4px 0 0;font-size:13px">Plataforma de Gestión de Riesgos</p>
   </div>
   <div style="padding:28px;background:#f9f9f9">
@@ -482,16 +515,16 @@ function plantillaFirma({ nombre, folio_codigo, proceso, link }: any) {
     <p style="color:#888;font-size:12px">Si no puedes hacer clic, copia esta URL: ${link}</p>
   </div>
   <div style="background:#eee;padding:12px;text-align:center;font-size:11px;color:#888">
-    FOR-SGC-11-01 · TRACEA · Documento confidencial
+    ${footerLinea(org_nombre, codigo_formato, version_formato)}
   </div>
 </div>`;
 }
 
-function plantillaListoParaDictamen({ nombre, folio_codigo, proceso, link }: any) {
+function plantillaListoParaDictamen({ nombre, folio_codigo, proceso, link, org_nombre, codigo_formato, version_formato }: any) {
   return `
 <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto">
   <div style="background:#042C53;padding:20px;text-align:center">
-    <h2 style="color:#fff;margin:0">TRACEA</h2>
+    <h2 style="color:#fff;margin:0">${(org_nombre || "TRACEA").toUpperCase()}</h2>
     <p style="color:#aac;margin:4px 0 0;font-size:13px">Plataforma de Gestión de Riesgos</p>
   </div>
   <div style="padding:28px;background:#f9f9f9">
@@ -511,17 +544,17 @@ function plantillaListoParaDictamen({ nombre, folio_codigo, proceso, link }: any
     </div>
   </div>
   <div style="background:#eee;padding:12px;text-align:center;font-size:11px;color:#888">
-    FOR-SGC-11-01 · TRACEA · Documento confidencial
+    ${footerLinea(org_nombre, codigo_formato, version_formato)}
   </div>
 </div>`;
 }
 
-function plantillaDictamen({ nombre, folio_codigo, proceso, conclusion, motivo, version, link }: any) {
+function plantillaDictamen({ nombre, folio_codigo, proceso, conclusion, motivo, version, link, org_nombre, codigo_formato, version_formato }: any) {
   const aprobado = conclusion === "Aprobado";
   return `
 <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto">
   <div style="background:#042C53;padding:20px;text-align:center">
-    <h2 style="color:#fff;margin:0">TRACEA</h2>
+    <h2 style="color:#fff;margin:0">${(org_nombre || "TRACEA").toUpperCase()}</h2>
     <p style="color:#aac;margin:4px 0 0;font-size:13px">Plataforma de Gestión de Riesgos</p>
   </div>
   <div style="padding:28px;background:#f9f9f9">
@@ -546,7 +579,7 @@ function plantillaDictamen({ nombre, folio_codigo, proceso, conclusion, motivo, 
     </div>
   </div>
   <div style="background:#eee;padding:12px;text-align:center;font-size:11px;color:#888">
-    FOR-SGC-11-01 · TRACEA · Documento confidencial
+    ${footerLinea(org_nombre, codigo_formato, version_formato)}
   </div>
 </div>`;
 }
