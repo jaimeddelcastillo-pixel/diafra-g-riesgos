@@ -478,8 +478,9 @@ export default function Folios() {
   const cargando = isLoading || loadingRiesgos;
   const lista = folios || [];
 
+  const { org } = useAuth();
   const handleExportCSV = () => exportarCSV(lista, riesgosMap);
-  const handleExportPDF = () => exportarPDF(lista, riesgosMap);
+  const handleExportPDF = () => exportarPDF(lista, riesgosMap, org);
 
   return (
     <div className="space-y-6">
