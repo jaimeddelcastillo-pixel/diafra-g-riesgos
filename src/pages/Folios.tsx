@@ -492,7 +492,7 @@ export default function Folios() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Mis Folios</h1>
-          <p className="text-sm text-muted-foreground">Archivos Maestros de Gestión de Riesgos — FOR-SGC-11-01</p>
+          <p className="text-sm text-muted-foreground">Archivos Maestros de Gestión de Riesgos</p>
         </div>
         <div className="flex items-center gap-2">
           {/* Botones de exportación — solo visibles cuando hay folios */}

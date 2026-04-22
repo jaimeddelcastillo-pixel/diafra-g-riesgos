@@ -53,7 +53,7 @@ export function AppLayout() {
               <div className="flex items-center gap-2">
                 <SidebarTrigger />
                 <span className="text-xs text-muted-foreground font-medium tracking-wide">
-                  ISO 14971 · NOM-241
+                  GESTIÓN DE RIESGOS
                 </span>
               </div>
               <div className="flex items-center gap-3">
