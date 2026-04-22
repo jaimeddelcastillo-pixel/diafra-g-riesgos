@@ -11,6 +11,7 @@ import { Plus, ChevronRight, FileDown, FileSpreadsheet } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { fetchOrgLogoDataUrl } from "@/lib/orgLogo";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Constants } from "@/integrations/supabase/types";
@@ -87,29 +88,21 @@ function exportarCSV(folios: any[], riesgosMap: Map<string, any[]>) {
 }
 
 // ─── Exportar a PDF ────────────────────────────────────────────────────────────
-async function exportarPDF(folios: any[], riesgosMap: Map<string, any[]>) {
+async function exportarPDF(
+  folios: any[],
+  riesgosMap: Map<string, any[]>,
+  org?: { nombre?: string | null; logo_url?: string | null } | null,
+) {
   // A4 landscape — 297mm × 210mm — más espacio que letter para 13 columnas
   const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
   const pageW = doc.internal.pageSize.getWidth();
   const pageH = doc.internal.pageSize.getHeight();
   const margin = 8;
 
-  // Cargar logo desde carpeta pública
-  let logoData: string | null = null;
-  try {
-    const resp = await fetch("/logo-tracea.png");
-    const ct = resp.headers.get("content-type") || "";
-    if (resp.ok && ct.includes("image/png")) {
-      const blob = await resp.blob();
-      logoData = await new Promise<string>((res) => {
-        const reader = new FileReader();
-        reader.onload = () => res(reader.result as string);
-        reader.readAsDataURL(blob);
-      });
-    }
-  } catch {
-    /* continúa sin logo */
-  }
+  // Cargar logo de la organización (si existe)
+  const orgLogo = await fetchOrgLogoDataUrl(org?.logo_url);
+  const orgNombre = (org?.nombre || "").trim();
+  const orgNombreUpper = (orgNombre || "ORGANIZACIÓN").toUpperCase();
 
   // ─── Encabezado y pie reutilizables ────────────────────────────────────────
   function addHeader(pageIndex: number, totalPages: number) {
@@ -122,13 +115,13 @@ async function exportarPDF(folios: any[], riesgosMap: Map<string, any[]>) {
     doc.line(pageW - margin - 32, 4, pageW - margin - 32, 22);
 
     // Logo
-    if (logoData) {
-      doc.addImage(logoData, "PNG", margin + 1, 5.5, 24, 13);
+    if (orgLogo) {
+      doc.addImage(orgLogo.dataUrl, orgLogo.format, margin + 1, 5.5, 24, 13);
     } else {
       doc.setFontSize(7);
       doc.setFont("helvetica", "bold");
       doc.setTextColor(15, 31, 61);
-      doc.text("TRACEA", margin + 3, 11);
+      doc.text(orgNombreUpper.slice(0, 18), margin + 1.5, 12);
       doc.setTextColor(0);
     }
 
@@ -136,7 +129,7 @@ async function exportarPDF(folios: any[], riesgosMap: Map<string, any[]>) {
     doc.setTextColor(0);
     doc.setFontSize(9);
     doc.setFont("helvetica", "bold");
-    doc.text("TRACEA", pageW / 2, 10, { align: "center" });
+    doc.text(orgNombreUpper, pageW / 2, 10, { align: "center" });
     doc.setFontSize(7);
     doc.setFont("helvetica", "italic");
     doc.text("FORMATO — DEPARTAMENTO: SISTEMA DE GESTIÓN DE CALIDAD", pageW / 2, 15, { align: "center" });
@@ -156,7 +149,7 @@ async function exportarPDF(folios: any[], riesgosMap: Map<string, any[]>) {
     doc.setFont("helvetica", "italic");
     doc.setTextColor(80);
     doc.text(
-      `Documento confidencial propiedad de Diafra S.A. de C.V. — FOR-SGC-11-01  |  Generado: ${new Date().toLocaleDateString("es-MX", { day: "2-digit", month: "long", year: "numeric" })}`,
+      `Documento confidencial propiedad de ${orgNombre || "la organización"}  |  Generado: ${new Date().toLocaleDateString("es-MX", { day: "2-digit", month: "long", year: "numeric" })}`,
       pageW / 2,
       pageH - 3,
       { align: "center" },
