@@ -63,7 +63,7 @@ export default function Catalogos() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold">Catálogos</h1>
-        <p className="text-sm text-muted-foreground">Escalas de evaluación según ISO 14971 / NOM-241</p>
+        <p className="text-sm text-muted-foreground">Escalas de evaluación</p>
       </div>
 
       <Tabs defaultValue="severidad">

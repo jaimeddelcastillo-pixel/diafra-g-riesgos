@@ -368,7 +368,7 @@ export default function Auditoria() {
       <div>
         <h1 className="text-2xl font-bold">Auditoría</h1>
         <p className="text-sm text-muted-foreground">
-          Cumplimiento NOM-241-SSA1-2025 · ISO 14971 · Trazabilidad del SGC
+          Cumplimiento · Trazabilidad
         </p>
       </div>
 
