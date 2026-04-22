@@ -10,6 +10,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
+import { OrgLogoCard } from "@/components/OrgLogoCard";
 import type { Database } from "@/integrations/supabase/types";
 
 type AppRole = Database["public"]["Enums"]["app_role"];
@@ -422,6 +423,8 @@ export default function Configuracion() {
           <p className="text-sm text-muted-foreground">Las alertas de correo automático se activarán próximamente.</p>
         </CardContent>
       </Card>
+
+      <OrgLogoCard />
 
       {/* Edit User Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>

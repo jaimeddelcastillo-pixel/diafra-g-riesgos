@@ -1043,7 +1043,7 @@ export default function FolioDetail() {
   const navigate = useNavigate();
   const { data, isLoading, refetch } = useFolioDetail(id);
   const queryClient = useQueryClient();
-  const { hasRole } = useAuth();
+  const { hasRole, org } = useAuth();
   const { toast } = useToast();
 
   const isAdmin = hasRole("admin") || hasRole("responsable_sanitario");
@@ -1152,7 +1152,7 @@ export default function FolioDetail() {
             variant="outline"
             size="sm"
             className="gap-1 text-xs"
-            onClick={() => generateFolioPDF(folio, riesgos, comite)}
+            onClick={() => generateFolioPDF(folio, riesgos, comite, org)}
           >
             <Printer className="h-3 w-3" /> Generar PDF
           </Button>

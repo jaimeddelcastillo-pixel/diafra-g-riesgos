@@ -2,6 +2,7 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import type { Folio, Riesgo, FolioComite } from "@/hooks/useFolios";
 import { getNPRLevel } from "@/hooks/useFolios";
+import { fetchOrgLogoDataUrl } from "@/lib/orgLogo";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -23,29 +24,21 @@ function getNPRColor(npr: number, severidad: number): [number, number, number] {
   return [0, 130, 0];
 }
 
-export async function generateFolioPDF(folio: Folio, riesgos: Riesgo[], comite: FolioComite[]) {
+export async function generateFolioPDF(
+  folio: Folio,
+  riesgos: Riesgo[],
+  comite: FolioComite[],
+  org?: { nombre?: string | null; logo_url?: string | null } | null,
+) {
   const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "letter" });
   const pageW = doc.internal.pageSize.getWidth();
   const pageH = doc.internal.pageSize.getHeight();
   const margin = 10;
   let pageNum = 0;
 
-  // Cargar logo desde carpeta pública
-  let logoData: string | null = null;
-  try {
-    const resp = await fetch("/logo-tracea.png");
-    const ct = resp.headers.get("content-type") || "";
-    if (resp.ok && ct.includes("image/png")) {
-      const blob = await resp.blob();
-      logoData = await new Promise<string>((res) => {
-        const reader = new FileReader();
-        reader.onload = () => res(reader.result as string);
-        reader.readAsDataURL(blob);
-      });
-    }
-  } catch {
-    /* continúa sin logo */
-  }
+  // Cargar logo de la organización (si existe)
+  const orgLogo = await fetchOrgLogoDataUrl(org?.logo_url);
+  const orgNombre = (org?.nombre || "").trim();
 
   // ─── Encabezado ─────────────────────────────────────────────────────────────
   function addHeader(pageIndex: number, totalPages: number) {
@@ -56,23 +49,24 @@ export async function generateFolioPDF(folio: Folio, riesgos: Riesgo[], comite: 
     doc.line(margin + 28, 5, margin + 28, 23);
     doc.line(pageW - margin - 32, 5, pageW - margin - 32, 23);
 
-    if (logoData) {
-      doc.addImage(logoData, "PNG", margin + 1, 6.5, 24, 13);
+    if (orgLogo) {
+      doc.addImage(orgLogo.dataUrl, orgLogo.format, margin + 1, 6.5, 24, 13);
     } else {
       doc.setFontSize(7.5);
       doc.setFont("helvetica", "bold");
       doc.setTextColor(15, 31, 61);
-      doc.text("TRACEA", margin + 3, 12);
+      const nombreCorto = (orgNombre || "ORGANIZACIÓN").slice(0, 18).toUpperCase();
+      doc.text(nombreCorto, margin + 1.5, 13);
       doc.setFontSize(5.5);
       doc.setFont("helvetica", "normal");
-      doc.text("Gestión de Riesgos", margin + 1, 18);
+      doc.text("Gestión de Riesgos", margin + 1.5, 18);
       doc.setTextColor(0);
     }
 
     doc.setTextColor(0);
     doc.setFontSize(9);
     doc.setFont("helvetica", "bold");
-    doc.text("TRACEA", pageW / 2, 11, { align: "center" });
+    doc.text((orgNombre || "ORGANIZACIÓN").toUpperCase(), pageW / 2, 11, { align: "center" });
     doc.setFontSize(7);
     doc.setFont("helvetica", "italic");
     doc.text("FORMATO — DEPARTAMENTO: SISTEMA DE GESTIÓN DE CALIDAD", pageW / 2, 16, { align: "center" });
