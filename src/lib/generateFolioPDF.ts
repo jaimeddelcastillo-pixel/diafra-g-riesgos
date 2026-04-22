@@ -2,6 +2,7 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import type { Folio, Riesgo, FolioComite } from "@/hooks/useFolios";
 import { getNPRLevel } from "@/hooks/useFolios";
+import { fetchOrgLogoDataUrl } from "@/lib/orgLogo";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -23,29 +24,21 @@ function getNPRColor(npr: number, severidad: number): [number, number, number] {
   return [0, 130, 0];
 }
 
-export async function generateFolioPDF(folio: Folio, riesgos: Riesgo[], comite: FolioComite[]) {
+export async function generateFolioPDF(
+  folio: Folio,
+  riesgos: Riesgo[],
+  comite: FolioComite[],
+  org?: { nombre?: string | null; logo_url?: string | null } | null,
+) {
   const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "letter" });
   const pageW = doc.internal.pageSize.getWidth();
   const pageH = doc.internal.pageSize.getHeight();
   const margin = 10;
   let pageNum = 0;
 
-  // Cargar logo desde carpeta pública
-  let logoData: string | null = null;
-  try {
-    const resp = await fetch("/logo-tracea.png");
-    const ct = resp.headers.get("content-type") || "";
-    if (resp.ok && ct.includes("image/png")) {
-      const blob = await resp.blob();
-      logoData = await new Promise<string>((res) => {
-        const reader = new FileReader();
-        reader.onload = () => res(reader.result as string);
-        reader.readAsDataURL(blob);
-      });
-    }
-  } catch {
-    /* continúa sin logo */
-  }
+  // Cargar logo de la organización (si existe)
+  const orgLogo = await fetchOrgLogoDataUrl(org?.logo_url);
+  const orgNombre = (org?.nombre || "").trim();
 
   // ─── Encabezado ─────────────────────────────────────────────────────────────
   function addHeader(pageIndex: number, totalPages: number) {
