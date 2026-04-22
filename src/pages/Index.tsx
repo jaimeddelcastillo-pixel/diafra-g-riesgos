@@ -248,7 +248,7 @@ export default function Dashboard() {
                   <p className="text-sm font-bold text-red-800">
                     ⛔ {criticosSinEvidencia.length} crítico{criticosSinEvidencia.length > 1 ? "s" : ""} sin evidencia
                   </p>
-                  <p className="text-xs text-red-700 font-medium">No conformidad mayor NOM-241</p>
+                  <p className="text-xs text-red-700 font-medium">No conformidad mayor</p>
                   <p className="text-xs text-red-600 mt-0.5">
                     {foliosSinEvidencia.length} folio{foliosSinEvidencia.length > 1 ? "s" : ""} afectado
                     {foliosSinEvidencia.length > 1 ? "s" : ""}
@@ -264,7 +264,7 @@ export default function Dashboard() {
                   <p className="text-sm font-semibold text-red-800">
                     {accionesPendientes.length} acción{accionesPendientes.length > 1 ? "es" : ""} sin definir
                   </p>
-                  <p className="text-xs text-red-600">Riesgos críticos sin acción propuesta — requerido NOM-241</p>
+                  <p className="text-xs text-red-600">Riesgos críticos sin acción propuesta</p>
                 </div>
               </div>
             )}
@@ -485,7 +485,7 @@ export default function Dashboard() {
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
             <AlertTriangle className="h-4 w-4 text-destructive" />
-            Riesgos Críticos ({critical.length}) — Requieren acción documentada NOM-241
+            Riesgos Críticos ({critical.length}) — Requieren acción documentada
           </CardTitle>
         </CardHeader>
         <CardContent>
