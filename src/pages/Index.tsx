@@ -167,7 +167,7 @@ export default function Dashboard() {
         <div>
           <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
           <p className="text-sm text-muted-foreground">
-            Panorama general — Sistema de Gestión de Riesgos FOR-SGC-11-01
+            Panorama general
           </p>
         </div>
         {/* Semáforo SGC */}
