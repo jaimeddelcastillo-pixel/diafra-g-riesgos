@@ -223,6 +223,8 @@ Deno.serve(async (req) => {
       .select("id, nombre, cargo, user_id")
       .eq("folio_id", folio_id);
 
+    const orgInfo = await getOrgInfo(admin, folio.org_id);
+
     if (comite && comite.length > 0) {
       for (const miembro of comite) {
         if (!miembro.user_id) continue;
@@ -235,12 +237,13 @@ Deno.serve(async (req) => {
 
         await enviarCorreo(admin, {
           to: perfil.email,
-          subject: `[TRACEA] Solicitud de firma — ${folio.codigo}`,
+          subject: `[${orgInfo.org_nombre}] Solicitud de firma — ${folio.codigo}`,
           html: plantillaFirma({
             nombre: perfil.nombre || miembro.nombre,
             folio_codigo: folio.codigo,
             proceso: folio.proceso_equipo,
             link: `${APP_URL}/folios/${folio_id}`,
+            ...orgInfo,
           }),
         });
       }
