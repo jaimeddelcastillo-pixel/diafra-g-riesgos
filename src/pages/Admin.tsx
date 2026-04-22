@@ -152,6 +152,7 @@ export default function Admin() {
           activo: imperOrg.activo,
           max_users: imperOrg.max_users,
           trial_expires_at: imperOrg.trial_expires_at,
+          logo_url: (imperOrg as any).logo_url ?? null,
         },
         imperMotivo,
         imperTicketId || null,
