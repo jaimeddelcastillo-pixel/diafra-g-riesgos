@@ -88,7 +88,12 @@ export async function generateFolioPDF(
   folio: Folio,
   riesgos: Riesgo[],
   comite: FolioComite[],
-  org?: { nombre?: string | null; logo_url?: string | null } | null,
+  org?: {
+    nombre?: string | null;
+    logo_url?: string | null;
+    codigo_formato?: string | null;
+    version_formato?: string | null;
+  } | null,
 ) {
   const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "letter" });
   const pageW = doc.internal.pageSize.getWidth();
@@ -98,6 +103,9 @@ export async function generateFolioPDF(
   // Cargar logo y datos
   const orgLogo = await fetchOrgLogoDataUrl(org?.logo_url);
   const orgNombre = (org?.nombre || "ORGANIZACIÓN").trim();
+  const codigoFormato = (org?.codigo_formato || "FOR-SGC-11-01").trim();
+  const versionFormato = (org?.version_formato || "01").trim();
+  const codigoLabel = `${codigoFormato} (${versionFormato})`;
   const versiones = await fetchVersiones(folio.id, folio.numero_version || "1.0");
 
   let pageNum = 0;
@@ -171,7 +179,7 @@ export async function generateFolioPDF(
     doc.text("CÓDIGO", rx + codigoW / 2, margin + 5.5, { align: "center" });
     doc.setFont("helvetica", "normal");
     doc.setFontSize(7);
-    doc.text("FOR-SGC-11-01 (02)", rx + codigoW / 2, margin + 9.5, { align: "center" });
+    doc.text(codigoLabel, rx + codigoW / 2, margin + 9.5, { align: "center" });
     doc.text(`Página ${pageIndex} de ${totalPages}`, rx + codigoW / 2, margin + 13.5, {
       align: "center",
     });
