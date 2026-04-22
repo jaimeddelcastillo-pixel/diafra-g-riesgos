@@ -13,6 +13,9 @@ export interface OrgInfo {
   max_users: number;
   trial_expires_at: string | null;
   logo_url?: string | null;
+  codigo_formato?: string | null;
+  version_formato?: string | null;
+  descripcion?: string | null;
 }
 
 interface AuthContextType {
@@ -71,7 +74,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             // Org membership (sistema multi-tenant)
             const { data: memberData } = await supabase
               .from("org_members")
-              .select("role, org_id, organizations(id, nombre, slug, plan, activo, max_users, trial_expires_at, logo_url)")
+              .select("role, org_id, organizations(id, nombre, slug, plan, activo, max_users, trial_expires_at, logo_url, codigo_formato, version_formato, descripcion)")
               .eq("user_id", session.user.id)
               .single();
 
