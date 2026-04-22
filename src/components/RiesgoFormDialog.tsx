@@ -184,7 +184,7 @@ function CatalogoInline({
         <div className="mt-2 border rounded-md overflow-hidden">
           <div className="bg-muted px-3 py-1.5 border-b">
             <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">
-              {titulo} — ISO 14971 / NOM-241
+              {titulo}
             </p>
           </div>
           <table className="w-full text-[10px]">

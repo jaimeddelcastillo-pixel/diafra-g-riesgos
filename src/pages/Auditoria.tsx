@@ -133,7 +133,7 @@ function TabCumplimiento() {
               puntaje === 100 ? "text-green-800" : puntaje >= 60 ? "text-amber-800" : "text-red-800"
             }`}
           >
-            Índice de cumplimiento NOM-241: {puntaje}%
+            Índice de cumplimiento: {puntaje}%
           </p>
           <p className="text-sm text-muted-foreground">
             {puntaje === 100
@@ -393,7 +393,7 @@ export default function Auditoria() {
             <CardHeader className="pb-2">
               <CardTitle className="text-base flex items-center gap-2">
                 <ShieldCheck className="h-4 w-4" />
-                Lista de verificación NOM-241-SSA1-2025
+                Lista de verificación
               </CardTitle>
             </CardHeader>
             <CardContent>

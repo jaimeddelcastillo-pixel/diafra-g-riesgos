@@ -79,7 +79,7 @@ function ChecklistNOM241({ folio, riesgos, comite }: { folio: Folio; riesgos: Ri
   return (
     <div className="border rounded-lg shadow-md bg-background p-4 w-80 space-y-3">
       <div className="flex items-center justify-between">
-        <p className="text-xs font-bold">Checklist NOM-241 / ISO 14971</p>
+        <p className="text-xs font-bold">Checklist de cumplimiento</p>
         {bloqueantes.length === 0 ? (
           <span className="text-[10px] text-green-700 font-bold bg-green-50 border border-green-200 rounded px-1.5 py-0.5">
             ✓ Listo para firma
@@ -100,7 +100,7 @@ function ChecklistNOM241({ folio, riesgos, comite }: { folio: Folio; riesgos: Ri
       </div>
       {pendientes.length === 0 && (
         <p className="text-[10px] text-green-700 text-center font-medium">
-          Todos los requisitos NOM-241 cumplidos
+          Todos los requisitos cumplidos
         </p>
       )}
     </div>
@@ -307,7 +307,7 @@ function SeccionDescripcion({ folio, locked, onSaved }: { folio: Folio; locked: 
         {/* Trazabilidad NOM-241 §7.5.3 */}
         <div className="border-t pt-3">
           <p className="text-[10px] font-semibold text-muted-foreground uppercase mb-2">
-            Trazabilidad del Dispositivo — NOM-241 §7.5.3
+            Trazabilidad del Dispositivo
           </p>
           <div className="grid grid-cols-4 gap-3">
             <div className="space-y-1">
@@ -386,7 +386,7 @@ function SeccionComite({
   const [nuevoMiembro, setNuevoMiembro] = useState({ nombre: "", cargo: "", responsabilidad: "", user_id: "" });
 
   const TEXTO_COMPROMISO =
-    "Declaro bajo protesta de decir verdad que he revisado el contenido íntegro de este Análisis de Gestión de Riesgos, que la información es correcta y completa conforme a la NOM-241-SSA1-2025 e ISO 14971:2019, y que mi firma electrónica registrada en este sistema tiene el mismo valor legal que mi firma autógrafa.";
+    "Declaro bajo protesta de decir verdad que he revisado el contenido íntegro de este Análisis de Gestión de Riesgos, que la información es correcta y completa conforme a la normativa aplicable, y que mi firma electrónica registrada en este sistema tiene el mismo valor legal que mi firma autógrafa.";
 
   const { data: profiles } = useQuery({
     queryKey: ["profiles-firmas"],
@@ -683,7 +683,7 @@ function SeccionComite({
               <h3 className="font-bold text-base">Confirmación de Firma Electrónica</h3>
             </div>
             <div className="bg-muted/50 rounded-md p-3 text-xs text-muted-foreground border-l-4 border-primary">
-              <p className="font-semibold text-foreground mb-1">Declaración de firma — NOM-241-SSA1-2025</p>
+              <p className="font-semibold text-foreground mb-1">Declaración de firma electrónica</p>
               <p>{TEXTO_COMPROMISO}</p>
             </div>
             <div className="bg-amber-50 border border-amber-200 rounded-md p-3 text-xs text-amber-800">
@@ -762,7 +762,7 @@ function SeccionRiesgoResidualGlobal({
       {/* Alertas de completitud */}
       {(faltaBeneficio || faltaResidual) && (
         <div className="px-4 py-2 bg-destructive/5 border-b flex items-center gap-2 text-xs text-destructive">
-          <span className="font-bold">⚠ NOM-241:</span>
+          <span className="font-bold">⚠ Atención:</span>
           {faltaBeneficio && <span>Beneficio clínico requerido.</span>}
           {faltaResidual && <span>Evaluación de riesgo residual global requerida.</span>}
         </div>
@@ -1098,7 +1098,7 @@ export default function FolioDetail() {
       if (result?.errores_nom241) {
         const errores: string[] = result.errores_nom241;
         toast({
-          title: "⛔ Folio incompleto — NOM-241",
+          title: "⛔ Folio incompleto",
           description: `${errores.length} requisito${errores.length > 1 ? "s" : ""} pendiente${errores.length > 1 ? "s" : ""}. Revisa el checklist.`,
           variant: "destructive",
         });
@@ -1167,7 +1167,7 @@ export default function FolioDetail() {
                   size="sm"
                   className="gap-1 text-xs"
                   onClick={() => setShowChecklist((v) => !v)}
-                  title="Ver checklist de requisitos NOM-241"
+                  title="Ver checklist de requisitos"
                 >
                   {(() => {
                     const items = evaluarChecklistNOM241(folio, riesgos, comite);
@@ -1179,7 +1179,7 @@ export default function FolioDetail() {
                         ? <span className="text-amber-600 font-bold">⚠ {advertencias}</span>
                         : <span className="text-green-700 font-bold">✓</span>;
                   })()}
-                  NOM-241
+                  Checklist
                 </Button>
                 {/* Botón enviar */}
                 <Button
