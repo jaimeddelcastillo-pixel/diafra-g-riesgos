@@ -49,23 +49,24 @@ export async function generateFolioPDF(
     doc.line(margin + 28, 5, margin + 28, 23);
     doc.line(pageW - margin - 32, 5, pageW - margin - 32, 23);
 
-    if (logoData) {
-      doc.addImage(logoData, "PNG", margin + 1, 6.5, 24, 13);
+    if (orgLogo) {
+      doc.addImage(orgLogo.dataUrl, orgLogo.format, margin + 1, 6.5, 24, 13);
     } else {
       doc.setFontSize(7.5);
       doc.setFont("helvetica", "bold");
       doc.setTextColor(15, 31, 61);
-      doc.text("TRACEA", margin + 3, 12);
+      const nombreCorto = (orgNombre || "ORGANIZACIÓN").slice(0, 18).toUpperCase();
+      doc.text(nombreCorto, margin + 1.5, 13);
       doc.setFontSize(5.5);
       doc.setFont("helvetica", "normal");
-      doc.text("Gestión de Riesgos", margin + 1, 18);
+      doc.text("Gestión de Riesgos", margin + 1.5, 18);
       doc.setTextColor(0);
     }
 
     doc.setTextColor(0);
     doc.setFontSize(9);
     doc.setFont("helvetica", "bold");
-    doc.text("TRACEA", pageW / 2, 11, { align: "center" });
+    doc.text((orgNombre || "ORGANIZACIÓN").toUpperCase(), pageW / 2, 11, { align: "center" });
     doc.setFontSize(7);
     doc.setFont("helvetica", "italic");
     doc.text("FORMATO — DEPARTAMENTO: SISTEMA DE GESTIÓN DE CALIDAD", pageW / 2, 16, { align: "center" });
