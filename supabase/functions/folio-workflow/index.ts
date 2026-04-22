@@ -457,11 +457,17 @@ async function enviarCorreo(
 
 // ─── Plantillas de correo ──────────────────────────────────────────────────────
 
-function plantillaFirma({ nombre, folio_codigo, proceso, link }: any) {
+function footerLinea(org_nombre?: string, codigo_formato?: string, version_formato?: string) {
+  const code = `${codigo_formato || "FOR-SGC-11-01"} (${version_formato || "01"})`;
+  const name = (org_nombre || "Organización").trim();
+  return `${code} · ${name} · Documento confidencial`;
+}
+
+function plantillaFirma({ nombre, folio_codigo, proceso, link, org_nombre, codigo_formato, version_formato }: any) {
   return `
 <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto">
   <div style="background:#042C53;padding:20px;text-align:center">
-    <h2 style="color:#fff;margin:0">TRACEA</h2>
+    <h2 style="color:#fff;margin:0">${(org_nombre || "TRACEA").toUpperCase()}</h2>
     <p style="color:#aac;margin:4px 0 0;font-size:13px">Plataforma de Gestión de Riesgos</p>
   </div>
   <div style="padding:28px;background:#f9f9f9">
@@ -482,16 +488,16 @@ function plantillaFirma({ nombre, folio_codigo, proceso, link }: any) {
     <p style="color:#888;font-size:12px">Si no puedes hacer clic, copia esta URL: ${link}</p>
   </div>
   <div style="background:#eee;padding:12px;text-align:center;font-size:11px;color:#888">
-    FOR-SGC-11-01 · TRACEA · Documento confidencial
+    ${footerLinea(org_nombre, codigo_formato, version_formato)}
   </div>
 </div>`;
 }
 
-function plantillaListoParaDictamen({ nombre, folio_codigo, proceso, link }: any) {
+function plantillaListoParaDictamen({ nombre, folio_codigo, proceso, link, org_nombre, codigo_formato, version_formato }: any) {
   return `
 <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto">
   <div style="background:#042C53;padding:20px;text-align:center">
-    <h2 style="color:#fff;margin:0">TRACEA</h2>
+    <h2 style="color:#fff;margin:0">${(org_nombre || "TRACEA").toUpperCase()}</h2>
     <p style="color:#aac;margin:4px 0 0;font-size:13px">Plataforma de Gestión de Riesgos</p>
   </div>
   <div style="padding:28px;background:#f9f9f9">
@@ -511,17 +517,17 @@ function plantillaListoParaDictamen({ nombre, folio_codigo, proceso, link }: any
     </div>
   </div>
   <div style="background:#eee;padding:12px;text-align:center;font-size:11px;color:#888">
-    FOR-SGC-11-01 · TRACEA · Documento confidencial
+    ${footerLinea(org_nombre, codigo_formato, version_formato)}
   </div>
 </div>`;
 }
 
-function plantillaDictamen({ nombre, folio_codigo, proceso, conclusion, motivo, version, link }: any) {
+function plantillaDictamen({ nombre, folio_codigo, proceso, conclusion, motivo, version, link, org_nombre, codigo_formato, version_formato }: any) {
   const aprobado = conclusion === "Aprobado";
   return `
 <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto">
   <div style="background:#042C53;padding:20px;text-align:center">
-    <h2 style="color:#fff;margin:0">TRACEA</h2>
+    <h2 style="color:#fff;margin:0">${(org_nombre || "TRACEA").toUpperCase()}</h2>
     <p style="color:#aac;margin:4px 0 0;font-size:13px">Plataforma de Gestión de Riesgos</p>
   </div>
   <div style="padding:28px;background:#f9f9f9">
@@ -546,7 +552,7 @@ function plantillaDictamen({ nombre, folio_codigo, proceso, conclusion, motivo, 
     </div>
   </div>
   <div style="background:#eee;padding:12px;text-align:center;font-size:11px;color:#888">
-    FOR-SGC-11-01 · TRACEA · Documento confidencial
+    ${footerLinea(org_nombre, codigo_formato, version_formato)}
   </div>
 </div>`;
 }
