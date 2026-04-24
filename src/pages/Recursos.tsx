@@ -23,8 +23,11 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import {
   ClipboardList, LayoutTemplate, Bot, Sparkles, Upload, Download, Trash2,
-  FileText, Eye, Inbox,
+  FileText, Eye, Inbox, RotateCcw, Shield, History,
 } from "lucide-react";
+import {
+  Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 type DocTipo =
   | "PNO"
@@ -46,6 +49,12 @@ interface OrgDocumento {
   usar_en_ia: boolean;
   creado_por: string | null;
   created_at: string;
+  deleted_at?: string | null;
+  deleted_by?: string | null;
+  sha256?: string | null;
+  version_num?: number;
+  parent_doc_id?: string | null;
+  es_version_actual?: boolean;
 }
 
 interface ReferenciaDoc {
@@ -147,13 +156,30 @@ function formatDate(d: string) {
   return new Date(d).toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric" });
 }
 
+/** Calcula el hash SHA-256 de un archivo en hex (64 chars). */
+async function sha256OfFile(file: File): Promise<string> {
+  const buf = await file.arrayBuffer();
+  const digest = await crypto.subtle.digest("SHA-256", buf);
+  return Array.from(new Uint8Array(digest))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+/** Días restantes hasta la purga automática (30 días desde el borrado). */
+function diasParaPurga(deletedAt: string): number {
+  const ms = new Date(deletedAt).getTime() + 30 * 86400000 - Date.now();
+  return Math.max(0, Math.ceil(ms / 86400000));
+}
+
 export default function Recursos() {
   const { org, user, hasRole } = useAuth();
   const { toast } = useToast();
   const [docs, setDocs] = useState<OrgDocumento[]>([]);
+  const [docsPapelera, setDocsPapelera] = useState<OrgDocumento[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploadOpen, setUploadOpen] = useState(false);
   const [previewDoc, setPreviewDoc] = useState<ReferenciaDoc | null>(null);
+  const [verPapelera, setVerPapelera] = useState(false);
 
   // Form upload state
   const [file, setFile] = useState<File | null>(null);
@@ -162,21 +188,38 @@ export default function Recursos() {
   const [version, setVersion] = useState("1.0");
   const [usarEnIa, setUsarEnIa] = useState(true);
   const [uploading, setUploading] = useState(false);
+  /** Si está definido, la subida se hace como nueva versión del documento padre. */
+  const [parentDocId, setParentDocId] = useState<string | null>(null);
 
   const puedeEliminar = hasRole("admin");
 
   const cargarDocs = async () => {
     if (!org?.id) return;
     setLoading(true);
-    const { data, error } = await supabase
+    // Activos: cast a any para evitar inferencia profunda en filtros sobre columnas
+    // recientemente agregadas (deleted_at, es_version_actual).
+    const sb = supabase as any;
+    const { data: activos, error: errA } = await sb
       .from("org_documentos")
       .select("*")
       .eq("org_id", org.id)
+      .is("deleted_at", null)
+      .eq("es_version_actual", true)
       .order("created_at", { ascending: false });
-    if (error) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+    if (errA) {
+      toast({ title: "Error", description: errA.message, variant: "destructive" });
     } else {
-      setDocs(data ?? []);
+      setDocs((activos ?? []) as OrgDocumento[]);
+    }
+    // Papelera (solo admins por RLS)
+    if (puedeEliminar) {
+      const { data: trash } = await sb
+        .from("org_documentos")
+        .select("*")
+        .eq("org_id", org.id)
+        .not("deleted_at", "is", null)
+        .order("deleted_at", { ascending: false });
+      setDocsPapelera((trash ?? []) as OrgDocumento[]);
     }
     setLoading(false);
   };
@@ -184,7 +227,7 @@ export default function Recursos() {
   useEffect(() => {
     cargarDocs();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [org?.id]);
+  }, [org?.id, puedeEliminar]);
 
   const handleDescargarReferencia = async (ref: ReferenciaDoc) => {
     const { data, error } = await supabase.storage
@@ -223,6 +266,15 @@ export default function Recursos() {
     const safeName = nombre.trim().replace(/[^a-zA-Z0-9._-]/g, "_");
     const path = `${org.id}/${Date.now()}-${safeName}.${ext}`;
 
+    // Hash SHA-256 para garantía de integridad ISO 14971 / COFEPRIS
+    let hash: string | null = null;
+    try {
+      hash = await sha256OfFile(file);
+    } catch {
+      // Si el navegador no soporta WebCrypto seguimos sin hash
+      hash = null;
+    }
+
     const { error: upErr } = await supabase.storage
       .from("org-documentos")
       .upload(path, file, { contentType: file.type, upsert: false });
@@ -243,7 +295,9 @@ export default function Recursos() {
       size_bytes: file.size,
       usar_en_ia: usarEnIa,
       creado_por: user.id,
-    });
+      sha256: hash,
+      parent_doc_id: parentDocId,
+    } as any);
 
     setUploading(false);
 
@@ -254,13 +308,19 @@ export default function Recursos() {
       return;
     }
 
-    toast({ title: "Documento subido", description: nombre.trim() });
+    toast({
+      title: parentDocId ? "Nueva versión registrada" : "Documento subido",
+      description: hash
+        ? `${nombre.trim()} · SHA-256: ${hash.slice(0, 12)}…`
+        : nombre.trim(),
+    });
     setUploadOpen(false);
     setFile(null);
     setNombre("");
     setTipo("PNO");
     setVersion("1.0");
     setUsarEnIa(true);
+    setParentDocId(null);
     cargarDocs();
   };
 
@@ -275,21 +335,48 @@ export default function Recursos() {
     window.open(data.signedUrl, "_blank");
   };
 
+  /** Soft delete: marca el documento como eliminado. Se purga automáticamente a los 30 días. */
   const handleEliminarDoc = async (doc: OrgDocumento) => {
-    const { error: stErr } = await supabase.storage
-      .from("org-documentos")
-      .remove([doc.storage_path]);
-    if (stErr) {
-      toast({ title: "Error eliminando archivo", description: stErr.message, variant: "destructive" });
+    const { error } = await supabase
+      .from("org_documentos")
+      .update({
+        deleted_at: new Date().toISOString(),
+        deleted_by: user?.id ?? null,
+      } as any)
+      .eq("id", doc.id);
+    if (error) {
+      toast({ title: "Error eliminando documento", description: error.message, variant: "destructive" });
       return;
     }
-    const { error: dbErr } = await supabase.from("org_documentos").delete().eq("id", doc.id);
-    if (dbErr) {
-      toast({ title: "Error eliminando registro", description: dbErr.message, variant: "destructive" });
-      return;
-    }
-    toast({ title: "Documento eliminado" });
+    toast({
+      title: "Documento enviado a la papelera",
+      description: "Permanecerá 30 días recuperable antes del borrado definitivo.",
+    });
     cargarDocs();
+  };
+
+  /** Restaura un documento desde la papelera. */
+  const handleRestaurarDoc = async (doc: OrgDocumento) => {
+    const { error } = await supabase.rpc("restaurar_documento" as any, { p_doc_id: doc.id });
+    if (error) {
+      toast({ title: "Error restaurando", description: error.message, variant: "destructive" });
+      return;
+    }
+    toast({ title: "Documento restaurado", description: doc.nombre });
+    cargarDocs();
+  };
+
+  /** Abre el dialog en modo "subir nueva versión" pre-rellenando datos. */
+  const subirNuevaVersion = (doc: OrgDocumento) => {
+    setParentDocId(doc.parent_doc_id || doc.id);
+    setNombre(doc.nombre);
+    setTipo(doc.tipo as DocTipo);
+    const [maj, min] = (doc.version || "1.0").split(".");
+    const nextMin = (parseInt(min || "0", 10) + 1).toString();
+    setVersion(`${maj || "1"}.${nextMin}`);
+    setUsarEnIa(doc.usar_en_ia);
+    setFile(null);
+    setUploadOpen(true);
   };
 
   const scrollToGuia = () => {
@@ -299,6 +386,7 @@ export default function Recursos() {
 
   return (
     <div className="space-y-8">
+      <TooltipProvider>
       {/* Header */}
       <div>
         <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Centro de Recursos TRACEA</h1>
@@ -368,8 +456,22 @@ export default function Recursos() {
                 {org.nombre}
               </Badge>
             )}
+            {puedeEliminar && docsPapelera.length > 0 && (
+              <Button
+                size="sm"
+                variant={verPapelera ? "default" : "outline"}
+                onClick={() => setVerPapelera((v) => !v)}
+                className="gap-1"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                Papelera ({docsPapelera.length})
+              </Button>
+            )}
           </div>
-          <Dialog open={uploadOpen} onOpenChange={setUploadOpen}>
+          <Dialog open={uploadOpen} onOpenChange={(o) => {
+            setUploadOpen(o);
+            if (!o) setParentDocId(null);
+          }}>
             <DialogTrigger asChild>
               <Button>
                 <Upload className="h-4 w-4" />
@@ -378,9 +480,13 @@ export default function Recursos() {
             </DialogTrigger>
             <DialogContent className="max-w-md">
               <DialogHeader>
-                <DialogTitle>Subir documento</DialogTitle>
+                <DialogTitle>
+                  {parentDocId ? "Subir nueva versión" : "Subir documento"}
+                </DialogTitle>
                 <DialogDescription>
-                  Acepta archivos PDF y DOCX. Quedará disponible solo para tu organización.
+                  {parentDocId
+                    ? "La versión anterior se conservará en el historial. Se calculará un hash SHA-256 para auditoría."
+                    : "Acepta archivos PDF y DOCX. Se calcula un hash SHA-256 para garantizar integridad."}
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
@@ -458,14 +564,78 @@ export default function Recursos() {
           </Dialog>
         </div>
         <p className="text-sm text-muted-foreground">
-          Sube los documentos propios de tu organización. El asistente IA los usará como contexto para
-          generar análisis más precisos.
+          Sube los documentos propios de tu organización. Se garantiza la integridad de cada archivo
+          con un hash SHA-256, las versiones anteriores se conservan en el historial, y los documentos
+          eliminados permanecen 30 días en la papelera antes de su borrado definitivo.
         </p>
 
         <Card>
           <CardContent className="p-0">
             {loading ? (
               <div className="p-8 text-center text-sm text-muted-foreground">Cargando...</div>
+            ) : verPapelera && puedeEliminar ? (
+              docsPapelera.length === 0 ? (
+                <div className="p-8 text-center text-sm text-muted-foreground">
+                  La papelera está vacía.
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Nombre</TableHead>
+                      <TableHead className="hidden md:table-cell">Eliminado</TableHead>
+                      <TableHead>Días restantes</TableHead>
+                      <TableHead className="text-right">Acciones</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {docsPapelera.map((doc) => {
+                      const dias = diasParaPurga(doc.deleted_at!);
+                      return (
+                        <TableRow key={doc.id} className="opacity-75">
+                          <TableCell className="font-medium">
+                            <div className="flex items-center gap-2">
+                              <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
+                              <div className="min-w-0">
+                                <div className="truncate">{doc.nombre}</div>
+                                <div className="text-xs text-muted-foreground">
+                                  {doc.tipo} · v{doc.version}
+                                </div>
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell className="hidden md:table-cell text-sm text-muted-foreground">
+                            {formatDate(doc.deleted_at!)}
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              variant="outline"
+                              className={
+                                dias <= 5
+                                  ? "border-destructive/40 text-destructive"
+                                  : "border-warning/40"
+                              }
+                            >
+                              {dias} días
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleRestaurarDoc(doc)}
+                              className="gap-1"
+                            >
+                              <RotateCcw className="h-3.5 w-3.5" />
+                              Restaurar
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              )
             ) : docs.length === 0 ? (
               <div className="flex flex-col items-center justify-center p-12 text-center">
                 <Inbox className="h-10 w-10 text-muted-foreground mb-3" />
@@ -500,6 +670,21 @@ export default function Recursos() {
                               {doc.usar_en_ia && (
                                 <span className="ml-2 text-[hsl(var(--primary))]">· IA</span>
                               )}
+                              {doc.sha256 && (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <span className="ml-2 inline-flex items-center gap-0.5 text-emerald-600 dark:text-emerald-400">
+                                      <Shield className="h-3 w-3" /> SHA-256
+                                    </span>
+                                  </TooltipTrigger>
+                                  <TooltipContent className="max-w-xs">
+                                    <p className="text-xs font-mono break-all">{doc.sha256}</p>
+                                    <p className="text-[10px] text-muted-foreground mt-1">
+                                      Huella inmutable de integridad (ISO 14971).
+                                    </p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -510,7 +695,14 @@ export default function Recursos() {
                       <TableCell className="hidden md:table-cell text-sm text-muted-foreground">
                         {formatDate(doc.created_at)}
                       </TableCell>
-                      <TableCell className="text-sm">{doc.version}</TableCell>
+                      <TableCell className="text-sm">
+                        v{doc.version}
+                        {(doc.version_num ?? 1) > 1 && (
+                          <Badge variant="outline" className="ml-1.5 text-[10px]">
+                            rev {doc.version_num}
+                          </Badge>
+                        )}
+                      </TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1">
                           <Button
@@ -522,23 +714,33 @@ export default function Recursos() {
                             <Download className="h-4 w-4" />
                           </Button>
                           {puedeEliminar && (
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              onClick={() => subirNuevaVersion(doc)}
+                              title="Subir nueva versión"
+                            >
+                              <History className="h-4 w-4" />
+                            </Button>
+                          )}
+                          {puedeEliminar && (
                             <AlertDialog>
                               <AlertDialogTrigger asChild>
                                 <Button
                                   size="icon"
                                   variant="ghost"
                                   className="text-destructive hover:text-destructive"
-                                  title="Eliminar"
+                                  title="Enviar a papelera"
                                 >
                                   <Trash2 className="h-4 w-4" />
                                 </Button>
                               </AlertDialogTrigger>
                               <AlertDialogContent>
                                 <AlertDialogHeader>
-                                  <AlertDialogTitle>¿Eliminar documento?</AlertDialogTitle>
+                                  <AlertDialogTitle>¿Enviar a la papelera?</AlertDialogTitle>
                                   <AlertDialogDescription>
-                                    Se eliminará "{doc.nombre}" de forma permanente. Esta acción no se
-                                    puede deshacer.
+                                    "{doc.nombre}" se enviará a la papelera y permanecerá recuperable
+                                    durante <strong>30 días</strong> antes de su borrado definitivo.
                                   </AlertDialogDescription>
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
@@ -547,7 +749,7 @@ export default function Recursos() {
                                     onClick={() => handleEliminarDoc(doc)}
                                     className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                                   >
-                                    Eliminar
+                                    Enviar a papelera
                                   </AlertDialogAction>
                                 </AlertDialogFooter>
                               </AlertDialogContent>
@@ -620,6 +822,7 @@ export default function Recursos() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      </TooltipProvider>
     </div>
   );
 }

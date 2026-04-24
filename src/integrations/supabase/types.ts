@@ -436,44 +436,62 @@ export type Database = {
         Row: {
           creado_por: string | null
           created_at: string
+          deleted_at: string | null
+          deleted_by: string | null
+          es_version_actual: boolean
           id: string
           mime_type: string | null
           nombre: string
           org_id: string
+          parent_doc_id: string | null
+          sha256: string | null
           size_bytes: number | null
           storage_path: string
           tipo: string
           updated_at: string
           usar_en_ia: boolean
           version: string
+          version_num: number
         }
         Insert: {
           creado_por?: string | null
           created_at?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
+          es_version_actual?: boolean
           id?: string
           mime_type?: string | null
           nombre: string
           org_id: string
+          parent_doc_id?: string | null
+          sha256?: string | null
           size_bytes?: number | null
           storage_path: string
           tipo: string
           updated_at?: string
           usar_en_ia?: boolean
           version?: string
+          version_num?: number
         }
         Update: {
           creado_por?: string | null
           created_at?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
+          es_version_actual?: boolean
           id?: string
           mime_type?: string | null
           nombre?: string
           org_id?: string
+          parent_doc_id?: string | null
+          sha256?: string | null
           size_bytes?: number | null
           storage_path?: string
           tipo?: string
           updated_at?: string
           usar_en_ia?: boolean
           version?: string
+          version_num?: number
         }
         Relationships: [
           {
@@ -953,6 +971,7 @@ export type Database = {
       }
       next_folio_code: { Args: never; Returns: string }
       next_ticket_code: { Args: { p_org_id: string }; Returns: string }
+      purgar_documentos_eliminados: { Args: never; Returns: number }
       read_email_batch: {
         Args: { batch_size: number; queue_name: string; vt: number }
         Returns: {
@@ -961,6 +980,7 @@ export type Database = {
           read_ct: number
         }[]
       }
+      restaurar_documento: { Args: { p_doc_id: string }; Returns: boolean }
       todos_firmaron: { Args: { p_folio_id: string }; Returns: boolean }
     }
     Enums: {
