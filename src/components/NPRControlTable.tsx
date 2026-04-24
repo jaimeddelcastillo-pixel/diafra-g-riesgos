@@ -107,8 +107,8 @@ export function NPRControlTable({ risks, onRiskClick }: { risks: RiskWithFolio[]
         </thead>
         <tbody>
           {rows.map(({ r, inicial, residual, reduccion, criticoResidual, estado, accion }) => {
-            const levelInicial = getNPRLevel(inicial, r.severidad);
-            const levelResidual = getNPRLevel(residual, r.sev_residual);
+            const levelInicial = nprLevel(inicial);
+            const levelResidual = nprLevel(residual);
             return (
               <tr
                 key={r.id}
@@ -126,9 +126,24 @@ export function NPRControlTable({ risks, onRiskClick }: { risks: RiskWithFolio[]
                 <td className="px-3 py-3"><NPRBadge value={residual} label={levelResidual.label} /></td>
                 <td className={`px-3 py-3 font-bold ${reduccion > 0 ? "text-success" : "text-destructive"}`}>{reduccion > 0 ? "↓" : "↑"} {Math.abs(reduccion)}%</td>
                 <td className="px-3 py-3">
+                  {alertaS9 ? (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Badge className="border-npr-high/30 bg-npr-high/10 text-npr-high hover:bg-npr-high/10">⚠️ S≥9</Badge>
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-xs">
+                          Severidad crítica — Este riesgo requiere Dictamen de Beneficio-Riesgo firmado por el Responsable Sanitario y controles permanentes que no pueden eliminarse, conforme a ISO 14971
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  ) : "—"}
+                </td>
+                <td className="px-3 py-3">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="font-medium">{estado.icon} {estado.label}</span>
                     {criticoResidual && <Badge className="border-destructive/30 bg-destructive/10 text-destructive hover:bg-destructive/10">⚠️ Crítico residual</Badge>}
+                    {alertaS9 && <Badge className="border-npr-high/30 bg-npr-high/10 text-npr-high hover:bg-npr-high/10">Dictamen requerido</Badge>}
                   </div>
                 </td>
                 <td className="px-3 py-3 font-medium text-primary">{accion}</td>
