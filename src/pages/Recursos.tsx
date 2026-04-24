@@ -92,8 +92,8 @@ const REFERENCIAS: ReferenciaDoc[] = [
       "Plantilla oficial TRACEA para análisis AMEF. Compatible con el sistema de firmas electrónicas y checklist NOM-241 de la plataforma.",
     badgeText: "Formato oficial",
     badgeClass: "bg-emerald-500/15 text-emerald-600 border-emerald-500/30 dark:text-emerald-400",
-    storagePath: "formato-amgr.docx",
-    buttonLabel: "Descargar DOCX",
+    storagePath: "formato-amgr.pdf",
+    buttonLabel: "Descargar PDF",
     preview: {
       titulo: "Formato Archivo Maestro de Gestión de Riesgos",
       cuerpo: [
