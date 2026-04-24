@@ -437,6 +437,70 @@ export default function Recursos() {
     setHistorialLoading(false);
   };
 
+  /** Copia el hash SHA-256 completo al portapapeles. */
+  const copiarHash = async (hash: string) => {
+    try {
+      await navigator.clipboard.writeText(hash);
+      toast({
+        title: "Hash copiado",
+        description: "SHA-256 copiado al portapapeles. Úsalo como evidencia ante COFEPRIS.",
+      });
+    } catch {
+      toast({ title: "No se pudo copiar", variant: "destructive" });
+    }
+  };
+
+  /**
+   * Verifica la integridad del documento: descarga el archivo, recalcula SHA-256
+   * en el navegador y lo compara contra el hash registrado en la base de datos.
+   */
+  const verificarIntegridad = async (doc: OrgDocumento) => {
+    if (!doc.sha256) {
+      toast({
+        title: "Sin hash registrado",
+        description: "Este documento se subió antes de la integración SHA-256.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setVerificando(doc.id);
+    try {
+      const { data, error } = await supabase.storage
+        .from("org-documentos")
+        .download(doc.storage_path);
+      if (error || !data) throw new Error(error?.message || "No se pudo descargar el archivo");
+
+      const buf = await data.arrayBuffer();
+      const digest = await crypto.subtle.digest("SHA-256", buf);
+      const hashCalculado = Array.from(new Uint8Array(digest))
+        .map((b) => b.toString(16).padStart(2, "0"))
+        .join("");
+
+      if (hashCalculado === doc.sha256) {
+        setVerificacion((prev) => ({ ...prev, [doc.id]: "ok" }));
+        toast({
+          title: "✅ Documento íntegro",
+          description: "El hash coincide — el archivo no ha sido modificado.",
+        });
+      } else {
+        setVerificacion((prev) => ({ ...prev, [doc.id]: "fail" }));
+        toast({
+          title: "❌ Alerta de integridad",
+          description: "El documento puede haber sido modificado. Hash no coincide.",
+          variant: "destructive",
+        });
+      }
+    } catch (e: any) {
+      toast({
+        title: "Error verificando integridad",
+        description: e?.message ?? "Error desconocido",
+        variant: "destructive",
+      });
+    } finally {
+      setVerificando(null);
+    }
+  };
+
   const scrollToGuia = () => {
     const el = document.getElementById("ref-guia");
     el?.scrollIntoView({ behavior: "smooth", block: "center" });
