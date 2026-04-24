@@ -829,19 +829,69 @@ export default function Recursos() {
                                 <span className="ml-2 text-[hsl(var(--primary))]">· IA</span>
                               )}
                               {doc.sha256 && (
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <span className="ml-2 inline-flex items-center gap-0.5 text-emerald-600 dark:text-emerald-400">
-                                      <Shield className="h-3 w-3" /> SHA-256
-                                    </span>
-                                  </TooltipTrigger>
-                                  <TooltipContent className="max-w-xs">
-                                    <p className="text-xs font-mono break-all">{doc.sha256}</p>
-                                    <p className="text-[10px] text-muted-foreground mt-1">
-                                      Huella inmutable de integridad (ISO 14971).
-                                    </p>
-                                  </TooltipContent>
-                                </Tooltip>
+                                <span className="ml-2 inline-flex items-center gap-1 align-middle">
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <span
+                                        className={
+                                          "inline-flex items-center gap-0.5 font-mono text-[11px] " +
+                                          (verificacion[doc.id] === "ok"
+                                            ? "text-emerald-600 dark:text-emerald-400"
+                                            : verificacion[doc.id] === "fail"
+                                              ? "text-destructive"
+                                              : "text-emerald-600 dark:text-emerald-400")
+                                        }
+                                      >
+                                        <Shield className="h-3 w-3" />…{doc.sha256.slice(-8)}
+                                      </span>
+                                    </TooltipTrigger>
+                                    <TooltipContent className="max-w-xs">
+                                      <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1">
+                                        SHA-256 (huella inmutable ISO 14971)
+                                      </p>
+                                      <p className="text-xs font-mono break-all">{doc.sha256}</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <button
+                                        type="button"
+                                        onClick={() => copiarHash(doc.sha256!)}
+                                        className="inline-flex items-center text-muted-foreground hover:text-foreground transition-colors"
+                                        aria-label="Copiar hash"
+                                      >
+                                        <Copy className="h-3 w-3" />
+                                      </button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>Copiar hash completo</TooltipContent>
+                                  </Tooltip>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <button
+                                        type="button"
+                                        onClick={() => verificarIntegridad(doc)}
+                                        disabled={verificando === doc.id}
+                                        className="inline-flex items-center text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+                                        aria-label="Verificar integridad"
+                                      >
+                                        {verificando === doc.id ? (
+                                          <Loader2 className="h-3 w-3 animate-spin" />
+                                        ) : verificacion[doc.id] === "ok" ? (
+                                          <CheckCircle2 className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />
+                                        ) : verificacion[doc.id] === "fail" ? (
+                                          <AlertTriangle className="h-3 w-3 text-destructive" />
+                                        ) : (
+                                          <Shield className="h-3 w-3" />
+                                        )}
+                                      </button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      {verificando === doc.id
+                                        ? "Verificando…"
+                                        : "Verificar integridad (recalcular SHA-256)"}
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </span>
                               )}
                             </div>
                           </div>
