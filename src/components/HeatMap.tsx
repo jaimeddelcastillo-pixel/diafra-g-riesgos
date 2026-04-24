@@ -1,272 +1,90 @@
-import { useRef, useEffect, useState } from "react";
+import { useMemo, useState } from "react";
 import type { Riesgo } from "@/hooks/useFolios";
 
-const GRID = 10;
-const CELL = 36;
-const GAP = 2;
-const LABEL_W = 20;
-const LABEL_H = 16;
-const PAD = 4;
+type Mode = "inicial" | "residual";
 
-function getCellBg(sev: number, ocu: number): string {
-  const val = sev * ocu;
-  if (val <= 6) return "hsl(var(--success) / 0.15)";
-  if (val <= 15) return "hsl(var(--warning) / 0.15)";
-  if (val <= 30) return "hsl(var(--npr-high) / 0.15)";
-  return "hsl(var(--destructive) / 0.15)";
+const occurrenceLabels = ["Rara vez", "Eventualmente", "Puede ocurrir", "Probable", "Muy frecuente"];
+const severityLabels = ["Insignificante", "Menor", "Moderado", "Mayor", "Catastrófico"];
+
+function toFivePoint(value: number) {
+  return Math.min(5, Math.max(1, Math.ceil(value / 2)));
 }
 
-function getDotColor(sev: number, ocu: number): string {
-  const val = sev * ocu;
-  if (val <= 6) return "hsl(var(--success))";
-  if (val <= 15) return "hsl(var(--warning))";
-  if (val <= 30) return "hsl(var(--npr-high))";
-  return "hsl(var(--destructive))";
-}
-
-/** Convert grid indices (0-based) to SVG pixel center */
-function cellCenter(col: number, row: number) {
-  return {
-    x: LABEL_W + PAD + col * (CELL + GAP) + CELL / 2,
-    y: LABEL_H + PAD + row * (CELL + GAP) + CELL / 2,
-  };
-}
-
-interface Migration {
-  fromSev: number;
-  fromOcu: number;
-  toSev: number;
-  toOcu: number;
+function zone(score: number) {
+  if (score <= 3) return { cls: "bg-success/15 border-success/30 text-success", label: "Asumir el riesgo" };
+  if (score <= 6) return { cls: "bg-warning/15 border-warning/35 text-warning", label: "Reducir el riesgo" };
+  if (score <= 12) return { cls: "bg-npr-high/15 border-npr-high/35 text-npr-high", label: "Compartir o transferir" };
+  return { cls: "bg-destructive/15 border-destructive/35 text-destructive", label: "Evitar el riesgo" };
 }
 
 export function HeatMap({ risks }: { risks: Riesgo[] }) {
-  const migrations: Migration[] = risks
-    .filter((r) => r.sev_residual !== undefined && r.ocu_residual !== undefined)
-    .map((r) => ({
-      fromSev: Math.min(r.severidad, 10),
-      fromOcu: Math.min(r.ocurrencia, 10),
-      toSev: Math.min(r.sev_residual, 10),
-      toOcu: Math.min(r.ocu_residual, 10),
-    }));
+  const [mode, setMode] = useState<Mode>("inicial");
 
-  // Count initial hits per cell
-  const initialGrid: number[][] = Array.from({ length: 10 }, () => Array(10).fill(0));
-  // Count residual hits per cell
-  const residualGrid: number[][] = Array.from({ length: 10 }, () => Array(10).fill(0));
-
-  migrations.forEach((m) => {
-    initialGrid[m.fromSev - 1][m.fromOcu - 1]++;
-    residualGrid[m.toSev - 1][m.toOcu - 1]++;
-  });
-
-  const totalW = LABEL_W + PAD + GRID * (CELL + GAP) - GAP;
-  const totalH = LABEL_H + PAD + GRID * (CELL + GAP) - GAP;
-
-  // Deduplicate arrows (group by from→to)
-  const arrowMap = new Map<string, { from: Migration; count: number }>();
-  migrations.forEach((m) => {
-    if (m.fromSev === m.toSev && m.fromOcu === m.toOcu) return; // no movement
-    const key = `${m.fromSev},${m.fromOcu}-${m.toSev},${m.toOcu}`;
-    const existing = arrowMap.get(key);
-    if (existing) existing.count++;
-    else arrowMap.set(key, { from: m, count: 1 });
-  });
+  const grid = useMemo(() => {
+    const counts = Array.from({ length: 5 }, () => Array(5).fill(0));
+    risks.forEach((risk) => {
+      const sev = toFivePoint(mode === "inicial" ? risk.severidad : risk.sev_residual);
+      const ocu = toFivePoint(mode === "inicial" ? risk.ocurrencia : risk.ocu_residual);
+      counts[sev - 1][ocu - 1]++;
+    });
+    return counts;
+  }, [mode, risks]);
 
   return (
-    <div className="overflow-x-auto">
-      <div className="min-w-[420px]">
-        {/* Legend */}
-        <div className="flex items-center gap-4 mb-3 text-[10px] text-muted-foreground flex-wrap">
-          <span className="flex items-center gap-1">
-            <span className="inline-block w-2.5 h-2.5 rounded-full border-2 border-foreground/60 bg-transparent" />
-            Inicial
-          </span>
-          <span className="flex items-center gap-1">
-            <span className="inline-block w-2 h-2 rounded-full bg-foreground/60" />
-            Residual
-          </span>
-          <span className="flex items-center gap-1">
-            <svg width="18" height="10"><line x1="0" y1="5" x2="14" y2="5" stroke="currentColor" strokeWidth="1.5" /><polygon points="14,2 18,5 14,8" fill="currentColor" /></svg>
-            Migración
-          </span>
-        </div>
-
-        <div className="flex items-end mb-1" style={{ paddingLeft: LABEL_W + PAD }}>
-          <span className="text-[10px] text-muted-foreground font-medium tracking-wide w-full text-center">
-            OCURRENCIA →
-          </span>
-        </div>
-
-        <div className="flex">
-          <div className="flex flex-col items-center justify-center" style={{ width: LABEL_W }}>
-            <span
-              className="text-[10px] text-muted-foreground font-medium tracking-wide"
-              style={{ writingMode: "vertical-rl", transform: "rotate(180deg)" }}
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="inline-flex rounded-md border bg-muted/40 p-1">
+          {(["inicial", "residual"] as const).map((item) => (
+            <button
+              key={item}
+              onClick={() => setMode(item)}
+              className={`rounded px-3 py-1.5 text-xs font-semibold transition-colors ${mode === item ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-primary"}`}
             >
-              SEVERIDAD →
-            </span>
+              {item === "inicial" ? "Inicial" : "Residual"}
+            </button>
+          ))}
+        </div>
+        <div className="flex flex-wrap gap-2 text-[10px] text-muted-foreground">
+          <span className="rounded border border-success/30 bg-success/10 px-2 py-1 text-success">1-3</span>
+          <span className="rounded border border-warning/30 bg-warning/10 px-2 py-1 text-warning">4-6</span>
+          <span className="rounded border border-npr-high/30 bg-npr-high/10 px-2 py-1 text-npr-high">8-12</span>
+          <span className="rounded border border-destructive/30 bg-destructive/10 px-2 py-1 text-destructive">15-25</span>
+        </div>
+      </div>
+
+      <div className="overflow-x-auto">
+        <div className="min-w-[720px]">
+          <div className="grid grid-cols-[118px_repeat(5,minmax(104px,1fr))] gap-2 text-xs">
+            <div />
+            {occurrenceLabels.map((label, i) => (
+              <div key={label} className="flex h-12 items-center justify-center rounded border bg-card px-2 text-center font-medium text-muted-foreground">
+                {i + 1}. {label}
+              </div>
+            ))}
+
+            {[5, 4, 3, 2, 1].map((sev) => (
+              <>
+                <div key={`sev-${sev}`} className="flex min-h-24 items-center justify-end rounded border bg-card px-3 text-right font-medium text-muted-foreground">
+                  {sev}. {severityLabels[sev - 1]}
+                </div>
+                {[1, 2, 3, 4, 5].map((ocu) => {
+                  const score = sev * ocu;
+                  const z = zone(score);
+                  const count = grid[sev - 1][ocu - 1];
+                  return (
+                    <div key={`${sev}-${ocu}`} className={`min-h-24 rounded-md border p-2 ${z.cls}`}>
+                      <div className="flex items-start justify-between gap-2">
+                        <span className="text-[10px] font-semibold opacity-75">S{sev}×O{ocu}</span>
+                        {count > 0 && <span className="flex h-8 min-w-8 items-center justify-center rounded-full bg-current px-2 text-sm font-bold"><span className="text-primary-foreground">{count}</span></span>}
+                      </div>
+                      <p className="mt-3 text-[11px] font-semibold leading-tight">{z.label}</p>
+                    </div>
+                  );
+                })}
+              </>
+            ))}
           </div>
-
-          <div className="relative">
-            <svg
-              width={totalW}
-              height={totalH}
-              viewBox={`0 0 ${totalW} ${totalH}`}
-              className="block"
-            >
-              <defs>
-                <marker
-                  id="arrowhead"
-                  markerWidth="6"
-                  markerHeight="4"
-                  refX="5"
-                  refY="2"
-                  orient="auto"
-                >
-                  <polygon
-                    points="0 0, 6 2, 0 4"
-                    fill="hsl(var(--foreground) / 0.5)"
-                  />
-                </marker>
-              </defs>
-
-              {/* Column labels */}
-              {Array.from({ length: 10 }, (_, i) => {
-                const x = LABEL_W + PAD + i * (CELL + GAP) + CELL / 2;
-                return (
-                  <text
-                    key={`cl-${i}`}
-                    x={x}
-                    y={LABEL_H - 4}
-                    textAnchor="middle"
-                    className="fill-muted-foreground"
-                    fontSize="10"
-                    fontFamily="monospace"
-                  >
-                    {i + 1}
-                  </text>
-                );
-              })}
-
-              {/* Row labels + cells */}
-              {Array.from({ length: 10 }, (_, rowIdx) => {
-                const sev = 10 - rowIdx;
-                const y = LABEL_H + PAD + rowIdx * (CELL + GAP);
-                return (
-                  <g key={`row-${sev}`}>
-                    <text
-                      x={LABEL_W - 2}
-                      y={y + CELL / 2 + 4}
-                      textAnchor="end"
-                      className="fill-muted-foreground"
-                      fontSize="10"
-                      fontFamily="monospace"
-                    >
-                      {sev}
-                    </text>
-
-                    {Array.from({ length: 10 }, (_, colIdx) => {
-                      const ocu = colIdx + 1;
-                      const cx = LABEL_W + PAD + colIdx * (CELL + GAP);
-                      const iCount = initialGrid[sev - 1][colIdx];
-                      const rCount = residualGrid[sev - 1][colIdx];
-                      return (
-                        <g key={`${sev}-${ocu}`}>
-                          <rect
-                            x={cx}
-                            y={y}
-                            width={CELL}
-                            height={CELL}
-                            rx={3}
-                            fill={getCellBg(sev, ocu)}
-                          />
-                          {/* Initial count — hollow circle */}
-                          {iCount > 0 && (
-                            <>
-                              <circle
-                                cx={cx + CELL / 2 - (rCount > 0 ? 6 : 0)}
-                                cy={y + CELL / 2}
-                                r={8}
-                                fill="transparent"
-                                stroke={getDotColor(sev, ocu)}
-                                strokeWidth={2}
-                              />
-                              <text
-                                x={cx + CELL / 2 - (rCount > 0 ? 6 : 0)}
-                                y={y + CELL / 2 + 3.5}
-                                textAnchor="middle"
-                                fontSize="9"
-                                fontWeight="bold"
-                                fill={getDotColor(sev, ocu)}
-                              >
-                                {iCount}
-                              </text>
-                            </>
-                          )}
-                          {/* Residual count — filled circle */}
-                          {rCount > 0 && (
-                            <>
-                              <circle
-                                cx={cx + CELL / 2 + (iCount > 0 ? 6 : 0)}
-                                cy={y + CELL / 2}
-                                r={6}
-                                fill={getDotColor(sev, ocu)}
-                                opacity={0.8}
-                              />
-                              <text
-                                x={cx + CELL / 2 + (iCount > 0 ? 6 : 0)}
-                                y={y + CELL / 2 + 3}
-                                textAnchor="middle"
-                                fontSize="8"
-                                fontWeight="bold"
-                                fill="white"
-                              >
-                                {rCount}
-                              </text>
-                            </>
-                          )}
-                        </g>
-                      );
-                    })}
-                  </g>
-                );
-              })}
-
-              {/* Migration arrows */}
-              {Array.from(arrowMap.values()).map(({ from: m, count }, i) => {
-                const fromRow = 10 - m.fromSev;
-                const fromCol = m.fromOcu - 1;
-                const toRow = 10 - m.toSev;
-                const toCol = m.toOcu - 1;
-                const start = cellCenter(fromCol, fromRow);
-                const end = cellCenter(toCol, toRow);
-
-                // Shorten arrow so it doesn't overlap circles
-                const dx = end.x - start.x;
-                const dy = end.y - start.y;
-                const len = Math.sqrt(dx * dx + dy * dy);
-                if (len === 0) return null;
-                const ux = dx / len;
-                const uy = dy / len;
-                const s = { x: start.x + ux * 10, y: start.y + uy * 10 };
-                const e = { x: end.x - ux * 8, y: end.y - uy * 8 };
-
-                return (
-                  <line
-                    key={`arrow-${i}`}
-                    x1={s.x}
-                    y1={s.y}
-                    x2={e.x}
-                    y2={e.y}
-                    stroke="hsl(var(--foreground) / 0.35)"
-                    strokeWidth={1.5}
-                    strokeDasharray="4 2"
-                    markerEnd="url(#arrowhead)"
-                  />
-                );
-              })}
-            </svg>
-          </div>
+          <div className="mt-3 text-center text-xs font-medium text-muted-foreground">Ocurrencia →</div>
         </div>
       </div>
     </div>

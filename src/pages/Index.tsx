@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { NPRBarChart } from "@/components/NPRBarChart";
 import { HeatMap } from "@/components/HeatMap";
+import { NPRControlTable } from "@/components/NPRControlTable";
 import { useFolios, useAllRiesgos, getNPRLevel } from "@/hooks/useFolios";
 import {
   AlertTriangle,
@@ -12,7 +12,6 @@ import {
   Clock,
   UserX,
   CheckCircle2,
-  Circle,
   AlertCircle,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -124,6 +123,16 @@ export default function Dashboard() {
 
   // % reducción de riesgos críticos (inicial → residual)
   const criticalResidual = risks.filter((r) => (r.npr_residual ?? 0) > 150 || r.sev_residual >= 9);
+  const riesgosMejoraron = risks.filter((r) => {
+    const inicial = r.npr ?? r.severidad * r.ocurrencia * r.deteccion;
+    const residual = r.npr_residual ?? r.sev_residual * r.ocu_residual * r.det_residual;
+    return residual < inicial;
+  });
+  const riesgosSinMitigacionEfectiva = risks.filter((r) => {
+    const inicial = r.npr ?? r.severidad * r.ocurrencia * r.deteccion;
+    const residual = r.npr_residual ?? r.sev_residual * r.ocu_residual * r.det_residual;
+    return residual >= inicial;
+  });
   const reduccionCriticos =
     critical.length > 0 ? Math.round(((critical.length - criticalResidual.length) / critical.length) * 100) : 0;
 
@@ -227,6 +236,38 @@ export default function Dashboard() {
           icon={FileX2}
           color={rechazados.length > 0 ? "text-destructive" : "text-muted-foreground"}
           sub="requieren corrección"
+        />
+      </div>
+
+      {/* Resumen ejecutivo regulatorio */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
+        <KPICard
+          label="Riesgos críticos iniciales"
+          value={isLoading ? <Skeleton className="h-8 w-12" /> : critical.length}
+          icon={AlertTriangle}
+          color={critical.length > 0 ? "text-destructive" : "text-success"}
+          sub="NPR >150 o S≥9"
+        />
+        <KPICard
+          label="Riesgos críticos residuales"
+          value={isLoading ? <Skeleton className="h-8 w-12" /> : criticalResidual.length}
+          icon={ShieldAlert}
+          color={criticalResidual.length > 0 ? "text-destructive" : "text-success"}
+          sub="persisten tras mitigación"
+        />
+        <KPICard
+          label="Riesgos que mejoraron"
+          value={isLoading ? <Skeleton className="h-8 w-12" /> : riesgosMejoraron.length}
+          icon={TrendingDown}
+          color="text-success"
+          sub="NPR residual < inicial"
+        />
+        <KPICard
+          label="Sin mitigación efectiva"
+          value={isLoading ? <Skeleton className="h-8 w-12" /> : riesgosSinMitigacionEfectiva.length}
+          icon={AlertCircle}
+          color={riesgosSinMitigacionEfectiva.length > 0 ? "text-destructive" : "text-success"}
+          sub="NPR residual ≥ inicial"
         />
       </div>
 
@@ -460,19 +501,20 @@ export default function Dashboard() {
         </Card>
       </div>
 
-      {/* Gráficas */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Control NPR y matriz regulatoria */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Tabla de Control NPR</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <NPRControlTable risks={risks} onRiskClick={(folioId) => navigate(`/folios/${folioId}`)} />
+        </CardContent>
+      </Card>
+
+      <div className="grid grid-cols-1 gap-6">
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Distribución de NPR (Inicial vs Residual)</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <NPRBarChart risks={risks} />
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Matriz de Calor (Severidad × Ocurrencia)</CardTitle>
+            <CardTitle className="text-base">Matriz de Calor regulatoria</CardTitle>
           </CardHeader>
           <CardContent>
             <HeatMap risks={risks} />
