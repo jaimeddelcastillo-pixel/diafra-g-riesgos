@@ -647,15 +647,51 @@ export default function Recursos() {
                             </Badge>
                           </TableCell>
                           <TableCell className="text-right">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleRestaurarDoc(doc)}
-                              className="gap-1"
-                            >
-                              <RotateCcw className="h-3.5 w-3.5" />
-                              Restaurar
-                            </Button>
+                            <div className="flex items-center justify-end gap-1">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleRestaurarDoc(doc)}
+                                className="gap-1"
+                              >
+                                <RotateCcw className="h-3.5 w-3.5" />
+                                Restaurar
+                              </Button>
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="gap-1 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                    Eliminar permanentemente
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle className="flex items-center gap-2">
+                                      <AlertTriangle className="h-5 w-5 text-destructive" />
+                                      Eliminar definitivamente
+                                    </AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      Esta acción es <strong>irreversible</strong>. El documento
+                                      "{doc.nombre}" será eliminado del sistema y no podrá
+                                      recuperarse.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                    <AlertDialogAction
+                                      onClick={() => handleEliminarPermanente(doc)}
+                                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                    >
+                                      Eliminar permanentemente
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            </div>
                           </TableCell>
                         </TableRow>
                       );
