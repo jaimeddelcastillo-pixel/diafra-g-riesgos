@@ -926,6 +926,88 @@ export default function Recursos() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Modal Historial de versiones */}
+      <Dialog
+        open={historialDoc !== null}
+        onOpenChange={(o) => {
+          if (!o) {
+            setHistorialDoc(null);
+            setHistorialVersiones([]);
+          }
+        }}
+      >
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <History className="h-5 w-5" />
+              Historial de versiones
+            </DialogTitle>
+            <DialogDescription>
+              {historialDoc?.nombre} — {historialVersiones.length} versión
+              {historialVersiones.length !== 1 ? "es" : ""} registrada
+              {historialVersiones.length !== 1 ? "s" : ""}.
+            </DialogDescription>
+          </DialogHeader>
+          {historialLoading ? (
+            <div className="p-6 text-center text-sm text-muted-foreground">Cargando…</div>
+          ) : historialVersiones.length === 0 ? (
+            <div className="p-6 text-center text-sm text-muted-foreground">
+              No hay versiones anteriores.
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Versión</TableHead>
+                  <TableHead className="hidden md:table-cell">Fecha</TableHead>
+                  <TableHead className="hidden md:table-cell">Tamaño</TableHead>
+                  <TableHead className="text-right">Acciones</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {historialVersiones.map((v) => (
+                  <TableRow key={v.id}>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">v{v.version}</span>
+                        <Badge variant="outline" className="text-[10px]">
+                          rev {v.version_num ?? 1}
+                        </Badge>
+                        {v.es_version_actual && (
+                          <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/15 text-[10px]">
+                            Versión actual
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="text-xs text-muted-foreground mt-0.5 md:hidden">
+                        {formatDate(v.created_at)} · {formatBytes(v.size_bytes)}
+                      </div>
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell text-sm text-muted-foreground">
+                      {formatDate(v.created_at)}
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell text-sm text-muted-foreground">
+                      {formatBytes(v.size_bytes)}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleDescargarDoc(v)}
+                        className="gap-1"
+                      >
+                        <Download className="h-3.5 w-3.5" />
+                        Descargar
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </DialogContent>
+      </Dialog>
       </TooltipProvider>
     </div>
   );
