@@ -23,7 +23,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import {
   ClipboardList, LayoutTemplate, Bot, Sparkles, Upload, Download, Trash2,
-  FileText, Eye, Inbox, RotateCcw, Shield, History,
+  FileText, Eye, Inbox, RotateCcw, Shield, History, Copy, CheckCircle2, AlertTriangle, Loader2,
 } from "lucide-react";
 import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
@@ -363,6 +363,33 @@ export default function Recursos() {
       return;
     }
     toast({ title: "Documento restaurado", description: doc.nombre });
+    cargarDocs();
+  };
+
+  /**
+   * Eliminación permanente: ejecuta la RPC SECURITY DEFINER que valida permisos,
+   * borra el registro y devuelve el storage_path para limpiar el bucket.
+   */
+  const handleEliminarPermanente = async (doc: OrgDocumento) => {
+    const { data: path, error } = await supabase.rpc(
+      "eliminar_documento_permanente" as any,
+      { p_doc_id: doc.id },
+    );
+    if (error) {
+      toast({
+        title: "Error eliminando definitivamente",
+        description: error.message,
+        variant: "destructive",
+      });
+      return;
+    }
+    if (path && typeof path === "string") {
+      await supabase.storage.from("org-documentos").remove([path]);
+    }
+    toast({
+      title: "Documento eliminado permanentemente",
+      description: `${doc.nombre} fue borrado del sistema.`,
+    });
     cargarDocs();
   };
 
