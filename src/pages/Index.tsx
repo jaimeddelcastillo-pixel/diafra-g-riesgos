@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { NPRBarChart } from "@/components/NPRBarChart";
 import { HeatMap } from "@/components/HeatMap";
+import { NPRControlTable } from "@/components/NPRControlTable";
 import { useFolios, useAllRiesgos, getNPRLevel } from "@/hooks/useFolios";
 import {
   AlertTriangle,
@@ -12,7 +12,6 @@ import {
   Clock,
   UserX,
   CheckCircle2,
-  Circle,
   AlertCircle,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
