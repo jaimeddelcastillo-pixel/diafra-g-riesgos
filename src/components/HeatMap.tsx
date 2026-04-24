@@ -1,19 +1,44 @@
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import type { Riesgo } from "@/hooks/useFolios";
 
 type Mode = "inicial" | "residual";
 
-const occurrenceLabels = ["Rara vez", "Eventualmente", "Puede ocurrir", "Probable", "Muy frecuente"];
-const severityLabels = ["Insignificante", "Menor", "Moderado", "Mayor", "Catastrófico"];
+const occurrenceLabels: Record<number, string> = {
+  10: "Muy frecuente (>50% lotes)",
+  9: "Casi siempre (1 de cada 3)",
+  8: "Recurrente (semanal)",
+  7: "Frecuente (mensual)",
+  6: "Ocasional (cada 6 meses)",
+  5: "Ocasional (cada 6 meses)",
+  4: "Aislada (anual)",
+  3: "Aislada (anual)",
+  2: "Rara vez (históricamente no)",
+  1: "Rara vez (históricamente no)",
+};
 
-function toFivePoint(value: number) {
-  return Math.min(5, Math.max(1, Math.ceil(value / 2)));
+const severityLabels: Record<number, string> = {
+  10: "Catastrófico / Muerte",
+  9: "Muy Alta / Lesión permanente",
+  8: "Alta / Lesión grave",
+  7: "Moderadamente Alta / Lesión temporal",
+  6: "Moderada / Molestia",
+  5: "Moderada / Molestia",
+  4: "Baja / Insignificante",
+  3: "Baja / Insignificante",
+  2: "Remota / Sin efecto",
+  1: "Remota / Sin efecto",
+};
+
+function toTraceaScale(value: number) {
+  return Math.min(10, Math.max(1, Math.round(value || 1)));
 }
 
-function zone(score: number) {
-  if (score <= 3) return { cls: "bg-success/15 border-success/30 text-success", label: "Asumir el riesgo" };
-  if (score <= 6) return { cls: "bg-warning/15 border-warning/35 text-warning", label: "Reducir el riesgo" };
-  if (score <= 12) return { cls: "bg-npr-high/15 border-npr-high/35 text-npr-high", label: "Compartir o transferir" };
+function zone(severity: number, occurrence: number) {
+  const score = severity * occurrence;
+  if (score >= 150 || severity >= 9) return { cls: "bg-destructive/15 border-destructive/35 text-destructive", label: "Evitar el riesgo" };
+  if (score >= 60) return { cls: "bg-npr-high/15 border-npr-high/35 text-npr-high", label: "Compartir o transferir" };
+  if (score >= 21) return { cls: "bg-warning/15 border-warning/35 text-warning", label: "Reducir el riesgo" };
+  if (score >= 1) return { cls: "bg-success/15 border-success/30 text-success", label: "Asumir el riesgo" };
   return { cls: "bg-destructive/15 border-destructive/35 text-destructive", label: "Evitar el riesgo" };
 }
 
@@ -21,10 +46,10 @@ export function HeatMap({ risks }: { risks: Riesgo[] }) {
   const [mode, setMode] = useState<Mode>("inicial");
 
   const grid = useMemo(() => {
-    const counts = Array.from({ length: 5 }, () => Array(5).fill(0));
+    const counts = Array.from({ length: 10 }, () => Array(10).fill(0));
     risks.forEach((risk) => {
-      const sev = toFivePoint(mode === "inicial" ? risk.severidad : risk.sev_residual);
-      const ocu = toFivePoint(mode === "inicial" ? risk.ocurrencia : risk.ocu_residual);
+      const sev = toTraceaScale(mode === "inicial" ? risk.severidad : risk.sev_residual);
+      const ocu = toTraceaScale(mode === "inicial" ? risk.ocurrencia : risk.ocu_residual);
       counts[sev - 1][ocu - 1]++;
     });
     return counts;
