@@ -196,28 +196,30 @@ export default function Recursos() {
   const cargarDocs = async () => {
     if (!org?.id) return;
     setLoading(true);
-    // Activos (RLS ya filtra deleted_at IS NULL para no-admins)
-    const { data: activos, error: errA } = await supabase
+    // Activos: cast a any para evitar inferencia profunda en filtros sobre columnas
+    // recientemente agregadas (deleted_at, es_version_actual).
+    const sb = supabase as any;
+    const { data: activos, error: errA } = await sb
       .from("org_documentos")
       .select("*")
       .eq("org_id", org.id)
-      .is("deleted_at" as any, null)
-      .eq("es_version_actual" as any, true)
+      .is("deleted_at", null)
+      .eq("es_version_actual", true)
       .order("created_at", { ascending: false });
     if (errA) {
       toast({ title: "Error", description: errA.message, variant: "destructive" });
     } else {
-      setDocs((activos ?? []) as any);
+      setDocs((activos ?? []) as OrgDocumento[]);
     }
     // Papelera (solo admins por RLS)
     if (puedeEliminar) {
-      const { data: trash } = await supabase
+      const { data: trash } = await sb
         .from("org_documentos")
         .select("*")
         .eq("org_id", org.id)
-        .not("deleted_at" as any, "is", null)
-        .order("deleted_at" as any, { ascending: false });
-      setDocsPapelera((trash ?? []) as any);
+        .not("deleted_at", "is", null)
+        .order("deleted_at", { ascending: false });
+      setDocsPapelera((trash ?? []) as OrgDocumento[]);
     }
     setLoading(false);
   };
