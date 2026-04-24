@@ -181,6 +181,15 @@ export default function Recursos() {
   const [previewDoc, setPreviewDoc] = useState<ReferenciaDoc | null>(null);
   const [verPapelera, setVerPapelera] = useState(false);
 
+  /** Documento para el cual se muestra el historial de versiones (modal). */
+  const [historialDoc, setHistorialDoc] = useState<OrgDocumento | null>(null);
+  const [historialVersiones, setHistorialVersiones] = useState<OrgDocumento[]>([]);
+  const [historialLoading, setHistorialLoading] = useState(false);
+
+  /** Estado de verificación de integridad por documento (id -> resultado). */
+  const [verificando, setVerificando] = useState<string | null>(null);
+  const [verificacion, setVerificacion] = useState<Record<string, "ok" | "fail">>({});
+
   // Form upload state
   const [file, setFile] = useState<File | null>(null);
   const [nombre, setNombre] = useState("");
@@ -404,6 +413,28 @@ export default function Recursos() {
     setUsarEnIa(doc.usar_en_ia);
     setFile(null);
     setUploadOpen(true);
+  };
+
+  /** Carga todas las versiones de un documento (versión actual + anteriores). */
+  const abrirHistorial = async (doc: OrgDocumento) => {
+    setHistorialDoc(doc);
+    setHistorialLoading(true);
+    const rootId = doc.parent_doc_id || doc.id;
+    const sb = supabase as any;
+    const { data, error } = await sb
+      .from("org_documentos")
+      .select("*")
+      .eq("org_id", org!.id)
+      .or(`id.eq.${rootId},parent_doc_id.eq.${rootId}`)
+      .is("deleted_at", null)
+      .order("version_num", { ascending: false });
+    if (error) {
+      toast({ title: "Error cargando historial", description: error.message, variant: "destructive" });
+      setHistorialVersiones([]);
+    } else {
+      setHistorialVersiones((data ?? []) as OrgDocumento[]);
+    }
+    setHistorialLoading(false);
   };
 
   const scrollToGuia = () => {
