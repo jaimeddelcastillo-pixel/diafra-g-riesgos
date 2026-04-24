@@ -123,6 +123,16 @@ export default function Dashboard() {
 
   // % reducción de riesgos críticos (inicial → residual)
   const criticalResidual = risks.filter((r) => (r.npr_residual ?? 0) > 150 || r.sev_residual >= 9);
+  const riesgosMejoraron = risks.filter((r) => {
+    const inicial = r.npr ?? r.severidad * r.ocurrencia * r.deteccion;
+    const residual = r.npr_residual ?? r.sev_residual * r.ocu_residual * r.det_residual;
+    return residual < inicial;
+  });
+  const riesgosSinMitigacionEfectiva = risks.filter((r) => {
+    const inicial = r.npr ?? r.severidad * r.ocurrencia * r.deteccion;
+    const residual = r.npr_residual ?? r.sev_residual * r.ocu_residual * r.det_residual;
+    return residual >= inicial;
+  });
   const reduccionCriticos =
     critical.length > 0 ? Math.round(((critical.length - criticalResidual.length) / critical.length) * 100) : 0;
 
