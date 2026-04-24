@@ -811,10 +811,20 @@ export default function Recursos() {
                             <Button
                               size="icon"
                               variant="ghost"
+                              onClick={() => abrirHistorial(doc)}
+                              title="Ver historial de versiones"
+                            >
+                              <History className="h-4 w-4" />
+                            </Button>
+                          )}
+                          {puedeEliminar && (
+                            <Button
+                              size="icon"
+                              variant="ghost"
                               onClick={() => subirNuevaVersion(doc)}
                               title="Subir nueva versión"
                             >
-                              <History className="h-4 w-4" />
+                              <Upload className="h-4 w-4" />
                             </Button>
                           )}
                           {puedeEliminar && (
