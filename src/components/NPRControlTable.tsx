@@ -1,11 +1,11 @@
 import { useMemo, useState } from "react";
 import { ArrowUpDown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { getNPRLevel } from "@/hooks/useFolios";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import type { Riesgo } from "@/hooks/useFolios";
 
 type RiskWithFolio = Riesgo & { folios?: { codigo: string } | null };
-type SortKey = "id" | "proceso" | "nprInicial" | "nprResidual" | "reduccion" | "estado" | "accion";
+type SortKey = "id" | "proceso" | "nprInicial" | "nprResidual" | "reduccion" | "alertaS9" | "estado" | "accion";
 
 function nprInicial(r: Riesgo) {
   return r.npr ?? r.severidad * r.ocurrencia * r.deteccion;
@@ -18,11 +18,20 @@ function nprResidual(r: Riesgo) {
 function accionRegulatoria(npr: number) {
   if (npr < 60) return "Asumir";
   if (npr < 150) return "Reducir";
-  return "Transferir o Evitar";
+  if (npr < 300) return "Transferir";
+  return "Evitar";
+}
+
+function nprLevel(npr: number) {
+  if (npr >= 300) return { label: "Crítico" };
+  if (npr >= 150) return { label: "Alto" };
+  if (npr >= 60) return { label: "Mayor" };
+  return { label: "Menor" };
 }
 
 function levelClasses(label: string) {
   if (label === "Crítico") return "border-destructive/30 bg-destructive/10 text-destructive";
+  if (label === "Alto") return "border-npr-high/30 bg-npr-high/10 text-npr-high";
   if (label === "Mayor") return "border-npr-high/30 bg-npr-high/10 text-npr-high";
   return "border-success/30 bg-success/10 text-success";
 }
@@ -44,9 +53,10 @@ export function NPRControlTable({ risks, onRiskClick }: { risks: RiskWithFolio[]
         const inicial = nprInicial(r);
         const residual = nprResidual(r);
         const reduccion = inicial > 0 ? Math.round(((inicial - residual) / inicial) * 100) : 0;
-        const criticoResidual = residual >= 150 || r.sev_residual >= 9;
+        const alertaS9 = r.severidad >= 9 || r.sev_residual >= 9;
+        const criticoResidual = residual >= 300 || r.sev_residual >= 9;
         const estado = rowEstado(inicial, residual, criticoResidual);
-        return { r, inicial, residual, reduccion, criticoResidual, estado, accion: accionRegulatoria(residual) };
+        return { r, inicial, residual, reduccion, alertaS9, criticoResidual, estado, accion: accionRegulatoria(residual) };
       })
       .sort((a, b) => {
         const dir = sortDir === "asc" ? 1 : -1;
@@ -56,6 +66,7 @@ export function NPRControlTable({ risks, onRiskClick }: { risks: RiskWithFolio[]
           nprInicial: [a.inicial, b.inicial],
           nprResidual: [a.residual, b.residual],
           reduccion: [a.reduccion, b.reduccion],
+          alertaS9: [Number(a.alertaS9), Number(b.alertaS9)],
           estado: [a.estado.weight, b.estado.weight],
           accion: [a.accion, b.accion],
         };
