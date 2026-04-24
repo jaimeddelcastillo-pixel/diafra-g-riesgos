@@ -10,7 +10,7 @@ import Folios from "./pages/Folios";
 import FolioDetail from "./pages/FolioDetail";
 import Auditoria from "./pages/Auditoria";
 import Catalogos from "./pages/Catalogos";
-import Recursos from "./pages/Recursos";
+import Recursos from "./pages/Recursos.tsx";
 import Configuracion from "./pages/Configuracion";
 import Admin from "./pages/Admin";
 import AdminOrg from "./pages/AdminOrg";
