@@ -947,6 +947,10 @@ export type Database = {
         Args: { message_id: number; queue_name: string }
         Returns: boolean
       }
+      eliminar_documento_permanente: {
+        Args: { p_doc_id: string }
+        Returns: string
+      }
       enqueue_email: {
         Args: { payload: Json; queue_name: string }
         Returns: number
@@ -972,6 +976,13 @@ export type Database = {
       next_folio_code: { Args: never; Returns: string }
       next_ticket_code: { Args: { p_org_id: string }; Returns: string }
       purgar_documentos_eliminados: { Args: never; Returns: number }
+      purgar_documentos_expirados: {
+        Args: never
+        Returns: {
+          id: string
+          storage_path: string
+        }[]
+      }
       read_email_batch: {
         Args: { batch_size: number; queue_name: string; vt: number }
         Returns: {

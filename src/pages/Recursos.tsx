@@ -23,7 +23,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import {
   ClipboardList, LayoutTemplate, Bot, Sparkles, Upload, Download, Trash2,
-  FileText, Eye, Inbox, RotateCcw, Shield, History,
+  FileText, Eye, Inbox, RotateCcw, Shield, History, Copy, CheckCircle2, AlertTriangle, Loader2,
 } from "lucide-react";
 import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
@@ -180,6 +180,15 @@ export default function Recursos() {
   const [uploadOpen, setUploadOpen] = useState(false);
   const [previewDoc, setPreviewDoc] = useState<ReferenciaDoc | null>(null);
   const [verPapelera, setVerPapelera] = useState(false);
+
+  /** Documento para el cual se muestra el historial de versiones (modal). */
+  const [historialDoc, setHistorialDoc] = useState<OrgDocumento | null>(null);
+  const [historialVersiones, setHistorialVersiones] = useState<OrgDocumento[]>([]);
+  const [historialLoading, setHistorialLoading] = useState(false);
+
+  /** Estado de verificación de integridad por documento (id -> resultado). */
+  const [verificando, setVerificando] = useState<string | null>(null);
+  const [verificacion, setVerificacion] = useState<Record<string, "ok" | "fail">>({});
 
   // Form upload state
   const [file, setFile] = useState<File | null>(null);
@@ -366,6 +375,33 @@ export default function Recursos() {
     cargarDocs();
   };
 
+  /**
+   * Eliminación permanente: ejecuta la RPC SECURITY DEFINER que valida permisos,
+   * borra el registro y devuelve el storage_path para limpiar el bucket.
+   */
+  const handleEliminarPermanente = async (doc: OrgDocumento) => {
+    const { data: path, error } = await supabase.rpc(
+      "eliminar_documento_permanente" as any,
+      { p_doc_id: doc.id },
+    );
+    if (error) {
+      toast({
+        title: "Error eliminando definitivamente",
+        description: error.message,
+        variant: "destructive",
+      });
+      return;
+    }
+    if (path && typeof path === "string") {
+      await supabase.storage.from("org-documentos").remove([path]);
+    }
+    toast({
+      title: "Documento eliminado permanentemente",
+      description: `${doc.nombre} fue borrado del sistema.`,
+    });
+    cargarDocs();
+  };
+
   /** Abre el dialog en modo "subir nueva versión" pre-rellenando datos. */
   const subirNuevaVersion = (doc: OrgDocumento) => {
     setParentDocId(doc.parent_doc_id || doc.id);
@@ -377,6 +413,92 @@ export default function Recursos() {
     setUsarEnIa(doc.usar_en_ia);
     setFile(null);
     setUploadOpen(true);
+  };
+
+  /** Carga todas las versiones de un documento (versión actual + anteriores). */
+  const abrirHistorial = async (doc: OrgDocumento) => {
+    setHistorialDoc(doc);
+    setHistorialLoading(true);
+    const rootId = doc.parent_doc_id || doc.id;
+    const sb = supabase as any;
+    const { data, error } = await sb
+      .from("org_documentos")
+      .select("*")
+      .eq("org_id", org!.id)
+      .or(`id.eq.${rootId},parent_doc_id.eq.${rootId}`)
+      .is("deleted_at", null)
+      .order("version_num", { ascending: false });
+    if (error) {
+      toast({ title: "Error cargando historial", description: error.message, variant: "destructive" });
+      setHistorialVersiones([]);
+    } else {
+      setHistorialVersiones((data ?? []) as OrgDocumento[]);
+    }
+    setHistorialLoading(false);
+  };
+
+  /** Copia el hash SHA-256 completo al portapapeles. */
+  const copiarHash = async (hash: string) => {
+    try {
+      await navigator.clipboard.writeText(hash);
+      toast({
+        title: "Hash copiado",
+        description: "SHA-256 copiado al portapapeles. Úsalo como evidencia ante COFEPRIS.",
+      });
+    } catch {
+      toast({ title: "No se pudo copiar", variant: "destructive" });
+    }
+  };
+
+  /**
+   * Verifica la integridad del documento: descarga el archivo, recalcula SHA-256
+   * en el navegador y lo compara contra el hash registrado en la base de datos.
+   */
+  const verificarIntegridad = async (doc: OrgDocumento) => {
+    if (!doc.sha256) {
+      toast({
+        title: "Sin hash registrado",
+        description: "Este documento se subió antes de la integración SHA-256.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setVerificando(doc.id);
+    try {
+      const { data, error } = await supabase.storage
+        .from("org-documentos")
+        .download(doc.storage_path);
+      if (error || !data) throw new Error(error?.message || "No se pudo descargar el archivo");
+
+      const buf = await data.arrayBuffer();
+      const digest = await crypto.subtle.digest("SHA-256", buf);
+      const hashCalculado = Array.from(new Uint8Array(digest))
+        .map((b) => b.toString(16).padStart(2, "0"))
+        .join("");
+
+      if (hashCalculado === doc.sha256) {
+        setVerificacion((prev) => ({ ...prev, [doc.id]: "ok" }));
+        toast({
+          title: "✅ Documento íntegro",
+          description: "El hash coincide — el archivo no ha sido modificado.",
+        });
+      } else {
+        setVerificacion((prev) => ({ ...prev, [doc.id]: "fail" }));
+        toast({
+          title: "❌ Alerta de integridad",
+          description: "El documento puede haber sido modificado. Hash no coincide.",
+          variant: "destructive",
+        });
+      }
+    } catch (e: any) {
+      toast({
+        title: "Error verificando integridad",
+        description: e?.message ?? "Error desconocido",
+        variant: "destructive",
+      });
+    } finally {
+      setVerificando(null);
+    }
   };
 
   const scrollToGuia = () => {
@@ -620,15 +742,51 @@ export default function Recursos() {
                             </Badge>
                           </TableCell>
                           <TableCell className="text-right">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleRestaurarDoc(doc)}
-                              className="gap-1"
-                            >
-                              <RotateCcw className="h-3.5 w-3.5" />
-                              Restaurar
-                            </Button>
+                            <div className="flex items-center justify-end gap-1">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleRestaurarDoc(doc)}
+                                className="gap-1"
+                              >
+                                <RotateCcw className="h-3.5 w-3.5" />
+                                Restaurar
+                              </Button>
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="gap-1 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                    Eliminar permanentemente
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle className="flex items-center gap-2">
+                                      <AlertTriangle className="h-5 w-5 text-destructive" />
+                                      Eliminar definitivamente
+                                    </AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      Esta acción es <strong>irreversible</strong>. El documento
+                                      "{doc.nombre}" será eliminado del sistema y no podrá
+                                      recuperarse.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                    <AlertDialogAction
+                                      onClick={() => handleEliminarPermanente(doc)}
+                                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                    >
+                                      Eliminar permanentemente
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            </div>
                           </TableCell>
                         </TableRow>
                       );
@@ -671,19 +829,69 @@ export default function Recursos() {
                                 <span className="ml-2 text-[hsl(var(--primary))]">· IA</span>
                               )}
                               {doc.sha256 && (
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <span className="ml-2 inline-flex items-center gap-0.5 text-emerald-600 dark:text-emerald-400">
-                                      <Shield className="h-3 w-3" /> SHA-256
-                                    </span>
-                                  </TooltipTrigger>
-                                  <TooltipContent className="max-w-xs">
-                                    <p className="text-xs font-mono break-all">{doc.sha256}</p>
-                                    <p className="text-[10px] text-muted-foreground mt-1">
-                                      Huella inmutable de integridad (ISO 14971).
-                                    </p>
-                                  </TooltipContent>
-                                </Tooltip>
+                                <span className="ml-2 inline-flex items-center gap-1 align-middle">
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <span
+                                        className={
+                                          "inline-flex items-center gap-0.5 font-mono text-[11px] " +
+                                          (verificacion[doc.id] === "ok"
+                                            ? "text-emerald-600 dark:text-emerald-400"
+                                            : verificacion[doc.id] === "fail"
+                                              ? "text-destructive"
+                                              : "text-emerald-600 dark:text-emerald-400")
+                                        }
+                                      >
+                                        <Shield className="h-3 w-3" />…{doc.sha256.slice(-8)}
+                                      </span>
+                                    </TooltipTrigger>
+                                    <TooltipContent className="max-w-xs">
+                                      <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1">
+                                        SHA-256 (huella inmutable ISO 14971)
+                                      </p>
+                                      <p className="text-xs font-mono break-all">{doc.sha256}</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <button
+                                        type="button"
+                                        onClick={() => copiarHash(doc.sha256!)}
+                                        className="inline-flex items-center text-muted-foreground hover:text-foreground transition-colors"
+                                        aria-label="Copiar hash"
+                                      >
+                                        <Copy className="h-3 w-3" />
+                                      </button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>Copiar hash completo</TooltipContent>
+                                  </Tooltip>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <button
+                                        type="button"
+                                        onClick={() => verificarIntegridad(doc)}
+                                        disabled={verificando === doc.id}
+                                        className="inline-flex items-center text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+                                        aria-label="Verificar integridad"
+                                      >
+                                        {verificando === doc.id ? (
+                                          <Loader2 className="h-3 w-3 animate-spin" />
+                                        ) : verificacion[doc.id] === "ok" ? (
+                                          <CheckCircle2 className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />
+                                        ) : verificacion[doc.id] === "fail" ? (
+                                          <AlertTriangle className="h-3 w-3 text-destructive" />
+                                        ) : (
+                                          <Shield className="h-3 w-3" />
+                                        )}
+                                      </button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      {verificando === doc.id
+                                        ? "Verificando…"
+                                        : "Verificar integridad (recalcular SHA-256)"}
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </span>
                               )}
                             </div>
                           </div>
@@ -717,10 +925,20 @@ export default function Recursos() {
                             <Button
                               size="icon"
                               variant="ghost"
+                              onClick={() => abrirHistorial(doc)}
+                              title="Ver historial de versiones"
+                            >
+                              <History className="h-4 w-4" />
+                            </Button>
+                          )}
+                          {puedeEliminar && (
+                            <Button
+                              size="icon"
+                              variant="ghost"
                               onClick={() => subirNuevaVersion(doc)}
                               title="Subir nueva versión"
                             >
-                              <History className="h-4 w-4" />
+                              <Upload className="h-4 w-4" />
                             </Button>
                           )}
                           {puedeEliminar && (
@@ -820,6 +1038,88 @@ export default function Recursos() {
               </Button>
             )}
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal Historial de versiones */}
+      <Dialog
+        open={historialDoc !== null}
+        onOpenChange={(o) => {
+          if (!o) {
+            setHistorialDoc(null);
+            setHistorialVersiones([]);
+          }
+        }}
+      >
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <History className="h-5 w-5" />
+              Historial de versiones
+            </DialogTitle>
+            <DialogDescription>
+              {historialDoc?.nombre} — {historialVersiones.length} versión
+              {historialVersiones.length !== 1 ? "es" : ""} registrada
+              {historialVersiones.length !== 1 ? "s" : ""}.
+            </DialogDescription>
+          </DialogHeader>
+          {historialLoading ? (
+            <div className="p-6 text-center text-sm text-muted-foreground">Cargando…</div>
+          ) : historialVersiones.length === 0 ? (
+            <div className="p-6 text-center text-sm text-muted-foreground">
+              No hay versiones anteriores.
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Versión</TableHead>
+                  <TableHead className="hidden md:table-cell">Fecha</TableHead>
+                  <TableHead className="hidden md:table-cell">Tamaño</TableHead>
+                  <TableHead className="text-right">Acciones</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {historialVersiones.map((v) => (
+                  <TableRow key={v.id}>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">v{v.version}</span>
+                        <Badge variant="outline" className="text-[10px]">
+                          rev {v.version_num ?? 1}
+                        </Badge>
+                        {v.es_version_actual && (
+                          <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/15 text-[10px]">
+                            Versión actual
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="text-xs text-muted-foreground mt-0.5 md:hidden">
+                        {formatDate(v.created_at)} · {formatBytes(v.size_bytes)}
+                      </div>
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell text-sm text-muted-foreground">
+                      {formatDate(v.created_at)}
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell text-sm text-muted-foreground">
+                      {formatBytes(v.size_bytes)}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleDescargarDoc(v)}
+                        className="gap-1"
+                      >
+                        <Download className="h-3.5 w-3.5" />
+                        Descargar
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
         </DialogContent>
       </Dialog>
       </TooltipProvider>
