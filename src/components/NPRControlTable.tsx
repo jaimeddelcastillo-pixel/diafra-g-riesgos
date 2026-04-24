@@ -93,7 +93,7 @@ export function NPRControlTable({ risks, onRiskClick }: { risks: RiskWithFolio[]
 
   return (
     <div className="overflow-x-auto">
-      <table className="w-full min-w-[980px] text-sm">
+      <table className="w-full min-w-[1120px] text-sm">
         <thead>
           <tr className="border-b text-left text-xs">
             <th className="px-3 py-3"><SortHeader label="ID Riesgo" value="id" /></th>
@@ -101,12 +101,13 @@ export function NPRControlTable({ risks, onRiskClick }: { risks: RiskWithFolio[]
             <th className="px-3 py-3"><SortHeader label="NPR Inicial" value="nprInicial" /></th>
             <th className="px-3 py-3"><SortHeader label="NPR Residual" value="nprResidual" /></th>
             <th className="px-3 py-3"><SortHeader label="Reducción" value="reduccion" /></th>
+            <th className="px-3 py-3"><SortHeader label="Alerta S≥9" value="alertaS9" /></th>
             <th className="px-3 py-3"><SortHeader label="Estado" value="estado" /></th>
             <th className="px-3 py-3"><SortHeader label="Acción sugerida" value="accion" /></th>
           </tr>
         </thead>
         <tbody>
-          {rows.map(({ r, inicial, residual, reduccion, criticoResidual, estado, accion }) => {
+          {rows.map(({ r, inicial, residual, reduccion, alertaS9, criticoResidual, estado, accion }) => {
             const levelInicial = nprLevel(inicial);
             const levelResidual = nprLevel(residual);
             return (
@@ -151,7 +152,7 @@ export function NPRControlTable({ risks, onRiskClick }: { risks: RiskWithFolio[]
             );
           })}
           {rows.length === 0 && (
-            <tr><td colSpan={7} className="py-8 text-center text-muted-foreground">Sin riesgos registrados</td></tr>
+            <tr><td colSpan={8} className="py-8 text-center text-muted-foreground">Sin riesgos registrados</td></tr>
           )}
         </tbody>
       </table>
