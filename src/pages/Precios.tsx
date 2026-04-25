@@ -13,7 +13,7 @@ import { ADDONS, PLANS, type AddonId, type PlanId } from "@/config/plans";
 const FAQ = [
   {
     q: "¿Qué incluye exactamente el plan Starter?",
-    a: "Hasta 5 usuarios, folios y matriz AMEF ilimitados, firma electrónica conforme a CFR Part 11 y soporte por correo. Ideal para equipos pequeños iniciando con gestión de riesgos bajo ISO 14971.",
+    a: "Hasta 5 usuarios, folios y matriz AMEF ilimitados, firma electrónica conforme a CFR Part 11 y soporte por correo. Ideal para equipos pequeños iniciando con gestión de riesgos bajo FEUM / ISO 14971.",
   },
   {
     q: "¿Puedo cambiar de plan en cualquier momento?",
