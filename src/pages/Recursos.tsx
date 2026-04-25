@@ -77,7 +77,7 @@ const REFERENCIAS: ReferenciaDoc[] = [
     iconClass: "text-[hsl(var(--primary))]",
     titulo: "PNO-AMGR-01 Gestión de Riesgos",
     descripcion:
-      "Procedimiento Normalizado de Operación bajo NOM-241 / ISO 14971. Úsalo como guía para crear o actualizar el PNO de tu organización.",
+      "Procedimiento Normalizado de Operación bajo NOM-241-SSA1-2025 / FEUM / ISO 14971. Úsalo como guía para crear o actualizar el PNO de tu organización.",
     badgeText: "Documento de referencia",
     badgeClass: "bg-[hsl(var(--primary))]/15 text-[hsl(var(--primary))] border-[hsl(var(--primary))]/30",
     storagePath: "PNO-AMGR-01.pdf",
@@ -85,7 +85,7 @@ const REFERENCIAS: ReferenciaDoc[] = [
     preview: {
       titulo: "PNO-AMGR-01 — Gestión de Riesgos",
       cuerpo: [
-        "Procedimiento alineado a NOM-241-SSA1-2025 e ISO 14971:2019.",
+        "Procedimiento alineado a NOM-241-SSA1-2025 e FEUM / ISO 14971:2019.",
         "Define alcance, responsabilidades y criterios de aceptabilidad.",
         "Incluye flujo de identificación, evaluación, control y verificación de riesgos.",
         "Sirve como base editable para tu propio PNO interno.",
@@ -128,7 +128,7 @@ const REFERENCIAS: ReferenciaDoc[] = [
       titulo: "Guía del Agente IA TRACEA Risk Manager",
       cuerpo: [
         "Paso a paso para configurar el agente en Gemini, ChatGPT o Claude.",
-        "Incluye System Prompt completo alineado a NOM-241 e ISO 14971.",
+        "Incluye System Prompt completo alineado a NOM-241-SSA1-2025 y FEUM / ISO 14971.",
         "Recomendaciones para alimentar el agente con tus documentos internos.",
         "Buenas prácticas para validación y uso responsable de IA.",
       ],

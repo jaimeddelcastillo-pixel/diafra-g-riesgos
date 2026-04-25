@@ -32,8 +32,8 @@ const FAQ = [
     a: "Los planes son suscripciones mensuales que dan acceso a la plataforma. Los complementos (Curso, Pack de Protocolos) son compras únicas que se suman a tu cuenta y permanecen disponibles indefinidamente.",
   },
   {
-    q: "¿TRACEA cumple con NOM-241, NOM-251 y NOM-059?",
-    a: "El módulo actual está optimizado para NOM-241 (dispositivos médicos). El sistema de gestión de riesgos es compatible con los principios de NOM-251 (alimentos) y NOM-059 (medicamentos). Los módulos específicos para cada norma están en desarrollo.",
+    q: "¿TRACEA cumple con NOM-241-SSA1-2025?",
+    a: "Sí. El módulo actual está optimizado para cumplir con NOM-241-SSA1-2025 (dispositivos médicos) bajo FEUM / ISO 14971. La plataforma está diseñada exclusivamente para esta normativa.",
   },
   {
     q: "¿Ofrecen prueba gratis?",
