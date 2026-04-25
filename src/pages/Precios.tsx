@@ -297,7 +297,7 @@ export default function Precios() {
 
       <footer className="border-t mt-16 py-6 bg-card">
         <div className="container mx-auto px-4 text-center text-sm text-muted-foreground">
-          © {new Date().getFullYear()} TRACEA · Plataforma de Gestión de Riesgos ISO 14971
+          © {new Date().getFullYear()} TRACEA · Plataforma de Gestión de Riesgos FEUM / ISO 14971
         </div>
       </footer>
     </div>

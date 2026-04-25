@@ -116,7 +116,7 @@ export function HeatMap({ risks }: { risks: Riesgo[] }) {
           </div>
           <div className="mt-3 text-center text-xs font-medium text-muted-foreground">Ocurrencia →</div>
           <div className="mt-3 rounded-md border border-npr-high/30 bg-npr-high/10 px-3 py-2 text-xs font-medium text-npr-high">
-            ⚠️ Riesgos con S≥9 requieren Dictamen de Beneficio-Riesgo aunque el NPR residual sea bajo — ISO 14971 §8
+            ⚠️ Riesgos con S≥9 requieren Dictamen de Beneficio-Riesgo aunque el NPR residual sea bajo — FEUM / ISO 14971 §8
           </div>
         </div>
       </div>

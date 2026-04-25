@@ -275,7 +275,7 @@ export default function Recursos() {
     const safeName = nombre.trim().replace(/[^a-zA-Z0-9._-]/g, "_");
     const path = `${org.id}/${Date.now()}-${safeName}.${ext}`;
 
-    // Hash SHA-256 para garantía de integridad ISO 14971 / COFEPRIS
+    // Hash SHA-256 para garantía de integridad FEUM / ISO 14971 / COFEPRIS
     let hash: string | null = null;
     try {
       hash = await sha256OfFile(file);
@@ -847,7 +847,7 @@ export default function Recursos() {
                                     </TooltipTrigger>
                                     <TooltipContent className="max-w-xs">
                                       <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1">
-                                        SHA-256 (huella inmutable ISO 14971)
+                                        SHA-256 (huella inmutable FEUM / ISO 14971)
                                       </p>
                                       <p className="text-xs font-mono break-all">{doc.sha256}</p>
                                     </TooltipContent>
