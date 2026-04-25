@@ -81,7 +81,7 @@ export const ADDONS: Addon[] = [
     nombre: "Curso de Capacitación",
     priceId: "STRIPE_CURSO_PRICE_ID",
     precio: "$199 USD",
-    descripcion: "Capacitación en gestión de riesgos ISO 14971 y NOM-241.",
+    descripcion: "Capacitación en gestión de riesgos FEUM / ISO 14971 y NOM-241-SSA1-2025.",
     features: [
       "Acceso 12 meses",
       "Certificado al finalizar",

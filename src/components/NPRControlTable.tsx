@@ -134,7 +134,7 @@ export function NPRControlTable({ risks, onRiskClick }: { risks: RiskWithFolio[]
                           <Badge className="border-npr-high/30 bg-npr-high/10 text-npr-high hover:bg-npr-high/10">⚠️ S≥9</Badge>
                         </TooltipTrigger>
                         <TooltipContent className="max-w-xs">
-                          Severidad crítica — Este riesgo requiere Dictamen de Beneficio-Riesgo firmado por el Responsable Sanitario y controles permanentes que no pueden eliminarse, conforme a ISO 14971
+                          Severidad crítica — Este riesgo requiere Dictamen de Beneficio-Riesgo firmado por el Responsable Sanitario y controles permanentes que no pueden eliminarse, conforme a FEUM / ISO 14971
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>

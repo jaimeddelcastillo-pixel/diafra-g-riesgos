@@ -77,7 +77,7 @@ const REFERENCIAS: ReferenciaDoc[] = [
     iconClass: "text-[hsl(var(--primary))]",
     titulo: "PNO-AMGR-01 Gestión de Riesgos",
     descripcion:
-      "Procedimiento Normalizado de Operación bajo NOM-241 / ISO 14971. Úsalo como guía para crear o actualizar el PNO de tu organización.",
+      "Procedimiento Normalizado de Operación bajo NOM-241-SSA1-2025 / FEUM / ISO 14971. Úsalo como guía para crear o actualizar el PNO de tu organización.",
     badgeText: "Documento de referencia",
     badgeClass: "bg-[hsl(var(--primary))]/15 text-[hsl(var(--primary))] border-[hsl(var(--primary))]/30",
     storagePath: "PNO-AMGR-01.pdf",
@@ -85,7 +85,7 @@ const REFERENCIAS: ReferenciaDoc[] = [
     preview: {
       titulo: "PNO-AMGR-01 — Gestión de Riesgos",
       cuerpo: [
-        "Procedimiento alineado a NOM-241-SSA1-2025 e ISO 14971:2019.",
+        "Procedimiento alineado a NOM-241-SSA1-2025 e FEUM / ISO 14971:2019.",
         "Define alcance, responsabilidades y criterios de aceptabilidad.",
         "Incluye flujo de identificación, evaluación, control y verificación de riesgos.",
         "Sirve como base editable para tu propio PNO interno.",
@@ -98,7 +98,7 @@ const REFERENCIAS: ReferenciaDoc[] = [
     iconClass: "text-emerald-500",
     titulo: "Formato Archivo Maestro de Riesgos",
     descripcion:
-      "Plantilla oficial TRACEA para análisis AMEF. Compatible con el sistema de firmas electrónicas y checklist NOM-241 de la plataforma.",
+      "Plantilla oficial TRACEA para análisis AMEF. Compatible con el sistema de firmas electrónicas y checklist NOM-241-SSA1-2025 de la plataforma.",
     badgeText: "Formato oficial",
     badgeClass: "bg-emerald-500/15 text-emerald-600 border-emerald-500/30 dark:text-emerald-400",
     storagePath: "formato-amgr.pdf",
@@ -119,7 +119,7 @@ const REFERENCIAS: ReferenciaDoc[] = [
     iconClass: "text-[#8587E8]",
     titulo: "Guía: Agente IA TRACEA Risk Manager",
     descripcion:
-      "Configura tu asistente de IA en Gemini, ChatGPT o Claude. Incluye el System Prompt listo para usar con el protocolo NOM-241.",
+      "Configura tu asistente de IA en Gemini, ChatGPT o Claude. Incluye el System Prompt listo para usar con el protocolo NOM-241-SSA1-2025.",
     badgeText: "Bonus exclusivo",
     badgeClass: "bg-[#8587E8]/15 text-[#8587E8] border-[#8587E8]/30",
     storagePath: "guia-agente-ia.pdf",
@@ -128,7 +128,7 @@ const REFERENCIAS: ReferenciaDoc[] = [
       titulo: "Guía del Agente IA TRACEA Risk Manager",
       cuerpo: [
         "Paso a paso para configurar el agente en Gemini, ChatGPT o Claude.",
-        "Incluye System Prompt completo alineado a NOM-241 e ISO 14971.",
+        "Incluye System Prompt completo alineado a NOM-241-SSA1-2025 y FEUM / ISO 14971.",
         "Recomendaciones para alimentar el agente con tus documentos internos.",
         "Buenas prácticas para validación y uso responsable de IA.",
       ],
@@ -275,7 +275,7 @@ export default function Recursos() {
     const safeName = nombre.trim().replace(/[^a-zA-Z0-9._-]/g, "_");
     const path = `${org.id}/${Date.now()}-${safeName}.${ext}`;
 
-    // Hash SHA-256 para garantía de integridad ISO 14971 / COFEPRIS
+    // Hash SHA-256 para garantía de integridad FEUM / ISO 14971 / COFEPRIS
     let hash: string | null = null;
     try {
       hash = await sha256OfFile(file);
@@ -847,7 +847,7 @@ export default function Recursos() {
                                     </TooltipTrigger>
                                     <TooltipContent className="max-w-xs">
                                       <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1">
-                                        SHA-256 (huella inmutable ISO 14971)
+                                        SHA-256 (huella inmutable FEUM / ISO 14971)
                                       </p>
                                       <p className="text-xs font-mono break-all">{doc.sha256}</p>
                                     </TooltipContent>

@@ -51,7 +51,7 @@ function nivelBadge(label: string) {
   return "bg-green-100 text-green-700 border-green-200";
 }
 
-// ─── Tab 1: Resumen de cumplimiento NOM-241 ───────────────────────────────────
+// ─── Tab 1: Resumen de cumplimiento NOM-241-SSA1-2025 ───────────────────────────────────
 function TabCumplimiento() {
   const navigate = useNavigate();
   const { data: folios = [], isLoading: lf } = useFolios();

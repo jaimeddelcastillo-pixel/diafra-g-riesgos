@@ -13,7 +13,7 @@ import { ADDONS, PLANS, type AddonId, type PlanId } from "@/config/plans";
 const FAQ = [
   {
     q: "¿Qué incluye exactamente el plan Starter?",
-    a: "Hasta 5 usuarios, folios y matriz AMEF ilimitados, firma electrónica conforme a CFR Part 11 y soporte por correo. Ideal para equipos pequeños iniciando con gestión de riesgos bajo ISO 14971.",
+    a: "Hasta 5 usuarios, folios y matriz AMEF ilimitados, firma electrónica conforme a CFR Part 11 y soporte por correo. Ideal para equipos pequeños iniciando con gestión de riesgos bajo FEUM / ISO 14971.",
   },
   {
     q: "¿Puedo cambiar de plan en cualquier momento?",
@@ -32,8 +32,8 @@ const FAQ = [
     a: "Los planes son suscripciones mensuales que dan acceso a la plataforma. Los complementos (Curso, Pack de Protocolos) son compras únicas que se suman a tu cuenta y permanecen disponibles indefinidamente.",
   },
   {
-    q: "¿TRACEA cumple con NOM-241, NOM-251 y NOM-059?",
-    a: "El módulo actual está optimizado para NOM-241 (dispositivos médicos). El sistema de gestión de riesgos es compatible con los principios de NOM-251 (alimentos) y NOM-059 (medicamentos). Los módulos específicos para cada norma están en desarrollo.",
+    q: "¿TRACEA cumple con NOM-241-SSA1-2025?",
+    a: "Sí. El módulo actual está optimizado para cumplir con NOM-241-SSA1-2025 (dispositivos médicos) bajo FEUM / ISO 14971. La plataforma está diseñada exclusivamente para esta normativa.",
   },
   {
     q: "¿Ofrecen prueba gratis?",
@@ -124,7 +124,7 @@ export default function Precios() {
             Planes que escalan con tu organización
           </h1>
           <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-            Plataforma de gestión de riesgos ISO 14971 alineada a NOM-241. Folios y matriz AMEF ilimitados en todos los planes.
+            Plataforma de gestión de riesgos FEUM / ISO 14971 alineada a NOM-241-SSA1-2025. Folios y matriz AMEF ilimitados en todos los planes.
           </p>
         </section>
 
@@ -297,7 +297,7 @@ export default function Precios() {
 
       <footer className="border-t mt-16 py-6 bg-card">
         <div className="container mx-auto px-4 text-center text-sm text-muted-foreground">
-          © {new Date().getFullYear()} TRACEA · Plataforma de Gestión de Riesgos ISO 14971
+          © {new Date().getFullYear()} TRACEA · Plataforma de Gestión de Riesgos FEUM / ISO 14971
         </div>
       </footer>
     </div>
