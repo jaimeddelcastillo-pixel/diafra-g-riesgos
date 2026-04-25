@@ -29,6 +29,47 @@ export type Database = {
         }
         Relationships: []
       }
+      addon_purchases: {
+        Row: {
+          id: string
+          metadata: Json | null
+          monto_usd: number
+          org_id: string
+          producto: string
+          purchased_at: string
+          stripe_payment_intent_id: string | null
+          stripe_session_id: string | null
+        }
+        Insert: {
+          id?: string
+          metadata?: Json | null
+          monto_usd: number
+          org_id: string
+          producto: string
+          purchased_at?: string
+          stripe_payment_intent_id?: string | null
+          stripe_session_id?: string | null
+        }
+        Update: {
+          id?: string
+          metadata?: Json | null
+          monto_usd?: number
+          org_id?: string
+          producto?: string
+          purchased_at?: string
+          stripe_payment_intent_id?: string | null
+          stripe_session_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "addon_purchases_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_trail: {
         Row: {
           accion: string
@@ -538,6 +579,7 @@ export type Database = {
       organizations: {
         Row: {
           activo: boolean
+          cancelled_at: string | null
           codigo_formato: string
           created_at: string
           descripcion: string
@@ -547,12 +589,17 @@ export type Database = {
           nombre: string
           plan: string
           slug: string
+          stripe_customer_id: string | null
+          stripe_subscription_id: string | null
+          subscription_current_period_end: string | null
+          subscription_status: string | null
           trial_expires_at: string | null
           updated_at: string
           version_formato: string
         }
         Insert: {
           activo?: boolean
+          cancelled_at?: string | null
           codigo_formato?: string
           created_at?: string
           descripcion?: string
@@ -562,12 +609,17 @@ export type Database = {
           nombre: string
           plan?: string
           slug: string
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          subscription_current_period_end?: string | null
+          subscription_status?: string | null
           trial_expires_at?: string | null
           updated_at?: string
           version_formato?: string
         }
         Update: {
           activo?: boolean
+          cancelled_at?: string | null
           codigo_formato?: string
           created_at?: string
           descripcion?: string
@@ -577,11 +629,65 @@ export type Database = {
           nombre?: string
           plan?: string
           slug?: string
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          subscription_current_period_end?: string | null
+          subscription_status?: string | null
           trial_expires_at?: string | null
           updated_at?: string
           version_formato?: string
         }
         Relationships: []
+      }
+      payment_history: {
+        Row: {
+          concepto: string
+          created_at: string
+          hosted_invoice_url: string | null
+          id: string
+          invoice_pdf_url: string | null
+          metadata: Json | null
+          monto_usd: number
+          org_id: string
+          status: string
+          stripe_invoice_id: string | null
+          stripe_payment_intent_id: string | null
+        }
+        Insert: {
+          concepto: string
+          created_at?: string
+          hosted_invoice_url?: string | null
+          id?: string
+          invoice_pdf_url?: string | null
+          metadata?: Json | null
+          monto_usd: number
+          org_id: string
+          status?: string
+          stripe_invoice_id?: string | null
+          stripe_payment_intent_id?: string | null
+        }
+        Update: {
+          concepto?: string
+          created_at?: string
+          hosted_invoice_url?: string | null
+          id?: string
+          invoice_pdf_url?: string | null
+          metadata?: Json | null
+          monto_usd?: number
+          org_id?: string
+          status?: string
+          stripe_invoice_id?: string | null
+          stripe_payment_intent_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_history_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
