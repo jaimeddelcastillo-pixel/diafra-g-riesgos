@@ -1,4 +1,4 @@
-import { LayoutDashboard, FolderOpen, Settings, BookOpen, ShieldCheck, LogOut, LifeBuoy, Ticket, Library, CreditCard } from "lucide-react";
+import { LayoutDashboard, FolderOpen, Settings, BookOpen, ShieldCheck, LogOut, LifeBuoy, Ticket, Library } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -42,12 +42,9 @@ export function AppSidebar() {
 
   // Solo admin y responsable_sanitario ven "Ayuda"
   const puedeAyuda = hasRole("admin") || hasRole("responsable_sanitario");
-  // Solo admin ve "Planes y Suscripción"
-  const puedePlanes = hasRole("admin");
   const navItems = showOrgNav
     ? [
         ...orgNavItems,
-        ...(puedePlanes ? [{ title: "Planes", url: "/planes", icon: CreditCard }] : []),
         ...(puedeAyuda ? [{ title: "Ayuda", url: "/soporte", icon: LifeBuoy }] : []),
       ]
     : adminNavItems;

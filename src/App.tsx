@@ -19,7 +19,7 @@ import Soporte from "./pages/Soporte";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Unsubscribe from "./pages/Unsubscribe";
-import Planes from "./pages/Planes";
+import Precios from "./pages/Precios";
 import CheckoutSuccess from "./pages/CheckoutSuccess";
 import NotFound from "./pages/NotFound";
 
@@ -35,6 +35,7 @@ const App = () => (
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/precios" element={<Precios />} />
             <Route path="/unsubscribe" element={<Unsubscribe />} />
             <Route path="/checkout/success" element={<CheckoutSuccess />} />
             <Route element={<AppLayout />}>
@@ -45,7 +46,6 @@ const App = () => (
               <Route path="/catalogos" element={<Catalogos />} />
               <Route path="/recursos" element={<Recursos />} />
               <Route path="/configuracion" element={<Configuracion />} />
-              <Route path="/planes" element={<Planes />} />
               <Route path="/admin" element={<Admin />} />
               <Route path="/admin/org/:id" element={<AdminOrg />} />
               <Route path="/admin/tickets" element={<AdminTickets />} />
