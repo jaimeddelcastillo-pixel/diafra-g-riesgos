@@ -19,7 +19,7 @@ import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { Constants } from "@/integrations/supabase/types";
 import { generateFolioPDF } from "@/lib/generateFolioPDF";
 
-// ─── Checklist NOM-241 / ISO 14971 ───────────────────────────────────────────
+// ─── Checklist NOM-241-SSA1-2025 / FEUM / ISO 14971 ───────────────────────────────────────────
 interface CheckItem {
   id: string;
   label: string;
@@ -33,8 +33,8 @@ function evaluarChecklistNOM241(folio: Folio, riesgos: Riesgo[], comite: FolioCo
   // ── Folio ──
   items.push({ id: "alcance", label: "Alcance del análisis capturado", ok: !!folio.alcance?.trim(), critico: true });
   items.push({ id: "modelo", label: "Número de modelo del dispositivo (§7.5.3)", ok: !!folio.numero_modelo?.trim(), critico: true });
-  items.push({ id: "beneficio", label: "Beneficio clínico documentado (ISO 14971 §7)", ok: !!folio.beneficio_clinico?.trim(), critico: true });
-  items.push({ id: "residual_global", label: "Evaluación de riesgo residual global (ISO 14971 §8)", ok: !!folio.riesgo_residual_global?.trim(), critico: true });
+  items.push({ id: "beneficio", label: "Beneficio clínico documentado (FEUM / ISO 14971 §7)", ok: !!folio.beneficio_clinico?.trim(), critico: true });
+  items.push({ id: "residual_global", label: "Evaluación de riesgo residual global (FEUM / ISO 14971 §8)", ok: !!folio.riesgo_residual_global?.trim(), critico: true });
   items.push({ id: "comite", label: "Al menos un miembro en el comité", ok: comite.length > 0, critico: true });
   items.push({ id: "riesgos_count", label: "Al menos un riesgo analizado", ok: riesgos.length > 0, critico: true });
 
@@ -705,7 +705,7 @@ function SeccionComite({
   );
 }
 
-// ─── Sección Riesgo Residual Global (ISO 14971 §7 / §8) ──────────────────────
+// ─── Sección Riesgo Residual Global (FEUM / ISO 14971 §7 / §8) ──────────────────────
 function SeccionRiesgoResidualGlobal({
   folio,
   locked,
@@ -747,7 +747,7 @@ function SeccionRiesgoResidualGlobal({
 
   return (
     <div className="border rounded-md overflow-hidden relative">
-      <SectionHeader number="V" title="EVALUACIÓN GLOBAL DE RIESGO-BENEFICIO — ISO 14971 §7/§8" />
+      <SectionHeader number="V" title="EVALUACIÓN GLOBAL DE RIESGO-BENEFICIO — FEUM / ISO 14971 §7/§8" />
       {!locked && (
         <Button
           variant="ghost"
@@ -772,7 +772,7 @@ function SeccionRiesgoResidualGlobal({
         <div className="p-4 space-y-3">
           <div className="space-y-1.5">
             <label className="text-[10px] font-semibold text-muted-foreground uppercase">
-              Beneficio Clínico del Dispositivo — ISO 14971 §7
+              Beneficio Clínico del Dispositivo — FEUM / ISO 14971 §7
             </label>
             <Textarea
               value={form.beneficio_clinico}
@@ -783,13 +783,13 @@ function SeccionRiesgoResidualGlobal({
           </div>
           <div className="space-y-1.5">
             <label className="text-[10px] font-semibold text-muted-foreground uppercase">
-              Evaluación del Riesgo Residual Global — ISO 14971 §8
+              Evaluación del Riesgo Residual Global — FEUM / ISO 14971 §8
             </label>
             <Textarea
               value={form.riesgo_residual_global}
               onChange={(e) => setForm({ ...form, riesgo_residual_global: e.target.value })}
               rows={4}
-              placeholder="Ejemplo: El riesgo residual global del dispositivo es aceptable. Se identificaron N riesgos, de los cuales X son Aceptables y Y requirieron acción. Los beneficios clínicos superan los riesgos residuales conforme a ISO 14971 §8."
+              placeholder="Ejemplo: El riesgo residual global del dispositivo es aceptable. Se identificaron N riesgos, de los cuales X son Aceptables y Y requirieron acción. Los beneficios clínicos superan los riesgos residuales conforme a FEUM / ISO 14971 §8."
             />
           </div>
           <div className="flex justify-end gap-2">
@@ -805,7 +805,7 @@ function SeccionRiesgoResidualGlobal({
         <div className="grid grid-cols-2">
           <div className="border-r border-b p-3">
             <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wide mb-1">
-              Beneficio Clínico — ISO 14971 §7
+              Beneficio Clínico — FEUM / ISO 14971 §7
             </p>
             <p className="text-sm whitespace-pre-line">
               {folio.beneficio_clinico || (
@@ -815,7 +815,7 @@ function SeccionRiesgoResidualGlobal({
           </div>
           <div className="border-b p-3">
             <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wide mb-1">
-              Riesgo Residual Global — ISO 14971 §8
+              Riesgo Residual Global — FEUM / ISO 14971 §8
             </p>
             <p className="text-sm whitespace-pre-line">
               {folio.riesgo_residual_global || (
@@ -872,13 +872,13 @@ function SeccionRiesgos({ riesgos, locked, folioId }: { riesgos: Riesgo[]; locke
                   ID
                 </th>
                 <th colSpan={6} className="border-r border-b p-2 text-center font-bold">
-                  1. IDENTIFICACIÓN ISO 14971 §5
+                  1. IDENTIFICACIÓN FEUM / ISO 14971 §5
                 </th>
                 <th colSpan={4} className="border-r border-b p-2 text-center font-bold">
                   2. EVALUACIÓN INICIAL
                 </th>
                 <th colSpan={5} className="border-r border-b p-2 text-center font-bold">
-                  3. CONTROLES Y GESTIÓN ISO 14971 §6
+                  3. CONTROLES Y GESTIÓN FEUM / ISO 14971 §6
                 </th>
                 <th colSpan={6} className={`border-b p-2 text-center font-bold ${!locked ? "border-r" : ""}`}>
                   4. EVALUACIÓN FINAL (RESIDUAL) + VERIFICACIÓN
@@ -929,7 +929,7 @@ function SeccionRiesgos({ riesgos, locked, folioId }: { riesgos: Riesgo[]; locke
                     <td className="border-r p-1.5 text-center font-mono font-bold">
                       {String(r.numero_id).padStart(2, "0")}
                     </td>
-                    {/* Grupo 1: Identificación ISO 14971 */}
+                    {/* Grupo 1: Identificación FEUM / ISO 14971 */}
                     <td className="border-r p-1.5 max-w-[90px] whitespace-pre-line">{r.etapa_proceso}</td>
                     <td className="border-r p-1.5 max-w-[110px] whitespace-pre-line">
                       {r.peligro || <span className="text-muted-foreground/50 italic text-[9px]">Sin capturar</span>}
@@ -1394,7 +1394,7 @@ export default function FolioDetail() {
         {/* Evidencias — pestaña documental para auditor */}
         <SeccionEvidencias riesgos={riesgos} folioCodigo={folio.codigo} folioId={folio.id} />
 
-        {/* Evaluación global de riesgo-beneficio — ISO 14971 §7/§8 */}
+        {/* Evaluación global de riesgo-beneficio — FEUM / ISO 14971 §7/§8 */}
         <SeccionRiesgoResidualGlobal folio={folio} locked={locked} onSaved={handleRefresh} />
 
         {/* Dictamen con zona exclusiva del RS */}
