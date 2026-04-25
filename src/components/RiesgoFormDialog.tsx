@@ -475,10 +475,10 @@ export function RiesgoFormDialog({ open, onClose, folioId, riesgo, nextNumeroId 
             </TabsTrigger>
           </TabsList>
 
-          {/* ── Tab 1: Identificación (ISO 14971 §5.4) ── */}
+          {/* ── Tab 1: Identificación (FEUM / ISO 14971 §5.4) ── */}
           <TabsContent value="identificacion" className="flex-1 overflow-y-auto space-y-3 pt-3">
             <p className="text-[10px] text-muted-foreground bg-muted/40 rounded px-2 py-1">
-              ISO 14971 §5.4 — Identifique el peligro fuente, la secuencia de eventos y el modo de falla.
+              FEUM / ISO 14971 §5.4 — Identifique el peligro fuente, la secuencia de eventos y el modo de falla.
             </p>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
@@ -555,7 +555,7 @@ export function RiesgoFormDialog({ open, onClose, folioId, riesgo, nextNumeroId 
           {/* ── Tab 2: Evaluación Inicial ── */}
           <TabsContent value="evaluacion" className="flex-1 overflow-y-auto space-y-3 pt-3">
             <p className="text-[10px] text-muted-foreground bg-muted/40 rounded px-2 py-1">
-              ISO 14971 §6.1 — Evalúe la probabilidad de daño (S × O × D = NPR).
+              FEUM / ISO 14971 §6.1 — Evalúe la probabilidad de daño (S × O × D = NPR).
             </p>
             <div className="grid grid-cols-4 gap-3">
               <div className="space-y-1.5">
