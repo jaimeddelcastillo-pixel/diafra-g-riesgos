@@ -154,7 +154,7 @@ function SeccionDescripcion({ folio, locked, onSaved }: { folio: Folio; locked: 
     fecha_inicio: folio.fecha_inicio,
     fecha_cierre: folio.fecha_cierre || "",
     alcance: folio.alcance || "",
-    // Nuevos — trazabilidad y versión (NOM-241)
+    // Nuevos — trazabilidad y versión (NOM-241-SSA1-2025)
     numero_version: folio.numero_version || "1.0",
     numero_modelo: folio.numero_modelo || "",
     numero_lote: folio.numero_lote || "",
@@ -304,7 +304,7 @@ function SeccionDescripcion({ folio, locked, onSaved }: { folio: Folio; locked: 
           <label className="text-[10px] font-semibold text-muted-foreground uppercase">Alcance</label>
           <Textarea value={form.alcance} onChange={(e) => setForm({ ...form, alcance: e.target.value })} rows={3} />
         </div>
-        {/* Trazabilidad NOM-241 §7.5.3 */}
+        {/* Trazabilidad NOM-241-SSA1-2025 §7.5.3 */}
         <div className="border-t pt-3">
           <p className="text-[10px] font-semibold text-muted-foreground uppercase mb-2">
             Trazabilidad del Dispositivo
@@ -674,7 +674,7 @@ function SeccionComite({
         </div>
       )}
 
-      {/* Modal de confirmación de firma electrónica — NOM-241 / 21 CFR Part 11 */}
+      {/* Modal de confirmación de firma electrónica — NOM-241-SSA1-2025 / 21 CFR Part 11 */}
       {showFirmaModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="bg-background border rounded-lg shadow-xl max-w-lg w-full mx-4 p-6 space-y-4">
@@ -1254,7 +1254,7 @@ export default function FolioDetail() {
 
       if (error) throw new Error(error.message);
 
-      // El backend retorna errores NOM-241 con código 422
+      // El backend retorna errores NOM-241-SSA1-2025 con código 422
       if (result?.errores_nom241) {
         const errores: string[] = result.errores_nom241;
         toast({
@@ -1321,7 +1321,7 @@ export default function FolioDetail() {
             <Printer className="h-3 w-3" /> Generar PDF
           </Button>
 
-          {/* Botón Enviar a Firma + Checklist NOM-241 */}
+          {/* Botón Enviar a Firma + Checklist NOM-241-SSA1-2025 */}
           {folio.estado === "Borrador" && (
             <div className="relative flex flex-col items-end gap-1">
               <div className="flex items-center gap-1">

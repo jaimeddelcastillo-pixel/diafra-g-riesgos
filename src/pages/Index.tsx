@@ -164,7 +164,7 @@ export default function Dashboard() {
   const SgcIcon = sgc.icon;
 
   // Todos los riesgos críticos ordenados por NPR descendente
-  // Un auditor NOM-241 necesita ver TODOS, no solo los primeros
+  // Un auditor NOM-241-SSA1-2025 necesita ver TODOS, no solo los primeros
   const topRiesgos = [...risks]
     .filter((r) => (r.npr ?? 0) > 150 || r.severidad >= 9)
     .sort((a, b) => (b.npr ?? 0) - (a.npr ?? 0));
@@ -271,7 +271,7 @@ export default function Dashboard() {
         />
       </div>
 
-      {/* Alertas operativas NOM-241 */}
+      {/* Alertas operativas NOM-241-SSA1-2025 */}
       {!isLoading &&
         (accionesPendientes.length > 0 ||
           sinResponsable.length > 0 ||

@@ -98,7 +98,7 @@ const REFERENCIAS: ReferenciaDoc[] = [
     iconClass: "text-emerald-500",
     titulo: "Formato Archivo Maestro de Riesgos",
     descripcion:
-      "Plantilla oficial TRACEA para análisis AMEF. Compatible con el sistema de firmas electrónicas y checklist NOM-241 de la plataforma.",
+      "Plantilla oficial TRACEA para análisis AMEF. Compatible con el sistema de firmas electrónicas y checklist NOM-241-SSA1-2025 de la plataforma.",
     badgeText: "Formato oficial",
     badgeClass: "bg-emerald-500/15 text-emerald-600 border-emerald-500/30 dark:text-emerald-400",
     storagePath: "formato-amgr.pdf",
@@ -119,7 +119,7 @@ const REFERENCIAS: ReferenciaDoc[] = [
     iconClass: "text-[#8587E8]",
     titulo: "Guía: Agente IA TRACEA Risk Manager",
     descripcion:
-      "Configura tu asistente de IA en Gemini, ChatGPT o Claude. Incluye el System Prompt listo para usar con el protocolo NOM-241.",
+      "Configura tu asistente de IA en Gemini, ChatGPT o Claude. Incluye el System Prompt listo para usar con el protocolo NOM-241-SSA1-2025.",
     badgeText: "Bonus exclusivo",
     badgeClass: "bg-[#8587E8]/15 text-[#8587E8] border-[#8587E8]/30",
     storagePath: "guia-agente-ia.pdf",

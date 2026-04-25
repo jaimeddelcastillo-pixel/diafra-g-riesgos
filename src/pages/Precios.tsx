@@ -124,7 +124,7 @@ export default function Precios() {
             Planes que escalan con tu organización
           </h1>
           <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-            Plataforma de gestión de riesgos ISO 14971 alineada a NOM-241. Folios y matriz AMEF ilimitados en todos los planes.
+            Plataforma de gestión de riesgos FEUM / ISO 14971 alineada a NOM-241-SSA1-2025. Folios y matriz AMEF ilimitados en todos los planes.
           </p>
         </section>
 
