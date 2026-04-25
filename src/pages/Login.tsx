@@ -95,6 +95,11 @@ export default function Login() {
                   ¿Nueva empresa? Crear cuenta →
                 </Link>
               </p>
+              <p className="text-sm text-muted-foreground">
+                <Link to="/precios" className="text-primary underline font-medium">
+                  Ver planes y precios →
+                </Link>
+              </p>
             </div>
           </form>
         </CardContent>
