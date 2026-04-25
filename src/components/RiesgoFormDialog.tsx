@@ -617,10 +617,10 @@ export function RiesgoFormDialog({ open, onClose, folioId, riesgo, nextNumeroId 
             </div>
           </TabsContent>
 
-          {/* ── Tab 3: Controles (ISO 14971 §6.2) ── */}
+          {/* ── Tab 3: Controles (FEUM / ISO 14971 §6.2) ── */}
           <TabsContent value="controles" className="flex-1 overflow-y-auto space-y-3 pt-3">
             <p className="text-[10px] text-muted-foreground bg-muted/40 rounded px-2 py-1">
-              ISO 14971 §6.2 — Documente los controles de prevención y detección existentes, y las acciones propuestas.
+              FEUM / ISO 14971 §6.2 — Documente los controles de prevención y detección existentes, y las acciones propuestas.
             </p>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
