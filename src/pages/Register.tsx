@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { Navigate } from "react-router-dom";
-import { Building2, User, ArrowRight, ArrowLeft, Check } from "lucide-react";
+import { Building2, User, ArrowRight, ArrowLeft, Check, Loader2 } from "lucide-react";
+import { PLANS, ADDONS, type PlanId, type AddonId } from "@/config/plans";
 
 type Step = 1 | 2 | 3;
 
@@ -16,8 +17,22 @@ export default function Register() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user, loading } = useAuth();
+  const [searchParams] = useSearchParams();
+  const planParam = searchParams.get("plan") as PlanId | AddonId | null;
+
+  // Identifica el item seleccionado (plan o addon) si viene en el query
+  const itemSeleccionado = (() => {
+    if (!planParam) return null;
+    const plan = PLANS.find((p) => p.id === planParam);
+    if (plan) return { tipo: "plan" as const, ...plan };
+    const addon = ADDONS.find((a) => a.id === planParam);
+    if (addon) return { tipo: "addon" as const, ...addon };
+    return null;
+  })();
+
   const [step, setStep] = useState<Step>(1);
   const [submitting, setSubmitting] = useState(false);
+  const [redirigiendoCheckout, setRedirigiendoCheckout] = useState(false);
 
   // Paso 1 — Empresa
   const [orgNombre, setOrgNombre] = useState("");
@@ -80,6 +95,29 @@ export default function Register() {
       if (fnData?.error) throw new Error(fnData.error);
 
       setStep(3);
+
+      // 3. Si la sesión quedó iniciada (auto-confirm) y hay plan elegido,
+      //    arrancamos checkout. Si no, el paso 3 muestra "confirma tu correo".
+      if (authData.session && itemSeleccionado) {
+        setRedirigiendoCheckout(true);
+        try {
+          const { data: coData, error: coError } = await supabase.functions.invoke(
+            "create-checkout",
+            { body: { priceId: itemSeleccionado.priceId } },
+          );
+          if (coError) throw coError;
+          if (!coData?.url) throw new Error("No se recibió URL de checkout");
+          window.location.href = coData.url;
+          return;
+        } catch (e: any) {
+          setRedirigiendoCheckout(false);
+          toast({
+            title: "Cuenta creada, pero no pudimos iniciar el cobro",
+            description: `${e.message}. Inicia sesión y vuelve a intentarlo desde /precios.`,
+            variant: "destructive",
+          });
+        }
+      }
     } catch (err: any) {
       toast({ title: "Error al registrar", description: err.message, variant: "destructive" });
     } finally {
@@ -105,6 +143,21 @@ export default function Register() {
             <CardTitle className="text-xl tracking-wide">TRACEA</CardTitle>
             <p className="text-xs text-muted-foreground mt-1">Crear cuenta de empresa</p>
           </div>
+
+          {itemSeleccionado && step < 3 && (
+            <div className="rounded-md border border-primary/30 bg-primary/5 px-3 py-2 text-xs text-foreground">
+              <p className="font-medium">
+                {itemSeleccionado.tipo === "plan"
+                  ? `Estás creando tu cuenta para suscribirte a ${itemSeleccionado.nombre}`
+                  : `Estás creando tu cuenta para adquirir ${itemSeleccionado.nombre}`}
+              </p>
+              <p className="text-muted-foreground mt-0.5">
+                {itemSeleccionado.precio}
+                {itemSeleccionado.tipo === "plan" ? ` ${(itemSeleccionado as any).periodo ?? ""}` : " · pago único"}
+                {" · "}Te llevaremos al pago al terminar.
+              </p>
+            </div>
+          )}
 
           {/* Stepper */}
           {step < 3 && (
@@ -201,18 +254,42 @@ export default function Register() {
           {/* Paso 3 — Confirmación */}
           {step === 3 && (
             <div className="text-center space-y-4 py-2">
-              <div className="mx-auto h-14 w-14 rounded-full bg-green-100 flex items-center justify-center">
-                <Check className="h-7 w-7 text-green-600" />
-              </div>
-              <div>
-                <p className="font-semibold text-foreground">¡Cuenta creada!</p>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Revisa tu correo <span className="font-medium">{email}</span> para confirmar tu cuenta y luego inicia sesión.
-                </p>
-              </div>
-              <Button className="w-full" onClick={() => navigate("/login")}>
-                Ir al inicio de sesión
-              </Button>
+              {redirigiendoCheckout ? (
+                <>
+                  <Loader2 className="h-10 w-10 text-primary animate-spin mx-auto" />
+                  <div>
+                    <p className="font-semibold text-foreground">Llevándote al pago…</p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Estamos preparando tu checkout seguro de Stripe.
+                    </p>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="mx-auto h-14 w-14 rounded-full bg-green-100 flex items-center justify-center">
+                    <Check className="h-7 w-7 text-green-600" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-foreground">¡Cuenta creada!</p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Revisa tu correo <span className="font-medium">{email}</span> para confirmar tu cuenta
+                      {itemSeleccionado
+                        ? `. Al iniciar sesión te llevaremos al pago de ${itemSeleccionado.nombre}.`
+                        : " y luego inicia sesión."}
+                    </p>
+                  </div>
+                  <Button
+                    className="w-full"
+                    onClick={() =>
+                      navigate(
+                        itemSeleccionado ? `/login?plan=${itemSeleccionado.id}` : "/login",
+                      )
+                    }
+                  >
+                    Ir al inicio de sesión
+                  </Button>
+                </>
+              )}
             </div>
           )}
 

@@ -45,17 +45,25 @@ export default function Precios() {
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
-  const { user, loading } = useAuth();
+  const { user, loading, org } = useAuth();
 
   const haySesion = !!user && !loading;
+  // Suscripción activa = la org tiene plan distinto de trial y está activa
+  const tieneSuscripcionActiva =
+    haySesion && !!org && org.activo === true && org.plan !== "trial";
 
   const startCheckout = async (priceId: string, key: PlanId | AddonId) => {
+    // Sin sesión → siempre va a /register?plan=<key>
     if (!haySesion) {
+      navigate(`/register?plan=${key}`);
+      return;
+    }
+    // Con sesión, pero el addon "protocolos" requiere suscripción activa
+    if (key === "protocolos" && !tieneSuscripcionActiva) {
       toast({
-        title: "Inicia sesión",
-        description: "Necesitas una cuenta activa para adquirir un plan o complemento.",
+        title: "Necesitas una suscripción activa",
+        description: "Adquiere un plan (Starter, Professional o Enterprise) para poder comprar este complemento.",
       });
-      navigate("/login");
       return;
     }
     setLoadingId(key);
@@ -166,7 +174,7 @@ export default function Precios() {
                   ) : haySesion ? (
                     `Suscribirme a ${plan.nombre}`
                   ) : (
-                    "Iniciar sesión para suscribirme"
+                    `Crear cuenta y suscribirme`
                   )}
                 </Button>
               </CardFooter>
@@ -182,7 +190,35 @@ export default function Precios() {
           </header>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
             {ADDONS.map((addon) => {
-              const disabled = !haySesion || loadingId !== null;
+              // Curso: cualquiera (con o sin sesión) puede comprarlo.
+              // Protocolos: requiere sesión + suscripción activa.
+              const requiereSuscripcion = addon.id === "protocolos";
+              const bloqueadoPorSuscripcion =
+                requiereSuscripcion && haySesion && !tieneSuscripcionActiva;
+              const disabled = bloqueadoPorSuscripcion || loadingId !== null;
+
+              const labelBoton = (() => {
+                if (loadingId === addon.id) return null;
+                if (!haySesion) {
+                  return requiereSuscripcion
+                    ? "Crear cuenta y adquirir"
+                    : `Adquirir ${addon.nombre}`;
+                }
+                return `Adquirir ${addon.nombre}`;
+              })();
+
+              const mensajeAyuda = (() => {
+                if (!haySesion) {
+                  return requiereSuscripcion
+                    ? "Crea tu cuenta y adquiere los protocolos"
+                    : null;
+                }
+                if (bloqueadoPorSuscripcion) {
+                  return "Necesitas una suscripción activa para adquirir este complemento.";
+                }
+                return null;
+              })();
+
               return (
                 <Card key={addon.id}>
                   <CardHeader>
@@ -213,13 +249,18 @@ export default function Precios() {
                       {loadingId === addon.id ? (
                         <Loader2 className="w-4 h-4 animate-spin" />
                       ) : (
-                        `Adquirir ${addon.nombre}`
+                        labelBoton
                       )}
                     </Button>
-                    {!haySesion && (
-                      <p className="text-xs text-muted-foreground text-center">
-                        Inicia sesión para adquirir este complemento
-                      </p>
+                    {mensajeAyuda && (
+                      <div className="text-xs text-muted-foreground text-center space-y-1">
+                        <p>{mensajeAyuda}</p>
+                        {bloqueadoPorSuscripcion && (
+                          <Link to="/precios#planes" className="text-primary underline">
+                            Ver planes →
+                          </Link>
+                        )}
+                      </div>
                     )}
                   </CardFooter>
                 </Card>
