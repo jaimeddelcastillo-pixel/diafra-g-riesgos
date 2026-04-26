@@ -228,6 +228,31 @@ export default function Admin() {
     onError: (e: any) => toast.error(e.message),
   });
 
+  const orgActionMutation = useMutation({
+    mutationFn: async (payload: {
+      action: "suspender" | "reactivar" | "cambiar-plan" | "eliminar" | "recordatorio-pago";
+      org_id: string;
+      plan?: string;
+      motivo?: string;
+      confirm_nombre?: string;
+    }) => {
+      const { data, error } = await supabase.functions.invoke("org-action", { body: payload });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data;
+    },
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ["admin-stats"] });
+      toast.success(data?.message || "Acción ejecutada");
+      setChangePlanOrg(null);
+      setReminderOrg(null);
+      setReminderMotivo("");
+      setDeleteOrgTarget(null);
+      setDeleteOrgConfirm("");
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
   const updateOrgMutation = useMutation({
     mutationFn: async ({ id, plan, trial_expires_at, max_users }: {
       id: string; plan: string; trial_expires_at: string | null; max_users: number;
