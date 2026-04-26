@@ -12,6 +12,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { OrgLogoCard } from "@/components/OrgLogoCard";
 import { OrgFormatoCard } from "@/components/OrgFormatoCard";
+import { PlanSubscriptionCard } from "@/components/PlanSubscriptionCard";
 import type { Database } from "@/integrations/supabase/types";
 
 type AppRole = Database["public"]["Enums"]["app_role"];
@@ -454,6 +455,8 @@ export default function Configuracion() {
           <p className="text-sm text-muted-foreground">Las alertas de correo automático se activarán próximamente.</p>
         </CardContent>
       </Card>
+
+      {isAdmin && <PlanSubscriptionCard />}
 
       <OrgLogoCard />
 
