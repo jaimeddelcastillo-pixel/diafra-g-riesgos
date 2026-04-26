@@ -14,7 +14,7 @@ import { ContactDialog } from "@/components/ContactDialog";
 const FAQ = [
   {
     q: "¿Qué incluye exactamente el plan Starter?",
-    a: "Hasta 5 usuarios, folios y matriz AMEF ilimitados, firma electrónica conforme a CFR Part 11 y soporte por correo. Ideal para equipos pequeños iniciando con gestión de riesgos bajo FEUM / ISO 14971.",
+    a: "Hasta 3 usuarios, folios ilimitados, matriz AMEF completa ISO 14971, firma electrónica NOM-241-SSA1-2025, checklist regulatorio integrado, 30 consultas mensuales al Asistente IA, Centro de Recursos TRACEA y soporte por correo. Ideal para equipos pequeños que inician su Sistema de Gestión de Riesgos bajo NOM-241-SSA1-2025.",
   },
   {
     q: "¿Puedo cambiar de plan en cualquier momento?",
@@ -26,11 +26,11 @@ const FAQ = [
   },
   {
     q: "¿Qué método de pago aceptan?",
-    a: "Aceptamos todas las tarjetas de crédito y débito principales (Visa, Mastercard, American Express) procesadas de forma segura mediante Stripe.",
+    a: "Aceptamos tarjetas de crédito y débito Visa y Mastercard procesadas de forma segura a través de Stripe. También puedes pagar en efectivo mediante voucher OXXO Pay — disponible en cualquier tienda OXXO y 7-Eleven de México. Al elegir esta opción en el checkout recibirás un voucher con número de referencia válido por 24 horas. Nota: los pagos en OXXO pueden tardar hasta 24 horas en confirmarse.",
   },
   {
-    q: "¿Cuál es la diferencia entre los complementos y los planes?",
-    a: "Los planes son suscripciones mensuales que dan acceso a la plataforma. Los complementos (Curso, Pack de Protocolos) son compras únicas que se suman a tu cuenta y permanecen disponibles indefinidamente.",
+    q: "¿Cuál es la diferencia entre el Curso, los Protocolos y una suscripción?",
+    a: "Son tres productos independientes con propósitos distintos:\n\nCURSO DE GESTIÓN DE RIESGOS ($450 USD, pago único): Es una compra única que permanece contigo independientemente de si mantienes una suscripción activa. Certifica a tu equipo en gestión de riesgos bajo NOM-241-SSA1-2025 e ISO 14971, y te otorga las constancias DC-3 oficiales STPS por cada usuario — la evidencia más sólida de capacitación que puedes presentar ante una auditoría COFEPRIS. Incluye 30 días de acceso completo a la plataforma para práctica real.\n\nPROTOCOLOS DQ/IQ/OQ/PQ ($450 USD, pago único): Son formatos validados para la calificación de sistemas. Los Protocolos de Diseño (DQ) e Instalación (IQ) se entregan listos para usar. Los de Operación (OQ) y Desempeño (PQ) son guías ejecutables que tu organización completa con sus propios datos. Son indispensables cuando una empresa u organización necesita calificar o validar sus sistemas de software, equipos o procesos ante COFEPRIS — documentando que el sistema hace lo que dice que hace, de forma consistente y verificable.\n\nSUSCRIPCIÓN MENSUAL (Starter/Professional/Enterprise): Es el acceso continuo a la plataforma para gestionar tus análisis de riesgos en producción. Incluye todos los folios, firmas electrónicas, trazabilidad y el Asistente IA según tu plan. El Curso y los Protocolos son complementos que potencian tu suscripción pero también funcionan de forma independiente.",
   },
   {
     q: "¿TRACEA cumple con NOM-241-SSA1-2025?",
