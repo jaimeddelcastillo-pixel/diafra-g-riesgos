@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -99,6 +99,21 @@ function FirmaUpload({
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [previewSrc, setPreviewSrc] = useState<string | null>(null);
+  const [signedUrl, setSignedUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    if (currentUrl && !previewSrc) {
+      getFirmaSignedUrl(currentUrl).then((url) => {
+        if (active) setSignedUrl(url);
+      });
+    } else {
+      setSignedUrl(null);
+    }
+    return () => {
+      active = false;
+    };
+  }, [currentUrl, previewSrc]);
 
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -113,7 +128,7 @@ function FirmaUpload({
     reader.readAsDataURL(file);
   };
 
-  const displayUrl = previewSrc || (currentUrl ? getPublicFirmaUrl(currentUrl) : null);
+  const displayUrl = previewSrc || signedUrl;
 
   return (
     <div className="space-y-2">
