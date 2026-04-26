@@ -134,7 +134,14 @@ export default function Precios() {
         </section>
 
         {/* Planes */}
-        <section className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-20">
+        <section id="planes" className="mb-20">
+          <p className="text-center text-sm text-muted-foreground mb-6">
+            ¿Necesitas DC-3 para tu equipo? Disponibles para cualquier plan a $35 USD por usuario —{" "}
+            <a href="mailto:soporte@tracea.com.mx" className="text-primary underline">
+              soporte@tracea.com.mx
+            </a>
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {PLANS.map((plan) => (
             <Card
               key={plan.id}
@@ -168,23 +175,40 @@ export default function Precios() {
                 </ul>
               </CardContent>
               <CardFooter>
-                <Button
-                  className="w-full"
-                  variant={plan.destacado ? "default" : "outline"}
-                  onClick={() => startCheckout(plan.priceId, plan.id)}
-                  disabled={loadingId !== null}
-                >
-                  {loadingId === plan.id ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : haySesion ? (
-                    `Suscribirme a ${plan.nombre}`
-                  ) : (
-                    `Crear cuenta y suscribirme`
-                  )}
-                </Button>
+                {plan.id === "enterprise" ? (
+                  <ContactDialog
+                    trigger={
+                      <Button className="w-full" variant={plan.destacado ? "default" : "outline"}>
+                        Contactar
+                      </Button>
+                    }
+                  />
+                ) : (
+                  <Button
+                    className="w-full"
+                    variant={plan.destacado ? "default" : "outline"}
+                    onClick={() => startCheckout(plan.priceId, plan.id)}
+                    disabled={loadingId !== null}
+                  >
+                    {loadingId === plan.id ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : haySesion ? (
+                      `Suscribirme a ${plan.nombre}`
+                    ) : (
+                      `Crear cuenta y suscribirme`
+                    )}
+                  </Button>
+                )}
               </CardFooter>
             </Card>
           ))}
+          </div>
+          <p className="text-center text-xs text-muted-foreground mt-6">
+            DC-3 adicionales disponibles para cualquier plan — $35 USD por usuario. Contáctanos:{" "}
+            <a href="mailto:soporte@tracea.com.mx" className="text-primary underline">
+              soporte@tracea.com.mx
+            </a>
+          </p>
         </section>
 
         {/* Complementos */}
