@@ -23,8 +23,8 @@ function BlockScreen({ title, message }: { title: string; message: string }) {
         </div>
         <p className="text-sm text-muted-foreground">
           Para más información contacta a{" "}
-          <a href="mailto:soporte@tracea.mx" className="text-primary underline font-medium">
-            soporte@tracea.mx
+          <a href="mailto:soporte@tracea.com.mx" className="text-primary underline font-medium">
+            soporte@tracea.com.mx
           </a>
         </p>
         <Button variant="outline" onClick={signOut} className="w-full">
