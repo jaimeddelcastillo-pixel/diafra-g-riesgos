@@ -585,13 +585,23 @@ export default function Admin() {
                         </td>
                         <td className="py-3">
                           <div className="flex items-center gap-1.5">
-                            <Switch
-                              checked={org.activo}
-                              onCheckedChange={(v) => toggleActivoMutation.mutate({ id: org.id, activo: v })}
-                            />
-                            <span className={`text-xs ${org.activo ? "text-green-600" : "text-muted-foreground"}`}>
-                              {org.activo ? "Activo" : "Inactivo"}
-                            </span>
+                            {(() => {
+                              const estado = (org as any).estado as string | undefined;
+                              const label =
+                                estado === "cancelado" ? "Cancelado" :
+                                estado === "suspendido" ? "Suspendido" :
+                                estado === "pendiente" ? "Pendiente" :
+                                org.activo ? "Activo" : "Inactivo";
+                              const cls =
+                                estado === "cancelado" ? "bg-gray-100 text-gray-600 border-gray-200" :
+                                estado === "suspendido" ? "bg-orange-100 text-orange-700 border-orange-200" :
+                                estado === "pendiente" ? "bg-yellow-100 text-yellow-700 border-yellow-200" :
+                                org.activo ? "bg-green-100 text-green-700 border-green-200" :
+                                "bg-gray-100 text-gray-600 border-gray-200";
+                              return (
+                                <Badge variant="outline" className={`text-[10px] ${cls}`}>{label}</Badge>
+                              );
+                            })()}
                           </div>
                         </td>
                         <td className="py-3">
@@ -612,6 +622,50 @@ export default function Admin() {
                             >
                               <Pencil className="h-3.5 w-3.5" />
                             </Button>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-7 w-7">
+                                  <MoreHorizontal className="h-3.5 w-3.5" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="w-56">
+                                <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                                <DropdownMenuSeparator />
+                                {((org as any).estado === "suspendido" || !org.activo) ? (
+                                  <DropdownMenuItem
+                                    onClick={() => orgActionMutation.mutate({ action: "reactivar", org_id: org.id })}
+                                  >
+                                    <Play className="h-3.5 w-3.5 mr-2" /> Reactivar
+                                  </DropdownMenuItem>
+                                ) : (
+                                  <DropdownMenuItem
+                                    onClick={() => orgActionMutation.mutate({ action: "suspender", org_id: org.id })}
+                                  >
+                                    <Pause className="h-3.5 w-3.5 mr-2" /> Suspender
+                                  </DropdownMenuItem>
+                                )}
+                                <DropdownMenuItem
+                                  onClick={() => {
+                                    setChangePlanOrg(org);
+                                    setChangePlanValue(org.plan);
+                                  }}
+                                >
+                                  <ArrowUpDown className="h-3.5 w-3.5 mr-2" /> Cambiar plan
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => { setReminderOrg(org); setReminderMotivo(""); }}
+                                >
+                                  <Send className="h-3.5 w-3.5 mr-2" /> Enviar recordatorio de pago
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  className="text-destructive focus:text-destructive"
+                                  onClick={() => { setDeleteOrgTarget(org); setDeleteOrgConfirm(""); }}
+                                >
+                                  <Trash2 className="h-3.5 w-3.5 mr-2" /> Cancelar organización
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                           </div>
                         </td>
                       </tr>
