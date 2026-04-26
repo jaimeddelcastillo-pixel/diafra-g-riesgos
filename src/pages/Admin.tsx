@@ -230,11 +230,12 @@ export default function Admin() {
 
   const orgActionMutation = useMutation({
     mutationFn: async (payload: {
-      action: "suspender" | "reactivar" | "cambiar-plan" | "eliminar" | "recordatorio-pago";
+      action: "suspender" | "reactivar" | "cambiar-plan" | "eliminar" | "recordatorio-pago" | "enviar-reactivacion";
       org_id: string;
       plan?: string;
       motivo?: string;
       confirm_nombre?: string;
+      dias_inactividad?: number;
     }) => {
       const { data, error } = await supabase.functions.invoke("org-action", { body: payload });
       if (error) throw error;
