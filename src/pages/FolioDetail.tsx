@@ -396,14 +396,10 @@ function SeccionComite({
     },
   });
 
-  const getFirmaUrl = (userId: string | null) => {
+  const getFirmaPath = (userId: string | null): string | null => {
     if (!userId) return null;
     const profile = profiles?.find((p: any) => p.id === userId);
-    if (profile && (profile as any).firma_url) {
-      const { data } = supabase.storage.from("firmas").getPublicUrl((profile as any).firma_url);
-      return data.publicUrl;
-    }
-    return null;
+    return (profile && (profile as any).firma_url) || null;
   };
 
   const handleAgregarMiembro = async () => {
