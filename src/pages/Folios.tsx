@@ -108,9 +108,13 @@ async function exportarPDF(
   const orgLogo = await fetchOrgLogoDataUrl(org?.logo_url);
   const orgNombre = (org?.nombre || "").trim();
   const orgNombreUpper = (orgNombre || "ORGANIZACIÓN").toUpperCase();
-  const codigoFormato = (org?.codigo_formato || "FOR-SGC-11-01").trim();
-  const versionFormato = (org?.version_formato || "01").trim();
-  const codigoLabel = `${codigoFormato} (${versionFormato})`;
+  const codigoFormato = (org?.codigo_formato || "").trim();
+  const versionFormato = (org?.version_formato || "").trim();
+  const codigoLabel = codigoFormato
+    ? versionFormato
+      ? `${codigoFormato} (${versionFormato})`
+      : codigoFormato
+    : "";
 
   // ─── Encabezado y pie reutilizables ────────────────────────────────────────
   function addHeader(pageIndex: number, totalPages: number) {
@@ -148,8 +152,12 @@ async function exportarPDF(
     // Código y página (derecha)
     doc.setFontSize(7);
     doc.setFont("helvetica", "normal");
-    doc.text(codigoLabel, pageW - margin - 16, 11, { align: "center" });
-    doc.text(`Página ${pageIndex} de ${totalPages}`, pageW - margin - 16, 17, { align: "center" });
+    if (codigoLabel) {
+      doc.text(codigoLabel, pageW - margin - 16, 11, { align: "center" });
+      doc.text(`Página ${pageIndex} de ${totalPages}`, pageW - margin - 16, 17, { align: "center" });
+    } else {
+      doc.text(`Página ${pageIndex} de ${totalPages}`, pageW - margin - 16, 14, { align: "center" });
+    }
   }
 
   function addFooter() {
