@@ -251,7 +251,14 @@ export default function Precios() {
               return (
                 <Card key={addon.id}>
                   <CardHeader>
-                    <CardTitle>{addon.nombre}</CardTitle>
+                    <div className="flex items-start justify-between gap-2">
+                      <CardTitle>{addon.nombre}</CardTitle>
+                      {addon.badge && (
+                        <Badge variant="secondary" className="shrink-0">
+                          {addon.badge}
+                        </Badge>
+                      )}
+                    </div>
                     <CardDescription>{addon.descripcion}</CardDescription>
                     <div className="pt-2">
                       <span className="text-3xl font-bold text-foreground">{addon.precio}</span>
@@ -281,6 +288,9 @@ export default function Precios() {
                         labelBoton
                       )}
                     </Button>
+                    {addon.notaPie && (
+                      <p className="text-xs text-muted-foreground text-center">{addon.notaPie}</p>
+                    )}
                     {mensajeAyuda && (
                       <div className="text-xs text-muted-foreground text-center space-y-1">
                         <p>{mensajeAyuda}</p>
@@ -308,7 +318,9 @@ export default function Precios() {
             {FAQ.map((item, i) => (
               <AccordionItem key={i} value={`item-${i}`}>
                 <AccordionTrigger className="text-left">{item.q}</AccordionTrigger>
-                <AccordionContent className="text-muted-foreground">{item.a}</AccordionContent>
+                <AccordionContent className="text-muted-foreground whitespace-pre-line">
+                  {item.a}
+                </AccordionContent>
               </AccordionItem>
             ))}
           </Accordion>
