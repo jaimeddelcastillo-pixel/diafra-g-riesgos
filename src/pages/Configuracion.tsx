@@ -12,6 +12,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { OrgLogoCard } from "@/components/OrgLogoCard";
 import { OrgFormatoCard } from "@/components/OrgFormatoCard";
+import { PlanSubscriptionCard } from "@/components/PlanSubscriptionCard";
 import type { Database } from "@/integrations/supabase/types";
 
 type AppRole = Database["public"]["Enums"]["app_role"];
