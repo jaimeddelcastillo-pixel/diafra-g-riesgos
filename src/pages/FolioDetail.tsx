@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Badge } from "@/components/ui/badge";
@@ -18,6 +18,29 @@ import { useToast } from "@/hooks/use-toast";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { Constants } from "@/integrations/supabase/types";
 import { generateFolioPDF } from "@/lib/generateFolioPDF";
+
+// Componente para mostrar firmas usando URLs firmadas (bucket privado)
+function FirmaImg({ path, alt, className }: { path: string | null; alt: string; className?: string }) {
+  const [url, setUrl] = useState<string | null>(null);
+  useEffect(() => {
+    let active = true;
+    if (!path) {
+      setUrl(null);
+      return;
+    }
+    supabase.storage
+      .from("firmas")
+      .createSignedUrl(path, 3600)
+      .then(({ data }) => {
+        if (active) setUrl(data?.signedUrl ?? null);
+      });
+    return () => {
+      active = false;
+    };
+  }, [path]);
+  if (!url) return null;
+  return <img src={url} alt={alt} className={className} />;
+}
 
 // ─── Checklist NOM-241-SSA1-2025 / FEUM / ISO 14971 ───────────────────────────────────────────
 interface CheckItem {
@@ -396,14 +419,10 @@ function SeccionComite({
     },
   });
 
-  const getFirmaUrl = (userId: string | null) => {
+  const getFirmaPath = (userId: string | null): string | null => {
     if (!userId) return null;
     const profile = profiles?.find((p: any) => p.id === userId);
-    if (profile && (profile as any).firma_url) {
-      const { data } = supabase.storage.from("firmas").getPublicUrl((profile as any).firma_url);
-      return data.publicUrl;
-    }
-    return null;
+    return (profile && (profile as any).firma_url) || null;
   };
 
   const handleAgregarMiembro = async () => {
@@ -512,7 +531,7 @@ function SeccionComite({
         </thead>
         <tbody>
           {comite.map((m) => {
-            const firmaImgUrl = m.firmado ? getFirmaUrl(m.user_id) : null;
+            const firmaPath = m.firmado ? getFirmaPath(m.user_id) : null;
             const esMiembro = m.user_id === user?.id;
             const puedeFiremar = esMiembro && !m.firmado && folioEstado === "En Firma";
 
@@ -524,8 +543,8 @@ function SeccionComite({
                 <td className="p-2 text-center">
                   {m.firmado ? (
                     <div className="flex flex-col items-center gap-1">
-                      {firmaImgUrl ? (
-                        <img src={firmaImgUrl} alt={`Firma de ${m.nombre}`} className="h-10 w-auto object-contain" />
+                      {firmaPath ? (
+                        <FirmaImg path={firmaPath} alt={`Firma de ${m.nombre}`} className="h-10 w-auto object-contain" />
                       ) : (
                         <span className="text-success font-bold text-[10px]">✓ Firmado</span>
                       )}

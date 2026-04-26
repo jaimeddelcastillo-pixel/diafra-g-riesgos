@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -49,9 +49,24 @@ interface OrgUser {
 const FIRMA_WIDTH = 200;
 const FIRMA_HEIGHT = 80;
 
-function getPublicFirmaUrl(path: string) {
-  const { data } = supabase.storage.from("firmas").getPublicUrl(path);
-  return data.publicUrl;
+async function getFirmaSignedUrl(path: string): Promise<string> {
+  const { data } = await supabase.storage.from("firmas").createSignedUrl(path, 3600);
+  return data?.signedUrl ?? "";
+}
+
+function FirmaThumb({ path }: { path: string }) {
+  const [url, setUrl] = useState<string | null>(null);
+  useEffect(() => {
+    let active = true;
+    getFirmaSignedUrl(path).then((u) => {
+      if (active) setUrl(u);
+    });
+    return () => {
+      active = false;
+    };
+  }, [path]);
+  if (!url) return <span className="text-muted-foreground/50 text-xs">…</span>;
+  return <img src={url} alt="Firma" className="h-8 w-auto object-contain" />;
 }
 
 async function uploadFirma(file: File, userId: string): Promise<string> {
@@ -99,6 +114,21 @@ function FirmaUpload({
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [previewSrc, setPreviewSrc] = useState<string | null>(null);
+  const [signedUrl, setSignedUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    if (currentUrl && !previewSrc) {
+      getFirmaSignedUrl(currentUrl).then((url) => {
+        if (active) setSignedUrl(url);
+      });
+    } else {
+      setSignedUrl(null);
+    }
+    return () => {
+      active = false;
+    };
+  }, [currentUrl, previewSrc]);
 
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -113,7 +143,7 @@ function FirmaUpload({
     reader.readAsDataURL(file);
   };
 
-  const displayUrl = previewSrc || (currentUrl ? getPublicFirmaUrl(currentUrl) : null);
+  const displayUrl = previewSrc || signedUrl;
 
   return (
     <div className="space-y-2">
@@ -383,7 +413,7 @@ export default function Configuracion() {
                     <td className="py-2 text-muted-foreground">{u.cargo || "—"}</td>
                     <td className="py-2">
                       {u.firma_url ? (
-                        <img src={getPublicFirmaUrl(u.firma_url)} alt="Firma" className="h-8 w-auto object-contain" />
+                        <FirmaThumb path={u.firma_url} />
                       ) : (
                         <span className="text-muted-foreground/50 text-xs">Sin firma</span>
                       )}

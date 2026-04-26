@@ -14,21 +14,6 @@ export type Database = {
   }
   public: {
     Tables: {
-      _folio_seq_backup: {
-        Row: {
-          last_number: number | null
-          year: number | null
-        }
-        Insert: {
-          last_number?: number | null
-          year?: number | null
-        }
-        Update: {
-          last_number?: number | null
-          year?: number | null
-        }
-        Relationships: []
-      }
       addon_purchases: {
         Row: {
           id: string
