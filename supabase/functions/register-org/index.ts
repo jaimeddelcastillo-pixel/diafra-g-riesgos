@@ -107,5 +107,25 @@ Deno.serve(async (req) => {
     return json({ error: memberErr.message }, 500);
   }
 
+  // Sincronizar user_roles: el trigger handle_new_user insertó 'operador'
+  // por defecto. El primer usuario de la org debe ser admin.
+  const { error: roleErr } = await admin
+    .from("user_roles")
+    .upsert(
+      { user_id, role: "admin" },
+      { onConflict: "user_id,role", ignoreDuplicates: true },
+    );
+  if (roleErr) {
+    console.error("user_roles upsert error:", roleErr);
+    // No es crítico — org_members ya tiene el rol correcto vía has_role()
+  } else {
+    // Eliminar el rol 'operador' duplicado que insertó el trigger
+    await admin
+      .from("user_roles")
+      .delete()
+      .eq("user_id", user_id)
+      .eq("role", "operador");
+  }
+
   return json({ success: true, org_id: org.id });
 });
