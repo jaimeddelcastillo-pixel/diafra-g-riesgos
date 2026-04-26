@@ -413,7 +413,7 @@ export default function Configuracion() {
                     <td className="py-2 text-muted-foreground">{u.cargo || "—"}</td>
                     <td className="py-2">
                       {u.firma_url ? (
-                        <img src={getPublicFirmaUrl(u.firma_url)} alt="Firma" className="h-8 w-auto object-contain" />
+                        <FirmaThumb path={u.firma_url} />
                       ) : (
                         <span className="text-muted-foreground/50 text-xs">Sin firma</span>
                       )}
