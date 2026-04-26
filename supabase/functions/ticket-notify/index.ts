@@ -15,9 +15,9 @@ const corsHeaders = {
 
 const SOPORTE_EMAIL = "soporte@tracea.com.mx";
 // Remitente configurable via secret EMAIL_FROM (formato: "Nombre <correo@dominio>").
-// Permite migrar de notify.diafra.mx → notify.tracea.com.mx sin redeploy de código.
-const FROM = Deno.env.get("EMAIL_FROM") ?? "TRACEA Soporte <soporte@notify.diafra.mx>";
-const APP_URL = Deno.env.get("APP_URL") ?? "https://diafra-g-riesgos.lovable.app";
+// Dominio verificado: notify.tracea.com.mx
+const FROM = Deno.env.get("EMAIL_FROM") ?? "TRACEA Soporte <soporte@notify.tracea.com.mx>";
+const APP_URL = Deno.env.get("APP_URL") ?? "https://tracea.com.mx";
 
 interface ReqBody {
   evento: "ticket_creado" | "respuesta_soporte" | "estado_cambiado" | "auto_cerrado";
