@@ -11,8 +11,10 @@ export interface TemplateEntry {
 
 import { template as bienvenidaUsuario } from './bienvenida-usuario.tsx'
 import { template as recordatorioPago } from './recordatorio-pago.tsx'
+import { template as reactivacionCuenta } from './reactivacion-cuenta.tsx'
 
 export const TEMPLATES: Record<string, TemplateEntry> = {
   'bienvenida-usuario': bienvenidaUsuario,
   'recordatorio-pago': recordatorioPago,
+  'reactivacion-cuenta': reactivacionCuenta,
 }
