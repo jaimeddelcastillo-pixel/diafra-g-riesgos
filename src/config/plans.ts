@@ -31,7 +31,7 @@ export const PLANS: Plan[] = [
     id: "starter",
     nombre: "Starter",
     priceId: "STRIPE_STARTER_PRICE_ID",
-    precio: "$49 USD",
+    precio: "$85 USD",
     periodo: "/mes",
     descripcion: "Ideal para equipos pequeños iniciando con gestión de riesgos.",
     features: [
@@ -46,7 +46,7 @@ export const PLANS: Plan[] = [
     id: "professional",
     nombre: "Professional",
     priceId: "STRIPE_PROFESSIONAL_PRICE_ID",
-    precio: "$149 USD",
+    precio: "$225 USD",
     periodo: "/mes",
     descripcion: "Para organizaciones que necesitan mayor capacidad y soporte.",
     features: [
@@ -62,7 +62,7 @@ export const PLANS: Plan[] = [
     id: "enterprise",
     nombre: "Enterprise",
     priceId: "STRIPE_ENTERPRISE_PRICE_ID",
-    precio: "$399 USD",
+    precio: "$475 USD",
     periodo: "/mes",
     descripcion: "Para empresas con múltiples sitios y requerimientos avanzados.",
     features: [
@@ -80,7 +80,7 @@ export const ADDONS: Addon[] = [
     id: "curso",
     nombre: "Curso de Capacitación",
     priceId: "STRIPE_CURSO_PRICE_ID",
-    precio: "$199 USD",
+    precio: "$450 USD",
     descripcion: "Capacitación en gestión de riesgos FEUM / ISO 14971 y NOM-241-SSA1-2025.",
     features: [
       "Acceso 12 meses",
@@ -92,7 +92,7 @@ export const ADDONS: Addon[] = [
     id: "protocolos",
     nombre: "Pack de Protocolos",
     priceId: "STRIPE_PROTOCOLOS_PRICE_ID",
-    precio: "$299 USD",
+    precio: "$450 USD",
     descripcion: "Plantillas de protocolos validados listos para usar.",
     features: [
       "20+ plantillas editables",
