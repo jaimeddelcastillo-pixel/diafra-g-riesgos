@@ -1323,9 +1323,13 @@ export default function FolioDetail() {
               {locked && <Lock className="h-3.5 w-3.5 text-muted-foreground" />}
             </div>
             <p className="text-xs text-muted-foreground">
-              {(org as any)?.codigo_formato || "FOR-SGC-11-01"}
-              {(org as any)?.version_formato ? ` (${(org as any).version_formato})` : ""}
-              {org?.nombre ? ` · ${org.nombre}` : ""}
+              {(() => {
+                const cf = ((org as any)?.codigo_formato || "").trim();
+                const vf = ((org as any)?.version_formato || "").trim();
+                const codigo = cf ? (vf ? `${cf} (${vf})` : cf) : "";
+                if (codigo && org?.nombre) return `${codigo} · ${org.nombre}`;
+                return codigo || org?.nombre || "";
+              })()}
             </p>
           </div>
         </div>
@@ -1428,10 +1432,16 @@ export default function FolioDetail() {
         />
 
         <div className="text-center pt-3 border-t">
-          <p className="text-[10px] text-muted-foreground">
-            {(org as any)?.codigo_formato || "FOR-SGC-11-01"} (
-            {(org as any)?.version_formato || "01"})
-          </p>
+          {(() => {
+            const cf = ((org as any)?.codigo_formato || "").trim();
+            const vf = ((org as any)?.version_formato || "").trim();
+            if (!cf) return null;
+            return (
+              <p className="text-[10px] text-muted-foreground">
+                {cf}{vf ? ` (${vf})` : ""}
+              </p>
+            );
+          })()}
           <p className="text-[9px] text-muted-foreground">
             Documento confidencial propiedad de {org?.nombre || "la organización"}. Queda prohibido su uso, divulgación y/o
             reproducción total o parcial sin previa autorización.
