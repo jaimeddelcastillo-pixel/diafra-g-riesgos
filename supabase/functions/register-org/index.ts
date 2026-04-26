@@ -39,7 +39,7 @@ Deno.serve(async (req) => {
     return json({ error: "Body inválido" }, 400);
   }
 
-  const { user_id, org_nombre, org_slug } = body ?? {};
+  const { user_id, org_nombre, org_slug, pending_price_id } = body ?? {};
 
   if (!user_id || !org_nombre?.trim() || !org_slug?.trim()) {
     return json({ error: "Faltan campos: user_id, org_nombre, org_slug" }, 400);
@@ -81,6 +81,9 @@ Deno.serve(async (req) => {
       slug: org_slug.trim(),
       plan: "trial",
       activo: true,
+      // Cuenta nace bloqueada hasta que Stripe confirme el pago
+      estado: "pendiente",
+      pending_price_id: pending_price_id?.trim() || null,
       // Trial estándar SaaS: 14 días desde el alta
       trial_expires_at: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
     })

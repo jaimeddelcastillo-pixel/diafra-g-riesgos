@@ -21,6 +21,7 @@ import Register from "./pages/Register";
 import Unsubscribe from "./pages/Unsubscribe";
 import Precios from "./pages/Precios";
 import CheckoutSuccess from "./pages/CheckoutSuccess";
+import PagoPendiente from "./pages/PagoPendiente";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -38,6 +39,7 @@ const App = () => (
             <Route path="/precios" element={<Precios />} />
             <Route path="/unsubscribe" element={<Unsubscribe />} />
             <Route path="/checkout/success" element={<CheckoutSuccess />} />
+            <Route path="/pago-pendiente" element={<PagoPendiente />} />
             <Route element={<AppLayout />}>
               <Route path="/" element={<Index />} />
               <Route path="/folios" element={<Folios />} />

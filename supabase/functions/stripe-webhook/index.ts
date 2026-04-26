@@ -75,13 +75,26 @@ Deno.serve(async (req) => {
             .update({
               plan: producto,
               subscription_status: "active",
+              estado: "activo",
               stripe_customer_id: customerId,
               stripe_subscription_id: subId,
               max_users: PLAN_LIMITS[producto],
               cancelled_at: null,
+              pending_price_id: null,
             })
             .eq("id", orgId);
         } else if (session.mode === "payment" && producto) {
+          // Si la compra única ya pagada incluye el "curso", también activamos
+          // la cuenta para que pueda entrar a la plataforma 30 días.
+          if (producto === "curso") {
+            await supabase
+              .from("organizations")
+              .update({
+                estado: "activo",
+                pending_price_id: null,
+              })
+              .eq("id", orgId);
+          }
           // Registrar addon
           await supabase.from("addon_purchases").insert({
             org_id: orgId,
@@ -94,6 +107,35 @@ Deno.serve(async (req) => {
             metadata: { price_id: priceId },
           });
         }
+        break;
+      }
+
+      case "checkout.session.async_payment_succeeded": {
+        // OXXO: el pago se confirma horas después → activar igual que en completed
+        const session = event.data.object as Stripe.Checkout.Session;
+        const orgId = session.metadata?.org_id;
+        const priceId = session.metadata?.price_id;
+        const producto = priceId ? PRICE_TO_PRODUCT[priceId] : session.metadata?.producto;
+        if (!orgId) break;
+
+        if (session.mode === "payment" && producto === "curso") {
+          await supabase
+            .from("organizations")
+            .update({ estado: "activo", pending_price_id: null })
+            .eq("id", orgId);
+        }
+        break;
+      }
+
+      case "checkout.session.async_payment_failed": {
+        const session = event.data.object as Stripe.Checkout.Session;
+        const orgId = session.metadata?.org_id;
+        if (!orgId) break;
+        // Mantener pendiente; el usuario verá la pantalla de pago pendiente
+        await supabase
+          .from("organizations")
+          .update({ estado: "pendiente" })
+          .eq("id", orgId);
         break;
       }
 
@@ -115,6 +157,15 @@ Deno.serve(async (req) => {
           updates.plan = producto;
           updates.max_users = PLAN_LIMITS[producto];
         }
+        // Sincronizar gate de acceso con estado real de Stripe
+        if (sub.status === "active" || sub.status === "trialing") {
+          updates.estado = "activo";
+          updates.pending_price_id = null;
+        } else if (sub.status === "past_due" || sub.status === "unpaid") {
+          updates.estado = "suspendido";
+        } else if (sub.status === "canceled" || sub.status === "incomplete_expired") {
+          updates.estado = "cancelado";
+        }
         if (sub.cancel_at_period_end) {
           updates.cancelled_at = new Date().toISOString();
         } else {
@@ -135,6 +186,7 @@ Deno.serve(async (req) => {
           .from("organizations")
           .update({
             subscription_status: "canceled",
+            estado: "cancelado",
             cancelled_at: new Date().toISOString(),
           })
           .eq("stripe_customer_id", customerId);
@@ -175,7 +227,7 @@ Deno.serve(async (req) => {
         if (!customerId) break;
         await supabase
           .from("organizations")
-          .update({ subscription_status: "past_due" })
+          .update({ subscription_status: "past_due", estado: "suspendido" })
           .eq("stripe_customer_id", customerId);
         break;
       }

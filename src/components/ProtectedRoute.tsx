@@ -53,6 +53,29 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
   // Org guard — solo aplica a usuarios con contexto de org
   // Usuarios legacy (sin org_members) e isSuperAdmin pasan siempre
   if (org && !isSuperAdmin()) {
+    // Cuenta creada pero pago no completado → pantalla de pago pendiente
+    if (org.estado === "pendiente") {
+      return <Navigate to="/pago-pendiente" replace />;
+    }
+
+    if (org.estado === "cancelado") {
+      return (
+        <BlockScreen
+          title="Suscripción cancelada"
+          message="Tu suscripción fue cancelada. Reactívala desde /precios o contacta a soporte para recuperar el acceso."
+        />
+      );
+    }
+
+    if (org.estado === "suspendido") {
+      return (
+        <BlockScreen
+          title="Suscripción suspendida"
+          message="Tu pago no se procesó correctamente. Actualiza tu método de pago o contacta a soporte para reactivar tu cuenta."
+        />
+      );
+    }
+
     if (!org.activo) {
       return (
         <BlockScreen
