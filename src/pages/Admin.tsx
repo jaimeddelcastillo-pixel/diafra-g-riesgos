@@ -51,6 +51,7 @@ interface OrgStats {
   folio_count: number;
   folios_mes: number;
   ultimo_folio_at: string | null;
+  estado?: string;
 }
 
 interface Metrics {
