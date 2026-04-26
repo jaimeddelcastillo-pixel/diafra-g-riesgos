@@ -54,6 +54,21 @@ async function getFirmaSignedUrl(path: string): Promise<string> {
   return data?.signedUrl ?? "";
 }
 
+function FirmaThumb({ path }: { path: string }) {
+  const [url, setUrl] = useState<string | null>(null);
+  useEffect(() => {
+    let active = true;
+    getFirmaSignedUrl(path).then((u) => {
+      if (active) setUrl(u);
+    });
+    return () => {
+      active = false;
+    };
+  }, [path]);
+  if (!url) return <span className="text-muted-foreground/50 text-xs">…</span>;
+  return <img src={url} alt="Firma" className="h-8 w-auto object-contain" />;
+}
+
 async function uploadFirma(file: File, userId: string): Promise<string> {
   const ext = file.name.split(".").pop() || "png";
   const path = `${userId}/firma.${ext}`;
