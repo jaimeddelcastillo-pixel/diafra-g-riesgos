@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { ADDONS, PLANS, type AddonId, type PlanId } from "@/config/plans";
+import { ContactDialog } from "@/components/ContactDialog";
 
 const FAQ = [
   {
@@ -102,13 +103,17 @@ export default function Precios() {
             <span className="font-bold tracking-wide text-foreground">TRACEA</span>
           </Link>
           <nav className="flex items-center gap-2 sm:gap-4">
-            <a
-              href="mailto:soporte@tracea.com.mx"
-              className="text-sm text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5"
-            >
-              <Mail className="w-4 h-4" />
-              <span className="hidden sm:inline">Contacto</span>
-            </a>
+            <ContactDialog
+              trigger={
+                <button
+                  type="button"
+                  className="text-sm text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5"
+                >
+                  <Mail className="w-4 h-4" />
+                  <span className="hidden sm:inline">Contacto</span>
+                </button>
+              }
+            />
             <Button asChild size="sm" variant="outline">
               <Link to="/login">Iniciar sesión</Link>
             </Button>
@@ -286,11 +291,13 @@ export default function Precios() {
 
           <div className="mt-10 text-center">
             <p className="text-muted-foreground mb-3">¿Tienes otra pregunta?</p>
-            <Button asChild variant="outline">
-              <a href="mailto:soporte@tracea.com.mx">
-                <Mail className="w-4 h-4 mr-2" /> Escríbenos a soporte@tracea.com.mx
-              </a>
-            </Button>
+            <ContactDialog
+              trigger={
+                <Button variant="outline">
+                  <Mail className="w-4 h-4 mr-2" /> Escríbenos
+                </Button>
+              }
+            />
           </div>
         </section>
       </main>
