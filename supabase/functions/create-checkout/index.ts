@@ -138,6 +138,9 @@ Deno.serve(async (req) => {
       success_url: `${appUrl}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${appUrl}/planes?cancelled=1`,
       allow_promotion_codes: true,
+      // OXXO solo está disponible para pagos únicos (no suscripciones).
+      payment_method_types:
+        config.mode === "payment" ? ["card", "oxxo"] : ["card"],
       metadata: {
         org_id: member.org_id,
         user_id: userId,

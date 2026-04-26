@@ -14,7 +14,7 @@ import { ContactDialog } from "@/components/ContactDialog";
 const FAQ = [
   {
     q: "¿Qué incluye exactamente el plan Starter?",
-    a: "Hasta 5 usuarios, folios y matriz AMEF ilimitados, firma electrónica conforme a CFR Part 11 y soporte por correo. Ideal para equipos pequeños iniciando con gestión de riesgos bajo FEUM / ISO 14971.",
+    a: "Hasta 3 usuarios, folios ilimitados, matriz AMEF completa ISO 14971, firma electrónica NOM-241-SSA1-2025, checklist regulatorio integrado, 30 consultas mensuales al Asistente IA, Centro de Recursos TRACEA y soporte por correo. Ideal para equipos pequeños que inician su Sistema de Gestión de Riesgos bajo NOM-241-SSA1-2025.",
   },
   {
     q: "¿Puedo cambiar de plan en cualquier momento?",
@@ -26,11 +26,11 @@ const FAQ = [
   },
   {
     q: "¿Qué método de pago aceptan?",
-    a: "Aceptamos todas las tarjetas de crédito y débito principales (Visa, Mastercard, American Express) procesadas de forma segura mediante Stripe.",
+    a: "Aceptamos tarjetas de crédito y débito Visa y Mastercard procesadas de forma segura a través de Stripe. También puedes pagar en efectivo mediante voucher OXXO Pay — disponible en cualquier tienda OXXO y 7-Eleven de México. Al elegir esta opción en el checkout recibirás un voucher con número de referencia válido por 24 horas. Nota: los pagos en OXXO pueden tardar hasta 24 horas en confirmarse.",
   },
   {
-    q: "¿Cuál es la diferencia entre los complementos y los planes?",
-    a: "Los planes son suscripciones mensuales que dan acceso a la plataforma. Los complementos (Curso, Pack de Protocolos) son compras únicas que se suman a tu cuenta y permanecen disponibles indefinidamente.",
+    q: "¿Cuál es la diferencia entre el Curso, los Protocolos y una suscripción?",
+    a: "Son tres productos independientes con propósitos distintos:\n\nCURSO DE GESTIÓN DE RIESGOS ($450 USD, pago único): Es una compra única que permanece contigo independientemente de si mantienes una suscripción activa. Certifica a tu equipo en gestión de riesgos bajo NOM-241-SSA1-2025 e ISO 14971, y te otorga las constancias DC-3 oficiales STPS por cada usuario — la evidencia más sólida de capacitación que puedes presentar ante una auditoría COFEPRIS. Incluye 30 días de acceso completo a la plataforma para práctica real.\n\nPROTOCOLOS DQ/IQ/OQ/PQ ($450 USD, pago único): Son formatos validados para la calificación de sistemas. Los Protocolos de Diseño (DQ) e Instalación (IQ) se entregan listos para usar. Los de Operación (OQ) y Desempeño (PQ) son guías ejecutables que tu organización completa con sus propios datos. Son indispensables cuando una empresa u organización necesita calificar o validar sus sistemas de software, equipos o procesos ante COFEPRIS — documentando que el sistema hace lo que dice que hace, de forma consistente y verificable.\n\nSUSCRIPCIÓN MENSUAL (Starter/Professional/Enterprise): Es el acceso continuo a la plataforma para gestionar tus análisis de riesgos en producción. Incluye todos los folios, firmas electrónicas, trazabilidad y el Asistente IA según tu plan. El Curso y los Protocolos son complementos que potencian tu suscripción pero también funcionan de forma independiente.",
   },
   {
     q: "¿TRACEA cumple con NOM-241-SSA1-2025?",
@@ -134,7 +134,14 @@ export default function Precios() {
         </section>
 
         {/* Planes */}
-        <section className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-20">
+        <section id="planes" className="mb-20">
+          <p className="text-center text-sm text-muted-foreground mb-6">
+            ¿Necesitas DC-3 para tu equipo? Disponibles para cualquier plan a $35 USD por usuario —{" "}
+            <a href="mailto:soporte@tracea.com.mx" className="text-primary underline">
+              soporte@tracea.com.mx
+            </a>
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {PLANS.map((plan) => (
             <Card
               key={plan.id}
@@ -168,23 +175,40 @@ export default function Precios() {
                 </ul>
               </CardContent>
               <CardFooter>
-                <Button
-                  className="w-full"
-                  variant={plan.destacado ? "default" : "outline"}
-                  onClick={() => startCheckout(plan.priceId, plan.id)}
-                  disabled={loadingId !== null}
-                >
-                  {loadingId === plan.id ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : haySesion ? (
-                    `Suscribirme a ${plan.nombre}`
-                  ) : (
-                    `Crear cuenta y suscribirme`
-                  )}
-                </Button>
+                {plan.id === "enterprise" ? (
+                  <ContactDialog
+                    trigger={
+                      <Button className="w-full" variant={plan.destacado ? "default" : "outline"}>
+                        Contactar
+                      </Button>
+                    }
+                  />
+                ) : (
+                  <Button
+                    className="w-full"
+                    variant={plan.destacado ? "default" : "outline"}
+                    onClick={() => startCheckout(plan.priceId, plan.id)}
+                    disabled={loadingId !== null}
+                  >
+                    {loadingId === plan.id ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : haySesion ? (
+                      `Suscribirme a ${plan.nombre}`
+                    ) : (
+                      `Crear cuenta y suscribirme`
+                    )}
+                  </Button>
+                )}
               </CardFooter>
             </Card>
           ))}
+          </div>
+          <p className="text-center text-xs text-muted-foreground mt-6">
+            DC-3 adicionales disponibles para cualquier plan — $35 USD por usuario. Contáctanos:{" "}
+            <a href="mailto:soporte@tracea.com.mx" className="text-primary underline">
+              soporte@tracea.com.mx
+            </a>
+          </p>
         </section>
 
         {/* Complementos */}
@@ -227,7 +251,14 @@ export default function Precios() {
               return (
                 <Card key={addon.id}>
                   <CardHeader>
-                    <CardTitle>{addon.nombre}</CardTitle>
+                    <div className="flex items-start justify-between gap-2">
+                      <CardTitle>{addon.nombre}</CardTitle>
+                      {addon.badge && (
+                        <Badge variant="secondary" className="shrink-0">
+                          {addon.badge}
+                        </Badge>
+                      )}
+                    </div>
                     <CardDescription>{addon.descripcion}</CardDescription>
                     <div className="pt-2">
                       <span className="text-3xl font-bold text-foreground">{addon.precio}</span>
@@ -257,6 +288,9 @@ export default function Precios() {
                         labelBoton
                       )}
                     </Button>
+                    {addon.notaPie && (
+                      <p className="text-xs text-muted-foreground text-center">{addon.notaPie}</p>
+                    )}
                     {mensajeAyuda && (
                       <div className="text-xs text-muted-foreground text-center space-y-1">
                         <p>{mensajeAyuda}</p>
@@ -284,7 +318,9 @@ export default function Precios() {
             {FAQ.map((item, i) => (
               <AccordionItem key={i} value={`item-${i}`}>
                 <AccordionTrigger className="text-left">{item.q}</AccordionTrigger>
-                <AccordionContent className="text-muted-foreground">{item.a}</AccordionContent>
+                <AccordionContent className="text-muted-foreground whitespace-pre-line">
+                  {item.a}
+                </AccordionContent>
               </AccordionItem>
             ))}
           </Accordion>
