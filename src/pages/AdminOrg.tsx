@@ -1,11 +1,13 @@
 import { useParams, useNavigate, Navigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Users, FileText, CheckCircle2, Clock, PenLine, Archive } from "lucide-react";
+import { ArrowLeft, Users, FileText, CheckCircle2, Clock, PenLine, Archive, Gift, Loader2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -17,6 +19,7 @@ interface OrgDetail {
   activo: boolean;
   max_users: number;
   trial_expires_at: string | null;
+  estado?: "pendiente" | "activo" | "suspendido" | "cancelado";
   user_count: number;
   folio_count: number;
   folios_por_estado: {
@@ -90,6 +93,9 @@ export default function AdminOrg() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { isSuperAdmin } = useAuth();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [activando, setActivando] = useState(false);
 
   if (!isSuperAdmin()) return <Navigate to="/" replace />;
 
@@ -107,6 +113,39 @@ export default function AdminOrg() {
   });
 
   const org = data?.org;
+
+  const activarGratis = async () => {
+    if (!id) return;
+    if (!confirm("¿Activar esta organización en modo trial gratuito por 14 días?")) return;
+    setActivando(true);
+    try {
+      const trialExp = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
+      const { error } = await supabase
+        .from("organizations")
+        .update({
+          estado: "activo",
+          activo: true,
+          plan: "trial",
+          trial_expires_at: trialExp,
+          pending_price_id: null,
+        })
+        .eq("id", id);
+      if (error) throw error;
+      toast({
+        title: "Cuenta activada",
+        description: `${org?.nombre} ahora puede acceder en modo trial por 14 días.`,
+      });
+      queryClient.invalidateQueries({ queryKey: ["admin-org", id] });
+    } catch (err) {
+      toast({
+        title: "Error al activar",
+        description: (err as Error).message,
+        variant: "destructive",
+      });
+    } finally {
+      setActivando(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -127,12 +166,32 @@ export default function AdminOrg() {
                   {planLabels[org.plan] ?? org.plan}
                 </Badge>
               )}
+              {org?.estado === "pendiente" && (
+                <Badge className="text-[10px] bg-amber-100 text-amber-800">Pendiente de pago</Badge>
+              )}
+              {org?.estado === "suspendido" && (
+                <Badge variant="destructive" className="text-[10px]">Suspendida</Badge>
+              )}
+              {org?.estado === "cancelado" && (
+                <Badge variant="destructive" className="text-[10px]">Cancelada</Badge>
+              )}
               {org && !org.activo && (
                 <Badge variant="destructive" className="text-[10px]">Suspendida</Badge>
               )}
             </div>
           )}
         </div>
+        {org && org.estado !== "activo" && (
+          <Button onClick={activarGratis} disabled={activando} size="sm" variant="outline">
+            {activando ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <>
+                <Gift className="h-4 w-4 mr-1.5" /> Activar gratis (trial 14d)
+              </>
+            )}
+          </Button>
+        )}
       </div>
 
       {error && (
