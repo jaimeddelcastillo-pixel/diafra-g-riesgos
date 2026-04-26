@@ -76,7 +76,7 @@ Deno.serve(async (req) => {
     // ── Organizaciones ──────────────────────────────────────────────────────────
     const { data: orgs } = await admin
       .from("organizations")
-      .select("id, nombre, slug, plan, activo, max_users, trial_expires_at, created_at")
+      .select("id, nombre, slug, plan, activo, max_users, trial_expires_at, created_at, estado, pending_price_id")
       .order("nombre");
 
     const orgIds = (orgs ?? []).map((o: any) => o.id);
