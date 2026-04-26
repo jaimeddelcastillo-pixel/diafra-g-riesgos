@@ -43,8 +43,8 @@ export function OrgFormatoCard() {
       const { error } = await supabase
         .from("organizations")
         .update({
-          codigo_formato: codigo.trim() || "FOR-SGC-11-01",
-          version_formato: version.trim() || "01",
+          codigo_formato: codigo.trim(),
+          version_formato: version.trim(),
         } as any)
         .eq("id", orgId);
       if (error) throw error;
@@ -75,7 +75,8 @@ export function OrgFormatoCard() {
           <p className="text-xs text-muted-foreground">
             Estos valores aparecen en la cabecera y pie del Archivo Maestro de Gestión de Riesgos
             (UI, PDFs y correos), junto con el nombre de la organización. Personalízalos según tu
-            sistema de calidad (FEUM / ISO 14971 / NOM-241-SSA1-2025).
+            sistema de calidad (FEUM / ISO 14971 / NOM-241-SSA1-2025). Déjalos vacíos si tu
+            organización aún no asigna un código de formato controlado.
           </p>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -86,7 +87,7 @@ export function OrgFormatoCard() {
               <Input
                 value={codigo}
                 onChange={(e) => setCodigo(e.target.value)}
-                placeholder="Ej. FOR-SGC-11-01"
+                placeholder="Ej. FOR-SGC-11-01 (opcional)"
                 disabled={!canEdit}
                 maxLength={40}
               />
@@ -102,7 +103,7 @@ export function OrgFormatoCard() {
               <Input
                 value={version}
                 onChange={(e) => setVersion(e.target.value)}
-                placeholder="Ej. 02"
+                placeholder="Ej. 02 (opcional)"
                 disabled={!canEdit}
                 maxLength={10}
               />
@@ -117,10 +118,19 @@ export function OrgFormatoCard() {
               Vista previa
             </p>
             <p className="text-xs">
-              <span className="font-mono">
-                {(codigo || "FOR-SGC-11-01")} ({(version || "01")})
-              </span>{" "}
-              · {orgRow?.nombre || "—"}
+              {codigo.trim() ? (
+                <>
+                  <span className="font-mono">
+                    {codigo.trim()}
+                    {version.trim() ? ` (${version.trim()})` : ""}
+                  </span>{" "}
+                  · {orgRow?.nombre || "—"}
+                </>
+              ) : (
+                <span className="italic text-muted-foreground">
+                  Sin código de formato — solo se mostrará el nombre de la organización: {orgRow?.nombre || "—"}
+                </span>
+              )}
             </p>
           </div>
 
