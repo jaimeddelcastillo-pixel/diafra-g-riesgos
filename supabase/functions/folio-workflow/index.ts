@@ -485,9 +485,13 @@ async function enviarCorreo(
 // ─── Plantillas de correo ──────────────────────────────────────────────────────
 
 function footerLinea(org_nombre?: string, codigo_formato?: string, version_formato?: string) {
-  const code = `${codigo_formato || "FOR-SGC-11-01"} (${version_formato || "01"})`;
+  const cf = (codigo_formato || "").trim();
+  const vf = (version_formato || "").trim();
+  const code = cf ? (vf ? `${cf} (${vf})` : cf) : "";
   const name = (org_nombre || "Organización").trim();
-  return `${code} · ${name} · Documento confidencial`;
+  return code
+    ? `${code} · ${name} · Documento confidencial`
+    : `${name} · Documento confidencial`;
 }
 
 function plantillaFirma({ nombre, folio_codigo, proceso, link, org_nombre, codigo_formato, version_formato }: any) {
