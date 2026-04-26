@@ -252,6 +252,8 @@ export default function Admin() {
       setReminderMotivo("");
       setDeleteOrgTarget(null);
       setDeleteOrgConfirm("");
+      setReactivationOrg(null);
+      setReactivationMotivo("");
     },
     onError: (e: any) => toast.error(e.message),
   });
