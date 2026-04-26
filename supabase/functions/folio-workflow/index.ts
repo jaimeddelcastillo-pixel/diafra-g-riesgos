@@ -25,7 +25,7 @@ async function getOrgInfo(
   admin: ReturnType<typeof createClient>,
   org_id: string | null | undefined,
 ): Promise<{ org_nombre: string; codigo_formato: string; version_formato: string }> {
-  const fallback = { org_nombre: "TRACEA", codigo_formato: "FOR-SGC-11-01", version_formato: "01" };
+  const fallback = { org_nombre: "TRACEA", codigo_formato: "", version_formato: "" };
   if (!org_id) return fallback;
   const { data } = await admin
     .from("organizations")
@@ -35,8 +35,8 @@ async function getOrgInfo(
   if (!data) return fallback;
   return {
     org_nombre: (data as any).nombre || fallback.org_nombre,
-    codigo_formato: (data as any).codigo_formato || fallback.codigo_formato,
-    version_formato: (data as any).version_formato || fallback.version_formato,
+    codigo_formato: (data as any).codigo_formato ?? "",
+    version_formato: (data as any).version_formato ?? "",
   };
 }
 
@@ -485,9 +485,13 @@ async function enviarCorreo(
 // ─── Plantillas de correo ──────────────────────────────────────────────────────
 
 function footerLinea(org_nombre?: string, codigo_formato?: string, version_formato?: string) {
-  const code = `${codigo_formato || "FOR-SGC-11-01"} (${version_formato || "01"})`;
+  const cf = (codigo_formato || "").trim();
+  const vf = (version_formato || "").trim();
+  const code = cf ? (vf ? `${cf} (${vf})` : cf) : "";
   const name = (org_nombre || "Organización").trim();
-  return `${code} · ${name} · Documento confidencial`;
+  return code
+    ? `${code} · ${name} · Documento confidencial`
+    : `${name} · Documento confidencial`;
 }
 
 function plantillaFirma({ nombre, folio_codigo, proceso, link, org_nombre, codigo_formato, version_formato }: any) {
