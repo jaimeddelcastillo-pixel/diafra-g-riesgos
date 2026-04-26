@@ -190,6 +190,8 @@ export default function Admin() {
   const [reminderMotivo, setReminderMotivo] = useState("");
   const [deleteOrgTarget, setDeleteOrgTarget] = useState<OrgStats | null>(null);
   const [deleteOrgConfirm, setDeleteOrgConfirm] = useState("");
+  const [reactivationOrg, setReactivationOrg] = useState<{ id: string; nombre: string; dias?: number } | null>(null);
+  const [reactivationMotivo, setReactivationMotivo] = useState("");
 
   // ── Equipo TRACEA ──
   const [newTraceaOpen, setNewTraceaOpen] = useState(false);
