@@ -19,6 +19,29 @@ import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { Constants } from "@/integrations/supabase/types";
 import { generateFolioPDF } from "@/lib/generateFolioPDF";
 
+// Componente para mostrar firmas usando URLs firmadas (bucket privado)
+function FirmaImg({ path, alt, className }: { path: string | null; alt: string; className?: string }) {
+  const [url, setUrl] = useState<string | null>(null);
+  useEffect(() => {
+    let active = true;
+    if (!path) {
+      setUrl(null);
+      return;
+    }
+    supabase.storage
+      .from("firmas")
+      .createSignedUrl(path, 3600)
+      .then(({ data }) => {
+        if (active) setUrl(data?.signedUrl ?? null);
+      });
+    return () => {
+      active = false;
+    };
+  }, [path]);
+  if (!url) return null;
+  return <img src={url} alt={alt} className={className} />;
+}
+
 // ─── Checklist NOM-241-SSA1-2025 / FEUM / ISO 14971 ───────────────────────────────────────────
 interface CheckItem {
   id: string;
