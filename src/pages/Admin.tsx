@@ -487,19 +487,38 @@ export default function Admin() {
                     Sin actividad +30 días
                   </p>
                   <div className="space-y-1.5">
-                    {alertas!.sin_actividad.map((org) => (
-                      <div key={org.id} className="flex items-center justify-between bg-white rounded-md px-3 py-2 border border-amber-100">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium">{org.nombre}</span>
-                          <span className="text-xs text-muted-foreground">
-                            {org.ultimo_folio_at ? `Último: ${tiempoDesde(org.ultimo_folio_at)}` : "Sin folios"}
-                          </span>
+                    {alertas!.sin_actividad.map((org) => {
+                      const dias = org.ultimo_folio_at
+                        ? Math.max(0, Math.floor((Date.now() - new Date(org.ultimo_folio_at).getTime()) / 86400000))
+                        : undefined;
+                      return (
+                        <div key={org.id} className="flex items-center justify-between bg-white rounded-md px-3 py-2 border border-amber-100">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium">{org.nombre}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {org.ultimo_folio_at ? `Último: ${tiempoDesde(org.ultimo_folio_at)}` : "Sin folios"}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 text-xs"
+                              disabled={orgActionMutation.isPending}
+                              onClick={() =>
+                                setReactivationOrg({ id: org.id, nombre: org.nombre, dias })
+                              }
+                            >
+                              <Mail className="h-3.5 w-3.5 mr-1" />
+                              Enviar reactivación
+                            </Button>
+                            <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => navigate(`/admin/org/${org.id}`)}>
+                              Ver
+                            </Button>
+                          </div>
                         </div>
-                        <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => navigate(`/admin/org/${org.id}`)}>
-                          Ver
-                        </Button>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               )}
