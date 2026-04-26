@@ -456,6 +456,8 @@ export default function Configuracion() {
         </CardContent>
       </Card>
 
+      {isAdmin && <PlanSubscriptionCard />}
+
       <OrgLogoCard />
 
       <OrgFormatoCard />
