@@ -190,6 +190,8 @@ export default function Admin() {
   const [reminderMotivo, setReminderMotivo] = useState("");
   const [deleteOrgTarget, setDeleteOrgTarget] = useState<OrgStats | null>(null);
   const [deleteOrgConfirm, setDeleteOrgConfirm] = useState("");
+  const [reactivationOrg, setReactivationOrg] = useState<{ id: string; nombre: string; dias?: number } | null>(null);
+  const [reactivationMotivo, setReactivationMotivo] = useState("");
 
   // ── Equipo TRACEA ──
   const [newTraceaOpen, setNewTraceaOpen] = useState(false);
@@ -230,11 +232,12 @@ export default function Admin() {
 
   const orgActionMutation = useMutation({
     mutationFn: async (payload: {
-      action: "suspender" | "reactivar" | "cambiar-plan" | "eliminar" | "recordatorio-pago";
+      action: "suspender" | "reactivar" | "cambiar-plan" | "eliminar" | "recordatorio-pago" | "enviar-reactivacion";
       org_id: string;
       plan?: string;
       motivo?: string;
       confirm_nombre?: string;
+      dias_inactividad?: number;
     }) => {
       const { data, error } = await supabase.functions.invoke("org-action", { body: payload });
       if (error) throw error;
@@ -249,6 +252,8 @@ export default function Admin() {
       setReminderMotivo("");
       setDeleteOrgTarget(null);
       setDeleteOrgConfirm("");
+      setReactivationOrg(null);
+      setReactivationMotivo("");
     },
     onError: (e: any) => toast.error(e.message),
   });
@@ -486,19 +491,38 @@ export default function Admin() {
                     Sin actividad +30 días
                   </p>
                   <div className="space-y-1.5">
-                    {alertas!.sin_actividad.map((org) => (
-                      <div key={org.id} className="flex items-center justify-between bg-white rounded-md px-3 py-2 border border-amber-100">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium">{org.nombre}</span>
-                          <span className="text-xs text-muted-foreground">
-                            {org.ultimo_folio_at ? `Último: ${tiempoDesde(org.ultimo_folio_at)}` : "Sin folios"}
-                          </span>
+                    {alertas!.sin_actividad.map((org) => {
+                      const dias = org.ultimo_folio_at
+                        ? Math.max(0, Math.floor((Date.now() - new Date(org.ultimo_folio_at).getTime()) / 86400000))
+                        : undefined;
+                      return (
+                        <div key={org.id} className="flex items-center justify-between bg-white rounded-md px-3 py-2 border border-amber-100">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium">{org.nombre}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {org.ultimo_folio_at ? `Último: ${tiempoDesde(org.ultimo_folio_at)}` : "Sin folios"}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 text-xs"
+                              disabled={orgActionMutation.isPending}
+                              onClick={() =>
+                                setReactivationOrg({ id: org.id, nombre: org.nombre, dias })
+                              }
+                            >
+                              <Mail className="h-3.5 w-3.5 mr-1" />
+                              Enviar reactivación
+                            </Button>
+                            <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => navigate(`/admin/org/${org.id}`)}>
+                              Ver
+                            </Button>
+                          </div>
                         </div>
-                        <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => navigate(`/admin/org/${org.id}`)}>
-                          Ver
-                        </Button>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -1108,6 +1132,47 @@ export default function Admin() {
               disabled={orgActionMutation.isPending}
             >
               {orgActionMutation.isPending ? "Enviando…" : "Enviar recordatorio"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Dialog Enviar Reactivación ── */}
+      <Dialog open={!!reactivationOrg} onOpenChange={(open) => !open && setReactivationOrg(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Enviar email de reactivación — {reactivationOrg?.nombre}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <p className="text-sm text-muted-foreground">
+              Se enviará un correo a todos los administradores de esta organización animándolos a volver a TRACEA.
+              {reactivationOrg?.dias ? ` Inactividad detectada: ${reactivationOrg.dias} días.` : ""}
+            </p>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Mensaje personalizado (opcional)</label>
+              <Textarea
+                value={reactivationMotivo}
+                onChange={(e) => setReactivationMotivo(e.target.value)}
+                placeholder="Si lo dejas vacío, se enviará el mensaje estándar de reactivación."
+                rows={4}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setReactivationOrg(null)}>Cancelar</Button>
+            <Button
+              onClick={() => {
+                if (!reactivationOrg) return;
+                orgActionMutation.mutate({
+                  action: "enviar-reactivacion",
+                  org_id: reactivationOrg.id,
+                  motivo: reactivationMotivo,
+                  dias_inactividad: reactivationOrg.dias,
+                });
+              }}
+              disabled={orgActionMutation.isPending}
+            >
+              {orgActionMutation.isPending ? "Enviando…" : "Enviar reactivación"}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -74,7 +74,7 @@ Deno.serve(async (req) => {
     return json({ error: "Body inválido" }, 400);
   }
 
-  const { action, org_id, plan, motivo, confirm_nombre } = body ?? {};
+  const { action, org_id, plan, motivo, confirm_nombre, dias_inactividad } = body ?? {};
   if (!action || !org_id) {
     return json({ error: "Faltan campos: action, org_id" }, 400);
   }
@@ -193,6 +193,71 @@ Deno.serve(async (req) => {
         return json({
           success: true,
           message: `Recordatorio enviado a ${sentTo.length} administrador(es)`,
+          sent_to: sentTo,
+          failed,
+        });
+      }
+
+      case "enviar-reactivacion": {
+        // Email a todos los admins de la org animándolos a volver
+        const { data: members } = await admin
+          .from("org_members")
+          .select("user_id")
+          .eq("org_id", org_id)
+          .eq("role", "admin");
+
+        const adminIds = (members ?? []).map((m: any) => m.user_id);
+        if (adminIds.length === 0) {
+          return json({ error: "La organización no tiene administradores" }, 400);
+        }
+
+        const { data: profiles } = await admin
+          .from("profiles")
+          .select("id, nombre, email")
+          .in("id", adminIds);
+
+        const recipients = (profiles ?? []).filter((p: any) => p.email);
+        if (recipients.length === 0) {
+          return json({ error: "No hay correos válidos entre los administradores" }, 400);
+        }
+
+        const mensajePersonalizado = (motivo && typeof motivo === "string" && motivo.trim().length > 0)
+          ? motivo.trim()
+          : "";
+        const dias = typeof dias_inactividad === "number" && dias_inactividad > 0
+          ? Math.floor(dias_inactividad)
+          : undefined;
+
+        const sentTo: string[] = [];
+        const failed: { email: string; error: string }[] = [];
+
+        for (const r of recipients) {
+          try {
+            const { error: sendErr } = await admin.functions.invoke("send-transactional-email", {
+              body: {
+                templateName: "reactivacion-cuenta",
+                recipientEmail: r.email,
+                idempotencyKey: `reactivacion-${org_id}-${r.id}-${Date.now()}`,
+                templateData: {
+                  nombre: r.nombre || "",
+                  organizacion: org.nombre,
+                  diasInactividad: dias,
+                  mensajePersonalizado,
+                  loginUrl: `${APP_URL}/login`,
+                  soporteEmail: "soporte@tracea.com.mx",
+                },
+              },
+            });
+            if (sendErr) throw sendErr;
+            sentTo.push(r.email);
+          } catch (e: any) {
+            failed.push({ email: r.email, error: e?.message || "error" });
+          }
+        }
+
+        return json({
+          success: true,
+          message: `Email de reactivación enviado a ${sentTo.length} administrador(es)`,
           sent_to: sentTo,
           failed,
         });
