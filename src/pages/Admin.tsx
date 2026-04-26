@@ -1023,6 +1023,145 @@ export default function Admin() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* ── Dialog Cambiar Plan ── */}
+      <Dialog open={!!changePlanOrg} onOpenChange={(open) => !open && setChangePlanOrg(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Cambiar plan — {changePlanOrg?.nombre}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <p className="text-xs text-muted-foreground">
+              Override manual: este cambio actualiza solo el campo en TRACEA. <strong>No</strong> sincroniza con la suscripción de Stripe.
+              Úsalo para ajustes comerciales o correcciones puntuales.
+            </p>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Nuevo plan</label>
+              <Select value={changePlanValue} onValueChange={setChangePlanValue}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="trial">Trial</SelectItem>
+                  <SelectItem value="starter">Starter</SelectItem>
+                  <SelectItem value="professional">Professional</SelectItem>
+                  <SelectItem value="enterprise">Enterprise</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Plan actual: <strong>{changePlanOrg?.plan}</strong>
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setChangePlanOrg(null)}>Cancelar</Button>
+            <Button
+              onClick={() => {
+                if (!changePlanOrg) return;
+                if (!changePlanValue || changePlanValue === changePlanOrg.plan) {
+                  toast.error("Selecciona un plan distinto al actual");
+                  return;
+                }
+                orgActionMutation.mutate({
+                  action: "cambiar-plan",
+                  org_id: changePlanOrg.id,
+                  plan: changePlanValue,
+                });
+              }}
+              disabled={orgActionMutation.isPending}
+            >
+              {orgActionMutation.isPending ? "Aplicando…" : "Cambiar plan"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Dialog Recordatorio de Pago ── */}
+      <Dialog open={!!reminderOrg} onOpenChange={(open) => !open && setReminderOrg(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Enviar recordatorio de pago — {reminderOrg?.nombre}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <p className="text-sm text-muted-foreground">
+              Se enviará un correo a todos los administradores de esta organización con un enlace para completar el pago.
+            </p>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Mensaje personalizado (opcional)</label>
+              <Textarea
+                value={reminderMotivo}
+                onChange={(e) => setReminderMotivo(e.target.value)}
+                placeholder="Si lo dejas vacío, se enviará el mensaje estándar."
+                rows={4}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setReminderOrg(null)}>Cancelar</Button>
+            <Button
+              onClick={() => {
+                if (!reminderOrg) return;
+                orgActionMutation.mutate({
+                  action: "recordatorio-pago",
+                  org_id: reminderOrg.id,
+                  motivo: reminderMotivo,
+                });
+              }}
+              disabled={orgActionMutation.isPending}
+            >
+              {orgActionMutation.isPending ? "Enviando…" : "Enviar recordatorio"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Dialog Cancelar Organización ── */}
+      <Dialog open={!!deleteOrgTarget} onOpenChange={(open) => !open && setDeleteOrgTarget(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="text-destructive">Cancelar organización</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <p className="text-sm">
+              Vas a cancelar la organización <strong>{deleteOrgTarget?.nombre}</strong>.
+            </p>
+            <p className="text-xs text-muted-foreground bg-muted/40 rounded p-3 border">
+              <strong>Soft-delete:</strong> el estado pasa a <code>cancelado</code> y los usuarios pierden el acceso.
+              Los datos (folios, riesgos, documentos, audit trail) se conservan por temas legales y de cumplimiento.
+              No es una eliminación física.
+            </p>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">
+                Para confirmar, escribe el nombre exacto: <code className="text-destructive">{deleteOrgTarget?.nombre}</code>
+              </label>
+              <Input
+                value={deleteOrgConfirm}
+                onChange={(e) => setDeleteOrgConfirm(e.target.value)}
+                placeholder={deleteOrgTarget?.nombre}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteOrgTarget(null)}>Cancelar</Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (!deleteOrgTarget) return;
+                if (deleteOrgConfirm.trim() !== deleteOrgTarget.nombre) {
+                  toast.error("El nombre no coincide");
+                  return;
+                }
+                orgActionMutation.mutate({
+                  action: "eliminar",
+                  org_id: deleteOrgTarget.id,
+                  confirm_nombre: deleteOrgConfirm.trim(),
+                });
+              }}
+              disabled={orgActionMutation.isPending || deleteOrgConfirm.trim() !== deleteOrgTarget?.nombre}
+            >
+              {orgActionMutation.isPending ? "Cancelando…" : "Cancelar organización"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
