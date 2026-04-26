@@ -13,9 +13,18 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   Building2, Pencil, LogIn, AlertTriangle, Clock,
   Users, FileText, CheckCircle2, ChevronDown, ChevronUp,
   UserPlus, KeyRound, ShieldCheck, Trash2, Mail,
+  MoreHorizontal, Pause, Play, RefreshCw, Send, ArrowUpDown,
 } from "lucide-react";
 import { toast } from "sonner";
 
