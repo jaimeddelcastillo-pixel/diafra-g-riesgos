@@ -24,6 +24,8 @@ export interface Addon {
   precio: string;
   descripcion: string;
   features: string[];
+  badge?: string;
+  notaPie?: string;
 }
 
 export const PLANS: Plan[] = [
@@ -33,12 +35,15 @@ export const PLANS: Plan[] = [
     priceId: "STRIPE_STARTER_PRICE_ID",
     precio: "$85 USD",
     periodo: "/mes",
-    descripcion: "Ideal para equipos pequeños iniciando con gestión de riesgos.",
+    descripcion: "Para equipos pequeños que inician su Sistema de Gestión de Riesgos bajo NOM-241-SSA1-2025.",
     features: [
-      "Hasta 5 usuarios",
+      "Hasta 3 usuarios",
       "Folios ilimitados",
-      "Matriz AMEF completa",
-      "Firma electrónica",
+      "Matriz AMEF completa ISO 14971",
+      "Firma electrónica NOM-241-SSA1-2025",
+      "Checklist regulatorio integrado",
+      "30 consultas al Asistente IA/mes",
+      "Centro de Recursos TRACEA",
       "Soporte por correo",
     ],
   },
@@ -48,12 +53,14 @@ export const PLANS: Plan[] = [
     priceId: "STRIPE_PROFESSIONAL_PRICE_ID",
     precio: "$225 USD",
     periodo: "/mes",
-    descripcion: "Para organizaciones que necesitan mayor capacidad y soporte.",
+    descripcion: "Para organizaciones que requieren mayor capacidad de usuarios y soporte prioritario.",
     features: [
-      "Hasta 25 usuarios",
-      "Folios ilimitados",
+      "Hasta 10 usuarios",
+      "Todo lo incluido en Starter",
+      "300 consultas al Asistente IA/mes",
       "Comité técnico ampliado",
-      "Auditoría avanzada",
+      "Auditoría avanzada con trazabilidad completa",
+      "1 sesión virtual de onboarding incluida",
       "Soporte prioritario",
     ],
     destacado: true,
@@ -64,13 +71,15 @@ export const PLANS: Plan[] = [
     priceId: "STRIPE_ENTERPRISE_PRICE_ID",
     precio: "$475 USD",
     periodo: "/mes",
-    descripcion: "Para empresas con múltiples sitios y requerimientos avanzados.",
+    descripcion: "Para empresas con múltiples sitios o líneas de producto que requieren escala regulatoria.",
     features: [
       "Usuarios ilimitados",
-      "Multi-sitio",
-      "SSO / SAML",
-      "Onboarding dedicado",
-      "SLA garantizado",
+      "Todo lo incluido en Professional",
+      "Asistente IA ilimitado",
+      "Múltiples sitios o plantas",
+      "Onboarding dedicado presencial o virtual",
+      "SLA de disponibilidad garantizado",
+      "Gestor de cuenta asignado",
     ],
   },
 ];
@@ -78,27 +87,43 @@ export const PLANS: Plan[] = [
 export const ADDONS: Addon[] = [
   {
     id: "curso",
-    nombre: "Curso de Capacitación",
+    nombre: "Curso de Gestión de Riesgos NOM-241",
     priceId: "STRIPE_CURSO_PRICE_ID",
     precio: "$450 USD",
-    descripcion: "Capacitación en gestión de riesgos FEUM / ISO 14971 y NOM-241-SSA1-2025.",
+    descripcion:
+      "Capacita y certifica a tu equipo en gestión de riesgos bajo NOM-241-SSA1-2025 e ISO 14971. Acceso completo a la plataforma por 30 días.",
+    badge: "Incluye DC-3 oficial STPS",
     features: [
-      "Acceso 12 meses",
-      "Certificado al finalizar",
-      "Material descargable",
+      "Hasta 3 usuarios incluidos",
+      "30 días de acceso completo a la plataforma",
+      "Manual técnico NOM-241-SSA1-2025 / ISO 14971",
+      "Videos de capacitación",
+      "Agente IA TRACEA Risk Manager",
+      "Ejercicio práctico guiado",
+      "Evaluación de conocimientos",
+      "Constancia DC-3 por usuario",
+      "PNO de referencia TRACEA",
+      "Formato Proforma TRACEA",
     ],
+    notaPie:
+      "¿Necesitas más de 3 usuarios? DC-3 adicionales a $35 USD por usuario — Contáctanos: soporte@tracea.com.mx",
   },
   {
     id: "protocolos",
-    nombre: "Pack de Protocolos",
+    nombre: "Protocolos de Validación DQ/IQ/OQ/PQ",
     priceId: "STRIPE_PROTOCOLOS_PRICE_ID",
     precio: "$450 USD",
-    descripcion: "Plantillas de protocolos validados listos para usar.",
+    descripcion:
+      "Protocolos de calificación listos para ejecutar conforme a NOM-241-SSA1-2025 y expediente maestro COFEPRIS.",
     features: [
-      "20+ plantillas editables",
-      "Casos de uso reales",
-      "Actualizaciones por 1 año",
+      "Protocolo DQ — Calificación de Diseño",
+      "Protocolo IQ — Calificación de Instalación",
+      "Protocolo OQ — Guía de Calificación Operacional",
+      "Protocolo PQ — Guía de Calificación de Desempeño",
+      "Formatos editables en Word",
+      "Ejemplos de llenado incluidos",
     ],
+    notaPie: "Disponible para clientes con suscripción activa",
   },
 ];
 
