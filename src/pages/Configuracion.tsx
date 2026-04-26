@@ -49,9 +49,9 @@ interface OrgUser {
 const FIRMA_WIDTH = 200;
 const FIRMA_HEIGHT = 80;
 
-function getPublicFirmaUrl(path: string) {
-  const { data } = supabase.storage.from("firmas").getPublicUrl(path);
-  return data.publicUrl;
+async function getFirmaSignedUrl(path: string): Promise<string> {
+  const { data } = await supabase.storage.from("firmas").createSignedUrl(path, 3600);
+  return data?.signedUrl ?? "";
 }
 
 async function uploadFirma(file: File, userId: string): Promise<string> {
