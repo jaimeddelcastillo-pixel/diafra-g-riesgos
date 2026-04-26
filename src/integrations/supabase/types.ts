@@ -568,10 +568,12 @@ export type Database = {
           codigo_formato: string
           created_at: string
           descripcion: string
+          estado: Database["public"]["Enums"]["org_estado"]
           id: string
           logo_url: string
           max_users: number
           nombre: string
+          pending_price_id: string | null
           plan: string
           slug: string
           stripe_customer_id: string | null
@@ -588,10 +590,12 @@ export type Database = {
           codigo_formato?: string
           created_at?: string
           descripcion?: string
+          estado?: Database["public"]["Enums"]["org_estado"]
           id?: string
           logo_url?: string
           max_users?: number
           nombre: string
+          pending_price_id?: string | null
           plan?: string
           slug: string
           stripe_customer_id?: string | null
@@ -608,10 +612,12 @@ export type Database = {
           codigo_formato?: string
           created_at?: string
           descripcion?: string
+          estado?: Database["public"]["Enums"]["org_estado"]
           id?: string
           logo_url?: string
           max_users?: number
           nombre?: string
+          pending_price_id?: string | null
           plan?: string
           slug?: string
           stripe_customer_id?: string | null
@@ -1095,6 +1101,7 @@ export type Database = {
         | "super_admin"
       dictamen_tipo: "Aceptable" | "No Aceptable" | "Pendiente"
       estado_folio: "Borrador" | "En Firma" | "Aprobado" | "Cerrado"
+      org_estado: "pendiente" | "activo" | "suspendido" | "cancelado"
       origen_riesgo:
         | "Diseño"
         | "Proceso"
@@ -1252,6 +1259,7 @@ export const Constants = {
       ],
       dictamen_tipo: ["Aceptable", "No Aceptable", "Pendiente"],
       estado_folio: ["Borrador", "En Firma", "Aprobado", "Cerrado"],
+      org_estado: ["pendiente", "activo", "suspendido", "cancelado"],
       origen_riesgo: [
         "Diseño",
         "Proceso",
