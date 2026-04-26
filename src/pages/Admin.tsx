@@ -1137,6 +1137,47 @@ export default function Admin() {
         </DialogContent>
       </Dialog>
 
+      {/* ── Dialog Enviar Reactivación ── */}
+      <Dialog open={!!reactivationOrg} onOpenChange={(open) => !open && setReactivationOrg(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Enviar email de reactivación — {reactivationOrg?.nombre}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <p className="text-sm text-muted-foreground">
+              Se enviará un correo a todos los administradores de esta organización animándolos a volver a TRACEA.
+              {reactivationOrg?.dias ? ` Inactividad detectada: ${reactivationOrg.dias} días.` : ""}
+            </p>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Mensaje personalizado (opcional)</label>
+              <Textarea
+                value={reactivationMotivo}
+                onChange={(e) => setReactivationMotivo(e.target.value)}
+                placeholder="Si lo dejas vacío, se enviará el mensaje estándar de reactivación."
+                rows={4}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setReactivationOrg(null)}>Cancelar</Button>
+            <Button
+              onClick={() => {
+                if (!reactivationOrg) return;
+                orgActionMutation.mutate({
+                  action: "enviar-reactivacion",
+                  org_id: reactivationOrg.id,
+                  motivo: reactivationMotivo,
+                  dias_inactividad: reactivationOrg.dias,
+                });
+              }}
+              disabled={orgActionMutation.isPending}
+            >
+              {orgActionMutation.isPending ? "Enviando…" : "Enviar reactivación"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* ── Dialog Cancelar Organización ── */}
       <Dialog open={!!deleteOrgTarget} onOpenChange={(open) => !open && setDeleteOrgTarget(null)}>
         <DialogContent>
