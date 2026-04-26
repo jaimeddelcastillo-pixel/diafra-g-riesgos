@@ -21,7 +21,7 @@ const FAQ = [
   },
   {
     q: "¿Los precios incluyen IVA?",
-    a: "Los precios mostrados están en USD y no incluyen impuestos locales. Si tu organización requiere factura fiscal mexicana, contáctanos a soporte@tracea.mx.",
+    a: "Los precios mostrados están en USD y no incluyen impuestos locales. Si tu organización requiere factura fiscal mexicana, contáctanos a soporte@tracea.com.mx.",
   },
   {
     q: "¿Qué método de pago aceptan?",
@@ -37,7 +37,7 @@ const FAQ = [
   },
   {
     q: "¿Ofrecen prueba gratis?",
-    a: "Ofrecemos demos guiadas con un especialista. Escríbenos a soporte@tracea.mx para agendar una sesión y conocer la plataforma antes de contratar.",
+    a: "Ofrecemos demos guiadas con un especialista. Escríbenos a soporte@tracea.com.mx para agendar una sesión y conocer la plataforma antes de contratar.",
   },
 ];
 
@@ -103,7 +103,7 @@ export default function Precios() {
           </Link>
           <nav className="flex items-center gap-2 sm:gap-4">
             <a
-              href="mailto:soporte@tracea.mx"
+              href="mailto:soporte@tracea.com.mx"
               className="text-sm text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5"
             >
               <Mail className="w-4 h-4" />
@@ -287,8 +287,8 @@ export default function Precios() {
           <div className="mt-10 text-center">
             <p className="text-muted-foreground mb-3">¿Tienes otra pregunta?</p>
             <Button asChild variant="outline">
-              <a href="mailto:soporte@tracea.mx">
-                <Mail className="w-4 h-4 mr-2" /> Escríbenos a soporte@tracea.mx
+              <a href="mailto:soporte@tracea.com.mx">
+                <Mail className="w-4 h-4 mr-2" /> Escríbenos a soporte@tracea.com.mx
               </a>
             </Button>
           </div>
