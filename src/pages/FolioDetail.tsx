@@ -531,7 +531,7 @@ function SeccionComite({
         </thead>
         <tbody>
           {comite.map((m) => {
-            const firmaImgUrl = m.firmado ? getFirmaUrl(m.user_id) : null;
+            const firmaPath = m.firmado ? getFirmaPath(m.user_id) : null;
             const esMiembro = m.user_id === user?.id;
             const puedeFiremar = esMiembro && !m.firmado && folioEstado === "En Firma";
 
@@ -543,8 +543,8 @@ function SeccionComite({
                 <td className="p-2 text-center">
                   {m.firmado ? (
                     <div className="flex flex-col items-center gap-1">
-                      {firmaImgUrl ? (
-                        <img src={firmaImgUrl} alt={`Firma de ${m.nombre}`} className="h-10 w-auto object-contain" />
+                      {firmaPath ? (
+                        <FirmaImg path={firmaPath} alt={`Firma de ${m.nombre}`} className="h-10 w-auto object-contain" />
                       ) : (
                         <span className="text-success font-bold text-[10px]">✓ Firmado</span>
                       )}
