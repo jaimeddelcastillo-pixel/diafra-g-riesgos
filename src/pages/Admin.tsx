@@ -13,9 +13,18 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   Building2, Pencil, LogIn, AlertTriangle, Clock,
   Users, FileText, CheckCircle2, ChevronDown, ChevronUp,
   UserPlus, KeyRound, ShieldCheck, Trash2, Mail,
+  MoreHorizontal, Pause, Play, RefreshCw, Send, ArrowUpDown,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -42,6 +51,7 @@ interface OrgStats {
   folio_count: number;
   folios_mes: number;
   ultimo_folio_at: string | null;
+  estado?: string;
 }
 
 interface Metrics {
@@ -173,6 +183,14 @@ export default function Admin() {
   const [editForm, setEditForm] = useState({ plan: "", trial_expires_at: "", max_users: 5 });
   const [dialogOpen, setDialogOpen] = useState(false);
 
+  // ── Nuevas acciones sobre orgs ──
+  const [changePlanOrg, setChangePlanOrg] = useState<OrgStats | null>(null);
+  const [changePlanValue, setChangePlanValue] = useState<string>("");
+  const [reminderOrg, setReminderOrg] = useState<OrgStats | null>(null);
+  const [reminderMotivo, setReminderMotivo] = useState("");
+  const [deleteOrgTarget, setDeleteOrgTarget] = useState<OrgStats | null>(null);
+  const [deleteOrgConfirm, setDeleteOrgConfirm] = useState("");
+
   // ── Equipo TRACEA ──
   const [newTraceaOpen, setNewTraceaOpen] = useState(false);
   const [newTraceaForm, setNewTraceaForm] = useState({ nombre: "", email: "", password: "", cargo: "" });
@@ -206,6 +224,31 @@ export default function Admin() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-stats"] });
       toast.success("Estado actualizado");
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const orgActionMutation = useMutation({
+    mutationFn: async (payload: {
+      action: "suspender" | "reactivar" | "cambiar-plan" | "eliminar" | "recordatorio-pago";
+      org_id: string;
+      plan?: string;
+      motivo?: string;
+      confirm_nombre?: string;
+    }) => {
+      const { data, error } = await supabase.functions.invoke("org-action", { body: payload });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data;
+    },
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ["admin-stats"] });
+      toast.success(data?.message || "Acción ejecutada");
+      setChangePlanOrg(null);
+      setReminderOrg(null);
+      setReminderMotivo("");
+      setDeleteOrgTarget(null);
+      setDeleteOrgConfirm("");
     },
     onError: (e: any) => toast.error(e.message),
   });
@@ -542,13 +585,23 @@ export default function Admin() {
                         </td>
                         <td className="py-3">
                           <div className="flex items-center gap-1.5">
-                            <Switch
-                              checked={org.activo}
-                              onCheckedChange={(v) => toggleActivoMutation.mutate({ id: org.id, activo: v })}
-                            />
-                            <span className={`text-xs ${org.activo ? "text-green-600" : "text-muted-foreground"}`}>
-                              {org.activo ? "Activo" : "Inactivo"}
-                            </span>
+                            {(() => {
+                              const estado = (org as any).estado as string | undefined;
+                              const label =
+                                estado === "cancelado" ? "Cancelado" :
+                                estado === "suspendido" ? "Suspendido" :
+                                estado === "pendiente" ? "Pendiente" :
+                                org.activo ? "Activo" : "Inactivo";
+                              const cls =
+                                estado === "cancelado" ? "bg-gray-100 text-gray-600 border-gray-200" :
+                                estado === "suspendido" ? "bg-orange-100 text-orange-700 border-orange-200" :
+                                estado === "pendiente" ? "bg-yellow-100 text-yellow-700 border-yellow-200" :
+                                org.activo ? "bg-green-100 text-green-700 border-green-200" :
+                                "bg-gray-100 text-gray-600 border-gray-200";
+                              return (
+                                <Badge variant="outline" className={`text-[10px] ${cls}`}>{label}</Badge>
+                              );
+                            })()}
                           </div>
                         </td>
                         <td className="py-3">
@@ -569,6 +622,50 @@ export default function Admin() {
                             >
                               <Pencil className="h-3.5 w-3.5" />
                             </Button>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-7 w-7">
+                                  <MoreHorizontal className="h-3.5 w-3.5" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="w-56">
+                                <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                                <DropdownMenuSeparator />
+                                {((org as any).estado === "suspendido" || !org.activo) ? (
+                                  <DropdownMenuItem
+                                    onClick={() => orgActionMutation.mutate({ action: "reactivar", org_id: org.id })}
+                                  >
+                                    <Play className="h-3.5 w-3.5 mr-2" /> Reactivar
+                                  </DropdownMenuItem>
+                                ) : (
+                                  <DropdownMenuItem
+                                    onClick={() => orgActionMutation.mutate({ action: "suspender", org_id: org.id })}
+                                  >
+                                    <Pause className="h-3.5 w-3.5 mr-2" /> Suspender
+                                  </DropdownMenuItem>
+                                )}
+                                <DropdownMenuItem
+                                  onClick={() => {
+                                    setChangePlanOrg(org);
+                                    setChangePlanValue(org.plan);
+                                  }}
+                                >
+                                  <ArrowUpDown className="h-3.5 w-3.5 mr-2" /> Cambiar plan
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => { setReminderOrg(org); setReminderMotivo(""); }}
+                                >
+                                  <Send className="h-3.5 w-3.5 mr-2" /> Enviar recordatorio de pago
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  className="text-destructive focus:text-destructive"
+                                  onClick={() => { setDeleteOrgTarget(org); setDeleteOrgConfirm(""); }}
+                                >
+                                  <Trash2 className="h-3.5 w-3.5 mr-2" /> Cancelar organización
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                           </div>
                         </td>
                       </tr>
@@ -922,6 +1019,145 @@ export default function Admin() {
             </Button>
             <Button onClick={confirmImpersonation} disabled={imperLoading || imperMotivo.trim().length < 10}>
               {imperLoading ? "Registrando…" : "Acceder y registrar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Dialog Cambiar Plan ── */}
+      <Dialog open={!!changePlanOrg} onOpenChange={(open) => !open && setChangePlanOrg(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Cambiar plan — {changePlanOrg?.nombre}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <p className="text-xs text-muted-foreground">
+              Override manual: este cambio actualiza solo el campo en TRACEA. <strong>No</strong> sincroniza con la suscripción de Stripe.
+              Úsalo para ajustes comerciales o correcciones puntuales.
+            </p>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Nuevo plan</label>
+              <Select value={changePlanValue} onValueChange={setChangePlanValue}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="trial">Trial</SelectItem>
+                  <SelectItem value="starter">Starter</SelectItem>
+                  <SelectItem value="professional">Professional</SelectItem>
+                  <SelectItem value="enterprise">Enterprise</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Plan actual: <strong>{changePlanOrg?.plan}</strong>
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setChangePlanOrg(null)}>Cancelar</Button>
+            <Button
+              onClick={() => {
+                if (!changePlanOrg) return;
+                if (!changePlanValue || changePlanValue === changePlanOrg.plan) {
+                  toast.error("Selecciona un plan distinto al actual");
+                  return;
+                }
+                orgActionMutation.mutate({
+                  action: "cambiar-plan",
+                  org_id: changePlanOrg.id,
+                  plan: changePlanValue,
+                });
+              }}
+              disabled={orgActionMutation.isPending}
+            >
+              {orgActionMutation.isPending ? "Aplicando…" : "Cambiar plan"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Dialog Recordatorio de Pago ── */}
+      <Dialog open={!!reminderOrg} onOpenChange={(open) => !open && setReminderOrg(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Enviar recordatorio de pago — {reminderOrg?.nombre}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <p className="text-sm text-muted-foreground">
+              Se enviará un correo a todos los administradores de esta organización con un enlace para completar el pago.
+            </p>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Mensaje personalizado (opcional)</label>
+              <Textarea
+                value={reminderMotivo}
+                onChange={(e) => setReminderMotivo(e.target.value)}
+                placeholder="Si lo dejas vacío, se enviará el mensaje estándar."
+                rows={4}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setReminderOrg(null)}>Cancelar</Button>
+            <Button
+              onClick={() => {
+                if (!reminderOrg) return;
+                orgActionMutation.mutate({
+                  action: "recordatorio-pago",
+                  org_id: reminderOrg.id,
+                  motivo: reminderMotivo,
+                });
+              }}
+              disabled={orgActionMutation.isPending}
+            >
+              {orgActionMutation.isPending ? "Enviando…" : "Enviar recordatorio"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Dialog Cancelar Organización ── */}
+      <Dialog open={!!deleteOrgTarget} onOpenChange={(open) => !open && setDeleteOrgTarget(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="text-destructive">Cancelar organización</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <p className="text-sm">
+              Vas a cancelar la organización <strong>{deleteOrgTarget?.nombre}</strong>.
+            </p>
+            <p className="text-xs text-muted-foreground bg-muted/40 rounded p-3 border">
+              <strong>Soft-delete:</strong> el estado pasa a <code>cancelado</code> y los usuarios pierden el acceso.
+              Los datos (folios, riesgos, documentos, audit trail) se conservan por temas legales y de cumplimiento.
+              No es una eliminación física.
+            </p>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">
+                Para confirmar, escribe el nombre exacto: <code className="text-destructive">{deleteOrgTarget?.nombre}</code>
+              </label>
+              <Input
+                value={deleteOrgConfirm}
+                onChange={(e) => setDeleteOrgConfirm(e.target.value)}
+                placeholder={deleteOrgTarget?.nombre}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteOrgTarget(null)}>Cancelar</Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (!deleteOrgTarget) return;
+                if (deleteOrgConfirm.trim() !== deleteOrgTarget.nombre) {
+                  toast.error("El nombre no coincide");
+                  return;
+                }
+                orgActionMutation.mutate({
+                  action: "eliminar",
+                  org_id: deleteOrgTarget.id,
+                  confirm_nombre: deleteOrgConfirm.trim(),
+                });
+              }}
+              disabled={orgActionMutation.isPending || deleteOrgConfirm.trim() !== deleteOrgTarget?.nombre}
+            >
+              {orgActionMutation.isPending ? "Cancelando…" : "Cancelar organización"}
             </Button>
           </DialogFooter>
         </DialogContent>
