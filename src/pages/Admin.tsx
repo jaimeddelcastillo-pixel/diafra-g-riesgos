@@ -254,14 +254,32 @@ export default function Admin() {
   const { data: traceaUsers = [], refetch: refetchTracea } = useQuery<TraceaUser[]>({
     queryKey: ["tracea-users"],
     queryFn: async () => {
-      const { data: roles, error: rErr } = await supabase.from("user_roles").select("user_id, role");
+      // Equipo TRACEA = solo super_admins (acceso global, sin org_member o en org 'tracea')
+      const { data: roles, error: rErr } = await supabase
+        .from("user_roles")
+        .select("user_id, role")
+        .eq("role", "super_admin");
       if (rErr) throw rErr;
-      const { data: profiles, error: pErr } = await supabase.from("profiles").select("id, nombre, email, cargo");
+
+      const userIds = (roles ?? []).map((r) => r.user_id);
+      if (userIds.length === 0) return [];
+
+      const { data: profiles, error: pErr } = await supabase
+        .from("profiles")
+        .select("id, nombre, email, cargo")
+        .in("id", userIds);
       if (pErr) throw pErr;
+
       const profileMap = new Map((profiles || []).map((p) => [p.id, p]));
       return (roles || []).map((r) => {
         const p = profileMap.get(r.user_id);
-        return { id: r.user_id, nombre: p?.nombre ?? "Sin nombre", email: p?.email ?? "", cargo: p?.cargo ?? null, role: r.role };
+        return {
+          id: r.user_id,
+          nombre: p?.nombre ?? "Sin nombre",
+          email: p?.email ?? "",
+          cargo: p?.cargo ?? null,
+          role: r.role,
+        };
       });
     },
   });
