@@ -183,6 +183,14 @@ export default function Admin() {
   const [editForm, setEditForm] = useState({ plan: "", trial_expires_at: "", max_users: 5 });
   const [dialogOpen, setDialogOpen] = useState(false);
 
+  // ── Nuevas acciones sobre orgs ──
+  const [changePlanOrg, setChangePlanOrg] = useState<OrgStats | null>(null);
+  const [changePlanValue, setChangePlanValue] = useState<string>("");
+  const [reminderOrg, setReminderOrg] = useState<OrgStats | null>(null);
+  const [reminderMotivo, setReminderMotivo] = useState("");
+  const [deleteOrgTarget, setDeleteOrgTarget] = useState<OrgStats | null>(null);
+  const [deleteOrgConfirm, setDeleteOrgConfirm] = useState("");
+
   // ── Equipo TRACEA ──
   const [newTraceaOpen, setNewTraceaOpen] = useState(false);
   const [newTraceaForm, setNewTraceaForm] = useState({ nombre: "", email: "", password: "", cargo: "" });
