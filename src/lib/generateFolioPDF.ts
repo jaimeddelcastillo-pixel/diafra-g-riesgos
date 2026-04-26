@@ -103,9 +103,13 @@ export async function generateFolioPDF(
   // Cargar logo y datos
   const orgLogo = await fetchOrgLogoDataUrl(org?.logo_url);
   const orgNombre = (org?.nombre || "ORGANIZACIÓN").trim();
-  const codigoFormato = (org?.codigo_formato || "FOR-SGC-11-01").trim();
-  const versionFormato = (org?.version_formato || "01").trim();
-  const codigoLabel = `${codigoFormato} (${versionFormato})`;
+  const codigoFormato = (org?.codigo_formato || "").trim();
+  const versionFormato = (org?.version_formato || "").trim();
+  const codigoLabel = codigoFormato
+    ? versionFormato
+      ? `${codigoFormato} (${versionFormato})`
+      : codigoFormato
+    : "";
   const versiones = await fetchVersiones(folio.id, folio.numero_version || "1.0");
 
   let pageNum = 0;
