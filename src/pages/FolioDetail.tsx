@@ -849,7 +849,7 @@ function SeccionRiesgoResidualGlobal({
 }
 
 // ─── Sección Riesgos ──────────────────────────────────────────────────────────
-function SeccionRiesgos({ riesgos, locked, folioId }: { riesgos: Riesgo[]; locked: boolean; folioId: string }) {
+function SeccionRiesgos({ riesgos, locked, folioId, normaFolio }: { riesgos: Riesgo[]; locked: boolean; folioId: string; normaFolio?: string | null }) {
   const [riesgoForm, setRiesgoForm] = useState<{ open: boolean; riesgo: Riesgo | null }>({ open: false, riesgo: null });
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -1050,6 +1050,7 @@ function SeccionRiesgos({ riesgos, locked, folioId }: { riesgos: Riesgo[]; locke
           folioId={folioId}
           riesgo={riesgoForm.riesgo}
           nextNumeroId={nextNumeroId}
+          normaFolio={normaFolio}
         />
       )}
     </>
