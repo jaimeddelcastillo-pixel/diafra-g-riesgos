@@ -39,11 +39,19 @@ Deno.serve(async (req) => {
     return json({ error: "Body inválido" }, 400);
   }
 
-  const { user_id, org_nombre, org_slug, pending_price_id } = body ?? {};
+  const { user_id, org_nombre, org_slug, pending_price_id, norma_aplicable } = body ?? {};
 
   if (!user_id || !org_nombre?.trim() || !org_slug?.trim()) {
     return json({ error: "Faltan campos: user_id, org_nombre, org_slug" }, 400);
   }
+
+  // Validar norma (default NOM-241 para retro-compatibilidad)
+  const normaInput = (norma_aplicable ?? "NOM-241") as string;
+  if (!["NOM-241", "NOM-059", "MULTI"].includes(normaInput)) {
+    return json({ error: "norma_aplicable inválida" }, 400);
+  }
+  const metodologia =
+    normaInput === "NOM-059" ? "ICH-Q9" : normaInput === "MULTI" ? "MULTI" : "AMEF";
 
   // Verificar que el user_id existe en auth.users
   const { data: authUser, error: userErr } = await admin.auth.admin.getUserById(user_id);
@@ -84,6 +92,8 @@ Deno.serve(async (req) => {
       // Cuenta nace bloqueada hasta que Stripe confirme el pago
       estado: "pendiente",
       pending_price_id: pending_price_id?.trim() || null,
+      norma_aplicable: normaInput,
+      metodologia,
       // Trial estándar SaaS: 14 días desde el alta
       trial_expires_at: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
     })

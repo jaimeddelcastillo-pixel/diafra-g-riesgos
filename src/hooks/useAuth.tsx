@@ -18,6 +18,11 @@ export interface OrgInfo {
   descripcion?: string | null;
   estado?: "pendiente" | "activo" | "suspendido" | "cancelado";
   pending_price_id?: string | null;
+  norma_aplicable?: "NOM-241" | "NOM-059" | "MULTI" | null;
+  metodologia?: "AMEF" | "ICH-Q9" | "MULTI" | null;
+  usar_detectabilidad?: boolean | null;
+  umbral_npr_alto?: number | null;
+  umbral_npr_medio?: number | null;
 }
 
 interface AuthContextType {
@@ -76,7 +81,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             // Org membership (sistema multi-tenant)
             const { data: memberData } = await supabase
               .from("org_members")
-              .select("role, org_id, organizations(id, nombre, slug, plan, activo, max_users, trial_expires_at, logo_url, codigo_formato, version_formato, descripcion, estado, pending_price_id)")
+              .select("role, org_id, organizations(id, nombre, slug, plan, activo, max_users, trial_expires_at, logo_url, codigo_formato, version_formato, descripcion, estado, pending_price_id, norma_aplicable, metodologia, usar_detectabilidad, umbral_npr_alto, umbral_npr_medio)")
               .eq("user_id", session.user.id)
               .single();
 
