@@ -1,8 +1,8 @@
 // supabase/functions/folio-workflow/index.ts v3
-// Maneja 4 acciones:
-//   1. enviar-a-firma   → valida completitud NOM-241 + cambia estado + correos al comité
-//   2. firmar           → registra firma con hash + IP + texto_compromiso + notifica RS
-//   3. dictamen         → RS aprueba o rechaza + correo al capturista
+// Maneja 4 acciones (multi-norma: NOM-241 / NOM-059, "frozen" en folios.norma_folio):
+//   1. enviar-a-firma   → valida completitud según norma + cambia estado + correos al comité
+//   2. firmar           → registra firma con hash + IP + texto_compromiso + notifica aprobador
+//   3. dictamen         → aprobador final aprueba o rechaza + correo al capturista
 //   4. reabrir          → archiva versión actual, regresa a Borrador, incrementa versión
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
@@ -16,9 +16,77 @@ const corsHeaders = {
 
 const APP_URL = Deno.env.get("APP_URL") ?? "https://tu-app.lovable.app";
 
-// ─── Texto de compromiso estándar para firma electrónica ─────────────────────
-const TEXTO_COMPROMISO =
-  "Declaro bajo protesta de decir verdad que he revisado el contenido íntegro de este Análisis de Gestión de Riesgos, que la información es correcta y completa conforme a la NOM-241-SSA1-2025 e ISO 14971:2019, y que mi firma electrónica registrada en este sistema tiene el mismo valor legal que mi firma autógrafa.";
+// ─── Configuración multi-norma (espejo simplificado de src/config/normas.ts) ──
+// Edge functions no pueden importar de src/; mantenemos los valores aquí.
+type NormaKey = "NOM-241" | "NOM-059";
+
+interface NormaWorkflowConfig {
+  nombre: string;
+  nombreLargo: string;
+  normasReferencia: string[];
+  metodologia: string;
+  usarDetectabilidad: boolean;
+  umbralNPRMedio: number;
+  umbralNPRAlto: number;
+  umbralSeveridadCritica: number;
+  terminologia: {
+    beneficio: string;
+    aprobadorFinal: string;
+    procesoEquipo: string;
+    objetoAnalisis: string;
+    efectoDano: string;
+    documento: string; // p.ej. "Análisis de Gestión de Riesgos"
+  };
+  textoCompromiso: string;
+}
+
+const NORMAS: Record<NormaKey, NormaWorkflowConfig> = {
+  "NOM-241": {
+    nombre: "NOM-241",
+    nombreLargo: "NOM-241-SSA1-2025",
+    normasReferencia: ["ISO 14971:2019", "NOM-241-SSA1-2025"],
+    metodologia: "AMEF",
+    usarDetectabilidad: true,
+    umbralNPRMedio: 60,
+    umbralNPRAlto: 150,
+    umbralSeveridadCritica: 9,
+    terminologia: {
+      beneficio: "Beneficio clínico",
+      aprobadorFinal: "Responsable Sanitario",
+      procesoEquipo: "Proceso / Equipo",
+      objetoAnalisis: "Dispositivo médico",
+      efectoDano: "Efecto / Daño potencial",
+      documento: "Archivo de Gestión de Riesgos",
+    },
+    textoCompromiso:
+      "Declaro bajo protesta de decir verdad que he revisado el contenido íntegro de este Análisis de Gestión de Riesgos, que la información es correcta y completa conforme a la NOM-241-SSA1-2025 e ISO 14971:2019, y que mi firma electrónica registrada en este sistema tiene el mismo valor legal que mi firma autógrafa.",
+  },
+  "NOM-059": {
+    nombre: "NOM-059",
+    nombreLargo: "NOM-059-SSA1-2015",
+    normasReferencia: ["ICH Q9 (R1)", "NOM-059-SSA1-2015"],
+    metodologia: "ICH-Q9",
+    usarDetectabilidad: true,
+    umbralNPRMedio: 60,
+    umbralNPRAlto: 150,
+    umbralSeveridadCritica: 9,
+    terminologia: {
+      beneficio: "Beneficio terapéutico",
+      aprobadorFinal: "Director Técnico",
+      procesoEquipo: "Etapa de fabricación",
+      objetoAnalisis: "Producto / Lote",
+      efectoDano: "Efecto sobre calidad / paciente",
+      documento: "Análisis de Gestión de Riesgos de Calidad",
+    },
+    textoCompromiso:
+      "Declaro bajo protesta de decir verdad que he revisado el contenido íntegro de este Análisis de Gestión de Riesgos de Calidad, que la información es correcta y completa conforme a la NOM-059-SSA1-2015 e ICH Q9 (R1), y que mi firma electrónica registrada en este sistema tiene el mismo valor legal que mi firma autógrafa.",
+  },
+};
+
+function getNorma(normaFolio: unknown): NormaWorkflowConfig {
+  const k = (normaFolio === "NOM-059" ? "NOM-059" : "NOM-241") as NormaKey;
+  return NORMAS[k];
+}
 
 // ─── Helper: datos identificativos de la organización del folio ─────────────
 async function getOrgInfo(
@@ -40,13 +108,13 @@ async function getOrgInfo(
   };
 }
 
-// ─── Validación de completitud NOM-241 ───────────────────────────────────────
+// ─── Validación de completitud (multi-norma) ─────────────────────────────────
 interface ValidacionResult {
   valido: boolean;
   errores: string[];
 }
 
-async function validarCompletitudNOM241(
+async function validarCompletitudFolio(
   admin: ReturnType<typeof createClient>,
   folio_id: string,
 ): Promise<ValidacionResult> {
@@ -56,11 +124,18 @@ async function validarCompletitudNOM241(
   const { data: folio } = await admin.from("folios").select("*").eq("id", folio_id).single();
   if (!folio) return { valido: false, errores: ["Folio no encontrado"] };
 
+  const norma = getNorma((folio as any).norma_folio);
+  const t = norma.terminologia;
+  const refs = norma.normasReferencia.join(" / ");
+
   // Validaciones del folio
   if (!folio.alcance?.trim()) errores.push("Alcance del análisis es obligatorio");
-  if (!folio.beneficio_clinico?.trim()) errores.push("Beneficio clínico del dispositivo es obligatorio (ISO 14971 §7)");
-  if (!folio.riesgo_residual_global?.trim()) errores.push("Evaluación del riesgo residual global es obligatoria (ISO 14971 §8)");
-  if (!folio.numero_modelo?.trim()) errores.push("Número de modelo del dispositivo es obligatorio (NOM-241 §7.5.3)");
+  if (!folio.beneficio_clinico?.trim())
+    errores.push(`${t.beneficio} del ${t.objetoAnalisis.toLowerCase()} es obligatorio (${refs})`);
+  if (!folio.riesgo_residual_global?.trim())
+    errores.push(`Evaluación del riesgo residual global es obligatoria (${refs})`);
+  if (!folio.numero_modelo?.trim())
+    errores.push(`Identificación del ${t.objetoAnalisis.toLowerCase()} es obligatoria (${norma.nombreLargo})`);
 
   // Verificar que tiene al menos un riesgo
   const { data: riesgos, count } = await admin
@@ -78,13 +153,13 @@ async function validarCompletitudNOM241(
     const id = `Riesgo #${r.numero_id}`;
 
     if (!r.peligro?.trim())
-      errores.push(`${id}: Peligro (fuente) es obligatorio (ISO 14971 §5.4)`);
+      errores.push(`${id}: Peligro (fuente) es obligatorio (${refs})`);
     if (!r.situacion_peligrosa?.trim())
-      errores.push(`${id}: Situación peligrosa es obligatoria (ISO 14971 §5.4)`);
+      errores.push(`${id}: Situación peligrosa es obligatoria (${refs})`);
     if (!r.causa_potencial?.trim())
       errores.push(`${id}: Causa potencial es obligatoria`);
     if (!r.efecto_dano?.trim())
-      errores.push(`${id}: Efecto/daño es obligatorio`);
+      errores.push(`${id}: ${t.efectoDano} es obligatorio`);
 
     // Riesgos con acción propuesta deben tener responsable y fecha
     if (r.requiere_accion) {
@@ -96,24 +171,25 @@ async function validarCompletitudNOM241(
         errores.push(`${id}: Fecha de compromiso es obligatoria cuando se requiere acción`);
     }
 
-    // NPR crítico (≥200 o S≥9) sin acción es no aceptable
-    const nprCritico = (r.npr ?? 0) >= 200 || r.severidad >= 9;
+    // NPR crítico según umbrales de la norma
+    const npr = r.npr ?? 0;
+    const nprCritico = npr > norma.umbralNPRAlto || (r.severidad ?? 0) >= norma.umbralSeveridadCritica;
     if (nprCritico && !r.requiere_accion && r.dictamen !== "No Aceptable") {
       errores.push(
-        `${id}: NPR crítico (${r.npr}) — debe requerir acción o marcarse como No Aceptable`,
+        `${id}: Riesgo crítico (NPR=${npr}, S=${r.severidad}) — debe requerir acción o marcarse como No Aceptable`,
       );
     }
 
     // Riesgo con acción implementada debe tener verificación
     if (r.accion_implementada?.trim() && !r.verificado_por?.trim()) {
-      errores.push(`${id}: Acción implementada requiere verificación (ISO 14971 §6.5)`);
+      errores.push(`${id}: Acción implementada requiere verificación (${refs})`);
     }
 
-    // Justificación ALARP para riesgos con NPR medio (125-199) aceptados sin acción
-    const nprMedio = (r.npr ?? 0) >= 125 && (r.npr ?? 0) < 200;
+    // Justificación ALARP para riesgos en zona media aceptados sin acción
+    const nprMedio = npr >= norma.umbralNPRMedio && npr <= norma.umbralNPRAlto;
     if (nprMedio && r.dictamen === "Aceptable" && !r.justificacion_aceptabilidad?.trim()) {
       errores.push(
-        `${id}: NPR en zona ALARP (${r.npr}) requiere justificación de aceptabilidad (ISO 14971 §7)`,
+        `${id}: NPR en zona ALARP (${npr}) requiere justificación de aceptabilidad (${refs})`,
       );
     }
   }
