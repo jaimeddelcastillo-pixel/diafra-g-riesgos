@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import type { Folio, Riesgo } from "@/hooks/useFolios";
+import { getNormaConfig } from "@/config/normas";
 
 function SectionHeader({ number, title }: { number: string; title: string }) {
   return (
@@ -32,6 +33,10 @@ export function SeccionDictamen({ folio, riesgos, locked, onSaved }: Props) {
   const [showRechazoForm, setShowRechazoForm] = useState(false);
   const { toast } = useToast();
   const { hasRole } = useAuth();
+
+  // Terminología dependiente de la norma del folio (no de la org).
+  const normaConfig = getNormaConfig((folio as any).norma_folio);
+  const t = normaConfig.terminologia;
 
   const esRS = hasRole("responsable_sanitario");
   const esAdmin = hasRole("admin");
@@ -105,7 +110,7 @@ export function SeccionDictamen({ folio, riesgos, locked, onSaved }: Props) {
 
   return (
     <div className="border rounded-md overflow-hidden">
-      <SectionHeader number="V" title="DICTAMEN DE BENEFICIO-RIESGO" />
+      <SectionHeader number="V" title={`DICTAMEN DE ${t.beneficio.toUpperCase()} vs RIESGO`} />
 
       <div className="p-4 space-y-4">
         {/* Pregunta riesgos no aceptables — calculada automáticamente */}
@@ -128,7 +133,7 @@ export function SeccionDictamen({ folio, riesgos, locked, onSaved }: Props) {
         <div>
           <div className="flex items-center justify-between mb-1">
             <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wide">
-              Justificación Técnica
+              Justificación Técnica — {normaConfig.nombre} ({normaConfig.metodologia})
             </p>
             {!locked && !editingJustificacion && (
               <Button
@@ -148,7 +153,7 @@ export function SeccionDictamen({ folio, riesgos, locked, onSaved }: Props) {
                 value={justificacion}
                 onChange={(e) => setJustificacion(e.target.value)}
                 rows={6}
-                placeholder="Explicar por qué el beneficio médico supera el riesgo residual identificado, citando evidencia clínica o técnica..."
+                placeholder={`Explicar por qué el ${t.beneficio.toLowerCase()} supera el riesgo residual identificado, citando evidencia clínica o técnica...`}
               />
               <div className="flex justify-end gap-2">
                 <Button variant="outline" size="sm" onClick={() => setEditingJustificacion(false)} className="gap-1">
@@ -237,13 +242,13 @@ export function SeccionDictamen({ folio, riesgos, locked, onSaved }: Props) {
               {esRS ? (
                 <>
                   <CheckCircle className="h-4 w-4 text-primary" />
-                  <span className="text-sm font-bold text-primary">Zona de dictamen — Responsable Sanitario</span>
+                  <span className="text-sm font-bold text-primary">Zona de dictamen — {t.aprobadorFinal}</span>
                 </>
               ) : (
                 <>
                   <Lock className="h-4 w-4 text-muted-foreground" />
                   <span className="text-sm font-medium text-muted-foreground">
-                    Dictamen pendiente del Responsable Sanitario
+                    Dictamen pendiente del {t.aprobadorFinal}
                   </span>
                 </>
               )}
@@ -252,7 +257,7 @@ export function SeccionDictamen({ folio, riesgos, locked, onSaved }: Props) {
             {esRS ? (
               <>
                 <p className="text-xs text-muted-foreground">
-                  Todos los miembros del comité han firmado. Como Responsable Sanitario, emite el dictamen final del
+                  Todos los miembros del comité han firmado. Como {t.aprobadorFinal}, emite el dictamen final del
                   folio <strong>{folio.codigo}</strong>.
                 </p>
 
@@ -315,7 +320,7 @@ export function SeccionDictamen({ folio, riesgos, locked, onSaved }: Props) {
         {conclusion && folio.estado === "Aprobado" && (
           <div className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-lg p-3">
             <CheckCircle className="h-5 w-5 text-green-700" />
-            <span className="text-sm font-medium text-green-800">Folio aprobado por Responsable Sanitario</span>
+            <span className="text-sm font-medium text-green-800">Folio aprobado por {t.aprobadorFinal}</span>
           </div>
         )}
         {conclusion === "Rechazado" && folio.estado === "Borrador" && (
