@@ -53,18 +53,24 @@ interface CheckItem {
 
 function evaluarChecklistNOM241(folio: Folio, riesgos: Riesgo[], comite: FolioComite[]): CheckItem[] {
   const items: CheckItem[] = [];
+  const nc = getNormaConfig(folio.norma_folio);
+  const beneficio = nc.terminologia.beneficio;
+  const refs = nc.normasReferencia.join(" / ");
 
   // ── Folio ──
   items.push({ id: "alcance", label: "Alcance del análisis capturado", ok: !!folio.alcance?.trim(), critico: true });
-  items.push({ id: "modelo", label: "Número de modelo del dispositivo (§7.5.3)", ok: !!folio.numero_modelo?.trim(), critico: true });
-  items.push({ id: "beneficio", label: "Beneficio clínico documentado (FEUM / ISO 14971 §7)", ok: !!folio.beneficio_clinico?.trim(), critico: true });
-  items.push({ id: "residual_global", label: "Evaluación de riesgo residual global (FEUM / ISO 14971 §8)", ok: !!folio.riesgo_residual_global?.trim(), critico: true });
+  items.push({ id: "modelo", label: `Identificador del ${nc.terminologia.objetoAnalisis.toLowerCase()}`, ok: !!folio.numero_modelo?.trim(), critico: true });
+  items.push({ id: "beneficio", label: `${beneficio} documentado (${refs})`, ok: !!folio.beneficio_clinico?.trim(), critico: true });
+  items.push({ id: "residual_global", label: `Evaluación de riesgo residual global (${refs})`, ok: !!folio.riesgo_residual_global?.trim(), critico: true });
   items.push({ id: "comite", label: "Al menos un miembro en el comité", ok: comite.length > 0, critico: true });
   items.push({ id: "riesgos_count", label: "Al menos un riesgo analizado", ok: riesgos.length > 0, critico: true });
 
   // ── Por riesgo ──
   let sinPeligro = 0, sinSituacion = 0, sinAccionResp = 0, sinFecha = 0, sinVerif = 0, alarpSinJust = 0, criticoSinEvidencia = 0;
 
+  const umbralCrit = nc.umbralNPRAlto;
+  const umbralSev = nc.umbralSeveridadCritica;
+  const umbralAlarpMin = nc.umbralNPRMedio;
   for (const r of riesgos) {
     if (!r.peligro?.trim()) sinPeligro++;
     if (!r.situacion_peligrosa?.trim()) sinSituacion++;
@@ -74,8 +80,8 @@ function evaluarChecklistNOM241(folio: Folio, riesgos: Riesgo[], comite: FolioCo
       if (!r.fecha_compromiso) sinFecha++;
     }
     if (r.accion_implementada?.trim() && !r.verificado_por?.trim()) sinVerif++;
-    if (npr >= 125 && npr < 200 && r.dictamen === "Aceptable" && !r.justificacion_aceptabilidad?.trim()) alarpSinJust++;
-    const esCritico = npr > 150 || r.severidad >= 9;
+    if (npr >= umbralAlarpMin && npr <= umbralCrit && r.dictamen === "Aceptable" && !r.justificacion_aceptabilidad?.trim()) alarpSinJust++;
+    const esCritico = npr > umbralCrit || r.severidad >= umbralSev;
     const tieneEvidencia = r.anexos && (r.anexos as unknown[]).length > 0;
     if (esCritico && r.requiere_accion && !tieneEvidencia) criticoSinEvidencia++;
   }
