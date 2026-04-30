@@ -864,6 +864,11 @@ function SeccionRiesgos({ riesgos, locked, folioId, normaFolio }: { riesgos: Rie
   const [riesgoForm, setRiesgoForm] = useState<{ open: boolean; riesgo: Riesgo | null }>({ open: false, riesgo: null });
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const nc = getNormaConfig(normaFolio);
+  const refs = nc.normasReferencia.join(" / ");
+  const umbralCrit = nc.umbralNPRAlto;
+  const umbralSev = nc.umbralSeveridadCritica;
+  const umbralMed = nc.umbralNPRMedio;
 
   const handleDelete = async (r: Riesgo) => {
     if (!confirm(`¿Eliminar riesgo ${String(r.numero_id).padStart(2, "0")} — "${r.peligro_modo_falla}"?`)) return;
@@ -885,13 +890,13 @@ function SeccionRiesgos({ riesgos, locked, folioId, normaFolio }: { riesgos: Rie
         <SectionHeader number="III" title="GESTIÓN DE RIESGOS" />
         <div className="flex items-center gap-4 px-4 py-2 bg-muted/30 border-b text-[10px]">
           <span>
-            🔴 <strong>Crítico</strong> (&gt; 150 ó S ≥ 9)
+            🔴 <strong>Crítico</strong> (&gt; {umbralCrit} ó S ≥ {umbralSev})
           </span>
           <span>
-            🟡 <strong>Mayor</strong> (60-149)
+            🟡 <strong>Mayor</strong> ({umbralMed}-{umbralCrit})
           </span>
           <span>
-            🟢 <strong>Menor</strong> (&lt; 60)
+            🟢 <strong>Menor</strong> (&lt; {umbralMed})
           </span>
         </div>
         <div className="overflow-x-auto">
@@ -902,13 +907,13 @@ function SeccionRiesgos({ riesgos, locked, folioId, normaFolio }: { riesgos: Rie
                   ID
                 </th>
                 <th colSpan={6} className="border-r border-b p-2 text-center font-bold">
-                  1. IDENTIFICACIÓN FEUM / ISO 14971 §5
+                  1. IDENTIFICACIÓN — {refs}
                 </th>
                 <th colSpan={4} className="border-r border-b p-2 text-center font-bold">
                   2. EVALUACIÓN INICIAL
                 </th>
                 <th colSpan={5} className="border-r border-b p-2 text-center font-bold">
-                  3. CONTROLES Y GESTIÓN FEUM / ISO 14971 §6
+                  3. CONTROLES Y GESTIÓN — {refs}
                 </th>
                 <th colSpan={6} className={`border-b p-2 text-center font-bold ${!locked ? "border-r" : ""}`}>
                   4. EVALUACIÓN FINAL (RESIDUAL) + VERIFICACIÓN
