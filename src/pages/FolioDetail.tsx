@@ -1413,7 +1413,7 @@ export default function FolioDetail() {
         {/* Comité con firma conectada */}
         <SeccionComite comite={comite} folioId={folio.id} folioEstado={folio.estado} onSaved={handleRefresh} />
 
-        <SeccionRiesgos riesgos={riesgos} locked={locked} folioId={folio.id} />
+        <SeccionRiesgos riesgos={riesgos} locked={locked} folioId={folio.id} normaFolio={folio.norma_folio} />
 
         {/* Evidencias — pestaña documental para auditor */}
         <SeccionEvidencias riesgos={riesgos} folioCodigo={folio.codigo} folioId={folio.id} />
