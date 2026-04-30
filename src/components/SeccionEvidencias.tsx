@@ -5,6 +5,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { FileText, Download, ExternalLink, FolderOpen, Upload, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { Riesgo } from "@/hooks/useFolios";
+import { getNormaConfig } from "@/config/normas";
 
 interface Anexo {
   name: string;
@@ -15,6 +16,7 @@ interface Props {
   riesgos: Riesgo[];
   folioCodigo: string;
   folioId: string;
+  normaFolio?: string | null;
 }
 
 function SectionHeader({ number, title }: { number: string; title: string }) {
