@@ -2,8 +2,8 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { supabase } from "@/integrations/supabase/client";
 import type { Folio, Riesgo, FolioComite } from "@/hooks/useFolios";
-import { getNPRLevel } from "@/hooks/useFolios";
 import { fetchOrgLogoDataUrl } from "@/lib/orgLogo";
+import { getNormaConfig, calcularNPR, getNPRLevelByNorma } from "@/config/normas";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -21,13 +21,13 @@ function fmtDate(d: string | null | undefined): string {
   }
 }
 
-function getNPRText(npr: number, severidad: number): string {
-  const level = getNPRLevel(npr, severidad);
+function getNPRText(npr: number, severidad: number, norma: string | null | undefined): string {
+  const level = getNPRLevelByNorma(npr, severidad, norma);
   return `${level.label}  ${npr}`;
 }
 
-function getNPRColor(npr: number, severidad: number): [number, number, number] {
-  const level = getNPRLevel(npr, severidad);
+function getNPRColor(npr: number, severidad: number, norma: string | null | undefined): [number, number, number] {
+  const level = getNPRLevelByNorma(npr, severidad, norma);
   if (level.label === "Crítico") return [180, 0, 0];
   if (level.label === "Mayor") return [160, 120, 0];
   return [0, 130, 0];
