@@ -748,6 +748,10 @@ function SeccionRiesgoResidualGlobal({
     beneficio_clinico: folio.beneficio_clinico || "",
     riesgo_residual_global: folio.riesgo_residual_global || "",
   });
+  const nc = getNormaConfig(folio.norma_folio);
+  const beneficio = nc.terminologia.beneficio;
+  const objeto = nc.terminologia.objetoAnalisis;
+  const refs = nc.normasReferencia.join(" / ");
 
   const handleSave = async () => {
     setSaving(true);
@@ -773,7 +777,7 @@ function SeccionRiesgoResidualGlobal({
 
   return (
     <div className="border rounded-md overflow-hidden relative">
-      <SectionHeader number="V" title="EVALUACIÓN GLOBAL DE RIESGO-BENEFICIO — FEUM / ISO 14971 §7/§8" />
+      <SectionHeader number="V" title={`EVALUACIÓN GLOBAL DE RIESGO-BENEFICIO — ${refs}`} />
       {!locked && (
         <Button
           variant="ghost"
@@ -789,7 +793,7 @@ function SeccionRiesgoResidualGlobal({
       {(faltaBeneficio || faltaResidual) && (
         <div className="px-4 py-2 bg-destructive/5 border-b flex items-center gap-2 text-xs text-destructive">
           <span className="font-bold">⚠ Atención:</span>
-          {faltaBeneficio && <span>Beneficio clínico requerido.</span>}
+          {faltaBeneficio && <span>{beneficio} requerido.</span>}
           {faltaResidual && <span>Evaluación de riesgo residual global requerida.</span>}
         </div>
       )}
@@ -798,24 +802,24 @@ function SeccionRiesgoResidualGlobal({
         <div className="p-4 space-y-3">
           <div className="space-y-1.5">
             <label className="text-[10px] font-semibold text-muted-foreground uppercase">
-              Beneficio Clínico del Dispositivo — FEUM / ISO 14971 §7
+              {beneficio} del {objeto} — {refs}
             </label>
             <Textarea
               value={form.beneficio_clinico}
               onChange={(e) => setForm({ ...form, beneficio_clinico: e.target.value })}
               rows={3}
-              placeholder="Describa el beneficio clínico que justifica el uso del dispositivo y los riesgos residuales aceptados."
+              placeholder={`Describa el ${beneficio.toLowerCase()} que justifica el uso del ${objeto.toLowerCase()} y los riesgos residuales aceptados.`}
             />
           </div>
           <div className="space-y-1.5">
             <label className="text-[10px] font-semibold text-muted-foreground uppercase">
-              Evaluación del Riesgo Residual Global — FEUM / ISO 14971 §8
+              Evaluación del Riesgo Residual Global — {refs}
             </label>
             <Textarea
               value={form.riesgo_residual_global}
               onChange={(e) => setForm({ ...form, riesgo_residual_global: e.target.value })}
               rows={4}
-              placeholder="Ejemplo: El riesgo residual global del dispositivo es aceptable. Se identificaron N riesgos, de los cuales X son Aceptables y Y requirieron acción. Los beneficios clínicos superan los riesgos residuales conforme a FEUM / ISO 14971 §8."
+              placeholder={`Ejemplo: El riesgo residual global del ${objeto.toLowerCase()} es aceptable. Se identificaron N riesgos, de los cuales X son Aceptables y Y requirieron acción. Los beneficios superan los riesgos residuales conforme a ${refs}.`}
             />
           </div>
           <div className="flex justify-end gap-2">
@@ -831,7 +835,7 @@ function SeccionRiesgoResidualGlobal({
         <div className="grid grid-cols-2">
           <div className="border-r border-b p-3">
             <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wide mb-1">
-              Beneficio Clínico — FEUM / ISO 14971 §7
+              {beneficio} — {refs}
             </p>
             <p className="text-sm whitespace-pre-line">
               {folio.beneficio_clinico || (
@@ -841,7 +845,7 @@ function SeccionRiesgoResidualGlobal({
           </div>
           <div className="border-b p-3">
             <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wide mb-1">
-              Riesgo Residual Global — FEUM / ISO 14971 §8
+              Riesgo Residual Global — {refs}
             </p>
             <p className="text-sm whitespace-pre-line">
               {folio.riesgo_residual_global || (
