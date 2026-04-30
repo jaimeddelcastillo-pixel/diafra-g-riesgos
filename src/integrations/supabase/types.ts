@@ -328,6 +328,8 @@ export type Database = {
           fecha_inicio: string
           id: string
           justificacion_tecnica: string | null
+          metodologia_folio: string
+          norma_folio: string
           normas_aplicables: string[]
           numero_lote: string
           numero_modelo: string
@@ -353,6 +355,8 @@ export type Database = {
           fecha_inicio?: string
           id?: string
           justificacion_tecnica?: string | null
+          metodologia_folio?: string
+          norma_folio?: string
           normas_aplicables?: string[]
           numero_lote?: string
           numero_modelo?: string
@@ -378,6 +382,8 @@ export type Database = {
           fecha_inicio?: string
           id?: string
           justificacion_tecnica?: string | null
+          metodologia_folio?: string
+          norma_folio?: string
           normas_aplicables?: string[]
           numero_lote?: string
           numero_modelo?: string
@@ -572,7 +578,9 @@ export type Database = {
           id: string
           logo_url: string
           max_users: number
+          metodologia: string
           nombre: string
+          norma_aplicable: string
           pending_price_id: string | null
           plan: string
           slug: string
@@ -581,7 +589,10 @@ export type Database = {
           subscription_current_period_end: string | null
           subscription_status: string | null
           trial_expires_at: string | null
+          umbral_npr_alto: number
+          umbral_npr_medio: number
           updated_at: string
+          usar_detectabilidad: boolean
           version_formato: string
         }
         Insert: {
@@ -594,7 +605,9 @@ export type Database = {
           id?: string
           logo_url?: string
           max_users?: number
+          metodologia?: string
           nombre: string
+          norma_aplicable?: string
           pending_price_id?: string | null
           plan?: string
           slug: string
@@ -603,7 +616,10 @@ export type Database = {
           subscription_current_period_end?: string | null
           subscription_status?: string | null
           trial_expires_at?: string | null
+          umbral_npr_alto?: number
+          umbral_npr_medio?: number
           updated_at?: string
+          usar_detectabilidad?: boolean
           version_formato?: string
         }
         Update: {
@@ -616,7 +632,9 @@ export type Database = {
           id?: string
           logo_url?: string
           max_users?: number
+          metodologia?: string
           nombre?: string
+          norma_aplicable?: string
           pending_price_id?: string | null
           plan?: string
           slug?: string
@@ -625,7 +643,10 @@ export type Database = {
           subscription_current_period_end?: string | null
           subscription_status?: string | null
           trial_expires_at?: string | null
+          umbral_npr_alto?: number
+          umbral_npr_medio?: number
           updated_at?: string
+          usar_detectabilidad?: boolean
           version_formato?: string
         }
         Relationships: []
@@ -722,6 +743,7 @@ export type Database = {
           created_at: string
           det_residual: number
           deteccion: number
+          detectabilidad_aplicable: boolean
           dictamen: Database["public"]["Enums"]["dictamen_tipo"]
           efecto_dano: string
           etapa_proceso: string
@@ -759,6 +781,7 @@ export type Database = {
           created_at?: string
           det_residual?: number
           deteccion?: number
+          detectabilidad_aplicable?: boolean
           dictamen?: Database["public"]["Enums"]["dictamen_tipo"]
           efecto_dano?: string
           etapa_proceso?: string
@@ -796,6 +819,7 @@ export type Database = {
           created_at?: string
           det_residual?: number
           deteccion?: number
+          detectabilidad_aplicable?: boolean
           dictamen?: Database["public"]["Enums"]["dictamen_tipo"]
           efecto_dano?: string
           etapa_proceso?: string
