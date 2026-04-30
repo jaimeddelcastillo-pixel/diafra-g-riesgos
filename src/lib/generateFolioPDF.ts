@@ -2,8 +2,8 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { supabase } from "@/integrations/supabase/client";
 import type { Folio, Riesgo, FolioComite } from "@/hooks/useFolios";
-import { getNPRLevel } from "@/hooks/useFolios";
 import { fetchOrgLogoDataUrl } from "@/lib/orgLogo";
+import { getNormaConfig, calcularNPR, getNPRLevelByNorma } from "@/config/normas";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -21,13 +21,13 @@ function fmtDate(d: string | null | undefined): string {
   }
 }
 
-function getNPRText(npr: number, severidad: number): string {
-  const level = getNPRLevel(npr, severidad);
+function getNPRText(npr: number, severidad: number, norma: string | null | undefined): string {
+  const level = getNPRLevelByNorma(npr, severidad, norma);
   return `${level.label}  ${npr}`;
 }
 
-function getNPRColor(npr: number, severidad: number): [number, number, number] {
-  const level = getNPRLevel(npr, severidad);
+function getNPRColor(npr: number, severidad: number, norma: string | null | undefined): [number, number, number] {
+  const level = getNPRLevelByNorma(npr, severidad, norma);
   if (level.label === "Crítico") return [180, 0, 0];
   if (level.label === "Mayor") return [160, 120, 0];
   return [0, 130, 0];
@@ -112,6 +112,17 @@ export async function generateFolioPDF(
     : "";
   const versiones = await fetchVersiones(folio.id, folio.numero_version || "1.0");
 
+  // ── Configuración por norma del folio (congelada al crear) ────────────────
+  const normaConfig = getNormaConfig(folio.norma_folio);
+  const usaDeteccion = normaConfig.usarDetectabilidad;
+  const t = normaConfig.terminologia;
+  const nprFormula = usaDeteccion ? "S × O × D" : "S × O";
+  const nprResFormula = usaDeteccion ? "S' × O' × D'" : "S' × O'";
+  const umbralLeyenda =
+    `Crítico (>${normaConfig.umbralNPRAlto} ó S≥${normaConfig.umbralSeveridadCritica})\n` +
+    `Mayor (${normaConfig.umbralNPRMedio}-${normaConfig.umbralNPRAlto})\n` +
+    `Menor (<${normaConfig.umbralNPRMedio})`;
+
   let pageNum = 0;
 
   // ─── Encabezado: 3 cajas como el modelo TRACEA ──────────────────────────────
@@ -171,7 +182,16 @@ export async function generateFolioPDF(
     doc.text(
       "ARCHIVO MAESTRO DE GESTIÓN DE RIESGOS",
       cx + centerW / 2,
-      margin + 13.5,
+      margin + 12.5,
+      { align: "center" },
+    );
+    // Línea de norma + metodología
+    doc.setFont("helvetica", "italic");
+    doc.setFontSize(7);
+    doc.text(
+      `${normaConfig.nombre} · ${normaConfig.metodologia} · ${normaConfig.normasReferencia.join(" / ")}`,
+      cx + centerW / 2,
+      margin + 15.5,
       { align: "center" },
     );
 
@@ -330,8 +350,11 @@ export async function generateFolioPDF(
   // ─── PÁGINAS DE RIESGOS (SECCIÓN III) ───────────────────────────────────────
   riesgos.forEach((r, idx) => {
     y = newPage();
-    const npr = r.npr ?? r.severidad * r.ocurrencia * r.deteccion;
-    const nprRes = r.npr_residual ?? r.sev_residual * r.ocu_residual * r.det_residual;
+    const npr =
+      r.npr ?? calcularNPR(r.severidad, r.ocurrencia, r.deteccion, folio.norma_folio);
+    const nprRes =
+      r.npr_residual ??
+      calcularNPR(r.sev_residual, r.ocu_residual, r.det_residual, folio.norma_folio);
 
     const label =
       riesgos.length > 1
@@ -357,7 +380,7 @@ export async function generateFolioPDF(
             rowSpan: 6,
             styles: { halign: "center", valign: "middle", fontSize: 16, fontStyle: "bold", fillColor: [248, 248, 248] },
           },
-          `Etapa del Proceso:\n${r.etapa_proceso || "—"}`,
+          `${t.procesoEquipo}:\n${r.etapa_proceso || "—"}`,
           { content: "S:", styles: { fontStyle: "bold", halign: "right", valign: "middle" } },
           { content: String(r.severidad), styles: { fontStyle: "bold", halign: "center", valign: "middle", fontSize: 11 } },
           `Controles Actuales:\n${r.controles_actuales || "—"}`,
@@ -372,28 +395,38 @@ export async function generateFolioPDF(
         ],
         [
           `Situación Peligrosa:\n${r.situacion_peligrosa || "—"}`,
-          { content: "D:", styles: { fontStyle: "bold", halign: "right", valign: "middle" } },
-          { content: String(r.deteccion), styles: { halign: "center", valign: "middle", fontSize: 11 } },
-          `Controles de Detección:\n${r.controles_deteccion || "—"}`,
-          { content: `S': ${r.sev_residual}\nO': ${r.ocu_residual}\nD': ${r.det_residual}`, colSpan: 2, styles: { halign: "center", valign: "middle" } },
+          usaDeteccion
+            ? { content: "D:", styles: { fontStyle: "bold", halign: "right", valign: "middle" } as any }
+            : { content: "—", styles: { halign: "right", valign: "middle", textColor: [160, 160, 160] } as any },
+          usaDeteccion
+            ? { content: String(r.deteccion), styles: { halign: "center", valign: "middle", fontSize: 11 } as any }
+            : { content: "n/a", styles: { halign: "center", valign: "middle", fontSize: 9, textColor: [160, 160, 160] } as any },
+          `Controles de Detección:\n${r.controles_deteccion || (usaDeteccion ? "—" : "No aplica para esta norma")}`,
+          {
+            content: usaDeteccion
+              ? `S': ${r.sev_residual}\nO': ${r.ocu_residual}\nD': ${r.det_residual}`
+              : `S': ${r.sev_residual}\nO': ${r.ocu_residual}`,
+            colSpan: 2,
+            styles: { halign: "center", valign: "middle" },
+          },
         ],
         [
           `Secuencia de Eventos:\n${r.secuencia_eventos || "—"}\n\nModo de Falla:\n${r.peligro_modo_falla || "—"}\n\nCausa:\n${r.causa_potencial || "—"}`,
           {
-            content: `NPR: (S × O × D)\n${getNPRText(npr, r.severidad)}`,
+            content: `NPR: (${nprFormula})\n${getNPRText(npr, r.severidad, folio.norma_folio)}`,
             colSpan: 2,
-            styles: { halign: "center", valign: "middle", fontStyle: "bold", textColor: getNPRColor(npr, r.severidad) },
+            styles: { halign: "center", valign: "middle", fontStyle: "bold", textColor: getNPRColor(npr, r.severidad, folio.norma_folio) },
           },
           `Acción Propuesta:\n${r.accion_propuesta || "—"}\n\nResponsable: ${r.responsable || "—"}\nFecha: ${fmtDate(r.fecha_compromiso)}`,
           {
-            content: `NPR RESIDUAL:\n${getNPRText(nprRes, r.sev_residual)}`,
+            content: `NPR RESIDUAL: (${nprResFormula})\n${getNPRText(nprRes, r.sev_residual, folio.norma_folio)}`,
             colSpan: 2,
-            styles: { halign: "center", valign: "middle", fontStyle: "bold", textColor: getNPRColor(nprRes, r.sev_residual) },
+            styles: { halign: "center", valign: "middle", fontStyle: "bold", textColor: getNPRColor(nprRes, r.sev_residual, folio.norma_folio) },
           },
         ],
         [
-          `Efecto / Daño:\n${r.efecto_dano || "—"}`,
-          { content: "Crítico (>150 ó S≥9)\nMayor (60-149)\nMenor (<60)", colSpan: 2, styles: { fontSize: 7, valign: "middle" } },
+          `${t.efectoDano}:\n${r.efecto_dano || "—"}`,
+          { content: umbralLeyenda, colSpan: 2, styles: { fontSize: 7, valign: "middle" } },
           `Verificado por: ${r.verificado_por || "—"}\nFecha: ${fmtDate(r.fecha_verificacion)}\nResultado: ${r.resultado_verificacion || "—"}`,
           {
             content: `Dictamen:\n${chk(r.dictamen === "Aceptable")} Aceptable\n${chk(r.dictamen === "No Aceptable")} No Aceptable`,
@@ -464,12 +497,13 @@ export async function generateFolioPDF(
   y = (doc as any).lastAutoTable.finalY + 4;
 
   // V. Evaluación Global
-  y = sectionHeader(y, "V.", "EVALUACIÓN GLOBAL DE RIESGO-BENEFICIO");
+  const beneficioUpper = t.beneficio.toUpperCase();
+  y = sectionHeader(y, "V.", `EVALUACIÓN GLOBAL DE ${beneficioUpper} vs RIESGO`);
   autoTable(doc, {
     startY: y,
     body: [
       [
-        { content: "Beneficio Clínico Documentado:", styles: { fontStyle: "bold", cellWidth: 70, fillColor: [248, 248, 248] } },
+        { content: `${t.beneficio} Documentado:`, styles: { fontStyle: "bold", cellWidth: 70, fillColor: [248, 248, 248] } },
         {
           content: folio.beneficio_clinico || "Sin capturar",
           styles: { textColor: folio.beneficio_clinico ? [0, 0, 0] : [160, 0, 0] },
@@ -495,7 +529,7 @@ export async function generateFolioPDF(
   }
 
   // VI. Dictamen
-  y = sectionHeader(y, "VI.", "DICTAMEN DE BENEFICIO-RIESGO");
+  y = sectionHeader(y, "VI.", `DICTAMEN DE ${beneficioUpper} vs RIESGO`);
 
   const hasNoAceptables = riesgos.some((r) => r.dictamen === "No Aceptable");
   const conclusion = folio.conclusion || "";
@@ -516,7 +550,7 @@ export async function generateFolioPDF(
       [
         {
           content:
-            "JUSTIFICACIÓN TÉCNICA: (Explicar por qué el beneficio médico supera el riesgo residual identificado, citando evidencia clínica o técnica).",
+            `JUSTIFICACIÓN TÉCNICA — ${normaConfig.nombre} (${normaConfig.metodologia}): (Explicar por qué el ${t.beneficio.toLowerCase()} supera el riesgo residual identificado, citando evidencia clínica o técnica).`,
           colSpan: 2,
           styles: { fontStyle: "bold", fontSize: 7.5 },
         },
