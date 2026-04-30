@@ -273,10 +273,54 @@ export default function Register() {
           {/* Paso 1 — Selección de plan */}
           {step === 1 && (
             <div className="space-y-4">
-              <p className="text-sm text-muted-foreground text-center">
-                Selecciona el plan o producto con el que quieres comenzar. Tu cuenta se activa al
-                confirmar tu pago.
-              </p>
+              {/* Selector de norma regulatoria */}
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-foreground text-center">
+                  ¿Bajo qué norma opera tu empresa?
+                </p>
+                <p className="text-xs text-muted-foreground text-center">
+                  Define el formato de gestión de riesgos. Puedes cambiarlo después.
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1">
+                  {[
+                    { key: "NOM-241" as NormaKey, icon: Shield, color: "text-primary", desc: "Dispositivos médicos" },
+                    { key: "NOM-059" as NormaKey, icon: FlaskConical, color: "text-blue-600", desc: "Medicamentos" },
+                    { key: "MULTI" as NormaKey, icon: Layers, color: "text-sky-500", desc: "Ambas normas" },
+                  ].map(({ key, icon: Icon, color, desc }) => {
+                    const cfg = NORMAS_CONFIG[key];
+                    const selected = norma === key;
+                    return (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => setNorma(key)}
+                        className={`text-left rounded-lg border-2 p-3 transition-colors ${
+                          selected
+                            ? "border-primary bg-primary/5"
+                            : "border-border hover:border-primary/50"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <Icon className={`h-4 w-4 ${color}`} />
+                          <span className="font-semibold text-sm">{cfg.nombre}</span>
+                          {selected && <Check className="h-3.5 w-3.5 ml-auto text-primary" />}
+                        </div>
+                        <p className="text-[11px] text-muted-foreground mt-1">{desc}</p>
+                        <p className="text-[10px] text-muted-foreground mt-0.5">
+                          {cfg.metodologiaNombre.split("(")[0].trim()}
+                        </p>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="border-t pt-4">
+                <p className="text-sm text-muted-foreground text-center">
+                  Selecciona el plan o producto con el que quieres comenzar. Tu cuenta se activa al
+                  confirmar tu pago.
+                </p>
+              </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {/* Curso */}
