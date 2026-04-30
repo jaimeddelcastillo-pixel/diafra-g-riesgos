@@ -266,7 +266,7 @@ Deno.serve(async (req) => {
   if (accion === "enviar-a-firma") {
     const { data: folio, error: fErr } = await admin
       .from("folios")
-      .select("id, codigo, proceso_equipo, estado, created_by, org_id")
+      .select("id, codigo, proceso_equipo, estado, created_by, org_id, norma_folio")
       .eq("id", folio_id)
       .single();
 
@@ -280,13 +280,17 @@ Deno.serve(async (req) => {
       }
     }
 
-    // ── Validación NOM-241 antes de enviar ─────────────────────────────────
-    const validacion = await validarCompletitudNOM241(admin, folio_id);
+    // ── Validación de completitud (multi-norma) antes de enviar ────────────
+    const norma = getNorma((folio as any).norma_folio);
+    const validacion = await validarCompletitudFolio(admin, folio_id);
     if (!validacion.valido) {
       return json(
         {
-          error: "El folio no cumple los requisitos NOM-241 para enviarse a firma",
+          error: `El folio no cumple los requisitos de ${norma.nombre} para enviarse a firma`,
+          errores_norma: validacion.errores,
+          // Alias retro-compatible para clientes existentes
           errores_nom241: validacion.errores,
+          norma: norma.nombre,
         },
         422,
       );
@@ -319,6 +323,7 @@ Deno.serve(async (req) => {
             folio_codigo: folio.codigo,
             proceso: folio.proceso_equipo,
             link: `${APP_URL}/folios/${folio_id}`,
+            norma,
             ...orgInfo,
           }),
         });
@@ -342,7 +347,7 @@ Deno.serve(async (req) => {
 
     const { data: folio } = await admin
       .from("folios")
-      .select("codigo, proceso_equipo, estado, org_id")
+      .select("codigo, proceso_equipo, estado, org_id, norma_folio")
       .eq("id", folio_id)
       .single();
 
@@ -350,6 +355,8 @@ Deno.serve(async (req) => {
     if (folio?.estado !== "En Firma") {
       return json({ error: "El folio no está en estado En Firma" }, 400);
     }
+
+    const norma = getNorma((folio as any).norma_folio);
 
     // Generar hash del documento al momento de la firma
     const hashDocumento = await generarHashDocumento(admin, folio_id);
@@ -361,8 +368,8 @@ Deno.serve(async (req) => {
       "desconocida";
     const userAgent = req.headers.get("user-agent") || "";
 
-    // Verificar que el usuario envió texto de compromiso (debe ser el estándar)
-    const textoCompromiso = body.texto_compromiso || TEXTO_COMPROMISO;
+    // Texto de compromiso conforme a la norma del folio
+    const textoCompromiso = body.texto_compromiso || norma.textoCompromiso;
 
     await admin.from("folio_comite").update({
       firmado: true,
@@ -377,6 +384,7 @@ Deno.serve(async (req) => {
 
     if (todosOk) {
       const orgInfo = await getOrgInfo(admin, folio?.org_id);
+      // Notificar al aprobador final (Responsable Sanitario / Director Técnico)
       const { data: rsRoles } = await admin
         .from("org_members")
         .select("user_id")
@@ -399,6 +407,7 @@ Deno.serve(async (req) => {
             folio_codigo: folio.codigo,
             proceso: folio.proceso_equipo,
             link: `${APP_URL}/folios/${folio_id}`,
+            norma,
             ...orgInfo,
           }),
         });
@@ -410,7 +419,7 @@ Deno.serve(async (req) => {
       todos_firmaron: todosOk,
       hash_documento: hashDocumento,
       mensaje: todosOk
-        ? "Todos firmaron — Responsable Sanitario notificado"
+        ? `Todos firmaron — ${norma.terminologia.aprobadorFinal} notificado`
         : "Firma registrada — esperando otros miembros",
     });
   }
@@ -425,13 +434,15 @@ Deno.serve(async (req) => {
 
     const { data: folio } = await admin
       .from("folios")
-      .select("codigo, proceso_equipo, estado, created_by, numero_version, org_id")
+      .select("codigo, proceso_equipo, estado, created_by, numero_version, org_id, norma_folio")
       .eq("id", folio_id)
       .single();
 
     if (!folio) return json({ error: "Folio no encontrado" }, 404);
     if (folio.org_id !== callerOrgId) return json({ error: "Sin permiso para este folio" }, 403);
     if (folio.estado !== "En Firma") return json({ error: "El folio no está en estado En Firma" }, 400);
+
+    const norma = getNorma((folio as any).norma_folio);
 
     const nuevoEstado = conclusion === "Aprobado" ? "Aprobado" : "Borrador";
 
@@ -444,7 +455,7 @@ Deno.serve(async (req) => {
     if (conclusion !== "Aprobado") {
       await admin.rpc("archivar_version_folio", {
         p_folio_id: folio_id,
-        p_motivo: motivo || "Rechazado por Responsable Sanitario — requiere corrección",
+        p_motivo: motivo || `Rechazado por ${norma.terminologia.aprobadorFinal} — requiere corrección`,
       });
     }
 
@@ -468,6 +479,7 @@ Deno.serve(async (req) => {
             motivo: motivo || "",
             version: folio.numero_version,
             link: `${APP_URL}/folios/${folio_id}`,
+            norma,
             ...orgInfo,
           }),
         });
