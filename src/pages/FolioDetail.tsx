@@ -53,18 +53,24 @@ interface CheckItem {
 
 function evaluarChecklistNOM241(folio: Folio, riesgos: Riesgo[], comite: FolioComite[]): CheckItem[] {
   const items: CheckItem[] = [];
+  const nc = getNormaConfig(folio.norma_folio);
+  const beneficio = nc.terminologia.beneficio;
+  const refs = nc.normasReferencia.join(" / ");
 
   // ── Folio ──
   items.push({ id: "alcance", label: "Alcance del análisis capturado", ok: !!folio.alcance?.trim(), critico: true });
-  items.push({ id: "modelo", label: "Número de modelo del dispositivo (§7.5.3)", ok: !!folio.numero_modelo?.trim(), critico: true });
-  items.push({ id: "beneficio", label: "Beneficio clínico documentado (FEUM / ISO 14971 §7)", ok: !!folio.beneficio_clinico?.trim(), critico: true });
-  items.push({ id: "residual_global", label: "Evaluación de riesgo residual global (FEUM / ISO 14971 §8)", ok: !!folio.riesgo_residual_global?.trim(), critico: true });
+  items.push({ id: "modelo", label: `Identificador del ${nc.terminologia.objetoAnalisis.toLowerCase()}`, ok: !!folio.numero_modelo?.trim(), critico: true });
+  items.push({ id: "beneficio", label: `${beneficio} documentado (${refs})`, ok: !!folio.beneficio_clinico?.trim(), critico: true });
+  items.push({ id: "residual_global", label: `Evaluación de riesgo residual global (${refs})`, ok: !!folio.riesgo_residual_global?.trim(), critico: true });
   items.push({ id: "comite", label: "Al menos un miembro en el comité", ok: comite.length > 0, critico: true });
   items.push({ id: "riesgos_count", label: "Al menos un riesgo analizado", ok: riesgos.length > 0, critico: true });
 
   // ── Por riesgo ──
   let sinPeligro = 0, sinSituacion = 0, sinAccionResp = 0, sinFecha = 0, sinVerif = 0, alarpSinJust = 0, criticoSinEvidencia = 0;
 
+  const umbralCrit = nc.umbralNPRAlto;
+  const umbralSev = nc.umbralSeveridadCritica;
+  const umbralAlarpMin = nc.umbralNPRMedio;
   for (const r of riesgos) {
     if (!r.peligro?.trim()) sinPeligro++;
     if (!r.situacion_peligrosa?.trim()) sinSituacion++;
@@ -74,8 +80,8 @@ function evaluarChecklistNOM241(folio: Folio, riesgos: Riesgo[], comite: FolioCo
       if (!r.fecha_compromiso) sinFecha++;
     }
     if (r.accion_implementada?.trim() && !r.verificado_por?.trim()) sinVerif++;
-    if (npr >= 125 && npr < 200 && r.dictamen === "Aceptable" && !r.justificacion_aceptabilidad?.trim()) alarpSinJust++;
-    const esCritico = npr > 150 || r.severidad >= 9;
+    if (npr >= umbralAlarpMin && npr <= umbralCrit && r.dictamen === "Aceptable" && !r.justificacion_aceptabilidad?.trim()) alarpSinJust++;
+    const esCritico = npr > umbralCrit || r.severidad >= umbralSev;
     const tieneEvidencia = r.anexos && (r.anexos as unknown[]).length > 0;
     if (esCritico && r.requiere_accion && !tieneEvidencia) criticoSinEvidencia++;
   }
@@ -742,6 +748,10 @@ function SeccionRiesgoResidualGlobal({
     beneficio_clinico: folio.beneficio_clinico || "",
     riesgo_residual_global: folio.riesgo_residual_global || "",
   });
+  const nc = getNormaConfig(folio.norma_folio);
+  const beneficio = nc.terminologia.beneficio;
+  const objeto = nc.terminologia.objetoAnalisis;
+  const refs = nc.normasReferencia.join(" / ");
 
   const handleSave = async () => {
     setSaving(true);
@@ -767,7 +777,7 @@ function SeccionRiesgoResidualGlobal({
 
   return (
     <div className="border rounded-md overflow-hidden relative">
-      <SectionHeader number="V" title="EVALUACIÓN GLOBAL DE RIESGO-BENEFICIO — FEUM / ISO 14971 §7/§8" />
+      <SectionHeader number="V" title={`EVALUACIÓN GLOBAL DE RIESGO-BENEFICIO — ${refs}`} />
       {!locked && (
         <Button
           variant="ghost"
@@ -783,7 +793,7 @@ function SeccionRiesgoResidualGlobal({
       {(faltaBeneficio || faltaResidual) && (
         <div className="px-4 py-2 bg-destructive/5 border-b flex items-center gap-2 text-xs text-destructive">
           <span className="font-bold">⚠ Atención:</span>
-          {faltaBeneficio && <span>Beneficio clínico requerido.</span>}
+          {faltaBeneficio && <span>{beneficio} requerido.</span>}
           {faltaResidual && <span>Evaluación de riesgo residual global requerida.</span>}
         </div>
       )}
@@ -792,24 +802,24 @@ function SeccionRiesgoResidualGlobal({
         <div className="p-4 space-y-3">
           <div className="space-y-1.5">
             <label className="text-[10px] font-semibold text-muted-foreground uppercase">
-              Beneficio Clínico del Dispositivo — FEUM / ISO 14971 §7
+              {beneficio} del {objeto} — {refs}
             </label>
             <Textarea
               value={form.beneficio_clinico}
               onChange={(e) => setForm({ ...form, beneficio_clinico: e.target.value })}
               rows={3}
-              placeholder="Describa el beneficio clínico que justifica el uso del dispositivo y los riesgos residuales aceptados."
+              placeholder={`Describa el ${beneficio.toLowerCase()} que justifica el uso del ${objeto.toLowerCase()} y los riesgos residuales aceptados.`}
             />
           </div>
           <div className="space-y-1.5">
             <label className="text-[10px] font-semibold text-muted-foreground uppercase">
-              Evaluación del Riesgo Residual Global — FEUM / ISO 14971 §8
+              Evaluación del Riesgo Residual Global — {refs}
             </label>
             <Textarea
               value={form.riesgo_residual_global}
               onChange={(e) => setForm({ ...form, riesgo_residual_global: e.target.value })}
               rows={4}
-              placeholder="Ejemplo: El riesgo residual global del dispositivo es aceptable. Se identificaron N riesgos, de los cuales X son Aceptables y Y requirieron acción. Los beneficios clínicos superan los riesgos residuales conforme a FEUM / ISO 14971 §8."
+              placeholder={`Ejemplo: El riesgo residual global del ${objeto.toLowerCase()} es aceptable. Se identificaron N riesgos, de los cuales X son Aceptables y Y requirieron acción. Los beneficios superan los riesgos residuales conforme a ${refs}.`}
             />
           </div>
           <div className="flex justify-end gap-2">
@@ -825,7 +835,7 @@ function SeccionRiesgoResidualGlobal({
         <div className="grid grid-cols-2">
           <div className="border-r border-b p-3">
             <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wide mb-1">
-              Beneficio Clínico — FEUM / ISO 14971 §7
+              {beneficio} — {refs}
             </p>
             <p className="text-sm whitespace-pre-line">
               {folio.beneficio_clinico || (
@@ -835,7 +845,7 @@ function SeccionRiesgoResidualGlobal({
           </div>
           <div className="border-b p-3">
             <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wide mb-1">
-              Riesgo Residual Global — FEUM / ISO 14971 §8
+              Riesgo Residual Global — {refs}
             </p>
             <p className="text-sm whitespace-pre-line">
               {folio.riesgo_residual_global || (
@@ -854,6 +864,11 @@ function SeccionRiesgos({ riesgos, locked, folioId, normaFolio }: { riesgos: Rie
   const [riesgoForm, setRiesgoForm] = useState<{ open: boolean; riesgo: Riesgo | null }>({ open: false, riesgo: null });
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const nc = getNormaConfig(normaFolio);
+  const refs = nc.normasReferencia.join(" / ");
+  const umbralCrit = nc.umbralNPRAlto;
+  const umbralSev = nc.umbralSeveridadCritica;
+  const umbralMed = nc.umbralNPRMedio;
 
   const handleDelete = async (r: Riesgo) => {
     if (!confirm(`¿Eliminar riesgo ${String(r.numero_id).padStart(2, "0")} — "${r.peligro_modo_falla}"?`)) return;
@@ -875,13 +890,13 @@ function SeccionRiesgos({ riesgos, locked, folioId, normaFolio }: { riesgos: Rie
         <SectionHeader number="III" title="GESTIÓN DE RIESGOS" />
         <div className="flex items-center gap-4 px-4 py-2 bg-muted/30 border-b text-[10px]">
           <span>
-            🔴 <strong>Crítico</strong> (&gt; 150 ó S ≥ 9)
+            🔴 <strong>Crítico</strong> (&gt; {umbralCrit} ó S ≥ {umbralSev})
           </span>
           <span>
-            🟡 <strong>Mayor</strong> (60-149)
+            🟡 <strong>Mayor</strong> ({umbralMed}-{umbralCrit})
           </span>
           <span>
-            🟢 <strong>Menor</strong> (&lt; 60)
+            🟢 <strong>Menor</strong> (&lt; {umbralMed})
           </span>
         </div>
         <div className="overflow-x-auto">
@@ -892,13 +907,13 @@ function SeccionRiesgos({ riesgos, locked, folioId, normaFolio }: { riesgos: Rie
                   ID
                 </th>
                 <th colSpan={6} className="border-r border-b p-2 text-center font-bold">
-                  1. IDENTIFICACIÓN FEUM / ISO 14971 §5
+                  1. IDENTIFICACIÓN — {refs}
                 </th>
                 <th colSpan={4} className="border-r border-b p-2 text-center font-bold">
                   2. EVALUACIÓN INICIAL
                 </th>
                 <th colSpan={5} className="border-r border-b p-2 text-center font-bold">
-                  3. CONTROLES Y GESTIÓN FEUM / ISO 14971 §6
+                  3. CONTROLES Y GESTIÓN — {refs}
                 </th>
                 <th colSpan={6} className={`border-b p-2 text-center font-bold ${!locked ? "border-r" : ""}`}>
                   4. EVALUACIÓN FINAL (RESIDUAL) + VERIFICACIÓN
@@ -938,7 +953,7 @@ function SeccionRiesgos({ riesgos, locked, folioId, normaFolio }: { riesgos: Rie
               {riesgos.map((r) => {
                 const npr = r.npr ?? r.severidad * r.ocurrencia * r.deteccion;
                 const nprRes = r.npr_residual ?? r.sev_residual * r.ocu_residual * r.det_residual;
-                const needsAction = r.severidad >= 9 || npr > 150;
+                const needsAction = r.severidad >= umbralSev || npr > umbralCrit;
                 const rowAlert = needsAction && !r.accion_propuesta;
                 return (
                   <tr
