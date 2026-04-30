@@ -82,7 +82,9 @@ function ProgressBar({ value, max, color = "bg-primary" }: { value: number; max:
 // ─── Dashboard principal ──────────────────────────────────────────────────────
 export default function Dashboard() {
   const navigate = useNavigate();
-  const { isSuperAdmin, isImpersonating, loading } = useAuth();
+  const { isSuperAdmin, isImpersonating, loading, org } = useAuth();
+  const normaConfig = getNormaConfig(org?.norma_aplicable);
+  const metodLabel = normaConfig.metodologia === "MULTI" ? "AMEF/ICH-Q9" : normaConfig.metodologia;
 
   const { data: folios, isLoading: loadingFolios } = useFolios();
   const { data: allRisks, isLoading: loadingRisks } = useAllRiesgos();
@@ -207,7 +209,7 @@ export default function Dashboard() {
           value={isLoading ? <Skeleton className="h-8 w-12" /> : risks.length}
           icon={ShieldAlert}
           color="text-accent"
-          sub={`${foliosConRiesgo.length} folios con AMEF`}
+          sub={`${foliosConRiesgo.length} folios con ${metodLabel}`}
         />
         <KPICard
           label="Riesgos Críticos"
@@ -341,7 +343,7 @@ export default function Dashboard() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-base flex items-center justify-between">
-              Avance captura AMEF
+              Avance captura {metodLabel}
               <span
                 className={`text-sm font-bold ${avanceAMEF >= 80 ? "text-green-600" : avanceAMEF >= 50 ? "text-amber-600" : "text-red-600"}`}
               >
@@ -373,7 +375,7 @@ export default function Dashboard() {
                   <span className="font-mono text-primary">{f.codigo}</span>
                   <span className="text-muted-foreground truncate max-w-[140px]">{f.proceso_equipo}</span>
                   <Badge variant="outline" className="text-[9px]">
-                    Sin AMEF
+                    Sin {metodLabel}
                   </Badge>
                 </div>
               ))}
