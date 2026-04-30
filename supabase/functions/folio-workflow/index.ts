@@ -582,7 +582,10 @@ function footerLinea(org_nombre?: string, codigo_formato?: string, version_forma
     : `${name} · Documento confidencial`;
 }
 
-function plantillaFirma({ nombre, folio_codigo, proceso, link, org_nombre, codigo_formato, version_formato }: any) {
+function plantillaFirma({ nombre, folio_codigo, proceso, link, norma, org_nombre, codigo_formato, version_formato }: any) {
+  const n: NormaWorkflowConfig = norma || NORMAS["NOM-241"];
+  const procesoLabel = n.terminologia.procesoEquipo;
+  const docLabel = n.terminologia.documento;
   return `
 <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto">
   <div style="background:#042C53;padding:20px;text-align:center">
@@ -591,13 +594,14 @@ function plantillaFirma({ nombre, folio_codigo, proceso, link, org_nombre, codig
   </div>
   <div style="padding:28px;background:#f9f9f9">
     <p style="margin:0 0 16px">Estimado(a) <strong>${nombre}</strong>,</p>
-    <p>Se te solicita firmar el siguiente Archivo de Gestión de Riesgos:</p>
+    <p>Se te solicita firmar el siguiente <strong>${docLabel}</strong> (${n.nombre} · ${n.metodologia}):</p>
     <div style="background:#fff;border:1px solid #ddd;border-radius:8px;padding:16px;margin:16px 0">
       <p style="margin:0 0 6px"><strong>Folio:</strong> ${folio_codigo}</p>
-      <p style="margin:0"><strong>Proceso:</strong> ${proceso}</p>
+      <p style="margin:0 0 6px"><strong>${procesoLabel}:</strong> ${proceso}</p>
+      <p style="margin:0"><strong>Marco normativo:</strong> ${n.normasReferencia.join(" · ")}</p>
     </div>
     <div style="background:#fff3cd;border:1px solid #ffc107;border-radius:6px;padding:12px;margin:16px 0;font-size:12px">
-      <strong>Importante:</strong> Al firmar, usted declara haber revisado el contenido íntegro y que su firma electrónica tiene el mismo valor legal que su firma autógrafa conforme a la NOM-241-SSA1-2025.
+      <strong>Importante:</strong> Al firmar, usted declara haber revisado el contenido íntegro y que su firma electrónica tiene el mismo valor legal que su firma autógrafa conforme a ${n.nombreLargo}.
     </div>
     <div style="text-align:center;margin:24px 0">
       <a href="${link}" style="background:#042C53;color:#fff;padding:12px 28px;border-radius:6px;text-decoration:none;font-weight:bold">
@@ -612,7 +616,10 @@ function plantillaFirma({ nombre, folio_codigo, proceso, link, org_nombre, codig
 </div>`;
 }
 
-function plantillaListoParaDictamen({ nombre, folio_codigo, proceso, link, org_nombre, codigo_formato, version_formato }: any) {
+function plantillaListoParaDictamen({ nombre, folio_codigo, proceso, link, norma, org_nombre, codigo_formato, version_formato }: any) {
+  const n: NormaWorkflowConfig = norma || NORMAS["NOM-241"];
+  const procesoLabel = n.terminologia.procesoEquipo;
+  const aprobador = n.terminologia.aprobadorFinal;
   return `
 <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto">
   <div style="background:#042C53;padding:20px;text-align:center">
@@ -624,10 +631,10 @@ function plantillaListoParaDictamen({ nombre, folio_codigo, proceso, link, org_n
     <div style="background:#e8f5e9;border-left:4px solid #2e7d32;padding:12px 16px;border-radius:4px;margin-bottom:16px">
       <strong style="color:#2e7d32">✅ Todos los miembros del comité han firmado</strong>
     </div>
-    <p>El siguiente folio está listo para su dictamen de Responsable Sanitario:</p>
+    <p>El siguiente folio está listo para su dictamen de <strong>${aprobador}</strong> (${n.nombre} · ${n.metodologia}):</p>
     <div style="background:#fff;border:1px solid #ddd;border-radius:8px;padding:16px;margin:16px 0">
       <p style="margin:0 0 6px"><strong>Folio:</strong> ${folio_codigo}</p>
-      <p style="margin:0"><strong>Proceso:</strong> ${proceso}</p>
+      <p style="margin:0"><strong>${procesoLabel}:</strong> ${proceso}</p>
     </div>
     <div style="text-align:center;margin:24px 0">
       <a href="${link}" style="background:#2e7d32;color:#fff;padding:12px 28px;border-radius:6px;text-decoration:none;font-weight:bold">
@@ -641,7 +648,10 @@ function plantillaListoParaDictamen({ nombre, folio_codigo, proceso, link, org_n
 </div>`;
 }
 
-function plantillaDictamen({ nombre, folio_codigo, proceso, conclusion, motivo, version, link, org_nombre, codigo_formato, version_formato }: any) {
+function plantillaDictamen({ nombre, folio_codigo, proceso, conclusion, motivo, version, link, norma, org_nombre, codigo_formato, version_formato }: any) {
+  const n: NormaWorkflowConfig = norma || NORMAS["NOM-241"];
+  const procesoLabel = n.terminologia.procesoEquipo;
+  const aprobador = n.terminologia.aprobadorFinal;
   const aprobado = conclusion === "Aprobado";
   return `
 <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto">
@@ -653,12 +663,13 @@ function plantillaDictamen({ nombre, folio_codigo, proceso, conclusion, motivo, 
     <p style="margin:0 0 16px">Estimado(a) <strong>${nombre}</strong>,</p>
     <div style="background:${aprobado ? "#e8f5e9" : "#fff3e0"};border-left:4px solid ${aprobado ? "#2e7d32" : "#e65100"};padding:12px 16px;border-radius:4px;margin-bottom:16px">
       <strong style="color:${aprobado ? "#2e7d32" : "#e65100"}">
-        ${aprobado ? "✅ Folio APROBADO por Responsable Sanitario" : "⚠ Folio RECHAZADO — Requiere corrección"}
+        ${aprobado ? `✅ Folio APROBADO por ${aprobador}` : "⚠ Folio RECHAZADO — Requiere corrección"}
       </strong>
     </div>
     <div style="background:#fff;border:1px solid #ddd;border-radius:8px;padding:16px;margin:16px 0">
       <p style="margin:0 0 6px"><strong>Folio:</strong> ${folio_codigo}</p>
-      <p style="margin:0 0 6px"><strong>Proceso:</strong> ${proceso}</p>
+      <p style="margin:0 0 6px"><strong>${procesoLabel}:</strong> ${proceso}</p>
+      <p style="margin:0 0 6px"><strong>Norma:</strong> ${n.nombre} (${n.metodologia})</p>
       <p style="margin:0 0 6px"><strong>Versión:</strong> ${version}</p>
       <p style="margin:0"><strong>Dictamen:</strong> ${conclusion}</p>
       ${motivo ? `<p style="margin:8px 0 0;color:#555"><strong>Observaciones:</strong> ${motivo}</p>` : ""}
