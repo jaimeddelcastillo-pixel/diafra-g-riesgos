@@ -1,8 +1,8 @@
 // supabase/functions/folio-workflow/index.ts v3
-// Maneja 4 acciones:
-//   1. enviar-a-firma   → valida completitud NOM-241 + cambia estado + correos al comité
-//   2. firmar           → registra firma con hash + IP + texto_compromiso + notifica RS
-//   3. dictamen         → RS aprueba o rechaza + correo al capturista
+// Maneja 4 acciones (multi-norma: NOM-241 / NOM-059, "frozen" en folios.norma_folio):
+//   1. enviar-a-firma   → valida completitud según norma + cambia estado + correos al comité
+//   2. firmar           → registra firma con hash + IP + texto_compromiso + notifica aprobador
+//   3. dictamen         → aprobador final aprueba o rechaza + correo al capturista
 //   4. reabrir          → archiva versión actual, regresa a Borrador, incrementa versión
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
@@ -16,9 +16,77 @@ const corsHeaders = {
 
 const APP_URL = Deno.env.get("APP_URL") ?? "https://tu-app.lovable.app";
 
-// ─── Texto de compromiso estándar para firma electrónica ─────────────────────
-const TEXTO_COMPROMISO =
-  "Declaro bajo protesta de decir verdad que he revisado el contenido íntegro de este Análisis de Gestión de Riesgos, que la información es correcta y completa conforme a la NOM-241-SSA1-2025 e ISO 14971:2019, y que mi firma electrónica registrada en este sistema tiene el mismo valor legal que mi firma autógrafa.";
+// ─── Configuración multi-norma (espejo simplificado de src/config/normas.ts) ──
+// Edge functions no pueden importar de src/; mantenemos los valores aquí.
+type NormaKey = "NOM-241" | "NOM-059";
+
+interface NormaWorkflowConfig {
+  nombre: string;
+  nombreLargo: string;
+  normasReferencia: string[];
+  metodologia: string;
+  usarDetectabilidad: boolean;
+  umbralNPRMedio: number;
+  umbralNPRAlto: number;
+  umbralSeveridadCritica: number;
+  terminologia: {
+    beneficio: string;
+    aprobadorFinal: string;
+    procesoEquipo: string;
+    objetoAnalisis: string;
+    efectoDano: string;
+    documento: string; // p.ej. "Análisis de Gestión de Riesgos"
+  };
+  textoCompromiso: string;
+}
+
+const NORMAS: Record<NormaKey, NormaWorkflowConfig> = {
+  "NOM-241": {
+    nombre: "NOM-241",
+    nombreLargo: "NOM-241-SSA1-2025",
+    normasReferencia: ["ISO 14971:2019", "NOM-241-SSA1-2025"],
+    metodologia: "AMEF",
+    usarDetectabilidad: true,
+    umbralNPRMedio: 60,
+    umbralNPRAlto: 150,
+    umbralSeveridadCritica: 9,
+    terminologia: {
+      beneficio: "Beneficio clínico",
+      aprobadorFinal: "Responsable Sanitario",
+      procesoEquipo: "Proceso / Equipo",
+      objetoAnalisis: "Dispositivo médico",
+      efectoDano: "Efecto / Daño potencial",
+      documento: "Archivo de Gestión de Riesgos",
+    },
+    textoCompromiso:
+      "Declaro bajo protesta de decir verdad que he revisado el contenido íntegro de este Análisis de Gestión de Riesgos, que la información es correcta y completa conforme a la NOM-241-SSA1-2025 e ISO 14971:2019, y que mi firma electrónica registrada en este sistema tiene el mismo valor legal que mi firma autógrafa.",
+  },
+  "NOM-059": {
+    nombre: "NOM-059",
+    nombreLargo: "NOM-059-SSA1-2015",
+    normasReferencia: ["ICH Q9 (R1)", "NOM-059-SSA1-2015"],
+    metodologia: "ICH-Q9",
+    usarDetectabilidad: true,
+    umbralNPRMedio: 60,
+    umbralNPRAlto: 150,
+    umbralSeveridadCritica: 9,
+    terminologia: {
+      beneficio: "Beneficio terapéutico",
+      aprobadorFinal: "Director Técnico",
+      procesoEquipo: "Etapa de fabricación",
+      objetoAnalisis: "Producto / Lote",
+      efectoDano: "Efecto sobre calidad / paciente",
+      documento: "Análisis de Gestión de Riesgos de Calidad",
+    },
+    textoCompromiso:
+      "Declaro bajo protesta de decir verdad que he revisado el contenido íntegro de este Análisis de Gestión de Riesgos de Calidad, que la información es correcta y completa conforme a la NOM-059-SSA1-2015 e ICH Q9 (R1), y que mi firma electrónica registrada en este sistema tiene el mismo valor legal que mi firma autógrafa.",
+  },
+};
+
+function getNorma(normaFolio: unknown): NormaWorkflowConfig {
+  const k = (normaFolio === "NOM-059" ? "NOM-059" : "NOM-241") as NormaKey;
+  return NORMAS[k];
+}
 
 // ─── Helper: datos identificativos de la organización del folio ─────────────
 async function getOrgInfo(
@@ -40,13 +108,13 @@ async function getOrgInfo(
   };
 }
 
-// ─── Validación de completitud NOM-241 ───────────────────────────────────────
+// ─── Validación de completitud (multi-norma) ─────────────────────────────────
 interface ValidacionResult {
   valido: boolean;
   errores: string[];
 }
 
-async function validarCompletitudNOM241(
+async function validarCompletitudFolio(
   admin: ReturnType<typeof createClient>,
   folio_id: string,
 ): Promise<ValidacionResult> {
@@ -56,11 +124,18 @@ async function validarCompletitudNOM241(
   const { data: folio } = await admin.from("folios").select("*").eq("id", folio_id).single();
   if (!folio) return { valido: false, errores: ["Folio no encontrado"] };
 
+  const norma = getNorma((folio as any).norma_folio);
+  const t = norma.terminologia;
+  const refs = norma.normasReferencia.join(" / ");
+
   // Validaciones del folio
   if (!folio.alcance?.trim()) errores.push("Alcance del análisis es obligatorio");
-  if (!folio.beneficio_clinico?.trim()) errores.push("Beneficio clínico del dispositivo es obligatorio (ISO 14971 §7)");
-  if (!folio.riesgo_residual_global?.trim()) errores.push("Evaluación del riesgo residual global es obligatoria (ISO 14971 §8)");
-  if (!folio.numero_modelo?.trim()) errores.push("Número de modelo del dispositivo es obligatorio (NOM-241 §7.5.3)");
+  if (!folio.beneficio_clinico?.trim())
+    errores.push(`${t.beneficio} del ${t.objetoAnalisis.toLowerCase()} es obligatorio (${refs})`);
+  if (!folio.riesgo_residual_global?.trim())
+    errores.push(`Evaluación del riesgo residual global es obligatoria (${refs})`);
+  if (!folio.numero_modelo?.trim())
+    errores.push(`Identificación del ${t.objetoAnalisis.toLowerCase()} es obligatoria (${norma.nombreLargo})`);
 
   // Verificar que tiene al menos un riesgo
   const { data: riesgos, count } = await admin
@@ -78,13 +153,13 @@ async function validarCompletitudNOM241(
     const id = `Riesgo #${r.numero_id}`;
 
     if (!r.peligro?.trim())
-      errores.push(`${id}: Peligro (fuente) es obligatorio (ISO 14971 §5.4)`);
+      errores.push(`${id}: Peligro (fuente) es obligatorio (${refs})`);
     if (!r.situacion_peligrosa?.trim())
-      errores.push(`${id}: Situación peligrosa es obligatoria (ISO 14971 §5.4)`);
+      errores.push(`${id}: Situación peligrosa es obligatoria (${refs})`);
     if (!r.causa_potencial?.trim())
       errores.push(`${id}: Causa potencial es obligatoria`);
     if (!r.efecto_dano?.trim())
-      errores.push(`${id}: Efecto/daño es obligatorio`);
+      errores.push(`${id}: ${t.efectoDano} es obligatorio`);
 
     // Riesgos con acción propuesta deben tener responsable y fecha
     if (r.requiere_accion) {
@@ -96,24 +171,25 @@ async function validarCompletitudNOM241(
         errores.push(`${id}: Fecha de compromiso es obligatoria cuando se requiere acción`);
     }
 
-    // NPR crítico (≥200 o S≥9) sin acción es no aceptable
-    const nprCritico = (r.npr ?? 0) >= 200 || r.severidad >= 9;
+    // NPR crítico según umbrales de la norma
+    const npr = r.npr ?? 0;
+    const nprCritico = npr > norma.umbralNPRAlto || (r.severidad ?? 0) >= norma.umbralSeveridadCritica;
     if (nprCritico && !r.requiere_accion && r.dictamen !== "No Aceptable") {
       errores.push(
-        `${id}: NPR crítico (${r.npr}) — debe requerir acción o marcarse como No Aceptable`,
+        `${id}: Riesgo crítico (NPR=${npr}, S=${r.severidad}) — debe requerir acción o marcarse como No Aceptable`,
       );
     }
 
     // Riesgo con acción implementada debe tener verificación
     if (r.accion_implementada?.trim() && !r.verificado_por?.trim()) {
-      errores.push(`${id}: Acción implementada requiere verificación (ISO 14971 §6.5)`);
+      errores.push(`${id}: Acción implementada requiere verificación (${refs})`);
     }
 
-    // Justificación ALARP para riesgos con NPR medio (125-199) aceptados sin acción
-    const nprMedio = (r.npr ?? 0) >= 125 && (r.npr ?? 0) < 200;
+    // Justificación ALARP para riesgos en zona media aceptados sin acción
+    const nprMedio = npr >= norma.umbralNPRMedio && npr <= norma.umbralNPRAlto;
     if (nprMedio && r.dictamen === "Aceptable" && !r.justificacion_aceptabilidad?.trim()) {
       errores.push(
-        `${id}: NPR en zona ALARP (${r.npr}) requiere justificación de aceptabilidad (ISO 14971 §7)`,
+        `${id}: NPR en zona ALARP (${npr}) requiere justificación de aceptabilidad (${refs})`,
       );
     }
   }
@@ -190,7 +266,7 @@ Deno.serve(async (req) => {
   if (accion === "enviar-a-firma") {
     const { data: folio, error: fErr } = await admin
       .from("folios")
-      .select("id, codigo, proceso_equipo, estado, created_by, org_id")
+      .select("id, codigo, proceso_equipo, estado, created_by, org_id, norma_folio")
       .eq("id", folio_id)
       .single();
 
@@ -204,13 +280,17 @@ Deno.serve(async (req) => {
       }
     }
 
-    // ── Validación NOM-241 antes de enviar ─────────────────────────────────
-    const validacion = await validarCompletitudNOM241(admin, folio_id);
+    // ── Validación de completitud (multi-norma) antes de enviar ────────────
+    const norma = getNorma((folio as any).norma_folio);
+    const validacion = await validarCompletitudFolio(admin, folio_id);
     if (!validacion.valido) {
       return json(
         {
-          error: "El folio no cumple los requisitos NOM-241 para enviarse a firma",
+          error: `El folio no cumple los requisitos de ${norma.nombre} para enviarse a firma`,
+          errores_norma: validacion.errores,
+          // Alias retro-compatible para clientes existentes
           errores_nom241: validacion.errores,
+          norma: norma.nombre,
         },
         422,
       );
@@ -243,6 +323,7 @@ Deno.serve(async (req) => {
             folio_codigo: folio.codigo,
             proceso: folio.proceso_equipo,
             link: `${APP_URL}/folios/${folio_id}`,
+            norma,
             ...orgInfo,
           }),
         });
@@ -266,7 +347,7 @@ Deno.serve(async (req) => {
 
     const { data: folio } = await admin
       .from("folios")
-      .select("codigo, proceso_equipo, estado, org_id")
+      .select("codigo, proceso_equipo, estado, org_id, norma_folio")
       .eq("id", folio_id)
       .single();
 
@@ -274,6 +355,8 @@ Deno.serve(async (req) => {
     if (folio?.estado !== "En Firma") {
       return json({ error: "El folio no está en estado En Firma" }, 400);
     }
+
+    const norma = getNorma((folio as any).norma_folio);
 
     // Generar hash del documento al momento de la firma
     const hashDocumento = await generarHashDocumento(admin, folio_id);
@@ -285,8 +368,8 @@ Deno.serve(async (req) => {
       "desconocida";
     const userAgent = req.headers.get("user-agent") || "";
 
-    // Verificar que el usuario envió texto de compromiso (debe ser el estándar)
-    const textoCompromiso = body.texto_compromiso || TEXTO_COMPROMISO;
+    // Texto de compromiso conforme a la norma del folio
+    const textoCompromiso = body.texto_compromiso || norma.textoCompromiso;
 
     await admin.from("folio_comite").update({
       firmado: true,
@@ -301,6 +384,7 @@ Deno.serve(async (req) => {
 
     if (todosOk) {
       const orgInfo = await getOrgInfo(admin, folio?.org_id);
+      // Notificar al aprobador final (Responsable Sanitario / Director Técnico)
       const { data: rsRoles } = await admin
         .from("org_members")
         .select("user_id")
@@ -323,6 +407,7 @@ Deno.serve(async (req) => {
             folio_codigo: folio.codigo,
             proceso: folio.proceso_equipo,
             link: `${APP_URL}/folios/${folio_id}`,
+            norma,
             ...orgInfo,
           }),
         });
@@ -334,7 +419,7 @@ Deno.serve(async (req) => {
       todos_firmaron: todosOk,
       hash_documento: hashDocumento,
       mensaje: todosOk
-        ? "Todos firmaron — Responsable Sanitario notificado"
+        ? `Todos firmaron — ${norma.terminologia.aprobadorFinal} notificado`
         : "Firma registrada — esperando otros miembros",
     });
   }
@@ -349,13 +434,15 @@ Deno.serve(async (req) => {
 
     const { data: folio } = await admin
       .from("folios")
-      .select("codigo, proceso_equipo, estado, created_by, numero_version, org_id")
+      .select("codigo, proceso_equipo, estado, created_by, numero_version, org_id, norma_folio")
       .eq("id", folio_id)
       .single();
 
     if (!folio) return json({ error: "Folio no encontrado" }, 404);
     if (folio.org_id !== callerOrgId) return json({ error: "Sin permiso para este folio" }, 403);
     if (folio.estado !== "En Firma") return json({ error: "El folio no está en estado En Firma" }, 400);
+
+    const norma = getNorma((folio as any).norma_folio);
 
     const nuevoEstado = conclusion === "Aprobado" ? "Aprobado" : "Borrador";
 
@@ -368,7 +455,7 @@ Deno.serve(async (req) => {
     if (conclusion !== "Aprobado") {
       await admin.rpc("archivar_version_folio", {
         p_folio_id: folio_id,
-        p_motivo: motivo || "Rechazado por Responsable Sanitario — requiere corrección",
+        p_motivo: motivo || `Rechazado por ${norma.terminologia.aprobadorFinal} — requiere corrección`,
       });
     }
 
@@ -392,6 +479,7 @@ Deno.serve(async (req) => {
             motivo: motivo || "",
             version: folio.numero_version,
             link: `${APP_URL}/folios/${folio_id}`,
+            norma,
             ...orgInfo,
           }),
         });
@@ -494,7 +582,10 @@ function footerLinea(org_nombre?: string, codigo_formato?: string, version_forma
     : `${name} · Documento confidencial`;
 }
 
-function plantillaFirma({ nombre, folio_codigo, proceso, link, org_nombre, codigo_formato, version_formato }: any) {
+function plantillaFirma({ nombre, folio_codigo, proceso, link, norma, org_nombre, codigo_formato, version_formato }: any) {
+  const n: NormaWorkflowConfig = norma || NORMAS["NOM-241"];
+  const procesoLabel = n.terminologia.procesoEquipo;
+  const docLabel = n.terminologia.documento;
   return `
 <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto">
   <div style="background:#042C53;padding:20px;text-align:center">
@@ -503,13 +594,14 @@ function plantillaFirma({ nombre, folio_codigo, proceso, link, org_nombre, codig
   </div>
   <div style="padding:28px;background:#f9f9f9">
     <p style="margin:0 0 16px">Estimado(a) <strong>${nombre}</strong>,</p>
-    <p>Se te solicita firmar el siguiente Archivo de Gestión de Riesgos:</p>
+    <p>Se te solicita firmar el siguiente <strong>${docLabel}</strong> (${n.nombre} · ${n.metodologia}):</p>
     <div style="background:#fff;border:1px solid #ddd;border-radius:8px;padding:16px;margin:16px 0">
       <p style="margin:0 0 6px"><strong>Folio:</strong> ${folio_codigo}</p>
-      <p style="margin:0"><strong>Proceso:</strong> ${proceso}</p>
+      <p style="margin:0 0 6px"><strong>${procesoLabel}:</strong> ${proceso}</p>
+      <p style="margin:0"><strong>Marco normativo:</strong> ${n.normasReferencia.join(" · ")}</p>
     </div>
     <div style="background:#fff3cd;border:1px solid #ffc107;border-radius:6px;padding:12px;margin:16px 0;font-size:12px">
-      <strong>Importante:</strong> Al firmar, usted declara haber revisado el contenido íntegro y que su firma electrónica tiene el mismo valor legal que su firma autógrafa conforme a la NOM-241-SSA1-2025.
+      <strong>Importante:</strong> Al firmar, usted declara haber revisado el contenido íntegro y que su firma electrónica tiene el mismo valor legal que su firma autógrafa conforme a ${n.nombreLargo}.
     </div>
     <div style="text-align:center;margin:24px 0">
       <a href="${link}" style="background:#042C53;color:#fff;padding:12px 28px;border-radius:6px;text-decoration:none;font-weight:bold">
@@ -524,7 +616,10 @@ function plantillaFirma({ nombre, folio_codigo, proceso, link, org_nombre, codig
 </div>`;
 }
 
-function plantillaListoParaDictamen({ nombre, folio_codigo, proceso, link, org_nombre, codigo_formato, version_formato }: any) {
+function plantillaListoParaDictamen({ nombre, folio_codigo, proceso, link, norma, org_nombre, codigo_formato, version_formato }: any) {
+  const n: NormaWorkflowConfig = norma || NORMAS["NOM-241"];
+  const procesoLabel = n.terminologia.procesoEquipo;
+  const aprobador = n.terminologia.aprobadorFinal;
   return `
 <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto">
   <div style="background:#042C53;padding:20px;text-align:center">
@@ -536,10 +631,10 @@ function plantillaListoParaDictamen({ nombre, folio_codigo, proceso, link, org_n
     <div style="background:#e8f5e9;border-left:4px solid #2e7d32;padding:12px 16px;border-radius:4px;margin-bottom:16px">
       <strong style="color:#2e7d32">✅ Todos los miembros del comité han firmado</strong>
     </div>
-    <p>El siguiente folio está listo para su dictamen de Responsable Sanitario:</p>
+    <p>El siguiente folio está listo para su dictamen de <strong>${aprobador}</strong> (${n.nombre} · ${n.metodologia}):</p>
     <div style="background:#fff;border:1px solid #ddd;border-radius:8px;padding:16px;margin:16px 0">
       <p style="margin:0 0 6px"><strong>Folio:</strong> ${folio_codigo}</p>
-      <p style="margin:0"><strong>Proceso:</strong> ${proceso}</p>
+      <p style="margin:0"><strong>${procesoLabel}:</strong> ${proceso}</p>
     </div>
     <div style="text-align:center;margin:24px 0">
       <a href="${link}" style="background:#2e7d32;color:#fff;padding:12px 28px;border-radius:6px;text-decoration:none;font-weight:bold">
@@ -553,7 +648,10 @@ function plantillaListoParaDictamen({ nombre, folio_codigo, proceso, link, org_n
 </div>`;
 }
 
-function plantillaDictamen({ nombre, folio_codigo, proceso, conclusion, motivo, version, link, org_nombre, codigo_formato, version_formato }: any) {
+function plantillaDictamen({ nombre, folio_codigo, proceso, conclusion, motivo, version, link, norma, org_nombre, codigo_formato, version_formato }: any) {
+  const n: NormaWorkflowConfig = norma || NORMAS["NOM-241"];
+  const procesoLabel = n.terminologia.procesoEquipo;
+  const aprobador = n.terminologia.aprobadorFinal;
   const aprobado = conclusion === "Aprobado";
   return `
 <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto">
@@ -565,12 +663,13 @@ function plantillaDictamen({ nombre, folio_codigo, proceso, conclusion, motivo, 
     <p style="margin:0 0 16px">Estimado(a) <strong>${nombre}</strong>,</p>
     <div style="background:${aprobado ? "#e8f5e9" : "#fff3e0"};border-left:4px solid ${aprobado ? "#2e7d32" : "#e65100"};padding:12px 16px;border-radius:4px;margin-bottom:16px">
       <strong style="color:${aprobado ? "#2e7d32" : "#e65100"}">
-        ${aprobado ? "✅ Folio APROBADO por Responsable Sanitario" : "⚠ Folio RECHAZADO — Requiere corrección"}
+        ${aprobado ? `✅ Folio APROBADO por ${aprobador}` : "⚠ Folio RECHAZADO — Requiere corrección"}
       </strong>
     </div>
     <div style="background:#fff;border:1px solid #ddd;border-radius:8px;padding:16px;margin:16px 0">
       <p style="margin:0 0 6px"><strong>Folio:</strong> ${folio_codigo}</p>
-      <p style="margin:0 0 6px"><strong>Proceso:</strong> ${proceso}</p>
+      <p style="margin:0 0 6px"><strong>${procesoLabel}:</strong> ${proceso}</p>
+      <p style="margin:0 0 6px"><strong>Norma:</strong> ${n.nombre} (${n.metodologia})</p>
       <p style="margin:0 0 6px"><strong>Versión:</strong> ${version}</p>
       <p style="margin:0"><strong>Dictamen:</strong> ${conclusion}</p>
       ${motivo ? `<p style="margin:8px 0 0;color:#555"><strong>Observaciones:</strong> ${motivo}</p>` : ""}
