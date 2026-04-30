@@ -953,7 +953,7 @@ function SeccionRiesgos({ riesgos, locked, folioId, normaFolio }: { riesgos: Rie
               {riesgos.map((r) => {
                 const npr = r.npr ?? r.severidad * r.ocurrencia * r.deteccion;
                 const nprRes = r.npr_residual ?? r.sev_residual * r.ocu_residual * r.det_residual;
-                const needsAction = r.severidad >= 9 || npr > 150;
+                const needsAction = r.severidad >= umbralSev || npr > umbralCrit;
                 const rowAlert = needsAction && !r.accion_propuesta;
                 return (
                   <tr
