@@ -733,14 +733,14 @@ export function RiesgoFormDialog({ open, onClose, folioId, riesgo, nextNumeroId,
             </div>
 
             {/* S' O' D' Residual */}
-            <div className="grid grid-cols-4 gap-3">
+            <div className={`grid gap-3 ${usaDeteccion ? "grid-cols-4" : "grid-cols-3"}`}>
               <div className="space-y-1.5">
                 <Label className="text-xs">S' Residual</Label>
                 <Select value={String(form.sev_residual)} onValueChange={(v) => update("sev_residual", Number(v))}>
-                  <SelectTrigger className={form.sev_residual >= 9 ? "border-destructive text-destructive" : ""}><SelectValue /></SelectTrigger>
+                  <SelectTrigger className={form.sev_residual >= normaConfig.umbralSeveridadCritica ? "border-destructive text-destructive" : ""}><SelectValue /></SelectTrigger>
                   <SelectContent>{SCORES.map((s) => <SelectItem key={s} value={String(s)}>{s}</SelectItem>)}</SelectContent>
                 </Select>
-                <CatalogoInline tipo="severidad" valorActual={form.sev_residual} />
+                <CatalogoInline tipo="severidad" valorActual={form.sev_residual} datos={normaConfig.catalogoSeveridad} normaNombre={normaConfig.nombre} />
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs">O' Residual</Label>
@@ -748,18 +748,20 @@ export function RiesgoFormDialog({ open, onClose, folioId, riesgo, nextNumeroId,
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>{SCORES.map((s) => <SelectItem key={s} value={String(s)}>{s}</SelectItem>)}</SelectContent>
                 </Select>
-                <CatalogoInline tipo="ocurrencia" valorActual={form.ocu_residual} />
+                <CatalogoInline tipo="ocurrencia" valorActual={form.ocu_residual} datos={normaConfig.catalogoOcurrencia} normaNombre={normaConfig.nombre} />
               </div>
+              {usaDeteccion && (
+                <div className="space-y-1.5">
+                  <Label className="text-xs">D' Residual</Label>
+                  <Select value={String(form.det_residual)} onValueChange={(v) => update("det_residual", Number(v))}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>{SCORES.map((s) => <SelectItem key={s} value={String(s)}>{s}</SelectItem>)}</SelectContent>
+                  </Select>
+                  <CatalogoInline tipo="deteccion" valorActual={form.det_residual} datos={normaConfig.catalogoDetectabilidad} normaNombre={normaConfig.nombre} />
+                </div>
+              )}
               <div className="space-y-1.5">
-                <Label className="text-xs">D' Residual</Label>
-                <Select value={String(form.det_residual)} onValueChange={(v) => update("det_residual", Number(v))}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>{SCORES.map((s) => <SelectItem key={s} value={String(s)}>{s}</SelectItem>)}</SelectContent>
-                </Select>
-                <CatalogoInline tipo="deteccion" valorActual={form.det_residual} />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs">NPR Residual</Label>
+                <Label className="text-xs">NPR Residual {usaDeteccion ? "(S'×O'×D')" : "(S'×O')"}</Label>
                 <div className={`h-10 rounded-md border flex items-center justify-center font-bold text-lg ${
                   nprResLevel.label === "Crítico" ? "bg-destructive/10 text-destructive border-destructive"
                     : nprResLevel.label === "Mayor" ? "bg-warning/10 text-warning border-warning"
