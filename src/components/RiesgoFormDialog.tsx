@@ -447,7 +447,7 @@ export function RiesgoFormDialog({ open, onClose, folioId, riesgo, nextNumeroId,
                 />
               </div>
               <div className="space-y-1.5 col-span-2">
-                <Label className="text-xs">Efecto / Daño Potencial</Label>
+                <Label className="text-xs">{t.efectoDano}</Label>
                 <Textarea
                   value={form.efecto_dano}
                   onChange={(e) => update("efecto_dano", e.target.value)}
