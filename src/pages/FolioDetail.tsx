@@ -18,6 +18,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { Constants } from "@/integrations/supabase/types";
 import { generateFolioPDF } from "@/lib/generateFolioPDF";
+import { getNormaConfig } from "@/config/normas";
 
 // Componente para mostrar firmas usando URLs firmadas (bucket privado)
 function FirmaImg({ path, alt, className }: { path: string | null; alt: string; className?: string }) {
