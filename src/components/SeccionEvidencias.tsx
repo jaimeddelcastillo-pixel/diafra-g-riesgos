@@ -102,7 +102,9 @@ function UploadEvidencia({
   );
 }
 
-export function SeccionEvidencias({ riesgos, folioCodigo, folioId }: Props) {
+export function SeccionEvidencias({ riesgos, folioCodigo, folioId, normaFolio }: Props) {
+  const nc = getNormaConfig(normaFolio);
+  const refs = nc.normasReferencia.join(" / ");
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [descargando, setDescargando] = useState<string | null>(null);
@@ -258,7 +260,7 @@ export function SeccionEvidencias({ riesgos, folioCodigo, folioId }: Props) {
       {/* Nota regulatoria */}
       <div className="px-4 py-2 bg-muted/20 border-t">
         <p className="text-[10px] text-muted-foreground">
-          NOM-241-SSA1-2025 · Las evidencias son parte integral del expediente de gestión de riesgos. Los archivos se
+          {refs} · Las evidencias son parte integral del expediente de gestión de riesgos. Los archivos se
           almacenan de forma segura y los links de descarga son válidos por 60 minutos.
         </p>
       </div>

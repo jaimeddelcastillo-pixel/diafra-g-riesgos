@@ -1445,7 +1445,7 @@ export default function FolioDetail() {
         <SeccionRiesgos riesgos={riesgos} locked={locked} folioId={folio.id} normaFolio={folio.norma_folio} />
 
         {/* Evidencias — pestaña documental para auditor */}
-        <SeccionEvidencias riesgos={riesgos} folioCodigo={folio.codigo} folioId={folio.id} />
+        <SeccionEvidencias riesgos={riesgos} folioCodigo={folio.codigo} folioId={folio.id} normaFolio={folio.norma_folio} />
 
         {/* Evaluación global de riesgo-beneficio — FEUM / ISO 14971 §7/§8 */}
         <SeccionRiesgoResidualGlobal folio={folio} locked={locked} onSaved={handleRefresh} />
