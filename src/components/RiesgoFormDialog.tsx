@@ -17,7 +17,12 @@ import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { useProfiles } from "@/hooks/useProfiles";
 import type { Riesgo } from "@/hooks/useFolios";
-import { getNPRLevel } from "@/hooks/useFolios";
+import {
+  getNormaConfig,
+  calcularNPR,
+  getNPRLevelByNorma,
+  type CatalogoItem,
+} from "@/config/normas";
 
 interface RiesgoFormProps {
   open: boolean;
@@ -25,6 +30,8 @@ interface RiesgoFormProps {
   folioId: string;
   riesgo?: Riesgo | null;
   nextNumeroId: number;
+  /** Norma del folio (NOM-241 / NOM-059 / MULTI). Si MULTI, fallback NOM-241. */
+  normaFolio?: string | null;
 }
 
 const SCORES = Array.from({ length: 10 }, (_, i) => i + 1);
@@ -34,128 +41,29 @@ interface Anexo {
   path: string;
 }
 
-// ─── Datos de catálogos (mismos que en Catalogos.tsx) ────────────────────────
-
-const severidadData = [
-  {
-    valor: "10",
-    nivel: "Muy Alta / Inevitable",
-    descripcion: "Muerte: Falla que puede resultar en muerte o lesión irreversible crítica.",
-    complemento: "Clausura total de planta o retiro de mercado (Recall) Clase I.",
-  },
-  {
-    valor: "9",
-    nivel: "Muy Alta",
-    descripcion: "Lesión Permanente: Daño irreversible o deterioro grave de la salud.",
-    complemento: "Suspensión de líneas críticas o Recall Clase II.",
-  },
-  {
-    valor: "8",
-    nivel: "Alta",
-    descripcion: "Lesión Grave: Requiere intervención médica profesional o quirúrgica.",
-    complemento: "Multas regulatorias mayores o pérdida de cliente clave.",
-  },
-  {
-    valor: "7",
-    nivel: "Moderadamente Alta",
-    descripcion: "Lesión Temporal: Requiere atención médica menor no quirúrgica.",
-    complemento: "Retención de lotes completa, desviación crítica.",
-  },
-  {
-    valor: "6",
-    nivel: "Moderada",
-    descripcion: "Molestia Menor: Incomodidad sin lesión (ej. irritación leve).",
-    complemento: "Desperdicio de material alto, reproceso costoso.",
-  },
-  {
-    valor: "5",
-    nivel: "Moderada Baja",
-    descripcion: "Impacto leve en el proceso sin afectar al paciente.",
-    complemento: "Reproceso menor programado.",
-  },
-  {
-    valor: "4",
-    nivel: "Baja",
-    descripcion: "Insignificante: El paciente lo nota, sin afectar seguridad.",
-    complemento: "Reproceso menor en línea, desviación menor.",
-  },
-  {
-    valor: "3",
-    nivel: "Baja",
-    descripcion: "Sin efecto clínico, solo operativo.",
-    complemento: "Ajuste de proceso sin paro.",
-  },
-  {
-    valor: "2",
-    nivel: "Remota",
-    descripcion: "Ninguno: Sin efecto perceptible.",
-    complemento: "Sin impacto operativo.",
-  },
-  { valor: "1", nivel: "Remota", descripcion: "Sin efecto en paciente ni en proceso.", complemento: "Sin impacto." },
-];
-
-const ocurrenciaData = [
-  { valor: "10", nivel: "Inevitable", descripcion: "La falla ocurre en casi todos los lotes (> 50%)." },
-  { valor: "9", nivel: "Muy Alta", descripcion: "1 de cada 3 lotes o eventos." },
-  { valor: "8", nivel: "Alta", descripcion: "Recurrente (1 vez a la semana)." },
-  { valor: "7", nivel: "Moderadamente Alta", descripcion: "Frecuente (1 vez al mes)." },
-  { valor: "6", nivel: "Moderada Alta", descripcion: "Ocasional (1 vez cada 3 meses)." },
-  { valor: "5", nivel: "Moderada", descripcion: "Ocasional (1 vez cada 6 meses)." },
-  { valor: "4", nivel: "Baja", descripcion: "Aislada (1 vez al año)." },
-  { valor: "3", nivel: "Baja", descripcion: "Muy aislada (cada 2-3 años)." },
-  { valor: "2", nivel: "Remota", descripcion: "Históricamente solo 1 vez." },
-  { valor: "1", nivel: "Improbable", descripcion: "Históricamente no se ha presentado." },
-];
-
-const deteccionData = [
-  {
-    valor: "10",
-    nivel: "Imposible detectar",
-    descripcion: "No hay control conocido o la falla no es detectable hasta el uso.",
-  },
-  { valor: "9", nivel: "Muy difícil", descripcion: "Controles erráticos o inspección visual aleatoria difícil." },
-  { valor: "8", nivel: "Difícil", descripcion: "Inspección visual 100% manual (sujeta a error humano)." },
-  { valor: "7", nivel: "Difícil", descripcion: "Inspección visual con criterio subjetivo parcialmente documentado." },
-  { valor: "6", nivel: "Moderada", descripcion: "Control Estadístico de Proceso (SPC) o muestreo robusto." },
-  { valor: "5", nivel: "Moderada", descripcion: "Muestreo establecido con criterios de aceptación documentados." },
-  {
-    valor: "4",
-    nivel: "Moderadamente Alta",
-    descripcion: "Detección automatizada que segrega producto defectuoso (Poka-yoke falible).",
-  },
-  { valor: "3", nivel: "Alta", descripcion: "Sistema automatizado con alarma y segregación confirmada." },
-  { valor: "2", nivel: "Muy Alta", descripcion: "Prevención automática por diseño (Poka-yoke infalible)." },
-  {
-    valor: "1",
-    nivel: "Casi cierta",
-    descripcion: "Imposible fabricar la pieza mal — detección automatizada infalible.",
-  },
-];
-
-// ─── Componente de referencia inline ─────────────────────────────────────────
+// ─── Componente de referencia inline (alimentado por NORMAS_CONFIG) ──────────
 function CatalogoInline({
   tipo,
   valorActual,
+  datos,
+  normaNombre,
 }: {
   tipo: "severidad" | "ocurrencia" | "deteccion";
   valorActual: number;
+  datos: CatalogoItem[];
+  normaNombre: string;
 }) {
   const [abierto, setAbierto] = useState(false);
 
-  const datos = tipo === "severidad" ? severidadData : tipo === "ocurrencia" ? ocurrenciaData : deteccionData;
-
-  const titulo =
+  const tituloBase =
     tipo === "severidad"
       ? "Criterios de Severidad (S)"
       : tipo === "ocurrencia"
         ? "Criterios de Ocurrencia (O)"
         : "Criterios de Detectabilidad (D)";
+  const titulo = `${tituloBase} — ${normaNombre}`;
 
-  // Fila que coincide con el valor actual
-  const filaActual = datos.find((d) => {
-    const vals = d.valor.split("-").map(Number);
-    return vals.length === 1 ? vals[0] === valorActual : valorActual >= vals[1] && valorActual <= vals[0];
-  });
+  const filaActual = datos.find((d) => d.valor === valorActual);
 
   return (
     <div className="mt-1">
@@ -163,7 +71,7 @@ function CatalogoInline({
       {filaActual && (
         <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground bg-muted/40 rounded px-2 py-1 mb-1">
           <span className="font-mono font-bold text-primary">{valorActual}</span>
-          <span className="font-medium">{filaActual.nivel}</span>
+          <span className="font-medium">{filaActual.etiqueta}</span>
           <span className="truncate">— {filaActual.descripcion.split(":")[0]}</span>
         </div>
       )}
@@ -197,9 +105,7 @@ function CatalogoInline({
             </thead>
             <tbody>
               {datos.map((item) => {
-                const vals = item.valor.split("-").map(Number);
-                const esActual =
-                  vals.length === 1 ? vals[0] === valorActual : valorActual >= vals[1] && valorActual <= vals[0];
+                const esActual = item.valor === valorActual;
                 return (
                   <tr
                     key={item.valor}
@@ -209,12 +115,9 @@ function CatalogoInline({
                       {esActual ? "► " : ""}
                       {item.valor}
                     </td>
-                    <td className="p-1.5">{item.nivel}</td>
+                    <td className="p-1.5">{item.etiqueta}</td>
                     <td className="p-1.5">
                       <span className="whitespace-pre-line">{item.descripcion}</span>
-                      {"complemento" in item && item.complemento && (
-                        <span className="block text-muted-foreground italic mt-0.5">{(item as any).complemento}</span>
-                      )}
                     </td>
                   </tr>
                 );
@@ -228,7 +131,7 @@ function CatalogoInline({
 }
 
 // ─── Formulario principal ─────────────────────────────────────────────────────
-export function RiesgoFormDialog({ open, onClose, folioId, riesgo, nextNumeroId }: RiesgoFormProps) {
+export function RiesgoFormDialog({ open, onClose, folioId, riesgo, nextNumeroId, normaFolio }: RiesgoFormProps) {
   const isEdit = !!riesgo;
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -237,6 +140,13 @@ export function RiesgoFormDialog({ open, onClose, folioId, riesgo, nextNumeroId 
   const [uploading, setUploading] = useState(false);
   const [activeTab, setActiveTab] = useState("identificacion");
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Resolver configuración de norma (MULTI → NOM-241 por default)
+  const normaConfig = getNormaConfig(
+    normaFolio === "MULTI" || !normaFolio ? "NOM-241" : normaFolio,
+  );
+  const usaDeteccion = normaConfig.usarDetectabilidad;
+  const t = normaConfig.terminologia;
 
   const [form, setForm] = useState(() => {
     if (riesgo) {
@@ -311,11 +221,12 @@ export function RiesgoFormDialog({ open, onClose, folioId, riesgo, nextNumeroId 
     };
   });
 
-  const npr = form.severidad * form.ocurrencia * form.deteccion;
-  const nprResidual = form.sev_residual * form.ocu_residual * form.det_residual;
-  const needsAction = form.severidad >= 9 || npr > 150;
-  const nprLevel = getNPRLevel(npr, form.severidad);
-  const nprResLevel = getNPRLevel(nprResidual, form.sev_residual);
+  const npr = calcularNPR(form.severidad, form.ocurrencia, form.deteccion, normaConfig.key);
+  const nprResidual = calcularNPR(form.sev_residual, form.ocu_residual, form.det_residual, normaConfig.key);
+  const needsAction =
+    form.severidad >= normaConfig.umbralSeveridadCritica || npr > normaConfig.umbralNPRAlto;
+  const nprLevel = getNPRLevelByNorma(npr, form.severidad, normaConfig.key);
+  const nprResLevel = getNPRLevelByNorma(nprResidual, form.sev_residual, normaConfig.key);
 
   const update = (field: string, value: any) => setForm((f) => ({ ...f, [field]: value }));
 
@@ -536,7 +447,7 @@ export function RiesgoFormDialog({ open, onClose, folioId, riesgo, nextNumeroId 
                 />
               </div>
               <div className="space-y-1.5 col-span-2">
-                <Label className="text-xs">Efecto / Daño Potencial</Label>
+                <Label className="text-xs">{t.efectoDano}</Label>
                 <Textarea
                   value={form.efecto_dano}
                   onChange={(e) => update("efecto_dano", e.target.value)}
@@ -557,18 +468,18 @@ export function RiesgoFormDialog({ open, onClose, folioId, riesgo, nextNumeroId 
             <p className="text-[10px] text-muted-foreground bg-muted/40 rounded px-2 py-1">
               FEUM / ISO 14971 §6.1 — Evalúe la probabilidad de daño (S × O × D = NPR).
             </p>
-            <div className="grid grid-cols-4 gap-3">
+            <div className={`grid gap-3 ${usaDeteccion ? "grid-cols-4" : "grid-cols-3"}`}>
               <div className="space-y-1.5">
                 <Label className="text-xs">Severidad (S)</Label>
                 <Select value={String(form.severidad)} onValueChange={(v) => update("severidad", Number(v))}>
-                  <SelectTrigger className={form.severidad >= 9 ? "border-destructive text-destructive" : ""}>
+                  <SelectTrigger className={form.severidad >= normaConfig.umbralSeveridadCritica ? "border-destructive text-destructive" : ""}>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     {SCORES.map((s) => <SelectItem key={s} value={String(s)}>{s}</SelectItem>)}
                   </SelectContent>
                 </Select>
-                <CatalogoInline tipo="severidad" valorActual={form.severidad} />
+                <CatalogoInline tipo="severidad" valorActual={form.severidad} datos={normaConfig.catalogoSeveridad} normaNombre={normaConfig.nombre} />
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs">Ocurrencia (O)</Label>
@@ -578,20 +489,22 @@ export function RiesgoFormDialog({ open, onClose, folioId, riesgo, nextNumeroId 
                     {SCORES.map((s) => <SelectItem key={s} value={String(s)}>{s}</SelectItem>)}
                   </SelectContent>
                 </Select>
-                <CatalogoInline tipo="ocurrencia" valorActual={form.ocurrencia} />
+                <CatalogoInline tipo="ocurrencia" valorActual={form.ocurrencia} datos={normaConfig.catalogoOcurrencia} normaNombre={normaConfig.nombre} />
               </div>
+              {usaDeteccion && (
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Detección (D)</Label>
+                  <Select value={String(form.deteccion)} onValueChange={(v) => update("deteccion", Number(v))}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {SCORES.map((s) => <SelectItem key={s} value={String(s)}>{s}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                  <CatalogoInline tipo="deteccion" valorActual={form.deteccion} datos={normaConfig.catalogoDetectabilidad} normaNombre={normaConfig.nombre} />
+                </div>
+              )}
               <div className="space-y-1.5">
-                <Label className="text-xs">Detección (D)</Label>
-                <Select value={String(form.deteccion)} onValueChange={(v) => update("deteccion", Number(v))}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {SCORES.map((s) => <SelectItem key={s} value={String(s)}>{s}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-                <CatalogoInline tipo="deteccion" valorActual={form.deteccion} />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs">NPR Inicial</Label>
+                <Label className="text-xs">NPR Inicial {usaDeteccion ? "(S×O×D)" : "(S×O)"}</Label>
                 <div className={`h-10 rounded-md border flex items-center justify-center font-bold text-lg ${
                   nprLevel.label === "Crítico" ? "bg-destructive/10 text-destructive border-destructive"
                     : nprLevel.label === "Mayor" ? "bg-warning/10 text-warning border-warning"
@@ -604,7 +517,7 @@ export function RiesgoFormDialog({ open, onClose, folioId, riesgo, nextNumeroId 
             </div>
             {needsAction && (
               <p className="text-xs text-destructive font-medium">
-                ⚠ NPR Crítico o S ≥ 9 — se requiere Acción Propuesta en la pestaña Controles.
+                ⚠ NPR Crítico o S ≥ {normaConfig.umbralSeveridadCritica} — se requiere Acción Propuesta en la pestaña Controles.
               </p>
             )}
             <div className="flex justify-between pt-2">
@@ -820,14 +733,14 @@ export function RiesgoFormDialog({ open, onClose, folioId, riesgo, nextNumeroId 
             </div>
 
             {/* S' O' D' Residual */}
-            <div className="grid grid-cols-4 gap-3">
+            <div className={`grid gap-3 ${usaDeteccion ? "grid-cols-4" : "grid-cols-3"}`}>
               <div className="space-y-1.5">
                 <Label className="text-xs">S' Residual</Label>
                 <Select value={String(form.sev_residual)} onValueChange={(v) => update("sev_residual", Number(v))}>
-                  <SelectTrigger className={form.sev_residual >= 9 ? "border-destructive text-destructive" : ""}><SelectValue /></SelectTrigger>
+                  <SelectTrigger className={form.sev_residual >= normaConfig.umbralSeveridadCritica ? "border-destructive text-destructive" : ""}><SelectValue /></SelectTrigger>
                   <SelectContent>{SCORES.map((s) => <SelectItem key={s} value={String(s)}>{s}</SelectItem>)}</SelectContent>
                 </Select>
-                <CatalogoInline tipo="severidad" valorActual={form.sev_residual} />
+                <CatalogoInline tipo="severidad" valorActual={form.sev_residual} datos={normaConfig.catalogoSeveridad} normaNombre={normaConfig.nombre} />
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs">O' Residual</Label>
@@ -835,18 +748,20 @@ export function RiesgoFormDialog({ open, onClose, folioId, riesgo, nextNumeroId 
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>{SCORES.map((s) => <SelectItem key={s} value={String(s)}>{s}</SelectItem>)}</SelectContent>
                 </Select>
-                <CatalogoInline tipo="ocurrencia" valorActual={form.ocu_residual} />
+                <CatalogoInline tipo="ocurrencia" valorActual={form.ocu_residual} datos={normaConfig.catalogoOcurrencia} normaNombre={normaConfig.nombre} />
               </div>
+              {usaDeteccion && (
+                <div className="space-y-1.5">
+                  <Label className="text-xs">D' Residual</Label>
+                  <Select value={String(form.det_residual)} onValueChange={(v) => update("det_residual", Number(v))}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>{SCORES.map((s) => <SelectItem key={s} value={String(s)}>{s}</SelectItem>)}</SelectContent>
+                  </Select>
+                  <CatalogoInline tipo="deteccion" valorActual={form.det_residual} datos={normaConfig.catalogoDetectabilidad} normaNombre={normaConfig.nombre} />
+                </div>
+              )}
               <div className="space-y-1.5">
-                <Label className="text-xs">D' Residual</Label>
-                <Select value={String(form.det_residual)} onValueChange={(v) => update("det_residual", Number(v))}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>{SCORES.map((s) => <SelectItem key={s} value={String(s)}>{s}</SelectItem>)}</SelectContent>
-                </Select>
-                <CatalogoInline tipo="deteccion" valorActual={form.det_residual} />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs">NPR Residual</Label>
+                <Label className="text-xs">NPR Residual {usaDeteccion ? "(S'×O'×D')" : "(S'×O')"}</Label>
                 <div className={`h-10 rounded-md border flex items-center justify-center font-bold text-lg ${
                   nprResLevel.label === "Crítico" ? "bg-destructive/10 text-destructive border-destructive"
                     : nprResLevel.label === "Mayor" ? "bg-warning/10 text-warning border-warning"
