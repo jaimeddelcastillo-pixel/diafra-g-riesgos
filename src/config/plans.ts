@@ -35,13 +35,14 @@ export const PLANS: Plan[] = [
     priceId: "price_1TQ7jKKfwzAg4OKvxoc4fDOi",
     precio: "$85 USD",
     periodo: "/mes",
-    descripcion: "Para equipos pequeños que inician su Sistema de Gestión de Riesgos bajo NOM-241-SSA1-2025.",
+    descripcion: "Para equipos pequeños que inician su Sistema de Gestión de Riesgos bajo NOM-241 (dispositivos médicos) o NOM-059 (medicamentos).",
     features: [
       "Hasta 3 usuarios",
       "Folios ilimitados",
-      "Matriz AMEF completa ISO 14971",
-      "Firma electrónica NOM-241-SSA1-2025",
-      "Checklist regulatorio integrado",
+      "Matriz AMEF (ISO 14971) o ICH Q9",
+      "Soporte multi-norma: NOM-241 y NOM-059",
+      "Firma electrónica conforme a 21 CFR Part 11",
+      "Checklist regulatorio adaptado a tu norma",
       "30 consultas al Asistente IA/mes",
       "Centro de Recursos TRACEA",
       "Soporte por correo",
@@ -71,12 +72,12 @@ export const PLANS: Plan[] = [
     priceId: "price_1TQ7jKKfwzAg4OKvjXcDjzgn",
     precio: "$475 USD",
     periodo: "/mes",
-    descripcion: "Para empresas con múltiples sitios o líneas de producto que requieren escala regulatoria.",
+    descripcion: "Para empresas con múltiples sitios, líneas de producto o que operan bajo NOM-241 y NOM-059 simultáneamente.",
     features: [
       "Usuarios ilimitados",
       "Todo lo incluido en Professional",
       "Asistente IA ilimitado",
-      "Múltiples sitios o plantas",
+      "Múltiples sitios o plantas (modo multi-norma)",
       "Onboarding dedicado presencial o virtual",
       "SLA de disponibilidad garantizado",
       "Gestor de cuenta asignado",
@@ -87,16 +88,16 @@ export const PLANS: Plan[] = [
 export const ADDONS: Addon[] = [
   {
     id: "curso",
-    nombre: "Curso de Gestión de Riesgos NOM-241",
+    nombre: "Curso de Gestión de Riesgos NOM-241 / NOM-059",
     priceId: "price_1TQ7kVKfwzAg4OKvjU9mVaun",
     precio: "$450 USD",
     descripcion:
-      "Capacita y certifica a tu equipo en gestión de riesgos bajo NOM-241-SSA1-2025 e ISO 14971. Acceso completo a la plataforma por 30 días.",
+      "Capacita y certifica a tu equipo en gestión de riesgos bajo NOM-241 (ISO 14971 — dispositivos médicos) o NOM-059 (ICH Q9 — medicamentos). Acceso completo a la plataforma por 30 días.",
     badge: "Incluye DC-3 oficial STPS",
     features: [
       "Hasta 3 usuarios incluidos",
       "30 días de acceso completo a la plataforma",
-      "Manual técnico NOM-241-SSA1-2025 / ISO 14971",
+      "Manual técnico NOM-241 / ISO 14971 y NOM-059 / ICH Q9",
       "Videos de capacitación",
       "Agente IA TRACEA Risk Manager",
       "Ejercicio práctico guiado",
@@ -114,7 +115,7 @@ export const ADDONS: Addon[] = [
     priceId: "price_1TQ7lbKfwzAg4OKvwQwizz4f",
     precio: "$450 USD",
     descripcion:
-      "Protocolos de calificación listos para ejecutar conforme a NOM-241-SSA1-2025 y expediente maestro COFEPRIS.",
+      "Protocolos de calificación listos para ejecutar conforme a NOM-241 / NOM-059 y expediente maestro COFEPRIS.",
     features: [
       "Protocolo DQ — Calificación de Diseño",
       "Protocolo IQ — Calificación de Instalación",

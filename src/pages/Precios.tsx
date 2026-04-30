@@ -14,7 +14,11 @@ import { ContactDialog } from "@/components/ContactDialog";
 const FAQ = [
   {
     q: "¿Qué incluye exactamente el plan Starter?",
-    a: "Hasta 3 usuarios, folios ilimitados, matriz AMEF completa ISO 14971, firma electrónica NOM-241-SSA1-2025, checklist regulatorio integrado, 30 consultas mensuales al Asistente IA, Centro de Recursos TRACEA y soporte por correo. Ideal para equipos pequeños que inician su Sistema de Gestión de Riesgos bajo NOM-241-SSA1-2025.",
+    a: "Hasta 3 usuarios, folios ilimitados, matriz de riesgos completa (AMEF/ISO 14971 para NOM-241 o ICH Q9 para NOM-059), firma electrónica conforme a 21 CFR Part 11, checklist regulatorio adaptado a tu norma, 30 consultas mensuales al Asistente IA, Centro de Recursos TRACEA y soporte por correo. Ideal para equipos pequeños que inician su Sistema de Gestión de Riesgos bajo NOM-241 o NOM-059.",
+  },
+  {
+    q: "¿Qué normas regulatorias soporta TRACEA?",
+    a: "TRACEA opera de forma nativa bajo dos normas mexicanas:\n\n• NOM-241-SSA1-2025 — Buenas Prácticas de Fabricación de dispositivos médicos. Usa la metodología AMEF alineada a ISO 14971:2019. Aprobador final: Responsable Sanitario.\n\n• NOM-059-SSA1-2015 — Buenas Prácticas de Fabricación de medicamentos. Usa la metodología ICH Q9 (R1) — Quality Risk Management. Aprobador final: Director Técnico.\n\nAl crear tu organización eliges la norma aplicable. La terminología, los catálogos de severidad/ocurrencia/detectabilidad, los umbrales de NPR y los formatos PDF se adaptan automáticamente. El plan Enterprise permite operar bajo ambas normas simultáneamente (modo multi-norma).",
   },
   {
     q: "¿Puedo cambiar de plan en cualquier momento?",
@@ -30,11 +34,11 @@ const FAQ = [
   },
   {
     q: "¿Cuál es la diferencia entre el Curso, los Protocolos y una suscripción?",
-    a: "Son tres productos independientes con propósitos distintos:\n\nCURSO DE GESTIÓN DE RIESGOS ($450 USD, pago único): Es una compra única que permanece contigo independientemente de si mantienes una suscripción activa. Certifica a tu equipo en gestión de riesgos bajo NOM-241-SSA1-2025 e ISO 14971, y te otorga las constancias DC-3 oficiales STPS por cada usuario — la evidencia más sólida de capacitación que puedes presentar ante una auditoría COFEPRIS. Incluye 30 días de acceso completo a la plataforma para práctica real.\n\nPROTOCOLOS DQ/IQ/OQ/PQ ($450 USD, pago único): Son formatos validados para la calificación de sistemas. Los Protocolos de Diseño (DQ) e Instalación (IQ) se entregan listos para usar. Los de Operación (OQ) y Desempeño (PQ) son guías ejecutables que tu organización completa con sus propios datos. Son indispensables cuando una empresa u organización necesita calificar o validar sus sistemas de software, equipos o procesos ante COFEPRIS — documentando que el sistema hace lo que dice que hace, de forma consistente y verificable.\n\nSUSCRIPCIÓN MENSUAL (Starter/Professional/Enterprise): Es el acceso continuo a la plataforma para gestionar tus análisis de riesgos en producción. Incluye todos los folios, firmas electrónicas, trazabilidad y el Asistente IA según tu plan. El Curso y los Protocolos son complementos que potencian tu suscripción pero también funcionan de forma independiente.",
+    a: "Son tres productos independientes con propósitos distintos:\n\nCURSO DE GESTIÓN DE RIESGOS ($450 USD, pago único): Es una compra única que permanece contigo independientemente de si mantienes una suscripción activa. Certifica a tu equipo en gestión de riesgos bajo NOM-241 (ISO 14971) o NOM-059 (ICH Q9), y te otorga las constancias DC-3 oficiales STPS por cada usuario — la evidencia más sólida de capacitación que puedes presentar ante una auditoría COFEPRIS. Incluye 30 días de acceso completo a la plataforma para práctica real.\n\nPROTOCOLOS DQ/IQ/OQ/PQ ($450 USD, pago único): Son formatos validados para la calificación de sistemas. Los Protocolos de Diseño (DQ) e Instalación (IQ) se entregan listos para usar. Los de Operación (OQ) y Desempeño (PQ) son guías ejecutables que tu organización completa con sus propios datos. Son indispensables cuando una empresa u organización necesita calificar o validar sus sistemas de software, equipos o procesos ante COFEPRIS — documentando que el sistema hace lo que dice que hace, de forma consistente y verificable.\n\nSUSCRIPCIÓN MENSUAL (Starter/Professional/Enterprise): Es el acceso continuo a la plataforma para gestionar tus análisis de riesgos en producción. Incluye todos los folios, firmas electrónicas, trazabilidad y el Asistente IA según tu plan. El Curso y los Protocolos son complementos que potencian tu suscripción pero también funcionan de forma independiente.",
   },
   {
-    q: "¿TRACEA cumple con NOM-241-SSA1-2025?",
-    a: "Sí. El módulo actual está optimizado para cumplir con NOM-241-SSA1-2025 (dispositivos médicos) bajo FEUM / ISO 14971. La plataforma está diseñada exclusivamente para esta normativa.",
+    q: "¿TRACEA cumple con NOM-241-SSA1-2025 y NOM-059-SSA1-2015?",
+    a: "Sí. La plataforma soporta de forma nativa ambas normas mexicanas: NOM-241-SSA1-2025 (dispositivos médicos, alineada a FEUM / ISO 14971:2019) y NOM-059-SSA1-2015 (medicamentos, alineada a ICH Q9 (R1) — Quality Risk Management). Cada folio se ejecuta bajo la norma de tu organización con la terminología, catálogos y umbrales correspondientes.",
   },
   {
     q: "¿Ofrecen prueba gratis?",
@@ -129,7 +133,7 @@ export default function Precios() {
             Planes que escalan con tu organización
           </h1>
           <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-            Plataforma de gestión de riesgos FEUM / ISO 14971 alineada a NOM-241-SSA1-2025. Folios y matriz AMEF ilimitados en todos los planes.
+            Plataforma de gestión de riesgos para NOM-241 (ISO 14971 — dispositivos médicos) y NOM-059 (ICH Q9 — medicamentos). Folios y matriz de riesgos ilimitados en todos los planes.
           </p>
         </section>
 
@@ -340,7 +344,7 @@ export default function Precios() {
 
       <footer className="border-t mt-16 py-6 bg-card">
         <div className="container mx-auto px-4 text-center text-sm text-muted-foreground">
-          © {new Date().getFullYear()} TRACEA · Plataforma de Gestión de Riesgos FEUM / ISO 14971
+          © {new Date().getFullYear()} TRACEA · Plataforma de Gestión de Riesgos NOM-241 / NOM-059
         </div>
       </footer>
     </div>
