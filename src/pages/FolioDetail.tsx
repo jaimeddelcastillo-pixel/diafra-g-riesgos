@@ -1321,6 +1321,19 @@ export default function FolioDetail() {
             <div className="flex items-center gap-2">
               <h1 className="text-lg font-bold">Archivo Maestro de Gestión de Riesgos</h1>
               <Badge className={`text-[10px] ${getEstadoStyle(folio.estado)}`}>{folio.estado}</Badge>
+              {(() => {
+                const nc = getNormaConfig(folio.norma_folio);
+                return (
+                  <>
+                    <Badge variant="outline" className="text-[10px] font-mono">
+                      {nc.nombre}
+                    </Badge>
+                    <Badge variant="secondary" className="text-[10px]">
+                      {nc.metodologia}
+                    </Badge>
+                  </>
+                );
+              })()}
               {locked && <Lock className="h-3.5 w-3.5 text-muted-foreground" />}
             </div>
             <p className="text-xs text-muted-foreground">
