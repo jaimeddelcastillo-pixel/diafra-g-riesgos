@@ -18,6 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useNavigate, Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { getNormaConfig } from "@/config/normas";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
