@@ -18,8 +18,12 @@ import {
   CreditCard,
   Sparkles,
   Mail,
+  Shield,
+  FlaskConical,
+  Layers,
 } from "lucide-react";
 import { PLANS, ADDONS, type PlanId, type AddonId } from "@/config/plans";
+import { NORMAS_CONFIG, type NormaKey } from "@/config/normas";
 import { ContactDialog } from "@/components/ContactDialog";
 
 type Step = 1 | 2 | 3 | 4;
@@ -68,6 +72,9 @@ export default function Register() {
   // Si el usuario llegó con un plan válido en la URL, saltamos la selección
   const [step, setStep] = useState<Step>(() => (resolverSeleccion(planParam) ? 2 : 1));
   const [submitting, setSubmitting] = useState(false);
+
+  // Norma regulatoria bajo la cual opera la empresa (default NOM-241)
+  const [norma, setNorma] = useState<NormaKey>("NOM-241");
 
   // Paso 2 — Empresa
   const [orgNombre, setOrgNombre] = useState("");
@@ -159,6 +166,7 @@ export default function Register() {
             org_nombre: orgNombre.trim(),
             org_slug: orgSlug.trim(),
             pending_price_id: seleccion.priceId,
+            norma_aplicable: norma,
           },
         },
       );
