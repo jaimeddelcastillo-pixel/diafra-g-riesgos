@@ -468,18 +468,18 @@ export function RiesgoFormDialog({ open, onClose, folioId, riesgo, nextNumeroId,
             <p className="text-[10px] text-muted-foreground bg-muted/40 rounded px-2 py-1">
               FEUM / ISO 14971 §6.1 — Evalúe la probabilidad de daño (S × O × D = NPR).
             </p>
-            <div className="grid grid-cols-4 gap-3">
+            <div className={`grid gap-3 ${usaDeteccion ? "grid-cols-4" : "grid-cols-3"}`}>
               <div className="space-y-1.5">
                 <Label className="text-xs">Severidad (S)</Label>
                 <Select value={String(form.severidad)} onValueChange={(v) => update("severidad", Number(v))}>
-                  <SelectTrigger className={form.severidad >= 9 ? "border-destructive text-destructive" : ""}>
+                  <SelectTrigger className={form.severidad >= normaConfig.umbralSeveridadCritica ? "border-destructive text-destructive" : ""}>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     {SCORES.map((s) => <SelectItem key={s} value={String(s)}>{s}</SelectItem>)}
                   </SelectContent>
                 </Select>
-                <CatalogoInline tipo="severidad" valorActual={form.severidad} />
+                <CatalogoInline tipo="severidad" valorActual={form.severidad} datos={normaConfig.catalogoSeveridad} normaNombre={normaConfig.nombre} />
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs">Ocurrencia (O)</Label>
@@ -489,20 +489,22 @@ export function RiesgoFormDialog({ open, onClose, folioId, riesgo, nextNumeroId,
                     {SCORES.map((s) => <SelectItem key={s} value={String(s)}>{s}</SelectItem>)}
                   </SelectContent>
                 </Select>
-                <CatalogoInline tipo="ocurrencia" valorActual={form.ocurrencia} />
+                <CatalogoInline tipo="ocurrencia" valorActual={form.ocurrencia} datos={normaConfig.catalogoOcurrencia} normaNombre={normaConfig.nombre} />
               </div>
+              {usaDeteccion && (
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Detección (D)</Label>
+                  <Select value={String(form.deteccion)} onValueChange={(v) => update("deteccion", Number(v))}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {SCORES.map((s) => <SelectItem key={s} value={String(s)}>{s}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                  <CatalogoInline tipo="deteccion" valorActual={form.deteccion} datos={normaConfig.catalogoDetectabilidad} normaNombre={normaConfig.nombre} />
+                </div>
+              )}
               <div className="space-y-1.5">
-                <Label className="text-xs">Detección (D)</Label>
-                <Select value={String(form.deteccion)} onValueChange={(v) => update("deteccion", Number(v))}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {SCORES.map((s) => <SelectItem key={s} value={String(s)}>{s}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-                <CatalogoInline tipo="deteccion" valorActual={form.deteccion} />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs">NPR Inicial</Label>
+                <Label className="text-xs">NPR Inicial {usaDeteccion ? "(S×O×D)" : "(S×O)"}</Label>
                 <div className={`h-10 rounded-md border flex items-center justify-center font-bold text-lg ${
                   nprLevel.label === "Crítico" ? "bg-destructive/10 text-destructive border-destructive"
                     : nprLevel.label === "Mayor" ? "bg-warning/10 text-warning border-warning"
@@ -515,7 +517,7 @@ export function RiesgoFormDialog({ open, onClose, folioId, riesgo, nextNumeroId,
             </div>
             {needsAction && (
               <p className="text-xs text-destructive font-medium">
-                ⚠ NPR Crítico o S ≥ 9 — se requiere Acción Propuesta en la pestaña Controles.
+                ⚠ NPR Crítico o S ≥ {normaConfig.umbralSeveridadCritica} — se requiere Acción Propuesta en la pestaña Controles.
               </p>
             )}
             <div className="flex justify-between pt-2">
