@@ -183,7 +183,7 @@ export const NORMAS_CONFIG: Record<NormaKey, NormaConfig> = {
     nombre: "NOM-059",
     nombreLargo: "NOM-059-SSA1-2015 — Buenas prácticas de fabricación de medicamentos",
     metodologia: "ICH-Q9",
-    metodologiaNombre: "ICH Q9 — Quality Risk Management",
+    metodologiaNombre: "FEUM / ICH Q9",
     normasReferencia: ["ICH Q9 (R1)", "NOM-059-SSA1-2015"],
     usarDetectabilidad: true,
     umbralNPRMedio: 60,
