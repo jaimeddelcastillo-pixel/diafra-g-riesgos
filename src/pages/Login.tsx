@@ -148,6 +148,15 @@ export default function Login() {
           </form>
         </CardContent>
       </Card>
+      <div className="mt-4 text-center text-xs text-muted-foreground space-x-3">
+        <Link to="/terminos" className="hover:text-foreground underline-offset-2 hover:underline">
+          Términos y Condiciones
+        </Link>
+        <span className="text-border">·</span>
+        <Link to="/privacidad" className="hover:text-foreground underline-offset-2 hover:underline">
+          Aviso de Privacidad
+        </Link>
+      </div>
     </div>
   );
 }
