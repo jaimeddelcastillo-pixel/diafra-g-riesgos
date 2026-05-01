@@ -147,7 +147,7 @@ export default function Privacidad() {
       <ul>
         <li><strong>Correo:</strong> soporte@tracea.com.mx</li>
         <li><strong>Web:</strong> tracea.com.mx/privacidad</li>
-        <li><strong>Domicilio:</strong> [DOMICILIO LEGAL DE TRACEA]</li>
+        <li><strong>Domicilio:</strong> —</li>
       </ul>
 
       <p className="text-xs text-muted-foreground border-t pt-4 mt-8">
