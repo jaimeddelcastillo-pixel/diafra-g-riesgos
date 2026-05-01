@@ -62,7 +62,7 @@ export interface NormaConfig {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Catálogos NOM-241 (AMEF — dispositivos médicos / fabricación)
+// Catálogos NOM-241 (FEUM / ISO 14971 — dispositivos médicos / fabricación)
 // ─────────────────────────────────────────────────────────────────────────────
 
 const SEVERIDAD_NOM241: CatalogoItem[] = [
@@ -157,7 +157,7 @@ export const NORMAS_CONFIG: Record<NormaKey, NormaConfig> = {
     nombre: "NOM-241",
     nombreLargo: "NOM-241-SSA1-2025 — Buenas prácticas de fabricación de dispositivos médicos",
     metodologia: "AMEF",
-    metodologiaNombre: "AMEF (Análisis de Modo y Efecto de Falla)",
+    metodologiaNombre: "FEUM / ISO 14971",
     normasReferencia: ["ISO 14971:2019", "NOM-241-SSA1-2025"],
     usarDetectabilidad: true,
     umbralNPRMedio: 60,
@@ -210,7 +210,7 @@ export const NORMAS_CONFIG: Record<NormaKey, NormaConfig> = {
     nombre: "Multi-norma",
     nombreLargo: "Operación bajo NOM-241 y NOM-059",
     metodologia: "MULTI",
-    metodologiaNombre: "AMEF + ICH Q9 (según folio)",
+    metodologiaNombre: "FEUM / ISO 14971 + ICH Q9 (según folio)",
     normasReferencia: ["ISO 14971:2019", "NOM-241-SSA1-2025", "ICH Q9 (R1)", "NOM-059-SSA1-2015"],
     usarDetectabilidad: true,
     umbralNPRMedio: 60,

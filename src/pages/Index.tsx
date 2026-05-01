@@ -84,7 +84,7 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const { isSuperAdmin, isImpersonating, loading, org } = useAuth();
   const normaConfig = getNormaConfig(org?.norma_aplicable);
-  const metodLabel = normaConfig.metodologia === "MULTI" ? "AMEF/ICH-Q9" : normaConfig.metodologia;
+  const metodLabel = normaConfig.metodologia === "MULTI" ? "FEUM/ISO 14971/ICH-Q9" : (normaConfig.metodologia === "AMEF" ? "FEUM / ISO 14971" : normaConfig.metodologia);
 
   const { data: folios, isLoading: loadingFolios } = useFolios();
   const { data: allRisks, isLoading: loadingRisks } = useAllRiesgos();
@@ -139,7 +139,7 @@ export default function Dashboard() {
   const reduccionCriticos =
     critical.length > 0 ? Math.round(((critical.length - criticalResidual.length) / critical.length) * 100) : 0;
 
-  // Avance captura AMEF ponderado por estado del folio
+  // Avance captura FEUM / ISO 14971 ponderado por estado del folio
   // Aprobado = 100%, En Firma = 75%, Borrador con riesgos = 50%, Rechazado = 0%, Sin riesgos = 0%
   const foliosConRiesgo = fols.filter((f) => risks.some((r) => r.folio_id === f.id));
   const puntosAMEF = fols.reduce((sum, f) => {
@@ -160,7 +160,7 @@ export default function Dashboard() {
   // Semáforo general SGC
   const puntajeSGC = Math.round(
     (aprobados.length / Math.max(fols.length, 1)) * 40 + // 40% peso aprobados
-      (avanceAMEF / 100) * 30 + // 30% peso avance AMEF
+      (avanceAMEF / 100) * 30 + // 30% peso avance FEUM / ISO 14971
       ((critical.length === 0 ? 100 : reduccionCriticos) / 100) * 30, // 30% reducción riesgos
   );
   const sgc = semaforo(puntajeSGC);
@@ -337,9 +337,9 @@ export default function Dashboard() {
           </div>
         )}
 
-      {/* Avance AMEF y estado por folio */}
+      {/* Avance FEUM / ISO 14971 y estado por folio */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Avance captura AMEF */}
+        {/* Avance captura FEUM / ISO 14971 */}
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-base flex items-center justify-between">

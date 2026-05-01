@@ -98,7 +98,7 @@ const REFERENCIAS: ReferenciaDoc[] = [
     iconClass: "text-emerald-500",
     titulo: "Formato Archivo Maestro de Riesgos",
     descripcion:
-      "Plantilla oficial TRACEA para análisis AMEF. Compatible con el sistema de firmas electrónicas y checklist NOM-241-SSA1-2025 de la plataforma.",
+      "Plantilla oficial TRACEA para análisis FEUM / ISO 14971. Compatible con el sistema de firmas electrónicas y checklist NOM-241-SSA1-2025 de la plataforma.",
     badgeText: "Formato oficial",
     badgeClass: "bg-emerald-500/15 text-emerald-600 border-emerald-500/30 dark:text-emerald-400",
     storagePath: "formato-amgr.pdf",
@@ -106,7 +106,7 @@ const REFERENCIAS: ReferenciaDoc[] = [
     preview: {
       titulo: "Formato Archivo Maestro de Gestión de Riesgos",
       cuerpo: [
-        "Plantilla AMEF con secciones I a VII.",
+        "Plantilla FEUM / ISO 14971 con secciones I a VII.",
         "Compatible con la matriz NPR (Severidad × Ocurrencia × Detectabilidad).",
         "Incluye sección de Comité Técnico y Dictamen del Responsable Sanitario.",
         "Pensada para diligenciar antes de cargarla al sistema o adaptar a tu proceso.",
