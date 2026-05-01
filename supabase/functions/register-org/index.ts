@@ -39,11 +39,34 @@ Deno.serve(async (req) => {
     return json({ error: "Body inválido" }, 400);
   }
 
-  const { user_id, org_nombre, org_slug, pending_price_id, norma_aplicable } = body ?? {};
+  const {
+    user_id,
+    org_nombre,
+    org_slug,
+    pending_price_id,
+    norma_aplicable,
+    acepta_terminos,
+    acepta_privacidad,
+  } = body ?? {};
 
   if (!user_id || !org_nombre?.trim() || !org_slug?.trim()) {
     return json({ error: "Faltan campos: user_id, org_nombre, org_slug" }, 400);
   }
+
+  // Validar aceptación de documentos legales (obligatorio)
+  if (acepta_terminos !== true || acepta_privacidad !== true) {
+    return json(
+      { error: "Debes aceptar los Términos y Condiciones y el Aviso de Privacidad" },
+      400,
+    );
+  }
+
+  // Capturar IP del cliente para evidencia legal
+  const clientIp =
+    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    req.headers.get("cf-connecting-ip") ||
+    req.headers.get("x-real-ip") ||
+    null;
 
   // Validar norma (default NOM-241 para retro-compatibilidad)
   const normaInput = (norma_aplicable ?? "NOM-241") as string;
@@ -96,6 +119,12 @@ Deno.serve(async (req) => {
       metodologia,
       // Trial estándar SaaS: 14 días desde el alta
       trial_expires_at: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
+      // Evidencia de aceptación de documentos legales
+      terminos_aceptados_en: new Date().toISOString(),
+      privacidad_aceptada_en: new Date().toISOString(),
+      terminos_version: "1.0",
+      privacidad_version: "1.0",
+      ip_aceptacion: clientIp,
     })
     .select()
     .single();
