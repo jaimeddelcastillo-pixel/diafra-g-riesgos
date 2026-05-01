@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -85,6 +86,8 @@ export default function Register() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [passwordConfirm, setPasswordConfirm] = useState("");
+  const [aceptaTerminos, setAceptaTerminos] = useState(false);
+  const [aceptaPrivacidad, setAceptaPrivacidad] = useState(false);
 
   if (loading) return null;
   if (user) return <Navigate to="/" replace />;
@@ -133,6 +136,14 @@ export default function Register() {
       toast({ title: "Las contraseñas no coinciden", variant: "destructive" });
       return false;
     }
+    if (!aceptaTerminos || !aceptaPrivacidad) {
+      toast({
+        title: "Debes aceptar los documentos legales",
+        description: "Marca ambos checkboxes para continuar.",
+        variant: "destructive",
+      });
+      return false;
+    }
     return true;
   };
 
@@ -167,6 +178,8 @@ export default function Register() {
             org_slug: orgSlug.trim(),
             pending_price_id: seleccion.priceId,
             norma_aplicable: norma,
+            acepta_terminos: aceptaTerminos,
+            acepta_privacidad: aceptaPrivacidad,
           },
         },
       );
