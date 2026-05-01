@@ -18,7 +18,7 @@ const FAQ = [
   },
   {
     q: "¿Qué normas regulatorias soporta TRACEA?",
-    a: "TRACEA opera de forma nativa bajo dos normas mexicanas:\n\n• NOM-241-SSA1-2025 — Buenas Prácticas de Fabricación de dispositivos médicos. Usa la metodología FEUM / ISO 14971:2019. Aprobador final: Responsable Sanitario.\n\n• NOM-059-SSA1-2015 — Buenas Prácticas de Fabricación de medicamentos. Usa la metodología ICH Q9 (R1) — Quality Risk Management. Aprobador final: Director Técnico.\n\nAl crear tu organización eliges la norma aplicable. La terminología, los catálogos de severidad/ocurrencia/detectabilidad, los umbrales de NPR y los formatos PDF se adaptan automáticamente. El plan Enterprise permite operar bajo ambas normas simultáneamente (modo multi-norma).",
+    a: "TRACEA opera de forma nativa bajo dos normas mexicanas:\n\n• NOM-241-SSA1-2025 — Buenas Prácticas de Fabricación de dispositivos médicos. Usa la metodología FEUM / ISO 14971:2019. Aprobador final: Responsable Sanitario.\n\n• NOM-059-SSA1-2015 — Buenas Prácticas de Fabricación de medicamentos. Usa la metodología FEUM / ICH Q9 (R1). Aprobador final: Director Técnico.\n\nAl crear tu organización eliges la norma aplicable. La terminología, los catálogos de severidad/ocurrencia/detectabilidad, los umbrales de NPR y los formatos PDF se adaptan automáticamente. El plan Enterprise permite operar bajo ambas normas simultáneamente (modo multi-norma).",
   },
   {
     q: "¿Puedo cambiar de plan en cualquier momento?",
@@ -38,7 +38,7 @@ const FAQ = [
   },
   {
     q: "¿TRACEA cumple con NOM-241-SSA1-2025 y NOM-059-SSA1-2015?",
-    a: "Sí. La plataforma soporta de forma nativa ambas normas mexicanas: NOM-241-SSA1-2025 (dispositivos médicos, alineada a FEUM / ISO 14971:2019) y NOM-059-SSA1-2015 (medicamentos, alineada a ICH Q9 (R1) — Quality Risk Management). Cada folio se ejecuta bajo la norma de tu organización con la terminología, catálogos y umbrales correspondientes.",
+    a: "Sí. La plataforma soporta de forma nativa ambas normas mexicanas: NOM-241-SSA1-2025 (dispositivos médicos, alineada a FEUM / ISO 14971:2019) y NOM-059-SSA1-2015 (medicamentos, alineada a FEUM / ICH Q9 (R1)). Cada folio se ejecuta bajo la norma de tu organización con la terminología, catálogos y umbrales correspondientes.",
   },
   {
     q: "¿Ofrecen prueba gratis?",
