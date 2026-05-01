@@ -1,23 +1,14 @@
-// Public contact form handler — sends an email to soporte@tracea.com.mx
+// Public contact form handler — envía mensaje al soporte vía Lovable Emails
+// (send-transactional-email + plantilla 'contacto-soporte').
 // No JWT required (verify_jwt = false in config.toml).
+
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
-
-const SUPPORT_EMAIL = "soporte@tracea.com.mx";
-const FROM = "TRACEA Contacto <soporte@notify.tracea.com.mx>";
-
-function escapeHtml(s: string): string {
-  return s
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-}
 
 function isValidEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -36,15 +27,6 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const RESEND_KEY = Deno.env.get("RESEND_API_KEY");
-    if (!RESEND_KEY) {
-      console.error("RESEND_API_KEY no configurado");
-      return new Response(JSON.stringify({ error: "Email no configurado" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
     const body = await req.json().catch(() => ({}));
     const nombre = String(body?.nombre ?? "").trim();
     const empresa = String(body?.empresa ?? "").trim();
@@ -67,47 +49,37 @@ Deno.serve(async (req) => {
       });
     }
 
-    const safe = {
-      nombre: escapeHtml(nombre),
-      empresa: escapeHtml(empresa),
-      email: escapeHtml(email),
-      telefono: telefono ? escapeHtml(telefono) : "—",
-      mensaje: escapeHtml(mensaje).replace(/\n/g, "<br/>"),
-    };
+    // Idempotency: hash sencillo del payload + minuto, para evitar duplicados
+    // si el usuario hace doble-click o reintenta en pocos segundos.
+    const idempotencyKey = `contacto-${email}-${nombre}-${Date.now().toString().slice(0, -4)}`;
 
-    const html = `
-      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 600px; margin: 0 auto; color: #042C53;">
-        <h2 style="color: #042C53; border-bottom: 2px solid #185FA5; padding-bottom: 8px;">Nuevo mensaje desde el formulario de contacto</h2>
-        <table style="width: 100%; border-collapse: collapse; margin-top: 16px;">
-          <tr><td style="padding: 8px 0; font-weight: 600; width: 140px;">Nombre:</td><td>${safe.nombre}</td></tr>
-          <tr><td style="padding: 8px 0; font-weight: 600;">Empresa:</td><td>${safe.empresa}</td></tr>
-          <tr><td style="padding: 8px 0; font-weight: 600;">Correo:</td><td><a href="mailto:${safe.email}">${safe.email}</a></td></tr>
-          <tr><td style="padding: 8px 0; font-weight: 600;">Teléfono:</td><td>${safe.telefono}</td></tr>
-        </table>
-        <h3 style="color: #185FA5; margin-top: 24px;">Mensaje</h3>
-        <div style="background: #f5f7fb; padding: 16px; border-radius: 8px; line-height: 1.5;">${safe.mensaje}</div>
-        <p style="margin-top: 24px; font-size: 12px; color: #888;">Enviado desde tracea.com.mx · ${new Date().toISOString()}</p>
-      </div>
-    `;
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+    );
 
-    const resp = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${RESEND_KEY}`,
-        "Content-Type": "application/json",
+    const { error: invokeErr } = await supabase.functions.invoke(
+      "send-transactional-email",
+      {
+        body: {
+          templateName: "contacto-soporte",
+          // recipientEmail se omite: la plantilla define `to: 'soporte@tracea.com.mx'`
+          recipientEmail: "soporte@tracea.com.mx",
+          idempotencyKey,
+          templateData: {
+            nombre,
+            empresa,
+            email,
+            telefono: telefono || "—",
+            mensaje,
+            fecha: new Date().toISOString(),
+          },
+        },
       },
-      body: JSON.stringify({
-        from: FROM,
-        to: [SUPPORT_EMAIL],
-        reply_to: email,
-        subject: `[Contacto TRACEA] ${nombre} — ${empresa}`,
-        html,
-      }),
-    });
+    );
 
-    if (!resp.ok) {
-      const text = await resp.text();
-      console.error("Resend error", resp.status, text);
+    if (invokeErr) {
+      console.error("contact-message: send-transactional-email error", invokeErr);
       return new Response(JSON.stringify({ error: "No se pudo enviar el mensaje" }), {
         status: 502,
         headers: { ...corsHeaders, "Content-Type": "application/json" },

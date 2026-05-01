@@ -16,6 +16,67 @@ const PLAN_LIMITS: Record<string, number> = {
   enterprise: 9999,
 };
 
+const PLAN_LABELS: Record<string, string> = {
+  starter: "Starter",
+  professional: "Professional",
+  enterprise: "Enterprise",
+  curso: "Curso TRACEA",
+};
+
+const APP_URL = Deno.env.get("APP_URL") ?? "https://tracea.com.mx";
+
+async function sendTplEmail(
+  supabase: ReturnType<typeof createClient>,
+  templateName: string,
+  recipientEmail: string,
+  templateData: Record<string, unknown>,
+  idempotencyKey: string,
+) {
+  try {
+    const { error } = await supabase.functions.invoke("send-transactional-email", {
+      body: { templateName, recipientEmail, idempotencyKey, templateData },
+    });
+    if (error) console.warn(`send-transactional-email[${templateName}] error`, error);
+  } catch (err) {
+    console.warn(`send-transactional-email[${templateName}] threw`, err);
+  }
+}
+
+async function getOrgContact(
+  supabase: ReturnType<typeof createClient>,
+  orgId: string,
+): Promise<{ email: string | null; nombre: string | null; org_nombre: string | null }> {
+  const { data: org } = await supabase
+    .from("organizations")
+    .select("nombre")
+    .eq("id", orgId)
+    .maybeSingle();
+
+  // Buscar al admin de la organización
+  const { data: adminMember } = await supabase
+    .from("org_members")
+    .select("user_id")
+    .eq("org_id", orgId)
+    .in("role", ["admin", "super_admin"])
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  if (!adminMember?.user_id) {
+    return { email: null, nombre: null, org_nombre: (org as any)?.nombre ?? null };
+  }
+  const { data: perfil } = await supabase
+    .from("profiles")
+    .select("email, nombre")
+    .eq("id", adminMember.user_id)
+    .maybeSingle();
+  return {
+    email: (perfil as any)?.email ?? null,
+    nombre: (perfil as any)?.nombre ?? null,
+    org_nombre: (org as any)?.nombre ?? null,
+  };
+}
+
 Deno.serve(async (req) => {
   if (req.method !== "POST") {
     return new Response("Method not allowed", { status: 405 });
@@ -83,6 +144,24 @@ Deno.serve(async (req) => {
               pending_price_id: null,
             })
             .eq("id", orgId);
+
+          // Correo bienvenida-org al admin
+          const contact = await getOrgContact(supabase, orgId);
+          if (contact.email) {
+            await sendTplEmail(
+              supabase,
+              "bienvenida-org",
+              contact.email,
+              {
+                nombre: contact.nombre,
+                organizacion: contact.org_nombre,
+                plan: producto,
+                max_users: PLAN_LIMITS[producto],
+                link: `${APP_URL}/login`,
+              },
+              `bienvenida-org-${orgId}-${producto}`,
+            );
+          }
         } else if (session.mode === "payment" && producto) {
           // Si la compra única ya pagada incluye el "curso", también activamos
           // la cuenta para que pueda entrar a la plataforma 30 días.
@@ -94,6 +173,22 @@ Deno.serve(async (req) => {
                 pending_price_id: null,
               })
               .eq("id", orgId);
+
+            const contact = await getOrgContact(supabase, orgId);
+            if (contact.email) {
+              await sendTplEmail(
+                supabase,
+                "bienvenida-org",
+                contact.email,
+                {
+                  nombre: contact.nombre,
+                  organizacion: contact.org_nombre,
+                  plan: "curso",
+                  link: `${APP_URL}/login`,
+                },
+                `bienvenida-org-${orgId}-curso-${session.id}`,
+              );
+            }
           }
           // Registrar addon
           await supabase.from("addon_purchases").insert({
@@ -229,6 +324,33 @@ Deno.serve(async (req) => {
           .from("organizations")
           .update({ subscription_status: "past_due", estado: "suspendido" })
           .eq("stripe_customer_id", customerId);
+
+        const { data: org } = await supabase
+          .from("organizations")
+          .select("id, nombre, plan")
+          .eq("stripe_customer_id", customerId)
+          .maybeSingle();
+        if (org?.id) {
+          const contact = await getOrgContact(supabase, (org as any).id);
+          if (contact.email) {
+            const planLabel = PLAN_LABELS[(org as any).plan] || (org as any).plan || "TRACEA";
+            const monto = ((invoice.amount_due ?? invoice.amount_remaining ?? 0) / 100).toFixed(2);
+            const moneda = (invoice.currency || "usd").toUpperCase();
+            await sendTplEmail(
+              supabase,
+              "pago-fallido",
+              contact.email,
+              {
+                nombre: contact.nombre,
+                organizacion: (org as any).nombre,
+                concepto: `Suscripción ${planLabel}`,
+                monto: `${moneda} ${monto}`,
+                link: `${APP_URL}/precios`,
+              },
+              `pago-fallido-${invoice.id}`,
+            );
+          }
+        }
         break;
       }
 

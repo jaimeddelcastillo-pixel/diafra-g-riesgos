@@ -108,6 +108,29 @@ async function getOrgInfo(
   };
 }
 
+// ─── Helper: invocar send-transactional-email (Lovable Emails unificado) ────
+async function sendTplEmail(
+  admin: ReturnType<typeof createClient>,
+  templateName: string,
+  recipientEmail: string,
+  templateData: Record<string, unknown>,
+  idempotencyKey: string,
+) {
+  try {
+    const { error } = await admin.functions.invoke("send-transactional-email", {
+      body: {
+        templateName,
+        recipientEmail,
+        idempotencyKey,
+        templateData,
+      },
+    });
+    if (error) console.warn(`send-transactional-email[${templateName}] error`, error);
+  } catch (err) {
+    console.warn(`send-transactional-email[${templateName}] threw`, err);
+  }
+}
+
 // ─── Validación de completitud (multi-norma) ─────────────────────────────────
 interface ValidacionResult {
   valido: boolean;
@@ -315,18 +338,24 @@ Deno.serve(async (req) => {
           .single();
         if (!perfil?.email) continue;
 
-        await enviarCorreo(admin, {
-          to: perfil.email,
-          subject: `[${orgInfo.org_nombre}] Solicitud de firma — ${folio.codigo}`,
-          html: plantillaFirma({
+        await sendTplEmail(
+          admin,
+          "folio-enviado-firma",
+          perfil.email,
+          {
             nombre: perfil.nombre || miembro.nombre,
             folio_codigo: folio.codigo,
             proceso: folio.proceso_equipo,
+            organizacion: orgInfo.org_nombre,
+            norma_nombre: norma.nombre,
+            norma_largo: norma.nombreLargo,
+            metodologia: norma.metodologia,
+            documento: norma.terminologia.documento,
+            proceso_label: norma.terminologia.procesoEquipo,
             link: `${APP_URL}/folios/${folio_id}`,
-            norma,
-            ...orgInfo,
-          }),
-        });
+          },
+          `folio-firma-${folio_id}-${miembro.user_id}`,
+        );
       }
     }
 
@@ -399,18 +428,22 @@ Deno.serve(async (req) => {
           .single();
 
         if (!rsPerfil?.email) continue;
-        await enviarCorreo(admin, {
-          to: rsPerfil.email,
-          subject: `[${orgInfo.org_nombre}] ✅ Folio listo para dictamen — ${folio.codigo}`,
-          html: plantillaListoParaDictamen({
+        await sendTplEmail(
+          admin,
+          "folio-firmado",
+          rsPerfil.email,
+          {
             nombre: rsPerfil.nombre,
             folio_codigo: folio.codigo,
             proceso: folio.proceso_equipo,
+            organizacion: orgInfo.org_nombre,
+            aprobador: norma.terminologia.aprobadorFinal,
+            norma_nombre: norma.nombre,
+            metodologia: norma.metodologia,
             link: `${APP_URL}/folios/${folio_id}`,
-            norma,
-            ...orgInfo,
-          }),
-        });
+          },
+          `folio-firmado-${folio_id}-${rs.user_id}`,
+        );
       }
     }
 
@@ -468,21 +501,25 @@ Deno.serve(async (req) => {
 
       if (capturista?.email) {
         const orgInfo = await getOrgInfo(admin, folio.org_id);
-        await enviarCorreo(admin, {
-          to: capturista.email,
-          subject: `[${orgInfo.org_nombre}] ${conclusion === "Aprobado" ? "✅ Aprobado" : "⚠ Requiere corrección"} — ${folio.codigo}`,
-          html: plantillaDictamen({
+        await sendTplEmail(
+          admin,
+          "folio-dictamen",
+          capturista.email,
+          {
             nombre: capturista.nombre,
             folio_codigo: folio.codigo,
             proceso: folio.proceso_equipo,
+            organizacion: orgInfo.org_nombre,
+            aprobador: norma.terminologia.aprobadorFinal,
             conclusion,
             motivo: motivo || "",
             version: folio.numero_version,
+            norma_nombre: norma.nombre,
+            metodologia: norma.metodologia,
             link: `${APP_URL}/folios/${folio_id}`,
-            norma,
-            ...orgInfo,
-          }),
-        });
+          },
+          `folio-dictamen-${folio_id}-${folio.numero_version}`,
+        );
       }
     }
 
@@ -544,145 +581,4 @@ function json(data: unknown, status = 200) {
     status,
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
-}
-
-async function enviarCorreo(
-  admin: ReturnType<typeof createClient>,
-  { to, subject, html }: { to: string; subject: string; html: string },
-) {
-  const resendKey = Deno.env.get("RESEND_API_KEY");
-  if (!resendKey) {
-    console.warn("RESEND_API_KEY no configurado — correo no enviado a:", to);
-    return;
-  }
-  await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${resendKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      from: "TRACEA <noreply@tracea.mx>",
-      to,
-      subject,
-      html,
-    }),
-  });
-}
-
-// ─── Plantillas de correo ──────────────────────────────────────────────────────
-
-function footerLinea(org_nombre?: string, codigo_formato?: string, version_formato?: string) {
-  const cf = (codigo_formato || "").trim();
-  const vf = (version_formato || "").trim();
-  const code = cf ? (vf ? `${cf} (${vf})` : cf) : "";
-  const name = (org_nombre || "Organización").trim();
-  return code
-    ? `${code} · ${name} · Documento confidencial`
-    : `${name} · Documento confidencial`;
-}
-
-function plantillaFirma({ nombre, folio_codigo, proceso, link, norma, org_nombre, codigo_formato, version_formato }: any) {
-  const n: NormaWorkflowConfig = norma || NORMAS["NOM-241"];
-  const procesoLabel = n.terminologia.procesoEquipo;
-  const docLabel = n.terminologia.documento;
-  return `
-<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto">
-  <div style="background:#042C53;padding:20px;text-align:center">
-    <h2 style="color:#fff;margin:0">${(org_nombre || "TRACEA").toUpperCase()}</h2>
-    <p style="color:#aac;margin:4px 0 0;font-size:13px">Plataforma de Gestión de Riesgos</p>
-  </div>
-  <div style="padding:28px;background:#f9f9f9">
-    <p style="margin:0 0 16px">Estimado(a) <strong>${nombre}</strong>,</p>
-    <p>Se te solicita firmar el siguiente <strong>${docLabel}</strong> (${n.nombre} · ${n.metodologia}):</p>
-    <div style="background:#fff;border:1px solid #ddd;border-radius:8px;padding:16px;margin:16px 0">
-      <p style="margin:0 0 6px"><strong>Folio:</strong> ${folio_codigo}</p>
-      <p style="margin:0 0 6px"><strong>${procesoLabel}:</strong> ${proceso}</p>
-      <p style="margin:0"><strong>Marco normativo:</strong> ${n.normasReferencia.join(" · ")}</p>
-    </div>
-    <div style="background:#fff3cd;border:1px solid #ffc107;border-radius:6px;padding:12px;margin:16px 0;font-size:12px">
-      <strong>Importante:</strong> Al firmar, usted declara haber revisado el contenido íntegro y que su firma electrónica tiene el mismo valor legal que su firma autógrafa conforme a ${n.nombreLargo}.
-    </div>
-    <div style="text-align:center;margin:24px 0">
-      <a href="${link}" style="background:#042C53;color:#fff;padding:12px 28px;border-radius:6px;text-decoration:none;font-weight:bold">
-        Ver y Firmar Folio
-      </a>
-    </div>
-    <p style="color:#888;font-size:12px">Si no puedes hacer clic, copia esta URL: ${link}</p>
-  </div>
-  <div style="background:#eee;padding:12px;text-align:center;font-size:11px;color:#888">
-    ${footerLinea(org_nombre, codigo_formato, version_formato)}
-  </div>
-</div>`;
-}
-
-function plantillaListoParaDictamen({ nombre, folio_codigo, proceso, link, norma, org_nombre, codigo_formato, version_formato }: any) {
-  const n: NormaWorkflowConfig = norma || NORMAS["NOM-241"];
-  const procesoLabel = n.terminologia.procesoEquipo;
-  const aprobador = n.terminologia.aprobadorFinal;
-  return `
-<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto">
-  <div style="background:#042C53;padding:20px;text-align:center">
-    <h2 style="color:#fff;margin:0">${(org_nombre || "TRACEA").toUpperCase()}</h2>
-    <p style="color:#aac;margin:4px 0 0;font-size:13px">Plataforma de Gestión de Riesgos</p>
-  </div>
-  <div style="padding:28px;background:#f9f9f9">
-    <p style="margin:0 0 16px">Estimado(a) <strong>${nombre}</strong>,</p>
-    <div style="background:#e8f5e9;border-left:4px solid #2e7d32;padding:12px 16px;border-radius:4px;margin-bottom:16px">
-      <strong style="color:#2e7d32">✅ Todos los miembros del comité han firmado</strong>
-    </div>
-    <p>El siguiente folio está listo para su dictamen de <strong>${aprobador}</strong> (${n.nombre} · ${n.metodologia}):</p>
-    <div style="background:#fff;border:1px solid #ddd;border-radius:8px;padding:16px;margin:16px 0">
-      <p style="margin:0 0 6px"><strong>Folio:</strong> ${folio_codigo}</p>
-      <p style="margin:0"><strong>${procesoLabel}:</strong> ${proceso}</p>
-    </div>
-    <div style="text-align:center;margin:24px 0">
-      <a href="${link}" style="background:#2e7d32;color:#fff;padding:12px 28px;border-radius:6px;text-decoration:none;font-weight:bold">
-        Emitir Dictamen
-      </a>
-    </div>
-  </div>
-  <div style="background:#eee;padding:12px;text-align:center;font-size:11px;color:#888">
-    ${footerLinea(org_nombre, codigo_formato, version_formato)}
-  </div>
-</div>`;
-}
-
-function plantillaDictamen({ nombre, folio_codigo, proceso, conclusion, motivo, version, link, norma, org_nombre, codigo_formato, version_formato }: any) {
-  const n: NormaWorkflowConfig = norma || NORMAS["NOM-241"];
-  const procesoLabel = n.terminologia.procesoEquipo;
-  const aprobador = n.terminologia.aprobadorFinal;
-  const aprobado = conclusion === "Aprobado";
-  return `
-<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto">
-  <div style="background:#042C53;padding:20px;text-align:center">
-    <h2 style="color:#fff;margin:0">${(org_nombre || "TRACEA").toUpperCase()}</h2>
-    <p style="color:#aac;margin:4px 0 0;font-size:13px">Plataforma de Gestión de Riesgos</p>
-  </div>
-  <div style="padding:28px;background:#f9f9f9">
-    <p style="margin:0 0 16px">Estimado(a) <strong>${nombre}</strong>,</p>
-    <div style="background:${aprobado ? "#e8f5e9" : "#fff3e0"};border-left:4px solid ${aprobado ? "#2e7d32" : "#e65100"};padding:12px 16px;border-radius:4px;margin-bottom:16px">
-      <strong style="color:${aprobado ? "#2e7d32" : "#e65100"}">
-        ${aprobado ? `✅ Folio APROBADO por ${aprobador}` : "⚠ Folio RECHAZADO — Requiere corrección"}
-      </strong>
-    </div>
-    <div style="background:#fff;border:1px solid #ddd;border-radius:8px;padding:16px;margin:16px 0">
-      <p style="margin:0 0 6px"><strong>Folio:</strong> ${folio_codigo}</p>
-      <p style="margin:0 0 6px"><strong>${procesoLabel}:</strong> ${proceso}</p>
-      <p style="margin:0 0 6px"><strong>Norma:</strong> ${n.nombre} (${n.metodologia})</p>
-      <p style="margin:0 0 6px"><strong>Versión:</strong> ${version}</p>
-      <p style="margin:0"><strong>Dictamen:</strong> ${conclusion}</p>
-      ${motivo ? `<p style="margin:8px 0 0;color:#555"><strong>Observaciones:</strong> ${motivo}</p>` : ""}
-    </div>
-    ${!aprobado ? `<p style="color:#666;font-size:13px">Se ha archivado la versión ${version} del documento. Se ha creado una nueva revisión para corrección.</p>` : ""}
-    <div style="text-align:center;margin:24px 0">
-      <a href="${link}" style="background:#042C53;color:#fff;padding:12px 28px;border-radius:6px;text-decoration:none;font-weight:bold">
-        Ver Folio
-      </a>
-    </div>
-  </div>
-  <div style="background:#eee;padding:12px;text-align:center;font-size:11px;color:#888">
-    ${footerLinea(org_nombre, codigo_formato, version_formato)}
-  </div>
-</div>`;
 }
