@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -85,6 +86,8 @@ export default function Register() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [passwordConfirm, setPasswordConfirm] = useState("");
+  const [aceptaTerminos, setAceptaTerminos] = useState(false);
+  const [aceptaPrivacidad, setAceptaPrivacidad] = useState(false);
 
   if (loading) return null;
   if (user) return <Navigate to="/" replace />;
@@ -133,6 +136,14 @@ export default function Register() {
       toast({ title: "Las contraseñas no coinciden", variant: "destructive" });
       return false;
     }
+    if (!aceptaTerminos || !aceptaPrivacidad) {
+      toast({
+        title: "Debes aceptar los documentos legales",
+        description: "Marca ambos checkboxes para continuar.",
+        variant: "destructive",
+      });
+      return false;
+    }
     return true;
   };
 
@@ -167,6 +178,8 @@ export default function Register() {
             org_slug: orgSlug.trim(),
             pending_price_id: seleccion.priceId,
             norma_aplicable: norma,
+            acepta_terminos: aceptaTerminos,
+            acepta_privacidad: aceptaPrivacidad,
           },
         },
       );
@@ -187,7 +200,7 @@ export default function Register() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4">
       <Card className="w-full max-w-2xl">
         <CardHeader className="text-center space-y-3">
           <div className="mx-auto h-14 w-14 flex items-center justify-center">
@@ -520,13 +533,59 @@ export default function Register() {
                   placeholder="••••••••"
                 />
               </div>
+              <div className="space-y-3 pt-2 border-t">
+                <div className="flex items-start gap-2">
+                  <Checkbox
+                    id="acepta-terminos"
+                    checked={aceptaTerminos}
+                    onCheckedChange={(v) => setAceptaTerminos(v === true)}
+                    className="mt-0.5"
+                  />
+                  <Label
+                    htmlFor="acepta-terminos"
+                    className="text-xs font-normal leading-relaxed cursor-pointer"
+                  >
+                    He leído y acepto los{" "}
+                    <Link
+                      to="/terminos"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary underline font-medium"
+                    >
+                      Términos y Condiciones
+                    </Link>
+                  </Label>
+                </div>
+                <div className="flex items-start gap-2">
+                  <Checkbox
+                    id="acepta-privacidad"
+                    checked={aceptaPrivacidad}
+                    onCheckedChange={(v) => setAceptaPrivacidad(v === true)}
+                    className="mt-0.5"
+                  />
+                  <Label
+                    htmlFor="acepta-privacidad"
+                    className="text-xs font-normal leading-relaxed cursor-pointer"
+                  >
+                    He leído y acepto el{" "}
+                    <Link
+                      to="/privacidad"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary underline font-medium"
+                    >
+                      Aviso de Privacidad
+                    </Link>
+                  </Label>
+                </div>
+              </div>
               <div className="flex gap-2">
                 <Button variant="outline" onClick={() => setStep(2)} className="flex-1">
                   <ArrowLeft className="mr-2 h-4 w-4" /> Atrás
                 </Button>
                 <Button
                   className="flex-1"
-                  disabled={submitting}
+                  disabled={submitting || !aceptaTerminos || !aceptaPrivacidad}
                   onClick={() => {
                     if (validateStep3()) handleRegister();
                   }}
@@ -574,6 +633,15 @@ export default function Register() {
           )}
         </CardContent>
       </Card>
+      <div className="mt-4 text-center text-xs text-muted-foreground space-x-3">
+        <Link to="/terminos" className="hover:text-foreground underline-offset-2 hover:underline">
+          Términos y Condiciones
+        </Link>
+        <span className="text-border">·</span>
+        <Link to="/privacidad" className="hover:text-foreground underline-offset-2 hover:underline">
+          Aviso de Privacidad
+        </Link>
+      </div>
     </div>
   );
 }

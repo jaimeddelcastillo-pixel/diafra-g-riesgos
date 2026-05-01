@@ -576,6 +576,7 @@ export type Database = {
           descripcion: string
           estado: Database["public"]["Enums"]["org_estado"]
           id: string
+          ip_aceptacion: string | null
           logo_url: string
           max_users: number
           metodologia: string
@@ -583,11 +584,15 @@ export type Database = {
           norma_aplicable: string
           pending_price_id: string | null
           plan: string
+          privacidad_aceptada_en: string | null
+          privacidad_version: string | null
           slug: string
           stripe_customer_id: string | null
           stripe_subscription_id: string | null
           subscription_current_period_end: string | null
           subscription_status: string | null
+          terminos_aceptados_en: string | null
+          terminos_version: string | null
           trial_expires_at: string | null
           umbral_npr_alto: number
           umbral_npr_medio: number
@@ -603,6 +608,7 @@ export type Database = {
           descripcion?: string
           estado?: Database["public"]["Enums"]["org_estado"]
           id?: string
+          ip_aceptacion?: string | null
           logo_url?: string
           max_users?: number
           metodologia?: string
@@ -610,11 +616,15 @@ export type Database = {
           norma_aplicable?: string
           pending_price_id?: string | null
           plan?: string
+          privacidad_aceptada_en?: string | null
+          privacidad_version?: string | null
           slug: string
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
           subscription_current_period_end?: string | null
           subscription_status?: string | null
+          terminos_aceptados_en?: string | null
+          terminos_version?: string | null
           trial_expires_at?: string | null
           umbral_npr_alto?: number
           umbral_npr_medio?: number
@@ -630,6 +640,7 @@ export type Database = {
           descripcion?: string
           estado?: Database["public"]["Enums"]["org_estado"]
           id?: string
+          ip_aceptacion?: string | null
           logo_url?: string
           max_users?: number
           metodologia?: string
@@ -637,11 +648,15 @@ export type Database = {
           norma_aplicable?: string
           pending_price_id?: string | null
           plan?: string
+          privacidad_aceptada_en?: string | null
+          privacidad_version?: string | null
           slug?: string
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
           subscription_current_period_end?: string | null
           subscription_status?: string | null
+          terminos_aceptados_en?: string | null
+          terminos_version?: string | null
           trial_expires_at?: string | null
           umbral_npr_alto?: number
           umbral_npr_medio?: number

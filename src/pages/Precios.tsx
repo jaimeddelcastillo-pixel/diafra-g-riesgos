@@ -343,8 +343,17 @@ export default function Precios() {
       </main>
 
       <footer className="border-t mt-16 py-6 bg-card">
-        <div className="container mx-auto px-4 text-center text-sm text-muted-foreground">
-          © {new Date().getFullYear()} TRACEA · Plataforma de Gestión de Riesgos NOM-241 / NOM-059
+        <div className="container mx-auto px-4 text-center text-sm text-muted-foreground space-y-2">
+          <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-xs">
+            <Link to="/terminos" className="hover:text-foreground underline-offset-2 hover:underline">
+              Términos y Condiciones
+            </Link>
+            <span className="text-border">·</span>
+            <Link to="/privacidad" className="hover:text-foreground underline-offset-2 hover:underline">
+              Aviso de Privacidad
+            </Link>
+          </div>
+          <p>© {new Date().getFullYear()} TRACEA · Plataforma de Gestión de Riesgos NOM-241 / NOM-059</p>
         </div>
       </footer>
     </div>
