@@ -200,7 +200,7 @@ export default function Register() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4">
       <Card className="w-full max-w-2xl">
         <CardHeader className="text-center space-y-3">
           <div className="mx-auto h-14 w-14 flex items-center justify-center">
@@ -633,6 +633,15 @@ export default function Register() {
           )}
         </CardContent>
       </Card>
+      <div className="mt-4 text-center text-xs text-muted-foreground space-x-3">
+        <Link to="/terminos" className="hover:text-foreground underline-offset-2 hover:underline">
+          Términos y Condiciones
+        </Link>
+        <span className="text-border">·</span>
+        <Link to="/privacidad" className="hover:text-foreground underline-offset-2 hover:underline">
+          Aviso de Privacidad
+        </Link>
+      </div>
     </div>
   );
 }
