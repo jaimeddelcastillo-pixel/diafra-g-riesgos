@@ -108,6 +108,29 @@ async function getOrgInfo(
   };
 }
 
+// ─── Helper: invocar send-transactional-email (Lovable Emails unificado) ────
+async function sendTplEmail(
+  admin: ReturnType<typeof createClient>,
+  templateName: string,
+  recipientEmail: string,
+  templateData: Record<string, unknown>,
+  idempotencyKey: string,
+) {
+  try {
+    const { error } = await admin.functions.invoke("send-transactional-email", {
+      body: {
+        templateName,
+        recipientEmail,
+        idempotencyKey,
+        templateData,
+      },
+    });
+    if (error) console.warn(`send-transactional-email[${templateName}] error`, error);
+  } catch (err) {
+    console.warn(`send-transactional-email[${templateName}] threw`, err);
+  }
+}
+
 // ─── Validación de completitud (multi-norma) ─────────────────────────────────
 interface ValidacionResult {
   valido: boolean;
@@ -315,18 +338,24 @@ Deno.serve(async (req) => {
           .single();
         if (!perfil?.email) continue;
 
-        await enviarCorreo(admin, {
-          to: perfil.email,
-          subject: `[${orgInfo.org_nombre}] Solicitud de firma — ${folio.codigo}`,
-          html: plantillaFirma({
+        await sendTplEmail(
+          admin,
+          "folio-enviado-firma",
+          perfil.email,
+          {
             nombre: perfil.nombre || miembro.nombre,
             folio_codigo: folio.codigo,
             proceso: folio.proceso_equipo,
+            organizacion: orgInfo.org_nombre,
+            norma_nombre: norma.nombre,
+            norma_largo: norma.nombreLargo,
+            metodologia: norma.metodologia,
+            documento: norma.terminologia.documento,
+            proceso_label: norma.terminologia.procesoEquipo,
             link: `${APP_URL}/folios/${folio_id}`,
-            norma,
-            ...orgInfo,
-          }),
-        });
+          },
+          `folio-firma-${folio_id}-${miembro.user_id}`,
+        );
       }
     }
 
@@ -399,18 +428,22 @@ Deno.serve(async (req) => {
           .single();
 
         if (!rsPerfil?.email) continue;
-        await enviarCorreo(admin, {
-          to: rsPerfil.email,
-          subject: `[${orgInfo.org_nombre}] ✅ Folio listo para dictamen — ${folio.codigo}`,
-          html: plantillaListoParaDictamen({
+        await sendTplEmail(
+          admin,
+          "folio-firmado",
+          rsPerfil.email,
+          {
             nombre: rsPerfil.nombre,
             folio_codigo: folio.codigo,
             proceso: folio.proceso_equipo,
+            organizacion: orgInfo.org_nombre,
+            aprobador: norma.terminologia.aprobadorFinal,
+            norma_nombre: norma.nombre,
+            metodologia: norma.metodologia,
             link: `${APP_URL}/folios/${folio_id}`,
-            norma,
-            ...orgInfo,
-          }),
-        });
+          },
+          `folio-firmado-${folio_id}-${rs.user_id}`,
+        );
       }
     }
 
@@ -468,21 +501,25 @@ Deno.serve(async (req) => {
 
       if (capturista?.email) {
         const orgInfo = await getOrgInfo(admin, folio.org_id);
-        await enviarCorreo(admin, {
-          to: capturista.email,
-          subject: `[${orgInfo.org_nombre}] ${conclusion === "Aprobado" ? "✅ Aprobado" : "⚠ Requiere corrección"} — ${folio.codigo}`,
-          html: plantillaDictamen({
+        await sendTplEmail(
+          admin,
+          "folio-dictamen",
+          capturista.email,
+          {
             nombre: capturista.nombre,
             folio_codigo: folio.codigo,
             proceso: folio.proceso_equipo,
+            organizacion: orgInfo.org_nombre,
+            aprobador: norma.terminologia.aprobadorFinal,
             conclusion,
             motivo: motivo || "",
             version: folio.numero_version,
+            norma_nombre: norma.nombre,
+            metodologia: norma.metodologia,
             link: `${APP_URL}/folios/${folio_id}`,
-            norma,
-            ...orgInfo,
-          }),
-        });
+          },
+          `folio-dictamen-${folio_id}-${folio.numero_version}`,
+        );
       }
     }
 
