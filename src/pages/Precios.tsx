@@ -14,11 +14,11 @@ import { ContactDialog } from "@/components/ContactDialog";
 const FAQ = [
   {
     q: "¿Qué incluye exactamente el plan Starter?",
-    a: "Hasta 3 usuarios, folios ilimitados, matriz de riesgos completa (AMEF/ISO 14971 para NOM-241 o ICH Q9 para NOM-059), firma electrónica conforme a 21 CFR Part 11, checklist regulatorio adaptado a tu norma, 30 consultas mensuales al Asistente IA, Centro de Recursos TRACEA y soporte por correo. Ideal para equipos pequeños que inician su Sistema de Gestión de Riesgos bajo NOM-241 o NOM-059.",
+    a: "Hasta 3 usuarios, folios ilimitados, matriz de riesgos completa (FEUM / ISO 14971 para NOM-241 o ICH Q9 para NOM-059), firma electrónica conforme a 21 CFR Part 11, checklist regulatorio adaptado a tu norma, 30 consultas mensuales al Asistente IA, Centro de Recursos TRACEA y soporte por correo. Ideal para equipos pequeños que inician su Sistema de Gestión de Riesgos bajo NOM-241 o NOM-059.",
   },
   {
     q: "¿Qué normas regulatorias soporta TRACEA?",
-    a: "TRACEA opera de forma nativa bajo dos normas mexicanas:\n\n• NOM-241-SSA1-2025 — Buenas Prácticas de Fabricación de dispositivos médicos. Usa la metodología AMEF alineada a ISO 14971:2019. Aprobador final: Responsable Sanitario.\n\n• NOM-059-SSA1-2015 — Buenas Prácticas de Fabricación de medicamentos. Usa la metodología ICH Q9 (R1) — Quality Risk Management. Aprobador final: Director Técnico.\n\nAl crear tu organización eliges la norma aplicable. La terminología, los catálogos de severidad/ocurrencia/detectabilidad, los umbrales de NPR y los formatos PDF se adaptan automáticamente. El plan Enterprise permite operar bajo ambas normas simultáneamente (modo multi-norma).",
+    a: "TRACEA opera de forma nativa bajo dos normas mexicanas:\n\n• NOM-241-SSA1-2025 — Buenas Prácticas de Fabricación de dispositivos médicos. Usa la metodología FEUM / ISO 14971:2019. Aprobador final: Responsable Sanitario.\n\n• NOM-059-SSA1-2015 — Buenas Prácticas de Fabricación de medicamentos. Usa la metodología ICH Q9 (R1) — Quality Risk Management. Aprobador final: Director Técnico.\n\nAl crear tu organización eliges la norma aplicable. La terminología, los catálogos de severidad/ocurrencia/detectabilidad, los umbrales de NPR y los formatos PDF se adaptan automáticamente. El plan Enterprise permite operar bajo ambas normas simultáneamente (modo multi-norma).",
   },
   {
     q: "¿Puedo cambiar de plan en cualquier momento?",

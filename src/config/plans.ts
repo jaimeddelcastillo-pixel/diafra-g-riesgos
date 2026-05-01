@@ -39,7 +39,7 @@ export const PLANS: Plan[] = [
     features: [
       "Hasta 3 usuarios",
       "Folios ilimitados",
-      "Matriz AMEF (ISO 14971) o ICH Q9",
+      "Matriz FEUM / ISO 14971 o ICH Q9",
       "Soporte multi-norma: NOM-241 y NOM-059",
       "Firma electrónica conforme a 21 CFR Part 11",
       "Checklist regulatorio adaptado a tu norma",
