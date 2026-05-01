@@ -533,13 +533,59 @@ export default function Register() {
                   placeholder="••••••••"
                 />
               </div>
+              <div className="space-y-3 pt-2 border-t">
+                <div className="flex items-start gap-2">
+                  <Checkbox
+                    id="acepta-terminos"
+                    checked={aceptaTerminos}
+                    onCheckedChange={(v) => setAceptaTerminos(v === true)}
+                    className="mt-0.5"
+                  />
+                  <Label
+                    htmlFor="acepta-terminos"
+                    className="text-xs font-normal leading-relaxed cursor-pointer"
+                  >
+                    He leído y acepto los{" "}
+                    <Link
+                      to="/terminos"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary underline font-medium"
+                    >
+                      Términos y Condiciones
+                    </Link>
+                  </Label>
+                </div>
+                <div className="flex items-start gap-2">
+                  <Checkbox
+                    id="acepta-privacidad"
+                    checked={aceptaPrivacidad}
+                    onCheckedChange={(v) => setAceptaPrivacidad(v === true)}
+                    className="mt-0.5"
+                  />
+                  <Label
+                    htmlFor="acepta-privacidad"
+                    className="text-xs font-normal leading-relaxed cursor-pointer"
+                  >
+                    He leído y acepto el{" "}
+                    <Link
+                      to="/privacidad"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary underline font-medium"
+                    >
+                      Aviso de Privacidad
+                    </Link>
+                  </Label>
+                </div>
+              </div>
               <div className="flex gap-2">
                 <Button variant="outline" onClick={() => setStep(2)} className="flex-1">
                   <ArrowLeft className="mr-2 h-4 w-4" /> Atrás
                 </Button>
                 <Button
                   className="flex-1"
-                  disabled={submitting}
+                  disabled={submitting || !aceptaTerminos || !aceptaPrivacidad}
                   onClick={() => {
                     if (validateStep3()) handleRegister();
                   }}
