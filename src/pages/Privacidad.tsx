@@ -8,7 +8,8 @@ export default function Privacidad() {
     >
       <h2>I. Identidad y Domicilio del Responsable</h2>
       <p>
-        [NOMBRE LEGAL DE LA EMPRESA], RFC: [RFC], con domicilio en [DOMICILIO COMPLETO], México,
+        Jaime David Del Castillo Couret, RFC: CACJ730326698, con domicilio en El Rosario N° 51,
+        Col. Club de Golf La Hacienda, Atizapán de Zaragoza, C.P. 52959, Estado de México, México,
         es el Responsable del tratamiento de sus datos personales conforme a la Ley Federal de
         Protección de Datos Personales en Posesión de los Particulares (LFPDPPP) y su Reglamento.
       </p>
@@ -145,9 +146,11 @@ export default function Privacidad() {
 
       <h2>XI. Contacto</h2>
       <ul>
+        <li><strong>Responsable:</strong> Jaime David Del Castillo Couret</li>
+        <li><strong>RFC:</strong> CACJ730326698</li>
         <li><strong>Correo:</strong> soporte@tracea.com.mx</li>
         <li><strong>Web:</strong> tracea.com.mx/privacidad</li>
-        <li><strong>Domicilio:</strong> —</li>
+        <li><strong>Domicilio:</strong> El Rosario N° 51, Col. Club de Golf La Hacienda, Atizapán de Zaragoza, C.P. 52959, Estado de México, México</li>
       </ul>
 
       <p className="text-xs text-muted-foreground border-t pt-4 mt-8">

@@ -16,7 +16,7 @@ export default function Terminos() {
       <h2>1. Definiciones</h2>
       <p>Para efectos de los presentes Términos y Condiciones, se entiende por:</p>
       <ul>
-        <li><strong>TRACEA:</strong> Plataforma SaaS de gestión de calidad operada por [NOMBRE LEGAL], RFC [RFC], con domicilio en [DOMICILIO].</li>
+        <li><strong>TRACEA:</strong> Plataforma SaaS de gestión de calidad operada por Jaime David Del Castillo Couret, RFC CACJ730326698, con domicilio en El Rosario N° 51, Col. Club de Golf La Hacienda, Atizapán de Zaragoza, C.P. 52959, Estado de México, México.</li>
         <li><strong>Usuario:</strong> Persona física que accede a la plataforma con credenciales propias.</li>
         <li><strong>Organización:</strong> Persona moral o física con actividad empresarial que contrata los servicios de TRACEA.</li>
         <li><strong>Administrador:</strong> Usuario con privilegios de gestión dentro de su Organización.</li>
@@ -130,9 +130,11 @@ export default function Terminos() {
 
       <h2>12. Contacto</h2>
       <ul>
+        <li><strong>Responsable:</strong> Jaime David Del Castillo Couret</li>
+        <li><strong>RFC:</strong> CACJ730326698</li>
         <li><strong>Correo:</strong> soporte@tracea.com.mx</li>
         <li><strong>Web:</strong> tracea.com.mx</li>
-        <li><strong>Domicilio:</strong> —</li>
+        <li><strong>Domicilio:</strong> El Rosario N° 51, Col. Club de Golf La Hacienda, Atizapán de Zaragoza, C.P. 52959, Estado de México, México</li>
       </ul>
 
       <p className="text-xs text-muted-foreground border-t pt-4 mt-8">
