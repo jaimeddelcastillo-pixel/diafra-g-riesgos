@@ -11,6 +11,18 @@ function chk(checked: boolean): string {
   return checked ? "(X)" : "( )";
 }
 
+// Normaliza espacios unicode (NBSP, etc.) a espacio normal y colapsa whitespace
+// para evitar que jsPDF-autotable rompa palabras carácter por carácter.
+function normalizarTexto(s: string | null | undefined): string {
+  if (!s) return "—";
+  return s
+    .replace(/[\u00A0\u1680\u2000-\u200B\u202F\u205F\u3000\uFEFF]/g, " ")
+    .replace(/\r\n?/g, "\n")
+    .replace(/[ \t]+/g, " ")
+    .replace(/ *\n */g, "\n")
+    .trim();
+}
+
 function fmtDate(d: string | null | undefined): string {
   if (!d) return "—";
   try {
@@ -412,7 +424,7 @@ export async function generateFolioPDF(
         ],
         [
           {
-            content: `Secuencia de Eventos:\n${(r.secuencia_eventos || "—").replace(/[ \t]+/g, " ").replace(/\s*\n\s*/g, "\n")}\n\nModo de Falla:\n${(r.peligro_modo_falla || "—").replace(/[ \t]+/g, " ")}\n\nCausa:\n${(r.causa_potencial || "—").replace(/[ \t]+/g, " ")}`,
+            content: `Secuencia de Eventos:\n${normalizarTexto(r.secuencia_eventos)}\n\nModo de Falla:\n${normalizarTexto(r.peligro_modo_falla)}\n\nCausa:\n${normalizarTexto(r.causa_potencial)}`,
             styles: { halign: "left", valign: "top", fontSize: 7, overflow: "linebreak", cellPadding: 2 },
           },
           {
