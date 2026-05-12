@@ -11,6 +11,18 @@ function chk(checked: boolean): string {
   return checked ? "(X)" : "( )";
 }
 
+// Normaliza espacios unicode (NBSP, etc.) a espacio normal y colapsa whitespace
+// para evitar que jsPDF-autotable rompa palabras carácter por carácter.
+function normalizarTexto(s: string | null | undefined): string {
+  if (!s) return "—";
+  return s
+    .replace(/[\u00A0\u1680\u2000-\u200B\u202F\u205F\u3000\uFEFF]/g, " ")
+    .replace(/\r\n?/g, "\n")
+    .replace(/[ \t]+/g, " ")
+    .replace(/ *\n */g, "\n")
+    .trim();
+}
+
 function fmtDate(d: string | null | undefined): string {
   if (!d) return "—";
   try {
