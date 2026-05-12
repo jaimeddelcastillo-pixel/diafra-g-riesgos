@@ -469,12 +469,81 @@ export function RiesgoFormDialog({ open, onClose, folioId, riesgo, nextNumeroId,
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs">Secuencia de Eventos</Label>
-                <Textarea
-                  value={form.secuencia_eventos}
-                  onChange={(e) => update("secuencia_eventos", e.target.value)}
-                  rows={2}
-                  placeholder="Cadena de eventos que lleva al daño"
-                />
+                <div className="space-y-1.5 rounded-md border border-input bg-background p-2">
+                  {pasos.map((paso, idx) => (
+                    <div key={idx} className="flex items-center gap-1.5">
+                      <span className="w-6 text-xs font-semibold text-muted-foreground tabular-nums text-right">
+                        {idx + 1}.
+                      </span>
+                      <Input
+                        value={paso}
+                        onChange={(e) => actualizarPaso(idx, e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            const next = [...pasos];
+                            next.splice(idx + 1, 0, "");
+                            setPasosSync(next);
+                            // Foco al nuevo input en el siguiente tick
+                            setTimeout(() => {
+                              const inputs = (e.currentTarget.closest("div.space-y-1\\.5")
+                                ?.parentElement?.querySelectorAll("input") || []) as NodeListOf<HTMLInputElement>;
+                              inputs[idx + 1]?.focus();
+                            }, 0);
+                          }
+                        }}
+                        placeholder={`Paso ${idx + 1}`}
+                        className="h-8 text-sm"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 shrink-0"
+                        onClick={() => moverPaso(idx, -1)}
+                        disabled={idx === 0}
+                        title="Subir"
+                      >
+                        <ArrowUp className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 shrink-0"
+                        onClick={() => moverPaso(idx, 1)}
+                        disabled={idx === pasos.length - 1}
+                        title="Bajar"
+                      >
+                        <ArrowDown className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 shrink-0 text-destructive hover:text-destructive"
+                        onClick={() => eliminarPaso(idx)}
+                        disabled={pasos.length === 1 && !paso.trim()}
+                        title="Eliminar"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  ))}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={agregarPaso}
+                    className="h-7 w-full text-xs"
+                  >
+                    <Plus className="h-3.5 w-3.5 mr-1" />
+                    Agregar paso
+                  </Button>
+                </div>
+                <p className="text-[10px] text-muted-foreground">
+                  La numeración 1, 2, 3… se genera automáticamente al guardar.
+                </p>
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs">Modo de Falla *</Label>
