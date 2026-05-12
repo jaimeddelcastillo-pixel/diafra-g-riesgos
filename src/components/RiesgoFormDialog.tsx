@@ -247,6 +247,27 @@ export function RiesgoFormDialog({ open, onClose, folioId, riesgo, nextNumeroId,
     };
   });
 
+  // ─── Estado local de pasos de la secuencia (sincronizado con form.secuencia_eventos) ──
+  const [pasos, setPasos] = useState<string[]>(() => parseSteps(riesgo?.secuencia_eventos));
+
+  const setPasosSync = (next: string[]) => {
+    const arr = next.length === 0 ? [""] : next;
+    setPasos(arr);
+    update("secuencia_eventos", serializeSteps(arr));
+  };
+
+  const agregarPaso = () => setPasosSync([...pasos, ""]);
+  const eliminarPaso = (idx: number) => setPasosSync(pasos.filter((_, i) => i !== idx));
+  const actualizarPaso = (idx: number, value: string) =>
+    setPasosSync(pasos.map((p, i) => (i === idx ? value : p)));
+  const moverPaso = (idx: number, dir: -1 | 1) => {
+    const target = idx + dir;
+    if (target < 0 || target >= pasos.length) return;
+    const next = [...pasos];
+    [next[idx], next[target]] = [next[target], next[idx]];
+    setPasosSync(next);
+  };
+
   const npr = calcularNPR(form.severidad, form.ocurrencia, form.deteccion, normaConfig.key);
   const nprResidual = calcularNPR(form.sev_residual, form.ocu_residual, form.det_residual, normaConfig.key);
   const needsAction =
