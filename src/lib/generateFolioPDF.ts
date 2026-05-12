@@ -412,7 +412,7 @@ export async function generateFolioPDF(
         ],
         [
           {
-            content: `Secuencia de Eventos:\n${(r.secuencia_eventos || "—").replace(/[ \t]+/g, " ").replace(/\s*\n\s*/g, "\n")}\n\nModo de Falla:\n${(r.peligro_modo_falla || "—").replace(/[ \t]+/g, " ")}\n\nCausa:\n${(r.causa_potencial || "—").replace(/[ \t]+/g, " ")}`,
+            content: `Secuencia de Eventos:\n${normalizarTexto(r.secuencia_eventos)}\n\nModo de Falla:\n${normalizarTexto(r.peligro_modo_falla)}\n\nCausa:\n${normalizarTexto(r.causa_potencial)}`,
             styles: { halign: "left", valign: "top", fontSize: 7, overflow: "linebreak", cellPadding: 2 },
           },
           {
