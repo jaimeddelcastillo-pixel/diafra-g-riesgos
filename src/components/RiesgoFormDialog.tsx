@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, Upload, FileText, X, HelpCircle, ChevronDown, ChevronUp, ShieldCheck, Settings, FlaskConical } from "lucide-react";
+import { CalendarIcon, Upload, FileText, X, HelpCircle, ChevronDown, ChevronUp, ShieldCheck, Settings, FlaskConical, Plus, ArrowUp, ArrowDown, Trash2 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -35,6 +35,32 @@ interface RiesgoFormProps {
 }
 
 const SCORES = Array.from({ length: 10 }, (_, i) => i + 1);
+
+// ─── Secuencia de Eventos: helpers ────────────────────────────────────────────
+/** Normaliza espacios unicode (NBSP, etc.) a espacio simple. */
+function normalizarPaso(s: string): string {
+  return s
+    .replace(/[\u00A0\u1680\u2000-\u200B\u202F\u205F\u3000\uFEFF]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/** Parsea un texto guardado a array de pasos. Soporta "1. x", "1) x" o un paso por línea. */
+function parseSteps(text: string | null | undefined): string[] {
+  if (!text || !text.trim()) return [""];
+  const lines = text
+    .replace(/\r\n?/g, "\n")
+    .split("\n")
+    .map((l) => l.replace(/^\s*\d+[\.\)]\s*/, "").trim())
+    .filter((l) => l.length > 0);
+  return lines.length > 0 ? lines : [""];
+}
+
+/** Serializa los pasos a "1. ...\n2. ...\n3. ..." descartando vacíos. */
+function serializeSteps(steps: string[]): string {
+  const limpios = steps.map(normalizarPaso).filter((s) => s.length > 0);
+  return limpios.map((s, i) => `${i + 1}. ${s}`).join("\n");
+}
 
 interface Anexo {
   name: string;
