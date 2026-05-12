@@ -411,7 +411,10 @@ export async function generateFolioPDF(
           },
         ],
         [
-          `Secuencia de Eventos:\n${r.secuencia_eventos || "—"}\n\nModo de Falla:\n${r.peligro_modo_falla || "—"}\n\nCausa:\n${r.causa_potencial || "—"}`,
+          {
+            content: `Secuencia de Eventos:\n${(r.secuencia_eventos || "—").replace(/[ \t]+/g, " ").replace(/\s*\n\s*/g, "\n")}\n\nModo de Falla:\n${(r.peligro_modo_falla || "—").replace(/[ \t]+/g, " ")}\n\nCausa:\n${(r.causa_potencial || "—").replace(/[ \t]+/g, " ")}`,
+            styles: { halign: "left", valign: "top", fontSize: 7, overflow: "linebreak", cellPadding: 2 },
+          },
           {
             content: `NPR: (${nprFormula})\n${getNPRText(npr, r.severidad, folio.norma_folio)}`,
             colSpan: 2,
