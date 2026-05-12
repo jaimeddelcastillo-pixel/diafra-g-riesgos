@@ -906,7 +906,7 @@ function SeccionRiesgos({ riesgos, locked, folioId, normaFolio }: { riesgos: Rie
                 <th rowSpan={2} className="border-r border-b p-2 text-center font-bold w-10">
                   ID
                 </th>
-                <th colSpan={6} className="border-r border-b p-2 text-center font-bold">
+                <th colSpan={7} className="border-r border-b p-2 text-center font-bold">
                   1. IDENTIFICACIÓN — {refs}
                 </th>
                 <th colSpan={4} className="border-r border-b p-2 text-center font-bold">
@@ -928,6 +928,7 @@ function SeccionRiesgos({ riesgos, locked, folioId, normaFolio }: { riesgos: Rie
                 <th className="border-r border-b p-1.5 min-w-[90px]">Etapa</th>
                 <th className="border-r border-b p-1.5 min-w-[110px]">Peligro (fuente)</th>
                 <th className="border-r border-b p-1.5 min-w-[110px]">Situación Peligrosa</th>
+                <th className="border-r border-b p-1.5 min-w-[130px]">Secuencia de Eventos</th>
                 <th className="border-r border-b p-1.5 min-w-[130px]">Modo de Falla</th>
                 <th className="border-r border-b p-1.5 min-w-[110px]">Causa Potencial</th>
                 <th className="border-r border-b p-1.5 min-w-[110px]">Efecto / Daño</th>
@@ -971,6 +972,9 @@ function SeccionRiesgos({ riesgos, locked, folioId, normaFolio }: { riesgos: Rie
                     </td>
                     <td className="border-r p-1.5 max-w-[110px] whitespace-pre-line">
                       {r.situacion_peligrosa || <span className="text-muted-foreground/50 italic text-[9px]">Sin capturar</span>}
+                    </td>
+                    <td className="border-r p-1.5 max-w-[130px] whitespace-pre-line">
+                      {r.secuencia_eventos || <span className="text-muted-foreground/50 italic text-[9px]">Sin capturar</span>}
                     </td>
                     <td className="border-r p-1.5 max-w-[130px] whitespace-pre-line">{r.peligro_modo_falla}</td>
                     <td className="border-r p-1.5 max-w-[110px] whitespace-pre-line">{r.causa_potencial}</td>
