@@ -28,15 +28,42 @@ function normalizarTexto(s: string | null | undefined): string {
   );
   // 4) Cualquier separador Unicode (NBSP, narrow NBSP, ideográfico, en/em space, etc.) → espacio normal
   out = out.replace(/[\u00A0\u1680\u2000-\u200A\u202F\u205F\u3000]/g, " ");
-  // 5) Colapsar tabs/espacios y limpiar márgenes de cada línea
+  // 5) Reparar texto "char-spaced" (p.ej. "e n   c o n d i c i o n e s") que aparece
+  //    cuando el usuario pegó texto desde un PDF con kerning. Detección por línea:
+  //    si una línea tiene muchos "tokens" de 1 carácter, asumimos espacio simple = intra-palabra
+  //    y espacio doble = separador real entre palabras.
+  out = out
+    .split("\n")
+    .map((line) => {
+      const tokens = line.split(" ");
+      const singles = tokens.filter((t) => t.length === 1).length;
+      const nonEmpty = tokens.filter((t) => t.length > 0).length;
+      if (singles >= 5 && nonEmpty > 0 && singles / nonEmpty >= 0.6) {
+        let result = "";
+        for (let i = 0; i < tokens.length; i++) {
+          const t = tokens[i];
+          if (t === "") {
+            // separador real (doble espacio) → un espacio entre palabras
+            if (result && !result.endsWith(" ")) result += " ";
+          } else {
+            result += t;
+          }
+        }
+        return result.replace(/ {2,}/g, " ").trim();
+      }
+      return line;
+    })
+    .join("\n");
+  // 6) Colapsar tabs/espacios y limpiar márgenes de cada línea
   out = out
     .replace(/[ \t]+/g, " ")
     .replace(/ *\n */g, "\n")
     .trim();
-  // 6) Red de seguridad: si quedó algún "token" sin espacios > 30 chars,
-  //    insertar zero-width space cada 30 chars para que autotable pueda romper
-  //    en lugar de hacer un wrap carácter por carácter (causa visual reportada).
-  out = out.replace(/\S{31,}/g, (token) => token.replace(/(.{30})/g, "$1\u200B"));
+  // 7) Red de seguridad: si quedó algún "token" sin espacios > 30 chars,
+  //    insertar un espacio normal cada 30 chars para que autotable pueda romper
+  //    en lugar de hacer un wrap carácter por carácter. (Evitamos \u200B porque
+  //    las fuentes estándar de jsPDF no lo soportan y lo renderizan raro.)
+  out = out.replace(/\S{31,}/g, (token) => token.replace(/(.{30})/g, "$1 "));
   return out || "—";
 }
 
