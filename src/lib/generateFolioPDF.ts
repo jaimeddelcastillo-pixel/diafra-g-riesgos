@@ -327,7 +327,6 @@ export async function generateFolioPDF(
   function newPage(): number {
     if (pageNum > 0) doc.addPage();
     pageNum++;
-    addFooter();
     return tableMargin.top; // debajo del header con margen
   }
 
@@ -726,6 +725,7 @@ export async function generateFolioPDF(
   for (let i = 1; i <= totalPgs; i++) {
     doc.setPage(i);
     addHeader(i, totalPgs);
+    addFooter();
   }
 
   doc.save(`${folio.codigo}_${folio.proceso_equipo.replace(/[^a-zA-Z0-9]/g, "_")}.pdf`);
