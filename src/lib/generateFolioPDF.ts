@@ -42,7 +42,7 @@ function sanitizePdfValue<T>(value: T): T {
 // Normaliza espacios unicode (NBSP, etc.) a espacio normal y colapsa whitespace
 // para evitar que jsPDF-autotable rompa palabras carácter por carácter.
 function normalizarTexto(s: string | null | undefined): string {
-  if (!s) return "—";
+  if (!s) return "-";
   let out = s;
   // 1) Normalización Unicode canónica (compat) — colapsa ligaduras y formas raras
   try { out = out.normalize("NFKC"); } catch { /* noop */ }
@@ -96,7 +96,7 @@ function normalizarTexto(s: string | null | undefined): string {
 }
 
 function fmtDate(d: string | null | undefined): string {
-  if (!d) return "—";
+  if (!d) return "-";
   try {
     const safe = d.length === 10 ? `${d}T12:00:00` : d;
     return new Date(safe).toLocaleDateString("es-MX");
@@ -330,8 +330,8 @@ export async function generateFolioPDF(
     doc.setFont("helvetica", "bold");
     doc.setFontSize(9);
     doc.setTextColor(0);
-    doc.text(romano, margin + 4, y + 4.8);
-    doc.text(text, margin + 18, y + 4.8);
+    doc.text(pdfSafeText(romano), margin + 4, y + 4.8);
+    doc.text(pdfSafeText(text), margin + 18, y + 4.8);
     return y + h + 0.5;
   }
 
