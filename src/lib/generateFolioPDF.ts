@@ -662,7 +662,7 @@ export async function generateFolioPDF(
     ],
     theme: "grid",
     styles: { fontSize: 8, cellPadding: 3, lineColor: [0, 0, 0], lineWidth: 0.2, overflow: "linebreak" },
-    margin: { left: margin, right: margin },
+    margin: tableMargin,
   });
 
   // ─── PÁGINA FINAL: VII. CONTROL DE CAMBIOS ──────────────────────────────────
@@ -699,7 +699,7 @@ export async function generateFolioPDF(
       3: { cellWidth: "auto" as any },
       4: { cellWidth: 50 },
     },
-    margin: { left: margin, right: margin },
+    margin: tableMargin,
   });
 
   // ─── Renderizar encabezados con total de páginas correcto ────────────────────
