@@ -503,6 +503,7 @@ export async function generateFolioPDF(
           },
         ],
         [
+          { content: "", styles: { fillColor: [248, 248, 248] } },
           {
             content: `Secuencia de Eventos:\n${normalizarTexto(r.secuencia_eventos)}\n\nModo de Falla:\n${normalizarTexto(r.peligro_modo_falla)}\n\nCausa:\n${normalizarTexto(r.causa_potencial)}`,
             styles: { halign: "left", valign: "top", fontSize: 7, overflow: "linebreak", cellPadding: 2 },
@@ -520,6 +521,7 @@ export async function generateFolioPDF(
           },
         ],
         [
+          { content: "", styles: { fillColor: [248, 248, 248] } },
           `${t.efectoDano}:\n${r.efecto_dano || "—"}`,
           { content: umbralLeyenda, colSpan: 2, styles: { fontSize: 7, valign: "middle" } },
           `Verificado por: ${r.verificado_por || "—"}\nFecha: ${fmtDate(r.fecha_verificacion)}\nResultado: ${r.resultado_verificacion || "—"}`,
@@ -529,6 +531,7 @@ export async function generateFolioPDF(
           },
         ],
         [
+          { content: "", styles: { fillColor: [248, 248, 248] } },
           `¿Requiere Acción?  ${chk(r.requiere_accion)} Sí   ${chk(!r.requiere_accion)} No`,
           {
             content: `Justificación de Aceptabilidad:\n${r.justificacion_aceptabilidad || "—"}`,
