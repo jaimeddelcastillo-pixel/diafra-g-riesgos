@@ -570,7 +570,7 @@ export async function generateFolioPDF(
       margin: tableMargin,
     });
   } else {
-    autoTable(doc, {
+    drawTable({
       startY: y,
       head: [["RIESGO ID", "NOMBRE DEL ARCHIVO", "TIPO"]],
       body: riesgosConAnexos.flatMap((r) => {
@@ -593,7 +593,7 @@ export async function generateFolioPDF(
   // V. Evaluación Global
   const beneficioUpper = t.beneficio.toUpperCase();
   y = sectionHeader(y, "V.", `EVALUACIÓN GLOBAL DE ${beneficioUpper} vs RIESGO`);
-  autoTable(doc, {
+  drawTable({
     startY: y,
     body: [
       [
@@ -628,7 +628,7 @@ export async function generateFolioPDF(
   const hasNoAceptables = riesgos.some((r) => r.dictamen === "No Aceptable");
   const conclusion = folio.conclusion || "";
 
-  autoTable(doc, {
+  drawTable({
     startY: y,
     body: [
       [
@@ -678,7 +678,7 @@ export async function generateFolioPDF(
     ? [["—", folio.numero_version || "1.0", fmtDate(folio.created_at), "Versión inicial del documento.", "—"]]
     : versiones.map((v) => [v.version_de, v.version_a, v.fecha, v.descripcion, v.realizado_por]);
 
-  autoTable(doc, {
+  drawTable({
     startY: y,
     head: [
       [
