@@ -335,11 +335,15 @@ export async function generateFolioPDF(
     return y + h + 0.5;
   }
 
+  function drawTable(options: Parameters<typeof autoTable>[1]) {
+    autoTable(doc, sanitizePdfValue(options));
+  }
+
   // ─── PÁGINA 1: I. DESCRIPCIÓN + II. COMITÉ ──────────────────────────────────
   let y = newPage();
   y = sectionHeader(y, "I.", "DESCRIPCIÓN");
 
-  autoTable(doc, {
+  drawTable({
     startY: y,
     body: [
       [
