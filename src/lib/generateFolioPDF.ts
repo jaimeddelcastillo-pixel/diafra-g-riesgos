@@ -11,10 +11,26 @@ function chk(checked: boolean): string {
   return checked ? "(X)" : "( )";
 }
 
+function removePdfUnsafeChars(s: string, keepLineBreaks = false): string {
+  return Array.from(s).filter((char) => {
+    const code = char.charCodeAt(0);
+    if (keepLineBreaks && code === 10) return true;
+    if (code < 32 || code === 127) return false;
+    if ([0x00AD, 0x034F, 0x061C, 0x115F, 0x1160, 0x17B4, 0x17B5, 0xFEFF, 0xFFFD].includes(code)) return false;
+    if (code >= 0x180B && code <= 0x180F) return false;
+    if (code >= 0x200B && code <= 0x200F) return false;
+    if (code >= 0x202A && code <= 0x202E) return false;
+    if (code >= 0x2060 && code <= 0x206F) return false;
+    if (code >= 0xFE00 && code <= 0xFE0F) return false;
+    if (code >= 0xFFF9 && code <= 0xFFFC) return false;
+    return true;
+  }).join("");
+}
+
 function pdfSafeText(s: string): string {
   let out = s;
   try { out = out.normalize("NFKC"); } catch { /* noop */ }
-  return out
+  return removePdfUnsafeChars(out)
     .replace(/[\u2018\u2019\u201A\u201B\u2032\u2035]/g, "'")
     .replace(/[\u201C\u201D\u201E\u201F\u2033\u2036]/g, '"')
     .replace(/[\u2010-\u2015\u2212]/g, "-")
@@ -23,9 +39,7 @@ function pdfSafeText(s: string): string {
     .replace(/\u2265/g, ">=")
     .replace(/\u2264/g, "<=")
     .replace(/[\u2713\u2714]/g, "(X)")
-    .replace(/[\u2610\u25A1]/g, "( )")
-    .replace(/[\uFFFD\uFFF9-\uFFFC]/g, "")
-    .replace(/[\u0000-\u0009\u000B-\u001F\u007F]/g, "");
+    .replace(/[\u2610\u25A1]/g, "( )");
 }
 
 function sanitizePdfValue<T>(value: T): T {
@@ -50,10 +64,7 @@ function normalizarTexto(s: string | null | undefined): string {
   out = out.replace(/\r\n?/g, "\n");
   // 3) Quitar caracteres de control y formato invisibles (zero-width, BOM, soft-hyphen, bidi, VS, etc.)
   //    Conservamos \n (\u000A) para los saltos de párrafo intencionales.
-  out = out.replace(
-    /[\u0000-\u0009\u000B-\u001F\u007F\u00AD\u034F\u061C\u115F\u1160\u17B4\u17B5\u180B-\u180F\u200B-\u200F\u202A-\u202E\u2060-\u206F\uFE00-\uFE0F\uFEFF\uFFF9-\uFFFC]/g,
-    "",
-  );
+  out = removePdfUnsafeChars(out, true);
   // 4) Cualquier separador Unicode (NBSP, narrow NBSP, ideográfico, en/em space, etc.) → espacio normal
   out = out.replace(/[\u00A0\u1680\u2000-\u200A\u202F\u205F\u3000]/g, " ");
   // 5) Reparar texto "char-spaced" (p.ej. "e n   c o n d i c i o n e s") que aparece
