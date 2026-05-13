@@ -15,12 +15,29 @@ function chk(checked: boolean): string {
 // para evitar que jsPDF-autotable rompa palabras carácter por carácter.
 function normalizarTexto(s: string | null | undefined): string {
   if (!s) return "—";
-  return s
-    .replace(/[\u00A0\u1680\u2000-\u200B\u202F\u205F\u3000\uFEFF]/g, " ")
-    .replace(/\r\n?/g, "\n")
+  let out = s;
+  // 1) Normalización Unicode canónica (compat) — colapsa ligaduras y formas raras
+  try { out = out.normalize("NFKC"); } catch { /* noop */ }
+  // 2) Normalizar saltos de línea
+  out = out.replace(/\r\n?/g, "\n");
+  // 3) Quitar caracteres de control y formato invisibles (zero-width, BOM, soft-hyphen, bidi, VS, etc.)
+  //    Conservamos \n (\u000A) para los saltos de párrafo intencionales.
+  out = out.replace(
+    /[\u0000-\u0009\u000B-\u001F\u007F\u00AD\u034F\u061C\u115F\u1160\u17B4\u17B5\u180B-\u180F\u200B-\u200F\u202A-\u202E\u2060-\u206F\uFE00-\uFE0F\uFEFF\uFFF9-\uFFFC]/g,
+    "",
+  );
+  // 4) Cualquier separador Unicode (NBSP, narrow NBSP, ideográfico, en/em space, etc.) → espacio normal
+  out = out.replace(/[\u00A0\u1680\u2000-\u200A\u202F\u205F\u3000]/g, " ");
+  // 5) Colapsar tabs/espacios y limpiar márgenes de cada línea
+  out = out
     .replace(/[ \t]+/g, " ")
     .replace(/ *\n */g, "\n")
     .trim();
+  // 6) Red de seguridad: si quedó algún "token" sin espacios > 30 chars,
+  //    insertar zero-width space cada 30 chars para que autotable pueda romper
+  //    en lugar de hacer un wrap carácter por carácter (causa visual reportada).
+  out = out.replace(/\S{31,}/g, (token) => token.replace(/(.{30})/g, "$1\u200B"));
+  return out || "—";
 }
 
 function fmtDate(d: string | null | undefined): string {
