@@ -563,7 +563,7 @@ export async function generateFolioPDF(
       body: [[{ content: "Sin evidencias adjuntas registradas en el sistema.", styles: { fontStyle: "italic", textColor: [120, 120, 120] } }]],
       theme: "grid",
       styles: { fontSize: 8, cellPadding: 3, lineColor: [0, 0, 0], lineWidth: 0.2, minCellHeight: 10 },
-      margin: { left: margin, right: margin },
+      margin: tableMargin,
     });
   } else {
     autoTable(doc, {
@@ -581,7 +581,7 @@ export async function generateFolioPDF(
       styles: { fontSize: 8, cellPadding: 2.5, lineColor: [0, 0, 0], lineWidth: 0.2 },
       headStyles: { fillColor: BAND_FILL, textColor: [0, 0, 0], fontStyle: "bold", halign: "center", lineColor: [0, 0, 0], lineWidth: 0.2 },
       columnStyles: { 0: { cellWidth: 30, halign: "center" }, 1: { cellWidth: "auto" as any }, 2: { cellWidth: 30, halign: "center" } },
-      margin: { left: margin, right: margin },
+      margin: tableMargin,
     });
   }
   y = (doc as any).lastAutoTable.finalY + 4;
@@ -609,7 +609,7 @@ export async function generateFolioPDF(
     ],
     theme: "grid",
     styles: { fontSize: 8, cellPadding: 3, lineColor: [0, 0, 0], lineWidth: 0.2, overflow: "linebreak" },
-    margin: { left: margin, right: margin },
+    margin: tableMargin,
   });
   y = (doc as any).lastAutoTable.finalY + 4;
 
