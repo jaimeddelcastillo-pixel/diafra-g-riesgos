@@ -398,7 +398,7 @@ export async function generateFolioPDF(
   y = (doc as any).lastAutoTable.finalY + 4;
   y = sectionHeader(y, "II.", "FORMACIÓN Y APROBACIÓN DEL COMITÉ TÉCNICO");
 
-  autoTable(doc, {
+  drawTable({
     startY: y,
     head: [["NOMBRE", "CARGO", "RESPONSABILIDAD", "FIRMA", "FECHA FIRMA"]],
     body:
@@ -453,7 +453,7 @@ export async function generateFolioPDF(
         : "GESTIÓN DE RIESGOS";
     y = sectionHeader(y, "III.", label);
 
-    autoTable(doc, {
+    drawTable({
       startY: y,
       head: [
         [
@@ -562,7 +562,7 @@ export async function generateFolioPDF(
   });
 
   if (riesgosConAnexos.length === 0) {
-    autoTable(doc, {
+    drawTable({
       startY: y,
       body: [[{ content: "Sin evidencias adjuntas registradas en el sistema.", styles: { fontStyle: "italic", textColor: [120, 120, 120] } }]],
       theme: "grid",
