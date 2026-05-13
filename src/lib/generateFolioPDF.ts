@@ -183,6 +183,10 @@ export async function generateFolioPDF(
   const pageW = doc.internal.pageSize.getWidth();
   const pageH = doc.internal.pageSize.getHeight();
   const margin = 8;
+  const headerH = 16;
+  const headerGap = 6;
+  const footerGap = 8;
+  const tableMargin = { left: margin, right: margin, top: margin + headerH + headerGap, bottom: footerGap };
 
   // Cargar logo y datos
   const orgLogo = await fetchOrgLogoDataUrl(org?.logo_url);
@@ -211,7 +215,6 @@ export async function generateFolioPDF(
 
   // ─── Encabezado: 3 cajas como el modelo TRACEA ──────────────────────────────
   function addHeader(pageIndex: number, totalPages: number) {
-    const headerH = 16;
     const logoW = 38;
     const codigoW = codigoLabel ? 32 : 24; // si no hay código, solo paginación
     const centerW = pageW - 2 * margin - logoW - codigoW;
