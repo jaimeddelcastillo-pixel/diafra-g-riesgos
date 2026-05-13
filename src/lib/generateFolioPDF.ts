@@ -468,7 +468,6 @@ export async function generateFolioPDF(
         [
           {
             content: String(r.numero_id).padStart(2, "0"),
-            rowSpan: 6,
             styles: { halign: "center", valign: "middle", fontSize: 16, fontStyle: "bold", fillColor: [248, 248, 248] },
           },
           `${t.procesoEquipo}:\n${r.etapa_proceso || "—"}`,
@@ -478,6 +477,7 @@ export async function generateFolioPDF(
           { content: `Acción Implementada:\n${r.accion_implementada || "—"}`, colSpan: 2 },
         ],
         [
+          { content: "", styles: { fillColor: [248, 248, 248] } },
           `Peligro (fuente):\n${r.peligro || "—"}`,
           { content: "O:", styles: { fontStyle: "bold", halign: "right", valign: "middle" } },
           { content: String(r.ocurrencia), styles: { halign: "center", valign: "middle", fontSize: 11 } },
@@ -485,6 +485,7 @@ export async function generateFolioPDF(
           { content: `Fecha y Evidencia:\n${r.fecha_evidencia || "—"}`, colSpan: 2 },
         ],
         [
+          { content: "", styles: { fillColor: [248, 248, 248] } },
           `Situación Peligrosa:\n${r.situacion_peligrosa || "—"}`,
           usaDeteccion
             ? { content: "D:", styles: { fontStyle: "bold", halign: "right", valign: "middle" } as any }
