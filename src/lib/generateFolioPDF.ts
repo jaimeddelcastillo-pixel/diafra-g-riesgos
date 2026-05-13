@@ -317,7 +317,7 @@ export async function generateFolioPDF(
     if (pageNum > 0) doc.addPage();
     pageNum++;
     addFooter();
-    return margin + 16 + 6; // debajo del header con margen
+    return tableMargin.top; // debajo del header con margen
   }
 
   // Banda de sección (azul claro tipo modelo)
@@ -388,7 +388,7 @@ export async function generateFolioPDF(
       overflow: "linebreak",
       valign: "middle",
     },
-    margin: { left: margin, right: margin },
+    margin: tableMargin,
   });
 
   y = (doc as any).lastAutoTable.finalY + 4;
@@ -431,7 +431,7 @@ export async function generateFolioPDF(
       3: { cellWidth: 32, halign: "center" },
       4: { cellWidth: 32, halign: "center" },
     },
-    margin: { left: margin, right: margin },
+    margin: tableMargin,
   });
 
   // ─── PÁGINAS DE RIESGOS (SECCIÓN III) ───────────────────────────────────────
@@ -543,7 +543,7 @@ export async function generateFolioPDF(
         5: { cellWidth: 30 },
         6: { cellWidth: 30 },
       },
-      margin: { left: margin, right: margin },
+      margin: tableMargin,
     });
   });
 
