@@ -204,10 +204,10 @@ export async function generateFolioPDF(
   const normaConfig = getNormaConfig(folio.norma_folio);
   const usaDeteccion = normaConfig.usarDetectabilidad;
   const t = normaConfig.terminologia;
-  const nprFormula = usaDeteccion ? "S × O × D" : "S × O";
-  const nprResFormula = usaDeteccion ? "S' × O' × D'" : "S' × O'";
+  const nprFormula = usaDeteccion ? "S x O x D" : "S x O";
+  const nprResFormula = usaDeteccion ? "S' x O' x D'" : "S' x O'";
   const umbralLeyenda =
-    `Crítico (>${normaConfig.umbralNPRAlto} ó S≥${normaConfig.umbralSeveridadCritica})\n` +
+    `Crítico (>${normaConfig.umbralNPRAlto} ó S>=${normaConfig.umbralSeveridadCritica})\n` +
     `Mayor (${normaConfig.umbralNPRMedio}-${normaConfig.umbralNPRAlto})\n` +
     `Menor (<${normaConfig.umbralNPRMedio})`;
 
@@ -259,7 +259,7 @@ export async function generateFolioPDF(
     doc.setFont("helvetica", "italic");
     doc.setFontSize(8);
     doc.text(
-      "FORMATO — DEPARTAMENTO: SISTEMA DE GESTIÓN DE CALIDAD",
+      "FORMATO - DEPARTAMENTO: SISTEMA DE GESTIÓN DE CALIDAD",
       cx + centerW / 2,
       margin + 9,
       { align: "center" },
