@@ -11,10 +11,52 @@ function chk(checked: boolean): string {
   return checked ? "(X)" : "( )";
 }
 
+function removePdfUnsafeChars(s: string, keepLineBreaks = false): string {
+  return Array.from(s).filter((char) => {
+    const code = char.charCodeAt(0);
+    if (keepLineBreaks && code === 10) return true;
+    if (code < 32 || code === 127) return false;
+    if ([0x00AD, 0x034F, 0x061C, 0x115F, 0x1160, 0x17B4, 0x17B5, 0xFEFF, 0xFFFD].includes(code)) return false;
+    if (code >= 0x180B && code <= 0x180F) return false;
+    if (code >= 0x200B && code <= 0x200F) return false;
+    if (code >= 0x202A && code <= 0x202E) return false;
+    if (code >= 0x2060 && code <= 0x206F) return false;
+    if (code >= 0xFE00 && code <= 0xFE0F) return false;
+    if (code >= 0xFFF9 && code <= 0xFFFC) return false;
+    return true;
+  }).join("");
+}
+
+function pdfSafeText(s: string): string {
+  let out = s;
+  try { out = out.normalize("NFKC"); } catch { /* noop */ }
+  return removePdfUnsafeChars(out, true)
+    .replace(/[\u2018\u2019\u201A\u201B\u2032\u2035]/g, "'")
+    .replace(/[\u201C\u201D\u201E\u201F\u2033\u2036]/g, '"')
+    .replace(/[\u2010-\u2015\u2212]/g, "-")
+    .replace(/\u2026/g, "...")
+    .replace(/[\u00D7\u2715\u2716]/g, "x")
+    .replace(/\u2265/g, ">=")
+    .replace(/\u2264/g, "<=")
+    .replace(/[\u2713\u2714]/g, "(X)")
+    .replace(/[\u2610\u25A1]/g, "( )");
+}
+
+function sanitizePdfValue<T>(value: T): T {
+  if (typeof value === "string") return pdfSafeText(value) as T;
+  if (Array.isArray(value)) return value.map((item) => sanitizePdfValue(item)) as T;
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>).map(([key, val]) => [key, sanitizePdfValue(val)]),
+    ) as T;
+  }
+  return value;
+}
+
 // Normaliza espacios unicode (NBSP, etc.) a espacio normal y colapsa whitespace
 // para evitar que jsPDF-autotable rompa palabras carácter por carácter.
 function normalizarTexto(s: string | null | undefined): string {
-  if (!s) return "—";
+  if (!s) return "-";
   let out = s;
   // 1) Normalización Unicode canónica (compat) — colapsa ligaduras y formas raras
   try { out = out.normalize("NFKC"); } catch { /* noop */ }
@@ -22,10 +64,7 @@ function normalizarTexto(s: string | null | undefined): string {
   out = out.replace(/\r\n?/g, "\n");
   // 3) Quitar caracteres de control y formato invisibles (zero-width, BOM, soft-hyphen, bidi, VS, etc.)
   //    Conservamos \n (\u000A) para los saltos de párrafo intencionales.
-  out = out.replace(
-    /[\u0000-\u0009\u000B-\u001F\u007F\u00AD\u034F\u061C\u115F\u1160\u17B4\u17B5\u180B-\u180F\u200B-\u200F\u202A-\u202E\u2060-\u206F\uFE00-\uFE0F\uFEFF\uFFF9-\uFFFC]/g,
-    "",
-  );
+  out = removePdfUnsafeChars(out, true);
   // 4) Cualquier separador Unicode (NBSP, narrow NBSP, ideográfico, en/em space, etc.) → espacio normal
   out = out.replace(/[\u00A0\u1680\u2000-\u200A\u202F\u205F\u3000]/g, " ");
   // 5) Reparar texto "char-spaced" (p.ej. "e n   c o n d i c i o n e s") que aparece
@@ -64,11 +103,11 @@ function normalizarTexto(s: string | null | undefined): string {
   //    en lugar de hacer un wrap carácter por carácter. (Evitamos \u200B porque
   //    las fuentes estándar de jsPDF no lo soportan y lo renderizan raro.)
   out = out.replace(/\S{31,}/g, (token) => token.replace(/(.{30})/g, "$1 "));
-  return out || "—";
+  return pdfSafeText(out || "-");
 }
 
 function fmtDate(d: string | null | undefined): string {
-  if (!d) return "—";
+  if (!d) return "-";
   try {
     const safe = d.length === 10 ? `${d}T12:00:00` : d;
     return new Date(safe).toLocaleDateString("es-MX");
@@ -155,6 +194,10 @@ export async function generateFolioPDF(
   const pageW = doc.internal.pageSize.getWidth();
   const pageH = doc.internal.pageSize.getHeight();
   const margin = 8;
+  const headerH = 16;
+  const headerGap = 6;
+  const footerGap = 8;
+  const tableMargin = { left: margin, right: margin, top: margin + headerH + headerGap, bottom: footerGap };
 
   // Cargar logo y datos
   const orgLogo = await fetchOrgLogoDataUrl(org?.logo_url);
@@ -172,10 +215,10 @@ export async function generateFolioPDF(
   const normaConfig = getNormaConfig(folio.norma_folio);
   const usaDeteccion = normaConfig.usarDetectabilidad;
   const t = normaConfig.terminologia;
-  const nprFormula = usaDeteccion ? "S × O × D" : "S × O";
-  const nprResFormula = usaDeteccion ? "S' × O' × D'" : "S' × O'";
+  const nprFormula = usaDeteccion ? "S x O x D" : "S x O";
+  const nprResFormula = usaDeteccion ? "S' x O' x D'" : "S' x O'";
   const umbralLeyenda =
-    `Crítico (>${normaConfig.umbralNPRAlto} ó S≥${normaConfig.umbralSeveridadCritica})\n` +
+    `Crítico (>${normaConfig.umbralNPRAlto} ó S>=${normaConfig.umbralSeveridadCritica})\n` +
     `Mayor (${normaConfig.umbralNPRMedio}-${normaConfig.umbralNPRAlto})\n` +
     `Menor (<${normaConfig.umbralNPRMedio})`;
 
@@ -183,7 +226,6 @@ export async function generateFolioPDF(
 
   // ─── Encabezado: 3 cajas como el modelo TRACEA ──────────────────────────────
   function addHeader(pageIndex: number, totalPages: number) {
-    const headerH = 16;
     const logoW = 38;
     const codigoW = codigoLabel ? 32 : 24; // si no hay código, solo paginación
     const centerW = pageW - 2 * margin - logoW - codigoW;
@@ -228,7 +270,7 @@ export async function generateFolioPDF(
     doc.setFont("helvetica", "italic");
     doc.setFontSize(8);
     doc.text(
-      "FORMATO — DEPARTAMENTO: SISTEMA DE GESTIÓN DE CALIDAD",
+      "FORMATO - DEPARTAMENTO: SISTEMA DE GESTIÓN DE CALIDAD",
       cx + centerW / 2,
       margin + 9,
       { align: "center" },
@@ -285,8 +327,7 @@ export async function generateFolioPDF(
   function newPage(): number {
     if (pageNum > 0) doc.addPage();
     pageNum++;
-    addFooter();
-    return margin + 16 + 6; // debajo del header con margen
+    return tableMargin.top; // debajo del header con margen
   }
 
   // Banda de sección (azul claro tipo modelo)
@@ -299,16 +340,20 @@ export async function generateFolioPDF(
     doc.setFont("helvetica", "bold");
     doc.setFontSize(9);
     doc.setTextColor(0);
-    doc.text(romano, margin + 4, y + 4.8);
-    doc.text(text, margin + 18, y + 4.8);
+    doc.text(pdfSafeText(romano), margin + 4, y + 4.8);
+    doc.text(pdfSafeText(text), margin + 18, y + 4.8);
     return y + h + 0.5;
+  }
+
+  function drawTable(options: Parameters<typeof autoTable>[1]) {
+    autoTable(doc, sanitizePdfValue(options));
   }
 
   // ─── PÁGINA 1: I. DESCRIPCIÓN + II. COMITÉ ──────────────────────────────────
   let y = newPage();
   y = sectionHeader(y, "I.", "DESCRIPCIÓN");
 
-  autoTable(doc, {
+  drawTable({
     startY: y,
     body: [
       [
@@ -357,13 +402,13 @@ export async function generateFolioPDF(
       overflow: "linebreak",
       valign: "middle",
     },
-    margin: { left: margin, right: margin },
+    margin: tableMargin,
   });
 
   y = (doc as any).lastAutoTable.finalY + 4;
   y = sectionHeader(y, "II.", "FORMACIÓN Y APROBACIÓN DEL COMITÉ TÉCNICO");
 
-  autoTable(doc, {
+  drawTable({
     startY: y,
     head: [["NOMBRE", "CARGO", "RESPONSABILIDAD", "FIRMA", "FECHA FIRMA"]],
     body:
@@ -400,7 +445,7 @@ export async function generateFolioPDF(
       3: { cellWidth: 32, halign: "center" },
       4: { cellWidth: 32, halign: "center" },
     },
-    margin: { left: margin, right: margin },
+    margin: tableMargin,
   });
 
   // ─── PÁGINAS DE RIESGOS (SECCIÓN III) ───────────────────────────────────────
@@ -418,7 +463,7 @@ export async function generateFolioPDF(
         : "GESTIÓN DE RIESGOS";
     y = sectionHeader(y, "III.", label);
 
-    autoTable(doc, {
+    drawTable({
       startY: y,
       head: [
         [
@@ -433,7 +478,6 @@ export async function generateFolioPDF(
         [
           {
             content: String(r.numero_id).padStart(2, "0"),
-            rowSpan: 6,
             styles: { halign: "center", valign: "middle", fontSize: 16, fontStyle: "bold", fillColor: [248, 248, 248] },
           },
           `${t.procesoEquipo}:\n${r.etapa_proceso || "—"}`,
@@ -443,6 +487,7 @@ export async function generateFolioPDF(
           { content: `Acción Implementada:\n${r.accion_implementada || "—"}`, colSpan: 2 },
         ],
         [
+          { content: "", styles: { fillColor: [248, 248, 248] } },
           `Peligro (fuente):\n${r.peligro || "—"}`,
           { content: "O:", styles: { fontStyle: "bold", halign: "right", valign: "middle" } },
           { content: String(r.ocurrencia), styles: { halign: "center", valign: "middle", fontSize: 11 } },
@@ -450,6 +495,7 @@ export async function generateFolioPDF(
           { content: `Fecha y Evidencia:\n${r.fecha_evidencia || "—"}`, colSpan: 2 },
         ],
         [
+          { content: "", styles: { fillColor: [248, 248, 248] } },
           `Situación Peligrosa:\n${r.situacion_peligrosa || "—"}`,
           usaDeteccion
             ? { content: "D:", styles: { fontStyle: "bold", halign: "right", valign: "middle" } as any }
@@ -467,6 +513,7 @@ export async function generateFolioPDF(
           },
         ],
         [
+          { content: "", styles: { fillColor: [248, 248, 248] } },
           {
             content: `Secuencia de Eventos:\n${normalizarTexto(r.secuencia_eventos)}\n\nModo de Falla:\n${normalizarTexto(r.peligro_modo_falla)}\n\nCausa:\n${normalizarTexto(r.causa_potencial)}`,
             styles: { halign: "left", valign: "top", fontSize: 7, overflow: "linebreak", cellPadding: 2 },
@@ -484,6 +531,7 @@ export async function generateFolioPDF(
           },
         ],
         [
+          { content: "", styles: { fillColor: [248, 248, 248] } },
           `${t.efectoDano}:\n${r.efecto_dano || "—"}`,
           { content: umbralLeyenda, colSpan: 2, styles: { fontSize: 7, valign: "middle" } },
           `Verificado por: ${r.verificado_por || "—"}\nFecha: ${fmtDate(r.fecha_verificacion)}\nResultado: ${r.resultado_verificacion || "—"}`,
@@ -493,6 +541,7 @@ export async function generateFolioPDF(
           },
         ],
         [
+          { content: "", styles: { fillColor: [248, 248, 248] } },
           `¿Requiere Acción?  ${chk(r.requiere_accion)} Sí   ${chk(!r.requiere_accion)} No`,
           {
             content: `Justificación de Aceptabilidad:\n${r.justificacion_aceptabilidad || "—"}`,
@@ -512,7 +561,7 @@ export async function generateFolioPDF(
         5: { cellWidth: 30 },
         6: { cellWidth: 30 },
       },
-      margin: { left: margin, right: margin },
+      margin: tableMargin,
     });
   });
 
@@ -527,15 +576,15 @@ export async function generateFolioPDF(
   });
 
   if (riesgosConAnexos.length === 0) {
-    autoTable(doc, {
+    drawTable({
       startY: y,
       body: [[{ content: "Sin evidencias adjuntas registradas en el sistema.", styles: { fontStyle: "italic", textColor: [120, 120, 120] } }]],
       theme: "grid",
       styles: { fontSize: 8, cellPadding: 3, lineColor: [0, 0, 0], lineWidth: 0.2, minCellHeight: 10 },
-      margin: { left: margin, right: margin },
+      margin: tableMargin,
     });
   } else {
-    autoTable(doc, {
+    drawTable({
       startY: y,
       head: [["RIESGO ID", "NOMBRE DEL ARCHIVO", "TIPO"]],
       body: riesgosConAnexos.flatMap((r) => {
@@ -550,7 +599,7 @@ export async function generateFolioPDF(
       styles: { fontSize: 8, cellPadding: 2.5, lineColor: [0, 0, 0], lineWidth: 0.2 },
       headStyles: { fillColor: BAND_FILL, textColor: [0, 0, 0], fontStyle: "bold", halign: "center", lineColor: [0, 0, 0], lineWidth: 0.2 },
       columnStyles: { 0: { cellWidth: 30, halign: "center" }, 1: { cellWidth: "auto" as any }, 2: { cellWidth: 30, halign: "center" } },
-      margin: { left: margin, right: margin },
+      margin: tableMargin,
     });
   }
   y = (doc as any).lastAutoTable.finalY + 4;
@@ -558,7 +607,7 @@ export async function generateFolioPDF(
   // V. Evaluación Global
   const beneficioUpper = t.beneficio.toUpperCase();
   y = sectionHeader(y, "V.", `EVALUACIÓN GLOBAL DE ${beneficioUpper} vs RIESGO`);
-  autoTable(doc, {
+  drawTable({
     startY: y,
     body: [
       [
@@ -578,7 +627,7 @@ export async function generateFolioPDF(
     ],
     theme: "grid",
     styles: { fontSize: 8, cellPadding: 3, lineColor: [0, 0, 0], lineWidth: 0.2, overflow: "linebreak" },
-    margin: { left: margin, right: margin },
+    margin: tableMargin,
   });
   y = (doc as any).lastAutoTable.finalY + 4;
 
@@ -593,7 +642,7 @@ export async function generateFolioPDF(
   const hasNoAceptables = riesgos.some((r) => r.dictamen === "No Aceptable");
   const conclusion = folio.conclusion || "";
 
-  autoTable(doc, {
+  drawTable({
     startY: y,
     body: [
       [
@@ -631,7 +680,7 @@ export async function generateFolioPDF(
     ],
     theme: "grid",
     styles: { fontSize: 8, cellPadding: 3, lineColor: [0, 0, 0], lineWidth: 0.2, overflow: "linebreak" },
-    margin: { left: margin, right: margin },
+    margin: tableMargin,
   });
 
   // ─── PÁGINA FINAL: VII. CONTROL DE CAMBIOS ──────────────────────────────────
@@ -643,7 +692,7 @@ export async function generateFolioPDF(
     ? [["—", folio.numero_version || "1.0", fmtDate(folio.created_at), "Versión inicial del documento.", "—"]]
     : versiones.map((v) => [v.version_de, v.version_a, v.fecha, v.descripcion, v.realizado_por]);
 
-  autoTable(doc, {
+  drawTable({
     startY: y,
     head: [
       [
@@ -668,7 +717,7 @@ export async function generateFolioPDF(
       3: { cellWidth: "auto" as any },
       4: { cellWidth: 50 },
     },
-    margin: { left: margin, right: margin },
+    margin: tableMargin,
   });
 
   // ─── Renderizar encabezados con total de páginas correcto ────────────────────
@@ -676,6 +725,7 @@ export async function generateFolioPDF(
   for (let i = 1; i <= totalPgs; i++) {
     doc.setPage(i);
     addHeader(i, totalPgs);
+    addFooter();
   }
 
   doc.save(`${folio.codigo}_${folio.proceso_equipo.replace(/[^a-zA-Z0-9]/g, "_")}.pdf`);
