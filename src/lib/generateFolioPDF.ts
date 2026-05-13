@@ -11,6 +11,34 @@ function chk(checked: boolean): string {
   return checked ? "(X)" : "( )";
 }
 
+function pdfSafeText(s: string): string {
+  let out = s;
+  try { out = out.normalize("NFKC"); } catch { /* noop */ }
+  return out
+    .replace(/[\u2018\u2019\u201A\u201B\u2032\u2035]/g, "'")
+    .replace(/[\u201C\u201D\u201E\u201F\u2033\u2036]/g, '"')
+    .replace(/[\u2010-\u2015\u2212]/g, "-")
+    .replace(/\u2026/g, "...")
+    .replace(/[\u00D7\u2715\u2716]/g, "x")
+    .replace(/\u2265/g, ">=")
+    .replace(/\u2264/g, "<=")
+    .replace(/[\u2713\u2714]/g, "(X)")
+    .replace(/[\u2610\u25A1]/g, "( )")
+    .replace(/[\uFFFD\uFFF9-\uFFFC]/g, "")
+    .replace(/[\u0000-\u0009\u000B-\u001F\u007F]/g, "");
+}
+
+function sanitizePdfValue<T>(value: T): T {
+  if (typeof value === "string") return pdfSafeText(value) as T;
+  if (Array.isArray(value)) return value.map((item) => sanitizePdfValue(item)) as T;
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>).map(([key, val]) => [key, sanitizePdfValue(val)]),
+    ) as T;
+  }
+  return value;
+}
+
 // Normaliza espacios unicode (NBSP, etc.) a espacio normal y colapsa whitespace
 // para evitar que jsPDF-autotable rompa palabras carácter por carácter.
 function normalizarTexto(s: string | null | undefined): string {
@@ -64,7 +92,7 @@ function normalizarTexto(s: string | null | undefined): string {
   //    en lugar de hacer un wrap carácter por carácter. (Evitamos \u200B porque
   //    las fuentes estándar de jsPDF no lo soportan y lo renderizan raro.)
   out = out.replace(/\S{31,}/g, (token) => token.replace(/(.{30})/g, "$1 "));
-  return out || "—";
+  return pdfSafeText(out || "-");
 }
 
 function fmtDate(d: string | null | undefined): string {
