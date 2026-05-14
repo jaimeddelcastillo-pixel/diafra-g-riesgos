@@ -28,11 +28,29 @@ const TOOLS = [
   {
     name: "buscar_folio",
     description:
-      "Busca un folio por código (GR-YYYY-NNN), nombre del proceso/equipo o palabras clave. Devuelve folios candidatos con su ID, código, estado y proceso.",
+      "Busca un folio existente por código (GR-YYYY-NNN), nombre del proceso/equipo o palabras clave. Devuelve { found, folios } o { found: false, message } si no existe. NO repetir si ya devolvió found:false.",
     input_schema: {
       type: "object",
       properties: { query: { type: "string", description: "Texto a buscar" } },
       required: ["query"],
+    },
+  },
+  {
+    name: "crear_folio",
+    description:
+      "Crea un nuevo folio de gestión de riesgos en estado Borrador para la organización del usuario. Úsalo cuando el usuario pida explícitamente crear un folio nuevo, o cuando buscar_folio devuelva found:false y el usuario confirme que quiere crearlo. Devuelve { folio_id, codigo }.",
+    input_schema: {
+      type: "object",
+      properties: {
+        proceso_equipo: { type: "string", description: "Nombre del proceso o equipo. Obligatorio." },
+        origen: {
+          type: "string",
+          enum: ["Diseño", "Proceso", "Queja / Devolución", "Desviación", "Control de Cambios"],
+          description: "Origen del análisis. Default: Diseño",
+        },
+        alcance: { type: "string", description: "Alcance del análisis (opcional)." },
+      },
+      required: ["proceso_equipo"],
     },
   },
   {
@@ -59,6 +77,79 @@ const TOOLS = [
     },
   },
 ];
+
+const MAX_TOOL_CALLS_PER_TURN = 3;
+
+async function execBuscarFolio(adminClient: any, orgId: string, query: string) {
+  const q = String(query ?? "").trim();
+  if (!q) return { found: false, message: "Consulta vacía." };
+  const { data, error } = await adminClient
+    .from("folios")
+    .select("id, codigo, proceso_equipo, estado, norma_folio, fecha_inicio")
+    .eq("org_id", orgId)
+    .or(`codigo.ilike.%${q}%,proceso_equipo.ilike.%${q}%,alcance.ilike.%${q}%`)
+    .order("fecha_inicio", { ascending: false })
+    .limit(10);
+  if (error) return { found: false, message: `Error de búsqueda: ${error.message}` };
+  if (!data || data.length === 0) {
+    return { found: false, message: "Folio no encontrado. Puede crearse como nuevo usando la herramienta crear_folio." };
+  }
+  return { found: true, folios: data };
+}
+
+async function execCrearFolio(
+  adminClient: any,
+  orgId: string,
+  userId: string,
+  input: any,
+) {
+  const proceso_equipo = String(input?.proceso_equipo ?? "").trim();
+  if (!proceso_equipo) return { ok: false, error: "proceso_equipo es obligatorio." };
+  const origen = input?.origen ?? "Diseño";
+  const alcance = String(input?.alcance ?? "").trim();
+
+  const year = new Date().getUTCFullYear();
+  // Reservar siguiente número de la secuencia (admin client bypass RLS)
+  const { data: seq } = await adminClient
+    .from("folio_sequence")
+    .select("last_number")
+    .eq("org_id", orgId).eq("year", year).maybeSingle();
+  const nextNumber = (seq?.last_number ?? 0) + 1;
+  if (seq) {
+    await adminClient.from("folio_sequence")
+      .update({ last_number: nextNumber })
+      .eq("org_id", orgId).eq("year", year);
+  } else {
+    await adminClient.from("folio_sequence")
+      .insert({ org_id: orgId, year, last_number: nextNumber });
+  }
+  const codigo = `GR-${year}-${String(nextNumber).padStart(3, "0")}`;
+
+  const { data: folio, error } = await adminClient
+    .from("folios")
+    .insert({
+      codigo,
+      proceso_equipo,
+      origen,
+      alcance,
+      org_id: orgId,
+      created_by: userId,
+      estado: "Borrador",
+    })
+    .select("id, codigo, proceso_equipo, estado")
+    .single();
+  if (error) return { ok: false, error: error.message };
+  return { ok: true, folio_id: folio.id, codigo: folio.codigo, proceso_equipo: folio.proceso_equipo, estado: folio.estado };
+}
+
+const TOOL_RULES_ADDENDUM = `
+
+## REGLAS DE USO DE HERRAMIENTAS (obligatorias)
+1. Si el usuario dice EXPLÍCITAMENTE "el folio no existe", "crea el folio GR-XXXX" o "crea un nuevo folio", NO llames a buscar_folio. Llama directamente a crear_folio.
+2. Si llamas a buscar_folio y devuelve { found: false }, NO repitas la búsqueda con otra query parecida. Pregunta al usuario si desea crear el folio o, si ya lo confirmó, llama a crear_folio.
+3. Máximo 3 llamadas a herramientas (buscar_folio + crear_folio) por turno del usuario. Tras alcanzar ese tope, recibirás un aviso y deberás responder con la información disponible sin más búsquedas.
+4. proponer_riesgo es terminal: tras llamarla NO sigas ejecutando otras herramientas en el mismo turno.
+`;
 
 async function getOrgContext(supabase: any, userId: string) {
   const { data: member } = await supabase
