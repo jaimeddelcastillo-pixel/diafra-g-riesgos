@@ -84,17 +84,33 @@ export function AssistantPanel({ open, onOpenChange, folioId = null, folioCodigo
 
   async function refreshConversaciones() {
     if (!org) return;
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("chat_conversaciones")
-      .select("id, titulo, folio_id, agente, ultimo_mensaje_en, mensajes_count, tiene_riesgos_insertados, folios:folio_id(codigo)")
+      .select("id, titulo, folio_id, agente, ultimo_mensaje_en, mensajes_count, tiene_riesgos_insertados")
       .eq("org_id", org.id)
       .order("ultimo_mensaje_en", { ascending: false })
       .limit(50);
-    const rows = (data ?? []).map((r: any) => ({
-      ...r,
-      folio: r.folios ?? null,
-    })) as Conversacion[];
-    setConversaciones(rows);
+    if (error) {
+      console.error("refreshConversaciones error:", error);
+      setConversaciones([]);
+      return;
+    }
+    const rows = (data ?? []) as any[];
+    const folioIds = Array.from(new Set(rows.map((r) => r.folio_id).filter(Boolean)));
+    let folioMap: Record<string, string> = {};
+    if (folioIds.length > 0) {
+      const { data: fdata } = await supabase
+        .from("folios")
+        .select("id, codigo")
+        .in("id", folioIds);
+      folioMap = Object.fromEntries((fdata ?? []).map((f: any) => [f.id, f.codigo]));
+    }
+    setConversaciones(
+      rows.map((r) => ({
+        ...r,
+        folio: r.folio_id && folioMap[r.folio_id] ? { codigo: folioMap[r.folio_id] } : null,
+      })) as Conversacion[],
+    );
   }
 
   function nuevaConversacion() {
