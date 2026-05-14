@@ -54,6 +54,43 @@ const TOOLS = [
     },
   },
   {
+    name: "consultar_config_org",
+    description:
+      "Devuelve la configuración de la organización (umbrales NPR, norma, metodología, uso de detectabilidad). Úsalo UNA VEZ al inicio de un análisis para alinear escalas y vocabulario. No lo repitas en el mismo turno.",
+    input_schema: { type: "object", properties: {}, required: [] },
+  },
+  {
+    name: "listar_riesgos_folio",
+    description:
+      "Lista los riesgos ya registrados en un folio (id, numero, peligro, S/O/D, NPR, dictamen). Úsalo antes de proponer nuevos riesgos para evitar duplicados o cuando el usuario pregunte qué lleva el folio.",
+    input_schema: {
+      type: "object",
+      properties: { folio_id: { type: "string" } },
+      required: ["folio_id"],
+    },
+  },
+  {
+    name: "actualizar_folio",
+    description:
+      "Actualiza metadatos del folio (Sección I/V/VI): alcance, número de modelo/lote, clase de dispositivo, beneficio clínico, riesgo residual global, justificación técnica, conclusión y normas aplicables. Solo se permite si el folio está en Borrador. Pasa únicamente los campos que vas a cambiar.",
+    input_schema: {
+      type: "object",
+      properties: {
+        folio_id: { type: "string" },
+        alcance: { type: "string" },
+        numero_modelo: { type: "string" },
+        numero_lote: { type: "string" },
+        clase_dispositivo: { type: "string" },
+        beneficio_clinico: { type: "string" },
+        riesgo_residual_global: { type: "string" },
+        justificacion_tecnica: { type: "string" },
+        conclusion: { type: "string", enum: ["Aprobado", "Aprobado con condiciones", "No aprobado"] },
+        normas_aplicables: { type: "array", items: { type: "string" } },
+      },
+      required: ["folio_id"],
+    },
+  },
+  {
     name: "proponer_riesgo",
     description:
       "Propone un nuevo riesgo para que el usuario lo revise. NO inserta directamente. Usar SIEMPRE antes de insertar. El frontend mostrará una tarjeta con botones Insertar/Modificar/Descartar.",
@@ -68,17 +105,26 @@ const TOOLS = [
         causa_potencial: { type: "string" },
         etapa_proceso: { type: "string" },
         controles_actuales: { type: "string" },
+        controles_prevencion: { type: "string" },
+        controles_deteccion: { type: "string" },
         severidad: { type: "integer", minimum: 1, maximum: 10 },
         ocurrencia: { type: "integer", minimum: 1, maximum: 10 },
         deteccion: { type: "integer", minimum: 1, maximum: 10 },
         justificacion: { type: "string" },
+        requiere_accion: { type: "boolean" },
+        accion_propuesta: { type: "string" },
+        responsable: { type: "string" },
+        fecha_compromiso: { type: "string", description: "Fecha YYYY-MM-DD" },
+        sev_residual: { type: "integer", minimum: 1, maximum: 10 },
+        ocu_residual: { type: "integer", minimum: 1, maximum: 10 },
+        det_residual: { type: "integer", minimum: 1, maximum: 10 },
       },
       required: ["folio_id", "peligro", "situacion_peligrosa", "efecto_dano", "severidad", "ocurrencia", "deteccion"],
     },
   },
 ];
 
-const MAX_TOOL_CALLS_PER_TURN = 3;
+const MAX_TOOL_CALLS_PER_TURN = 8;
 
 async function execBuscarFolio(adminClient: any, orgId: string, query: string) {
   const q = String(query ?? "").trim();
@@ -147,8 +193,12 @@ const TOOL_RULES_ADDENDUM = `
 ## REGLAS DE USO DE HERRAMIENTAS (obligatorias)
 1. Si el usuario dice EXPLÍCITAMENTE "el folio no existe", "crea el folio GR-XXXX" o "crea un nuevo folio", NO llames a buscar_folio. Llama directamente a crear_folio.
 2. Si llamas a buscar_folio y devuelve { found: false }, NO repitas la búsqueda con otra query parecida. Pregunta al usuario si desea crear el folio o, si ya lo confirmó, llama a crear_folio.
-3. Máximo 3 llamadas a herramientas (buscar_folio + crear_folio) por turno del usuario. Tras alcanzar ese tope, recibirás un aviso y deberás responder con la información disponible sin más búsquedas.
-4. proponer_riesgo es terminal: tras llamarla NO sigas ejecutando otras herramientas en el mismo turno.
+3. Máximo 8 llamadas a herramientas por turno del usuario. Tras alcanzar ese tope, recibirás un aviso y deberás responder con la información disponible sin más búsquedas.
+4. proponer_riesgo es terminal: tras llamarla NO sigas ejecutando otras herramientas en el mismo turno (espera la decisión del usuario).
+5. consultar_config_org y listar_riesgos_folio: máximo UNA llamada por turno cada una; reutiliza el resultado.
+6. actualizar_folio: solo si el usuario confirmó los valores. No inventes "alcance" ni "beneficio clínico"; pídelos explícitamente.
+7. Antes de proponer un riesgo, calcula NPR = S × O × D y clasifícalo según los umbrales devueltos por consultar_config_org (Bajo < umbral_medio, Medio < umbral_alto, Alto ≥ umbral_alto). Si NPR ≥ umbral_medio, marca requiere_accion=true y propón acción, responsable y fecha_compromiso, además de S/O/D residuales esperados.
+8. Distingue claramente: alcance = qué cubre el análisis (producto, área, proceso). etapa_proceso = fase del proceso productivo donde aparece el peligro (recepción, mezclado, envasado, etc.). NUNCA los confundas.
 `;
 
 async function getOrgContext(supabase: any, userId: string) {
