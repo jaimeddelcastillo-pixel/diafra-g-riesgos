@@ -101,8 +101,15 @@ function evaluarChecklistNOM241(folio: Folio, riesgos: Riesgo[], comite: FolioCo
   items.push({ id: "verificacion", label: `Acciones implementadas con verificación${sinVerif > 0 ? ` (${sinVerif} sin verificar)` : ""}`, ok: sinVerif === 0, critico: false });
   items.push({ id: "alarp", label: `Riesgos zona ALARP con justificación de aceptabilidad${alarpSinJust > 0 ? ` (${alarpSinJust} sin justificar)` : ""}`, ok: alarpSinJust === 0, critico: false });
 
-  // ── Informativos ──
-  items.push({ id: "clase", label: "Clase del dispositivo especificada", ok: !!folio.clase_dispositivo?.trim(), critico: false });
+  // ── Informativos: clasificación según norma ──
+  const modo = getClasificacionMode(folio.norma_folio, folio.clasificacion_categoria);
+  if (modo === "dm") {
+    items.push({ id: "clase", label: "Clase del dispositivo especificada", ok: !!folio.clase_dispositivo?.trim(), critico: false });
+  } else {
+    items.push({ id: "clase_tipo", label: "Tipo de medicamento especificado", ok: !!folio.clasificacion_tipo?.trim(), critico: false });
+    items.push({ id: "clase_venta", label: "Condición de venta especificada", ok: !!folio.clasificacion_condicion_venta?.trim(), critico: false });
+    items.push({ id: "clase_riesgo", label: "Nivel de riesgo sanitario especificado", ok: !!folio.clasificacion_riesgo_sanitario?.trim(), critico: false });
+  }
   items.push({ id: "lote", label: "Número de lote / revisión especificado", ok: !!folio.numero_lote?.trim(), critico: false });
 
   return items;
