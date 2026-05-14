@@ -379,7 +379,7 @@ function SeccionDescripcion({ folio, locked, onSaved }: { folio: Folio; locked: 
           <p className="text-[10px] font-semibold text-muted-foreground uppercase mb-2">
             Trazabilidad del Dispositivo
           </p>
-          <div className="grid grid-cols-4 gap-3">
+          <div className="grid grid-cols-3 gap-3">
             <div className="space-y-1">
               <label className="text-[10px] font-semibold text-muted-foreground uppercase">Versión Doc.</label>
               <Input
@@ -403,9 +403,6 @@ function SeccionDescripcion({ folio, locked, onSaved }: { folio: Folio; locked: 
                 onChange={(e) => setForm({ ...form, numero_lote: e.target.value })}
                 placeholder="L-2026-001"
               />
-            </div>
-            <div className="space-y-1 col-span-1">
-              {/* Placeholder vacío para mantener grid de 4 cuando la clasificación se renderiza abajo */}
             </div>
           </div>
           {/* ─── Clasificación (adaptable según norma) ─── */}
