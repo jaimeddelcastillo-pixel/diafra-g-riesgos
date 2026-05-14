@@ -251,7 +251,11 @@ export function AssistantPanel({ open, onOpenChange, folioId = null, folioCodigo
               <div className="text-center text-muted-foreground text-sm py-12">
                 <Bot className="h-10 w-10 mx-auto mb-2 opacity-40" />
                 <p>Hola, soy tu asistente de gestión de riesgos.</p>
-                <p className="text-xs mt-1">Pregúntame sobre AMEF, ICH-Q9, normativas o adjunta un documento.</p>
+                <p className="text-xs mt-1">
+                  {agente === "dm"
+                    ? "Pregúntame sobre AMEF, ISO 14971, normativas o adjunta un documento."
+                    : "Pregúntame sobre ICH-Q9, normativas o adjunta un documento."}
+                </p>
               </div>
             )}
             {messages.map((m, i) => (
