@@ -3,7 +3,7 @@ import autoTable from "jspdf-autotable";
 import { supabase } from "@/integrations/supabase/client";
 import type { Folio, Riesgo, FolioComite } from "@/hooks/useFolios";
 import { fetchOrgLogoDataUrl } from "@/lib/orgLogo";
-import { getNormaConfig, calcularNPR, getNPRLevelByNorma } from "@/config/normas";
+import { getNormaConfig, calcularNPR, getNPRLevelByNorma, getClasificacionMode } from "@/config/normas";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -356,14 +356,28 @@ export async function generateFolioPDF(
   drawTable({
     startY: y,
     body: [
-      [
-        { content: "Folio de Gestión:", styles: { fontStyle: "bold", cellWidth: 36, fillColor: [248, 248, 248] } },
-        { content: folio.codigo, styles: { fontStyle: "bold", fontSize: 9 } },
-        { content: "Versión:", styles: { fontStyle: "bold", cellWidth: 22, fillColor: [248, 248, 248] } },
-        { content: folio.numero_version || "1.0", styles: { fontStyle: "bold" } },
-        { content: "Clase Dispositivo:", styles: { fontStyle: "bold", cellWidth: 32, fillColor: [248, 248, 248] } },
-        { content: folio.clase_dispositivo || "—" },
-      ],
+      (() => {
+        const modo = getClasificacionMode(folio.norma_folio, (folio as any).clasificacion_categoria);
+        const labelClas = modo === "dm" ? "Clase Dispositivo:" : "Clasificación:";
+        const valorClas =
+          modo === "dm"
+            ? folio.clase_dispositivo || "—"
+            : [
+                (folio as any).clasificacion_tipo,
+                (folio as any).clasificacion_condicion_venta,
+                (folio as any).clasificacion_riesgo_sanitario,
+              ]
+                .filter(Boolean)
+                .join(" · ") || "—";
+        return [
+          { content: "Folio de Gestión:", styles: { fontStyle: "bold", cellWidth: 36, fillColor: [248, 248, 248] } },
+          { content: folio.codigo, styles: { fontStyle: "bold", fontSize: 9 } },
+          { content: "Versión:", styles: { fontStyle: "bold", cellWidth: 22, fillColor: [248, 248, 248] } },
+          { content: folio.numero_version || "1.0", styles: { fontStyle: "bold" } },
+          { content: labelClas, styles: { fontStyle: "bold", cellWidth: 32, fillColor: [248, 248, 248] } },
+          { content: valorClas },
+        ];
+      })(),
       [
         { content: "Proceso / Equipo Analizado:", styles: { fontStyle: "bold", fillColor: [248, 248, 248] } },
         folio.proceso_equipo,

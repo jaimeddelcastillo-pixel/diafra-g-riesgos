@@ -1,124 +1,80 @@
 ## Objetivo
-Dotar al Asistente IA de historial persistente: el usuario podrá ver, reanudar y continuar conversaciones previas, agrupadas por folio y fecha, con contexto inyectado a Claude al reanudar.
 
----
+Hacer que el campo "Clasificación" del folio se adapte a la norma de la organización (NOM-241, NOM-059 o MULTI), agregando los subcampos de medicamentos sin romper los folios existentes de dispositivos médicos.
 
-## 1. Cambios en base de datos (migración)
+## 1. Base de datos (migración)
 
-### Nueva tabla `chat_conversaciones`
-- `id` UUID PK (default gen_random_uuid)
-- `org_id` UUID NOT NULL
-- `folio_id` UUID NULL
-- `agente` TEXT NOT NULL DEFAULT 'dm'  (`dm` | `farma`)
-- `titulo` TEXT NOT NULL DEFAULT 'Nueva conversación'
-- `ultimo_mensaje_en` TIMESTAMPTZ NOT NULL DEFAULT now()
-- `mensajes_count` INT NOT NULL DEFAULT 0
-- `tiene_riesgos_insertados` BOOL NOT NULL DEFAULT false
-- `created_by` UUID NULL
-- `created_at` TIMESTAMPTZ NOT NULL DEFAULT now()
-- Índices: `(org_id, ultimo_mensaje_en DESC)`, `(folio_id)`
+Agregar a `public.folios`:
 
-### Modificación a `chat_mensajes`
-- Añadir columna `conversacion_id` UUID NULL (FK lógica) + índice.
-- Migración suave: las filas viejas quedan con `conversacion_id` null (no se mostrarán en historial).
+- `clasificacion_tipo TEXT NOT NULL DEFAULT ''` — tipo de medicamento (Alopático, Biológico, Genérico, OTC, Homeopático, Herbolario) **o** vacío en DM (en DM se sigue usando `clase_dispositivo`).
+- `clasificacion_condicion_venta TEXT NOT NULL DEFAULT ''` — solo medicamentos.
+- `clasificacion_riesgo_sanitario TEXT NOT NULL DEFAULT ''` — solo medicamentos (Alto / Moderado / Bajo).
+- `clasificacion_categoria TEXT NOT NULL DEFAULT ''` — solo MULTI: `dispositivo` | `medicamento` (define qué bloque mostrar).
 
-### RLS
-- `chat_conversaciones`:
-  - SELECT/UPDATE: `org_id = get_user_org_id() OR is_super_admin()`
-  - INSERT: igual + `created_by = auth.uid()`
-  - DELETE: admin de la org o super admin
-- Service role: ALL (para edge functions).
+`clase_dispositivo` se conserva intacto. No se borra nada. Sin nuevos triggers; el `audit_trigger_func` ya cubre los cambios.
 
-### Trigger
-- `chat_mensajes` AFTER INSERT → si trae `conversacion_id`, actualiza `ultimo_mensaje_en = now()` y `mensajes_count = mensajes_count + 1` en la conversación.
-- Marcar `tiene_riesgos_insertados = true` desde el edge `chat-insertar-riesgo` cuando se inserte un riesgo asociado a una conversación (parámetro opcional `conversacion_id`).
+No se requieren cambios en RLS (heredan de `folios`).
 
----
+## 2. Configuración (frontend)
 
-## 2. Edge functions
+En `src/config/normas.ts` agregar catálogos centralizados para reusar en form, PDF y AI:
 
-### `chat-asistente` (modificar)
-- Recibe `conversacion_id` opcional.
-- Si no viene: crea una nueva fila en `chat_conversaciones` (org_id, folio_id, agente, created_by) y la devuelve en la respuesta inicial (header SSE `x-conversacion-id` o evento custom previo al stream).
-- Persiste cada mensaje (user + assistant) en `chat_mensajes` con el `conversacion_id`.
-- Al reanudar (conversación existente): carga últimos **20 mensajes** de `chat_mensajes` y los antepone al array enviado a Claude. Inyecta nota en el system prompt: *"Retomando conversación del {fecha} sobre {titulo}…"*.
-- Tras el primer turno completo: si `titulo = 'Nueva conversación'`, auto-genera:
-  - con folio: `[FOLIO_CODIGO] — {proceso_equipo}` (lookup a `folios`)
-  - sin folio: primeros 50 chars del primer mensaje de usuario
-  - update a `chat_conversaciones`.
-
-### `chat-insertar-riesgo` (modificar mínimo)
-- Aceptar `conversacion_id` opcional → marca `tiene_riesgos_insertados = true`.
-
----
-
-## 3. Frontend — `AssistantPanel.tsx`
-
-### Layout interno del Sheet
 ```text
-┌─────────────────────────────────────────┐
-│ Header: Asistente IA — Agent DM         │
-├──────────────┬──────────────────────────┤
-│ Historial    │ Chat activo              │
-│ ─────────    │ ──────────               │
-│ [+ Nueva]    │ messages…                │
-│              │                          │
-│ HOY          │                          │
-│ • GR-2026-03 │                          │
-│   Esterilz.  │                          │
-│ • Consulta…  │                          │
-│              │                          │
-│ AYER         │                          │
-│ • …          │                          │
-│              │                          │
-│ ESTA SEMANA  │                          │
-│ • …          │ [input]            [Send]│
-└──────────────┴──────────────────────────┘
+CLASIFICACION_DM = [Clase I, Clase II, Clase III]
+CLASIFICACION_MED_TIPO = [Alopático, Biológico/biotecnológico, Genérico intercambiable, OTC, Homeopático, Herbolario]
+CLASIFICACION_MED_VENTA = [Prescripción obligatoria, Sin receta (OTC), Sin receta con leyenda preventiva]
+CLASIFICACION_MED_RIESGO = [Alto, Moderado, Bajo]
 ```
-- Sidebar izquierdo (~220px), colapsable con botón hamburguesa para móvil.
-- Sheet ampliado a `sm:max-w-3xl`.
 
-### Estado nuevo
-- `conversacionId: string | null`
-- `conversaciones: ConversacionRow[]` (cargado al abrir panel)
-- Función `cargarConversacion(id)` → fetch a `chat_mensajes` ordenados, set `messages`.
-- `nuevaConversacion()` → resetea `conversacionId` y `messages`.
+Helper `getClasificacionMode(norma, categoriaMulti)` → `"dm" | "med"`.
 
-### Item del sidebar muestra
-- Título (truncado 1 línea)
-- Subtexto: hora si es hoy, fecha si no.
-- Badges: código de folio (outline), 🟢 si activa hoy, "IDs agregados" si `tiene_riesgos_insertados`.
+## 3. UI — formulario de folio
 
-### Agrupación
-- `Hoy`, `Ayer`, `Esta semana`, `Este mes`, `Anteriores` — ordenado por `ultimo_mensaje_en DESC`.
+Archivo: `src/components/RiesgoFormDialog.tsx` y/o el form de folio (Sección I en `FolioDetail.tsx`).
 
-### Integración con stream
-- Al iniciar `sendMessage`: incluir `conversacion_id` en el body si existe.
-- El backend devuelve `conversacion_id` en el primer evento; frontend lo guarda en estado y refresca lista.
-- Al insertar riesgo: pasar `conversacion_id`.
+Lógica condicional según `folio.norma_folio`:
 
----
+- **NOM-241** → render actual: select `clase_dispositivo` + tooltip NOM-241/COFEPRIS.
+- **NOM-059** → 3 selects: Tipo, Condición de venta, Nivel de riesgo + tooltip NOM-059.
+- **MULTI** → primer radio "¿Dispositivo médico o medicamento?" persistido en `clasificacion_categoria`; según valor renderiza el bloque DM o MED.
 
-## 4. Detalles técnicos
+Validación: campos requeridos solo para el bloque visible. PDF (`generateFolioPDF.ts`) imprime los que correspondan.
 
-- **Carga de mensajes históricos:** desde el cliente (Supabase JS) usando RLS — no se exponen mensajes de otras orgs.
-- **Límite UI:** 50 conversaciones más recientes; "Ver más" pagina si hace falta (fase 2 — fuera de este alcance, no se implementa).
-- **Auto-título:** se hace en backend (edge) tras primer turno; el frontend solo refresca la lista al terminar el stream.
-- **Migraciones de datos antiguos:** los mensajes con `conversacion_id NULL` simplemente no aparecen en el historial; sin backfill.
-- **Performance:** índice compuesto cubre el listado; SELECT pesa pocos KB.
+## 4. Agente IA
 
----
+`supabase/functions/chat-asistente/index.ts`:
 
-## 5. Archivos afectados
-- `supabase/migrations/<timestamp>_chat_historial.sql` (nuevo)
-- `supabase/functions/chat-asistente/index.ts` (modificar)
-- `supabase/functions/chat-insertar-riesgo/index.ts` (modificar mínimo)
-- `src/components/AssistantPanel.tsx` (refactor: sidebar + estado)
+- Tool `consultar_config_org` ya devuelve la norma; añadir flag `clasificacion_categoria` del folio cuando exista.
+- Tool `actualizar_folio` permite además: `clasificacion_tipo`, `clasificacion_condicion_venta`, `clasificacion_riesgo_sanitario`, `clasificacion_categoria`.
+- En el contexto inicial del system prompt (TOOL_RULES_ADDENDUM) inyectar la clasificación del folio activo.
+- Regla nueva: si `clasificacion_tipo ∈ {Biológico, Alopático+inyectable}` o `clasificacion_riesgo_sanitario = "Alto"` y la propuesta tiene `severidad ≥ 9`, el agente debe (a) advertir riesgo en población vulnerable y (b) sugerir `severidad + 1` (tope 10) en `proponer_riesgo`, dejando justificación.
 
-## 6. Fuera de alcance
-- Eliminar/renombrar conversaciones desde la UI (puede añadirse luego).
-- Búsqueda dentro del historial.
-- Exportar conversación a PDF.
-- Compartir conversación entre usuarios.
+`chat-insertar-riesgo` no cambia (los campos viven en `folios`, no en `riesgos`).
 
-¿Apruebas el plan para proceder con la migración y el código?
+## 5. AssistantPanel
+
+Mostrar badge de clasificación (Clase II / Biológico-Rx-Alto, etc.) en el header del chat cuando hay folio vinculado, leyendo los nuevos campos.
+
+## 6. Compatibilidad
+
+- Folios existentes: `clase_dispositivo` sigue funcionando. Los nuevos campos arrancan en `''`.
+- Orgs NOM-241 ya creadas: cero impacto visual.
+- Orgs NOM-059: el form viejo seguía pidiendo `clase_dispositivo` (ignorable); ahora pide los 3 subcampos correctos.
+
+## Archivos a tocar
+
+- Migración SQL nueva (4 columnas en `folios`).
+- `src/config/normas.ts` — catálogos + helper.
+- `src/components/RiesgoFormDialog.tsx` (si aplica) y el form de Sección I del folio.
+- `src/pages/FolioDetail.tsx` — render de los campos en lectura.
+- `src/lib/generateFolioPDF.ts` — imprimir clasificación correcta.
+- `supabase/functions/chat-asistente/index.ts` — tools + reglas.
+- `src/components/AssistantPanel.tsx` — badge de clasificación.
+
+## Orden sugerido
+
+1. Migración (apruebas).
+2. `normas.ts` + form + PDF.
+3. Edge function + AssistantPanel.
+
+¿Apruebo y arranco con la migración?

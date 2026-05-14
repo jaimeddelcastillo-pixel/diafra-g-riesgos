@@ -86,6 +86,11 @@ const TOOLS = [
         justificacion_tecnica: { type: "string" },
         conclusion: { type: "string", enum: ["Aprobado", "Aprobado con condiciones", "No aprobado"] },
         normas_aplicables: { type: "array", items: { type: "string" } },
+        // ── Clasificación adaptable según norma ──
+        clasificacion_categoria: { type: "string", enum: ["dispositivo", "medicamento"], description: "Solo orgs MULTI: define si el folio se clasifica como DM o medicamento." },
+        clasificacion_tipo: { type: "string", description: "Solo medicamentos: Alopático, Biológico/biotecnológico, Genérico intercambiable, OTC, Homeopático, Herbolario." },
+        clasificacion_condicion_venta: { type: "string", description: "Solo medicamentos: Prescripción obligatoria, OTC, OTC con leyenda." },
+        clasificacion_riesgo_sanitario: { type: "string", description: "Solo medicamentos: Alto, Moderado, Bajo." },
       },
       required: ["folio_id"],
     },
@@ -225,7 +230,11 @@ async function execActualizarFolio(adminClient: any, orgId: string, input: any) 
   if (!folio || folio.org_id !== orgId) return { ok: false, error: "Folio no pertenece a la organización." };
   if (folio.estado !== "Borrador") return { ok: false, error: `Folio en estado "${folio.estado}", solo editable en Borrador.` };
 
-  const allowed = ["alcance","numero_modelo","numero_lote","clase_dispositivo","beneficio_clinico","riesgo_residual_global","justificacion_tecnica","conclusion","normas_aplicables"];
+  const allowed = [
+    "alcance","numero_modelo","numero_lote","clase_dispositivo","beneficio_clinico",
+    "riesgo_residual_global","justificacion_tecnica","conclusion","normas_aplicables",
+    "clasificacion_categoria","clasificacion_tipo","clasificacion_condicion_venta","clasificacion_riesgo_sanitario",
+  ];
   const patch: any = {};
   for (const k of allowed) if (input[k] !== undefined) patch[k] = input[k];
   if (Object.keys(patch).length === 0) return { ok: false, error: "Sin campos para actualizar." };
@@ -246,6 +255,8 @@ const TOOL_RULES_ADDENDUM = `
 6. actualizar_folio: solo si el usuario confirmó los valores. No inventes "alcance" ni "beneficio clínico"; pídelos explícitamente.
 7. Antes de proponer un riesgo, calcula NPR = S × O × D y clasifícalo según los umbrales devueltos por consultar_config_org (Bajo < umbral_medio, Medio < umbral_alto, Alto ≥ umbral_alto). Si NPR ≥ umbral_medio, marca requiere_accion=true y propón acción, responsable y fecha_compromiso, además de S/O/D residuales esperados.
 8. Distingue claramente: alcance = qué cubre el análisis (producto, área, proceso). etapa_proceso = fase del proceso productivo donde aparece el peligro (recepción, mezclado, envasado, etc.). NUNCA los confundas.
+9. Clasificación regulatoria: revisa el contexto del folio. Si "clasificacion_riesgo_sanitario" = "Alto" o "clasificacion_tipo" = "Biológico/biotecnológico" (medicamentos), o "clase_dispositivo" = "Clase III" (DM), considera población vulnerable: cuando propongas un riesgo con S ≥ 9, aumenta severidad en +1 (tope 10) y deja explícito en justificación_aceptabilidad la mención de población vulnerable, exposición sistémica o consecuencia regulatoria (recall, farmacovigilancia, etc.).
+10. Si la norma del folio es NOM-241, el campo de clasificación es "clase_dispositivo" (Clase I/II/III). Si es NOM-059, son tres campos: clasificacion_tipo, clasificacion_condicion_venta, clasificacion_riesgo_sanitario. NUNCA mezcles ambos esquemas; usa el correcto según norma_folio.
 `;
 
 async function getOrgContext(supabase: any, userId: string) {
@@ -382,7 +393,7 @@ Deno.serve(async (req) => {
     if (folio_id) {
       const { data: folio } = await adminClient
         .from("folios")
-        .select("codigo, proceso_equipo, estado, norma_folio, alcance, beneficio_clinico")
+        .select("codigo, proceso_equipo, estado, norma_folio, alcance, beneficio_clinico, clase_dispositivo, clasificacion_categoria, clasificacion_tipo, clasificacion_condicion_venta, clasificacion_riesgo_sanitario")
         .eq("id", folio_id)
         .maybeSingle();
       const { data: riesgos } = await adminClient
@@ -391,7 +402,14 @@ Deno.serve(async (req) => {
         .eq("folio_id", folio_id)
         .order("numero_id");
       if (folio) {
-        folioCtx = `\n\n## CONTEXTO DEL FOLIO ACTIVO\nCódigo: ${folio.codigo}\nProceso/Equipo: ${folio.proceso_equipo}\nEstado: ${folio.estado}\nNorma: ${folio.norma_folio}\nAlcance: ${folio.alcance ?? "—"}\nFolio_id: ${folio_id}\n\nRiesgos actuales (${(riesgos ?? []).length}):\n${(riesgos ?? []).map((r: any) => `#${r.numero_id} S:${r.severidad} O:${r.ocurrencia} D:${r.deteccion} NPR:${r.npr} ${r.dictamen} — ${r.peligro}`).join("\n")}`;
+        const f: any = folio;
+        const isMed =
+          f.norma_folio === "NOM-059" ||
+          (f.norma_folio === "MULTI" && f.clasificacion_categoria === "medicamento");
+        const clasifLine = isMed
+          ? `Clasificación (medicamento): tipo=${f.clasificacion_tipo || "—"} | venta=${f.clasificacion_condicion_venta || "—"} | riesgo_sanitario=${f.clasificacion_riesgo_sanitario || "—"}`
+          : `Clasificación (dispositivo médico): ${f.clase_dispositivo || "—"}`;
+        folioCtx = `\n\n## CONTEXTO DEL FOLIO ACTIVO\nCódigo: ${f.codigo}\nProceso/Equipo: ${f.proceso_equipo}\nEstado: ${f.estado}\nNorma: ${f.norma_folio}\nAlcance: ${f.alcance ?? "—"}\n${clasifLine}\nFolio_id: ${folio_id}\n\nRiesgos actuales (${(riesgos ?? []).length}):\n${(riesgos ?? []).map((r: any) => `#${r.numero_id} S:${r.severidad} O:${r.ocurrencia} D:${r.deteccion} NPR:${r.npr} ${r.dictamen} — ${r.peligro}`).join("\n")}`;
       }
     }
 

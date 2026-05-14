@@ -18,7 +18,14 @@ import { useToast } from "@/hooks/use-toast";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { Constants } from "@/integrations/supabase/types";
 import { generateFolioPDF } from "@/lib/generateFolioPDF";
-import { getNormaConfig } from "@/config/normas";
+import {
+  getNormaConfig,
+  getClasificacionMode,
+  CLASIFICACION_DM,
+  CLASIFICACION_MED_TIPO,
+  CLASIFICACION_MED_VENTA,
+  CLASIFICACION_MED_RIESGO,
+} from "@/config/normas";
 
 // Componente para mostrar firmas usando URLs firmadas (bucket privado)
 function FirmaImg({ path, alt, className }: { path: string | null; alt: string; className?: string }) {
@@ -94,8 +101,15 @@ function evaluarChecklistNOM241(folio: Folio, riesgos: Riesgo[], comite: FolioCo
   items.push({ id: "verificacion", label: `Acciones implementadas con verificación${sinVerif > 0 ? ` (${sinVerif} sin verificar)` : ""}`, ok: sinVerif === 0, critico: false });
   items.push({ id: "alarp", label: `Riesgos zona ALARP con justificación de aceptabilidad${alarpSinJust > 0 ? ` (${alarpSinJust} sin justificar)` : ""}`, ok: alarpSinJust === 0, critico: false });
 
-  // ── Informativos ──
-  items.push({ id: "clase", label: "Clase del dispositivo especificada", ok: !!folio.clase_dispositivo?.trim(), critico: false });
+  // ── Informativos: clasificación según norma ──
+  const modo = getClasificacionMode(folio.norma_folio, folio.clasificacion_categoria);
+  if (modo === "dm") {
+    items.push({ id: "clase", label: "Clase del dispositivo especificada", ok: !!folio.clase_dispositivo?.trim(), critico: false });
+  } else {
+    items.push({ id: "clase_tipo", label: "Tipo de medicamento especificado", ok: !!folio.clasificacion_tipo?.trim(), critico: false });
+    items.push({ id: "clase_venta", label: "Condición de venta especificada", ok: !!folio.clasificacion_condicion_venta?.trim(), critico: false });
+    items.push({ id: "clase_riesgo", label: "Nivel de riesgo sanitario especificado", ok: !!folio.clasificacion_riesgo_sanitario?.trim(), critico: false });
+  }
   items.push({ id: "lote", label: "Número de lote / revisión especificado", ok: !!folio.numero_lote?.trim(), critico: false });
 
   return items;
@@ -189,7 +203,16 @@ function SeccionDescripcion({ folio, locked, onSaved }: { folio: Folio; locked: 
     numero_modelo: folio.numero_modelo || "",
     numero_lote: folio.numero_lote || "",
     clase_dispositivo: folio.clase_dispositivo || "",
+    // Clasificación adaptable según norma
+    clasificacion_categoria: folio.clasificacion_categoria || "",
+    clasificacion_tipo: folio.clasificacion_tipo || "",
+    clasificacion_condicion_venta: folio.clasificacion_condicion_venta || "",
+    clasificacion_riesgo_sanitario: folio.clasificacion_riesgo_sanitario || "",
   });
+
+  const nc = getNormaConfig(folio.norma_folio);
+  const isMulti = nc.key === "MULTI";
+  const modo = getClasificacionMode(folio.norma_folio, form.clasificacion_categoria);
 
   const handleSave = async () => {
     setSaving(true);
@@ -206,7 +229,12 @@ function SeccionDescripcion({ folio, locked, onSaved }: { folio: Folio; locked: 
         numero_version: form.numero_version,
         numero_modelo: form.numero_modelo,
         numero_lote: form.numero_lote,
-        clase_dispositivo: form.clase_dispositivo,
+        // Solo persistimos los campos del bloque visible para evitar mezclar normas.
+        clase_dispositivo: modo === "dm" ? form.clase_dispositivo : "",
+        clasificacion_tipo: modo === "med" ? form.clasificacion_tipo : "",
+        clasificacion_condicion_venta: modo === "med" ? form.clasificacion_condicion_venta : "",
+        clasificacion_riesgo_sanitario: modo === "med" ? form.clasificacion_riesgo_sanitario : "",
+        clasificacion_categoria: isMulti ? form.clasificacion_categoria : "",
       })
       .eq("id", folio.id);
     setSaving(false);
@@ -246,7 +274,19 @@ function SeccionDescripcion({ folio, locked, onSaved }: { folio: Folio; locked: 
           />
           <FormField label="Modelo / Ref." value={folio.numero_modelo} className="col-span-2" />
           <FormField label="Lote / Rev." value={folio.numero_lote} className="col-span-2" />
-          <FormField label="Clase" value={folio.clase_dispositivo} className="col-span-2 border-r-0" />
+          {getClasificacionMode(folio.norma_folio, folio.clasificacion_categoria) === "dm" ? (
+            <FormField label="Clase" value={folio.clase_dispositivo} className="col-span-2 border-r-0" />
+          ) : (
+            <FormField
+              label="Clasificación"
+              value={
+                [folio.clasificacion_tipo, folio.clasificacion_condicion_venta, folio.clasificacion_riesgo_sanitario]
+                  .filter(Boolean)
+                  .join(" · ")
+              }
+              className="col-span-2 border-r-0"
+            />
+          )}
         </div>
         <div className="grid grid-cols-12">
           <FormField label="Proceso / Equipo Analizado" value={folio.proceso_equipo} className="col-span-4" />
@@ -339,7 +379,7 @@ function SeccionDescripcion({ folio, locked, onSaved }: { folio: Folio; locked: 
           <p className="text-[10px] font-semibold text-muted-foreground uppercase mb-2">
             Trazabilidad del Dispositivo
           </p>
-          <div className="grid grid-cols-4 gap-3">
+          <div className="grid grid-cols-3 gap-3">
             <div className="space-y-1">
               <label className="text-[10px] font-semibold text-muted-foreground uppercase">Versión Doc.</label>
               <Input
@@ -364,20 +404,95 @@ function SeccionDescripcion({ folio, locked, onSaved }: { folio: Folio; locked: 
                 placeholder="L-2026-001"
               />
             </div>
-            <div className="space-y-1">
-              <label className="text-[10px] font-semibold text-muted-foreground uppercase">Clase Dispositivo</label>
-              <Select
-                value={form.clase_dispositivo}
-                onValueChange={(v) => setForm({ ...form, clase_dispositivo: v })}
-              >
-                <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Clase I">Clase I — Bajo riesgo</SelectItem>
-                  <SelectItem value="Clase II">Clase II — Riesgo moderado</SelectItem>
-                  <SelectItem value="Clase III">Clase III — Alto riesgo</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+          </div>
+          {/* ─── Clasificación (adaptable según norma) ─── */}
+          <div className="border-t pt-3 mt-3 space-y-3">
+            <p className="text-[10px] font-semibold text-muted-foreground uppercase">
+              Clasificación regulatoria{" "}
+              <span className="text-muted-foreground/70 normal-case">
+                ({modo === "dm"
+                  ? "NOM-241-SSA1-2025 / COFEPRIS"
+                  : "NOM-059-SSA1-2015 / COFEPRIS"})
+              </span>
+            </p>
+            {isMulti && (
+              <div className="space-y-1">
+                <label className="text-[10px] font-semibold text-muted-foreground uppercase">
+                  ¿Este folio es para dispositivo médico o medicamento?
+                </label>
+                <Select
+                  value={form.clasificacion_categoria}
+                  onValueChange={(v) => setForm({ ...form, clasificacion_categoria: v })}
+                >
+                  <SelectTrigger><SelectValue placeholder="Seleccionar categoría" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="dispositivo">Dispositivo médico (NOM-241)</SelectItem>
+                    <SelectItem value="medicamento">Medicamento (NOM-059)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            {modo === "dm" ? (
+              <div className="space-y-1">
+                <label className="text-[10px] font-semibold text-muted-foreground uppercase">Clase del dispositivo</label>
+                <Select
+                  value={form.clase_dispositivo}
+                  onValueChange={(v) => setForm({ ...form, clase_dispositivo: v })}
+                >
+                  <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
+                  <SelectContent>
+                    {CLASIFICACION_DM.map((c) => (
+                      <SelectItem key={c.valor} value={c.valor}>{c.etiqueta}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            ) : (
+              <div className="grid grid-cols-3 gap-3">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-semibold text-muted-foreground uppercase">Tipo de medicamento</label>
+                  <Select
+                    value={form.clasificacion_tipo}
+                    onValueChange={(v) => setForm({ ...form, clasificacion_tipo: v })}
+                  >
+                    <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
+                    <SelectContent>
+                      {CLASIFICACION_MED_TIPO.map((c) => (
+                        <SelectItem key={c.valor} value={c.valor}>{c.etiqueta}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-semibold text-muted-foreground uppercase">Condición de venta</label>
+                  <Select
+                    value={form.clasificacion_condicion_venta}
+                    onValueChange={(v) => setForm({ ...form, clasificacion_condicion_venta: v })}
+                  >
+                    <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
+                    <SelectContent>
+                      {CLASIFICACION_MED_VENTA.map((c) => (
+                        <SelectItem key={c.valor} value={c.valor}>{c.etiqueta}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-semibold text-muted-foreground uppercase">Nivel de riesgo sanitario</label>
+                  <Select
+                    value={form.clasificacion_riesgo_sanitario}
+                    onValueChange={(v) => setForm({ ...form, clasificacion_riesgo_sanitario: v })}
+                  >
+                    <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
+                    <SelectContent>
+                      {CLASIFICACION_MED_RIESGO.map((c) => (
+                        <SelectItem key={c.valor} value={c.valor}>{c.etiqueta}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            )}
           </div>
         </div>
         <div className="flex justify-end gap-2">

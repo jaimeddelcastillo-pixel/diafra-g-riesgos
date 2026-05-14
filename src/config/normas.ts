@@ -281,3 +281,71 @@ export function getNPRLevelByNorma(
 
 /** Lista de normas seleccionables en registro (excluye duplicados internos). */
 export const NORMAS_SELECCIONABLES: NormaKey[] = ["NOM-241", "NOM-059", "MULTI"];
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Catálogos de clasificación (Sección I del folio)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Clasificación de dispositivo médico (NOM-241 / COFEPRIS). */
+export const CLASIFICACION_DM: { valor: string; etiqueta: string }[] = [
+  { valor: "Clase I", etiqueta: "Clase I — Bajo riesgo" },
+  { valor: "Clase II", etiqueta: "Clase II — Riesgo moderado" },
+  { valor: "Clase III", etiqueta: "Clase III — Alto riesgo" },
+];
+
+/** Tipo de medicamento (NOM-059 / COFEPRIS). */
+export const CLASIFICACION_MED_TIPO: { valor: string; etiqueta: string }[] = [
+  { valor: "Alopático", etiqueta: "Alopático" },
+  { valor: "Biológico/biotecnológico", etiqueta: "Biológico o biotecnológico" },
+  { valor: "Genérico intercambiable", etiqueta: "Genérico intercambiable" },
+  { valor: "OTC", etiqueta: "OTC — Sin receta" },
+  { valor: "Homeopático", etiqueta: "Homeopático" },
+  { valor: "Herbolario", etiqueta: "Herbolario / Fitoterapéutico" },
+];
+
+/** Condición de venta del medicamento. */
+export const CLASIFICACION_MED_VENTA: { valor: string; etiqueta: string }[] = [
+  { valor: "Prescripción obligatoria", etiqueta: "Prescripción médica obligatoria" },
+  { valor: "OTC", etiqueta: "Venta sin receta (OTC)" },
+  { valor: "OTC con leyenda", etiqueta: "Venta sin receta con leyenda preventiva" },
+];
+
+/** Nivel de riesgo sanitario del medicamento. */
+export const CLASIFICACION_MED_RIESGO: { valor: string; etiqueta: string }[] = [
+  { valor: "Alto", etiqueta: "Alto — Inyectable / Biológico / Oncológico" },
+  { valor: "Moderado", etiqueta: "Moderado — Sólido oral con prescripción" },
+  { valor: "Bajo", etiqueta: "Bajo — OTC tópico / Vitaminas / Suplementos" },
+];
+
+export type ClasificacionMode = "dm" | "med";
+
+/**
+ * Determina si la sección de clasificación debe mostrar el bloque de
+ * dispositivo médico ("dm") o de medicamento ("med").
+ * - NOM-241 → siempre "dm".
+ * - NOM-059 → siempre "med".
+ * - MULTI → según `categoria` ("dispositivo" | "medicamento"). Si está vacía,
+ *   devuelve "dm" como default neutro (la UI debe forzar al usuario a elegir).
+ */
+export function getClasificacionMode(
+  norma: string | null | undefined,
+  categoria: string | null | undefined,
+): ClasificacionMode {
+  const cfg = getNormaConfig(norma);
+  if (cfg.key === "NOM-241") return "dm";
+  if (cfg.key === "NOM-059") return "med";
+  return categoria === "medicamento" ? "med" : "dm";
+}
+
+/**
+ * Indica si una clasificación implica población vulnerable / alto riesgo
+ * sanitario, lo que el agente IA debe usar para sugerir S+1 cuando S≥9.
+ */
+export function esClasificacionAltoRiesgo(
+  tipo: string | null | undefined,
+  riesgoSanitario: string | null | undefined,
+): boolean {
+  if (riesgoSanitario === "Alto") return true;
+  if (tipo === "Biológico/biotecnológico") return true;
+  return false;
+}
