@@ -1,10 +1,10 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Bot, User, Send, Paperclip, Loader2, AlertTriangle, Sparkles, FileText } from "lucide-react";
+import { Bot, User, Send, Paperclip, Loader2, AlertTriangle, Sparkles, FileText, Plus, History, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { useAuth } from "@/hooks/useAuth";
@@ -12,6 +12,17 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
 type Msg = { role: "user" | "assistant"; content: any; toolUses?: any[] };
+
+type Conversacion = {
+  id: string;
+  titulo: string;
+  folio_id: string | null;
+  agente: string;
+  ultimo_mensaje_en: string;
+  mensajes_count: number;
+  tiene_riesgos_insertados: boolean;
+  folio?: { codigo: string } | null;
+};
 
 interface Props {
   open: boolean;
@@ -33,6 +44,10 @@ export function AssistantPanel({ open, onOpenChange, folioId = null, folioCodigo
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [agente, setAgente] = useState<"dm" | "farma">("dm");
+  const [conversacionId, setConversacionId] = useState<string | null>(null);
+  const [conversaciones, setConversaciones] = useState<Conversacion[]>([]);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [loadingConv, setLoadingConv] = useState(false);
 
   // Norma multi → selector
   const showAgenteSelector = org?.norma_aplicable === "MULTI";
@@ -46,6 +61,7 @@ export function AssistantPanel({ open, onOpenChange, folioId = null, folioCodigo
   useEffect(() => {
     if (!open || !org) return;
     refreshUsage();
+    refreshConversaciones();
   }, [open, org?.id]);
 
   useEffect(() => {
@@ -64,6 +80,51 @@ export function AssistantPanel({ open, onOpenChange, folioId = null, folioCodigo
       .maybeSingle();
     const limit = PLAN_LIMITS[org.plan] ?? 30;
     setUsage({ used: data?.mensajes_consumidos ?? 0, limit });
+  }
+
+  async function refreshConversaciones() {
+    if (!org) return;
+    const { data } = await supabase
+      .from("chat_conversaciones")
+      .select("id, titulo, folio_id, agente, ultimo_mensaje_en, mensajes_count, tiene_riesgos_insertados, folios:folio_id(codigo)")
+      .eq("org_id", org.id)
+      .order("ultimo_mensaje_en", { ascending: false })
+      .limit(50);
+    const rows = (data ?? []).map((r: any) => ({
+      ...r,
+      folio: r.folios ?? null,
+    })) as Conversacion[];
+    setConversaciones(rows);
+  }
+
+  function nuevaConversacion() {
+    setConversacionId(null);
+    setMessages([]);
+    setInput("");
+  }
+
+  async function cargarConversacion(id: string) {
+    if (id === conversacionId) return;
+    setLoadingConv(true);
+    try {
+      const { data, error } = await supabase
+        .from("chat_mensajes")
+        .select("role, contenido, documentos_adjuntos, created_at")
+        .eq("conversacion_id", id)
+        .order("created_at", { ascending: true });
+      if (error) throw error;
+      const msgs: Msg[] = (data ?? []).map((r: any) => ({
+        role: r.role === "assistant" ? "assistant" : "user",
+        content: r.contenido ?? "",
+        toolUses: r.documentos_adjuntos?.tool_uses ?? undefined,
+      }));
+      setMessages(msgs);
+      setConversacionId(id);
+    } catch (e: any) {
+      toast({ title: "Error cargando conversación", description: e.message, variant: "destructive" });
+    } finally {
+      setLoadingConv(false);
+    }
   }
 
   async function sendMessage() {
@@ -86,6 +147,7 @@ export function AssistantPanel({ open, onOpenChange, folioId = null, folioCodigo
           messages: next.map((m) => ({ role: m.role, content: m.content })),
           folio_id: folioId,
           agente: showAgenteSelector ? agente : undefined,
+          conversacion_id: conversacionId,
         }),
       });
 
@@ -123,6 +185,10 @@ export function AssistantPanel({ open, onOpenChange, folioId = null, folioCodigo
           if (!line.startsWith("data: ")) continue;
           try {
             const evt = JSON.parse(line.slice(6));
+            if (evt.type === "conversacion" && evt.id) {
+              if (!conversacionId) setConversacionId(evt.id);
+              continue;
+            }
             if (evt.type === "content_block_start" && evt.content_block?.type === "tool_use") {
               currentTool = { ...evt.content_block };
               currentToolJson = "";
@@ -153,6 +219,7 @@ export function AssistantPanel({ open, onOpenChange, folioId = null, folioCodigo
       }
 
       await refreshUsage();
+      await refreshConversaciones();
     } catch (e: any) {
       toast({ title: "Error", description: e.message, variant: "destructive" });
     } finally {
@@ -195,7 +262,7 @@ export function AssistantPanel({ open, onOpenChange, folioId = null, folioCodigo
           "Content-Type": "application/json",
           Authorization: `Bearer ${session?.access_token ?? ""}`,
         },
-        body: JSON.stringify(input),
+        body: JSON.stringify({ ...input, conversacion_id: conversacionId }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -203,6 +270,7 @@ export function AssistantPanel({ open, onOpenChange, folioId = null, folioCodigo
       }
       toast({ title: "Riesgo insertado", description: `#${(data as any).riesgo.numero_id} creado correctamente.` });
       setMessages((m) => [...m, { role: "assistant", content: `✅ Riesgo #${(data as any).riesgo.numero_id} insertado en el folio.` }]);
+      refreshConversaciones();
     } catch (e: any) {
       toast({ title: "No se pudo insertar", description: e.message ?? String(e), variant: "destructive" });
     }
@@ -212,14 +280,25 @@ export function AssistantPanel({ open, onOpenChange, folioId = null, folioCodigo
   const used = usage?.used ?? 0;
   const pct = limit === -1 ? 0 : limit === 0 ? 0 : (used / limit) * 100;
 
+  const grouped = useMemo(() => groupConversaciones(conversaciones), [conversaciones]);
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full sm:max-w-xl flex flex-col p-0">
+      <SheetContent className="w-full sm:max-w-3xl flex flex-col p-0">
         <SheetHeader className="bg-primary text-primary-foreground px-4 py-3 space-y-1">
-          <SheetTitle className="text-primary-foreground flex items-center gap-2 text-base">
-            <Sparkles className="h-4 w-4" />
-            Asistente IA — {agente === "dm" ? "Agent DM (NOM-241)" : "Agent Farma (NOM-059)"}
-          </SheetTitle>
+          <div className="flex items-center justify-between gap-2">
+            <SheetTitle className="text-primary-foreground flex items-center gap-2 text-base">
+              <Sparkles className="h-4 w-4" />
+              Asistente IA — {agente === "dm" ? "Agent DM (NOM-241)" : "Agent Farma (NOM-059)"}
+            </SheetTitle>
+            <button
+              onClick={() => setSidebarOpen((v) => !v)}
+              aria-label="Mostrar/ocultar historial"
+              className="text-primary-foreground/80 hover:text-primary-foreground p-1"
+            >
+              {sidebarOpen ? <PanelLeftClose className="h-4 w-4" /> : <PanelLeftOpen className="h-4 w-4" />}
+            </button>
+          </div>
           <div className="flex items-center justify-between text-xs text-primary-foreground/80">
             <span>{folioCodigo ? `Contexto: ${folioCodigo}` : "Sin folio activo"}</span>
             {usage && (
@@ -255,7 +334,41 @@ export function AssistantPanel({ open, onOpenChange, folioId = null, folioCodigo
           </div>
         )}
 
-        <ScrollArea className="flex-1 px-4 py-3" ref={scrollRef as any}>
+        <div className="flex-1 flex min-h-0">
+          {sidebarOpen && (
+            <aside className="w-56 border-r bg-muted/20 flex flex-col shrink-0">
+              <div className="p-2 border-b">
+                <Button size="sm" variant="outline" className="w-full justify-start gap-2 h-8" onClick={nuevaConversacion}>
+                  <Plus className="h-3.5 w-3.5" /> Nueva conversación
+                </Button>
+              </div>
+              <ScrollArea className="flex-1">
+                <div className="p-2 space-y-3">
+                  {conversaciones.length === 0 && (
+                    <div className="text-xs text-muted-foreground text-center py-6 flex flex-col items-center gap-1">
+                      <History className="h-4 w-4 opacity-50" />
+                      Sin conversaciones aún
+                    </div>
+                  )}
+                  {grouped.map(({ label, items }) => (
+                    <div key={label}>
+                      <div className="text-[10px] uppercase tracking-wide text-muted-foreground px-1 mb-1">{label}</div>
+                      <div className="space-y-1">
+                        {items.map((c) => (
+                          <ConversacionItem key={c.id}
+                            c={c}
+                            active={c.id === conversacionId}
+                            onClick={() => cargarConversacion(c.id)} />
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
+            </aside>
+          )}
+
+          <ScrollArea className="flex-1 px-4 py-3" ref={scrollRef as any}>
           <div className="space-y-4">
             {messages.length === 0 && (
               <div className="text-center text-muted-foreground text-sm py-12">
@@ -268,6 +381,11 @@ export function AssistantPanel({ open, onOpenChange, folioId = null, folioCodigo
                 </p>
               </div>
             )}
+            {loadingConv && (
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Loader2 className="h-3 w-3 animate-spin" /> Cargando conversación...
+              </div>
+            )}
             {messages.map((m, i) => (
               <MessageBubble key={i} msg={m} onInsertarRiesgo={insertarRiesgo} folioId={folioId} />
             ))}
@@ -278,7 +396,8 @@ export function AssistantPanel({ open, onOpenChange, folioId = null, folioCodigo
               </div>
             )}
           </div>
-        </ScrollArea>
+          </ScrollArea>
+        </div>
 
         <div className="border-t p-3 flex flex-col gap-2">
           <div className="flex gap-2 items-end">
@@ -305,6 +424,58 @@ export function AssistantPanel({ open, onOpenChange, folioId = null, folioCodigo
       </SheetContent>
     </Sheet>
   );
+}
+
+function ConversacionItem({ c, active, onClick }: { c: Conversacion; active: boolean; onClick: () => void }) {
+  const fecha = new Date(c.ultimo_mensaje_en);
+  const hoy = new Date();
+  const esHoy = fecha.toDateString() === hoy.toDateString();
+  const sub = esHoy
+    ? fecha.toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" })
+    : fecha.toLocaleDateString("es-MX", { day: "numeric", month: "short" });
+  return (
+    <button
+      onClick={onClick}
+      className={`w-full text-left px-2 py-1.5 rounded text-xs hover:bg-accent/30 transition ${active ? "bg-accent/40" : ""}`}
+    >
+      <div className="flex items-center gap-1">
+        {esHoy && <span className="h-1.5 w-1.5 rounded-full bg-success shrink-0" aria-label="Activa hoy" />}
+        <div className="font-medium truncate flex-1">{c.titulo}</div>
+      </div>
+      <div className="flex items-center justify-between mt-0.5 gap-1">
+        <span className="text-muted-foreground text-[10px]">{sub}</span>
+        <div className="flex gap-1">
+          {c.folio?.codigo && (
+            <Badge variant="outline" className="text-[9px] px-1 py-0 h-4">{c.folio.codigo}</Badge>
+          )}
+          {c.tiene_riesgos_insertados && (
+            <Badge variant="secondary" className="text-[9px] px-1 py-0 h-4">IDs</Badge>
+          )}
+        </div>
+      </div>
+    </button>
+  );
+}
+
+function groupConversaciones(rows: Conversacion[]) {
+  const now = new Date();
+  const startOfDay = new Date(now); startOfDay.setHours(0, 0, 0, 0);
+  const startOfYesterday = new Date(startOfDay); startOfYesterday.setDate(startOfYesterday.getDate() - 1);
+  const startOfWeek = new Date(startOfDay); startOfWeek.setDate(startOfWeek.getDate() - 7);
+  const startOfMonth = new Date(startOfDay); startOfMonth.setDate(startOfMonth.getDate() - 30);
+
+  const buckets: Record<string, Conversacion[]> = { "Hoy": [], "Ayer": [], "Esta semana": [], "Este mes": [], "Anteriores": [] };
+  for (const c of rows) {
+    const d = new Date(c.ultimo_mensaje_en);
+    if (d >= startOfDay) buckets["Hoy"].push(c);
+    else if (d >= startOfYesterday) buckets["Ayer"].push(c);
+    else if (d >= startOfWeek) buckets["Esta semana"].push(c);
+    else if (d >= startOfMonth) buckets["Este mes"].push(c);
+    else buckets["Anteriores"].push(c);
+  }
+  return Object.entries(buckets)
+    .filter(([, v]) => v.length > 0)
+    .map(([label, items]) => ({ label, items }));
 }
 
 function MessageBubble({ msg, onInsertarRiesgo, folioId }: { msg: Msg; onInsertarRiesgo: (i: any) => void; folioId: string | null }) {
