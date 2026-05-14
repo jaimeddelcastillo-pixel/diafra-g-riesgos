@@ -203,7 +203,16 @@ function SeccionDescripcion({ folio, locked, onSaved }: { folio: Folio; locked: 
     numero_modelo: folio.numero_modelo || "",
     numero_lote: folio.numero_lote || "",
     clase_dispositivo: folio.clase_dispositivo || "",
+    // Clasificación adaptable según norma
+    clasificacion_categoria: folio.clasificacion_categoria || "",
+    clasificacion_tipo: folio.clasificacion_tipo || "",
+    clasificacion_condicion_venta: folio.clasificacion_condicion_venta || "",
+    clasificacion_riesgo_sanitario: folio.clasificacion_riesgo_sanitario || "",
   });
+
+  const nc = getNormaConfig(folio.norma_folio);
+  const isMulti = nc.key === "MULTI";
+  const modo = getClasificacionMode(folio.norma_folio, form.clasificacion_categoria);
 
   const handleSave = async () => {
     setSaving(true);
@@ -220,7 +229,12 @@ function SeccionDescripcion({ folio, locked, onSaved }: { folio: Folio; locked: 
         numero_version: form.numero_version,
         numero_modelo: form.numero_modelo,
         numero_lote: form.numero_lote,
-        clase_dispositivo: form.clase_dispositivo,
+        // Solo persistimos los campos del bloque visible para evitar mezclar normas.
+        clase_dispositivo: modo === "dm" ? form.clase_dispositivo : "",
+        clasificacion_tipo: modo === "med" ? form.clasificacion_tipo : "",
+        clasificacion_condicion_venta: modo === "med" ? form.clasificacion_condicion_venta : "",
+        clasificacion_riesgo_sanitario: modo === "med" ? form.clasificacion_riesgo_sanitario : "",
+        clasificacion_categoria: isMulti ? form.clasificacion_categoria : "",
       })
       .eq("id", folio.id);
     setSaving(false);
