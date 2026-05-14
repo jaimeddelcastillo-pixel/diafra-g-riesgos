@@ -404,20 +404,98 @@ function SeccionDescripcion({ folio, locked, onSaved }: { folio: Folio; locked: 
                 placeholder="L-2026-001"
               />
             </div>
-            <div className="space-y-1">
-              <label className="text-[10px] font-semibold text-muted-foreground uppercase">Clase Dispositivo</label>
-              <Select
-                value={form.clase_dispositivo}
-                onValueChange={(v) => setForm({ ...form, clase_dispositivo: v })}
-              >
-                <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Clase I">Clase I — Bajo riesgo</SelectItem>
-                  <SelectItem value="Clase II">Clase II — Riesgo moderado</SelectItem>
-                  <SelectItem value="Clase III">Clase III — Alto riesgo</SelectItem>
-                </SelectContent>
-              </Select>
+            <div className="space-y-1 col-span-1">
+              {/* Placeholder vacío para mantener grid de 4 cuando la clasificación se renderiza abajo */}
             </div>
+          </div>
+          {/* ─── Clasificación (adaptable según norma) ─── */}
+          <div className="border-t pt-3 mt-3 space-y-3">
+            <p className="text-[10px] font-semibold text-muted-foreground uppercase">
+              Clasificación regulatoria{" "}
+              <span className="text-muted-foreground/70 normal-case">
+                ({modo === "dm"
+                  ? "NOM-241-SSA1-2025 / COFEPRIS"
+                  : "NOM-059-SSA1-2015 / COFEPRIS"})
+              </span>
+            </p>
+            {isMulti && (
+              <div className="space-y-1">
+                <label className="text-[10px] font-semibold text-muted-foreground uppercase">
+                  ¿Este folio es para dispositivo médico o medicamento?
+                </label>
+                <Select
+                  value={form.clasificacion_categoria}
+                  onValueChange={(v) => setForm({ ...form, clasificacion_categoria: v })}
+                >
+                  <SelectTrigger><SelectValue placeholder="Seleccionar categoría" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="dispositivo">Dispositivo médico (NOM-241)</SelectItem>
+                    <SelectItem value="medicamento">Medicamento (NOM-059)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            {modo === "dm" ? (
+              <div className="space-y-1">
+                <label className="text-[10px] font-semibold text-muted-foreground uppercase">Clase del dispositivo</label>
+                <Select
+                  value={form.clase_dispositivo}
+                  onValueChange={(v) => setForm({ ...form, clase_dispositivo: v })}
+                >
+                  <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
+                  <SelectContent>
+                    {CLASIFICACION_DM.map((c) => (
+                      <SelectItem key={c.valor} value={c.valor}>{c.etiqueta}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            ) : (
+              <div className="grid grid-cols-3 gap-3">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-semibold text-muted-foreground uppercase">Tipo de medicamento</label>
+                  <Select
+                    value={form.clasificacion_tipo}
+                    onValueChange={(v) => setForm({ ...form, clasificacion_tipo: v })}
+                  >
+                    <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
+                    <SelectContent>
+                      {CLASIFICACION_MED_TIPO.map((c) => (
+                        <SelectItem key={c.valor} value={c.valor}>{c.etiqueta}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-semibold text-muted-foreground uppercase">Condición de venta</label>
+                  <Select
+                    value={form.clasificacion_condicion_venta}
+                    onValueChange={(v) => setForm({ ...form, clasificacion_condicion_venta: v })}
+                  >
+                    <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
+                    <SelectContent>
+                      {CLASIFICACION_MED_VENTA.map((c) => (
+                        <SelectItem key={c.valor} value={c.valor}>{c.etiqueta}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-semibold text-muted-foreground uppercase">Nivel de riesgo sanitario</label>
+                  <Select
+                    value={form.clasificacion_riesgo_sanitario}
+                    onValueChange={(v) => setForm({ ...form, clasificacion_riesgo_sanitario: v })}
+                  >
+                    <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
+                    <SelectContent>
+                      {CLASIFICACION_MED_RIESGO.map((c) => (
+                        <SelectItem key={c.valor} value={c.valor}>{c.etiqueta}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            )}
           </div>
         </div>
         <div className="flex justify-end gap-2">
