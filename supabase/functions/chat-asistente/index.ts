@@ -188,6 +188,53 @@ async function execCrearFolio(
   return { ok: true, folio_id: folio.id, codigo: folio.codigo, proceso_equipo: folio.proceso_equipo, estado: folio.estado };
 }
 
+async function execConsultarConfigOrg(org: any) {
+  return {
+    nombre: org.nombre,
+    norma_aplicable: org.norma_aplicable,
+    metodologia: org.metodologia,
+    usar_detectabilidad: org.usar_detectabilidad,
+    umbral_npr_medio: org.umbral_npr_medio,
+    umbral_npr_alto: org.umbral_npr_alto,
+    clasificacion: {
+      bajo: `NPR < ${org.umbral_npr_medio}`,
+      medio: `${org.umbral_npr_medio} ≤ NPR < ${org.umbral_npr_alto}`,
+      alto: `NPR ≥ ${org.umbral_npr_alto}`,
+    },
+  };
+}
+
+async function execListarRiesgosFolio(adminClient: any, orgId: string, folioId: string) {
+  if (!folioId) return { ok: false, error: "folio_id requerido" };
+  const { data: folio } = await adminClient
+    .from("folios").select("id, org_id, codigo").eq("id", folioId).maybeSingle();
+  if (!folio || folio.org_id !== orgId) return { ok: false, error: "Folio no pertenece a la organización." };
+  const { data, error } = await adminClient
+    .from("riesgos")
+    .select("id, numero_id, peligro, situacion_peligrosa, severidad, ocurrencia, deteccion, npr, sev_residual, ocu_residual, det_residual, npr_residual, dictamen, requiere_accion")
+    .eq("folio_id", folioId).order("numero_id");
+  if (error) return { ok: false, error: error.message };
+  return { ok: true, codigo: folio.codigo, total: data?.length ?? 0, riesgos: data ?? [] };
+}
+
+async function execActualizarFolio(adminClient: any, orgId: string, input: any) {
+  const folioId = input?.folio_id;
+  if (!folioId) return { ok: false, error: "folio_id requerido" };
+  const { data: folio } = await adminClient
+    .from("folios").select("id, org_id, estado").eq("id", folioId).maybeSingle();
+  if (!folio || folio.org_id !== orgId) return { ok: false, error: "Folio no pertenece a la organización." };
+  if (folio.estado !== "Borrador") return { ok: false, error: `Folio en estado "${folio.estado}", solo editable en Borrador.` };
+
+  const allowed = ["alcance","numero_modelo","numero_lote","clase_dispositivo","beneficio_clinico","riesgo_residual_global","justificacion_tecnica","conclusion","normas_aplicables"];
+  const patch: any = {};
+  for (const k of allowed) if (input[k] !== undefined) patch[k] = input[k];
+  if (Object.keys(patch).length === 0) return { ok: false, error: "Sin campos para actualizar." };
+
+  const { error } = await adminClient.from("folios").update(patch).eq("id", folioId);
+  if (error) return { ok: false, error: error.message };
+  return { ok: true, folio_id: folioId, actualizados: Object.keys(patch) };
+}
+
 const TOOL_RULES_ADDENDUM = `
 
 ## REGLAS DE USO DE HERRAMIENTAS (obligatorias)
