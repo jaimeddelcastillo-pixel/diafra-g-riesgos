@@ -393,7 +393,7 @@ Deno.serve(async (req) => {
     if (folio_id) {
       const { data: folio } = await adminClient
         .from("folios")
-        .select("codigo, proceso_equipo, estado, norma_folio, alcance, beneficio_clinico")
+        .select("codigo, proceso_equipo, estado, norma_folio, alcance, beneficio_clinico, clase_dispositivo, clasificacion_categoria, clasificacion_tipo, clasificacion_condicion_venta, clasificacion_riesgo_sanitario")
         .eq("id", folio_id)
         .maybeSingle();
       const { data: riesgos } = await adminClient
@@ -402,7 +402,14 @@ Deno.serve(async (req) => {
         .eq("folio_id", folio_id)
         .order("numero_id");
       if (folio) {
-        folioCtx = `\n\n## CONTEXTO DEL FOLIO ACTIVO\nCódigo: ${folio.codigo}\nProceso/Equipo: ${folio.proceso_equipo}\nEstado: ${folio.estado}\nNorma: ${folio.norma_folio}\nAlcance: ${folio.alcance ?? "—"}\nFolio_id: ${folio_id}\n\nRiesgos actuales (${(riesgos ?? []).length}):\n${(riesgos ?? []).map((r: any) => `#${r.numero_id} S:${r.severidad} O:${r.ocurrencia} D:${r.deteccion} NPR:${r.npr} ${r.dictamen} — ${r.peligro}`).join("\n")}`;
+        const f: any = folio;
+        const isMed =
+          f.norma_folio === "NOM-059" ||
+          (f.norma_folio === "MULTI" && f.clasificacion_categoria === "medicamento");
+        const clasifLine = isMed
+          ? `Clasificación (medicamento): tipo=${f.clasificacion_tipo || "—"} | venta=${f.clasificacion_condicion_venta || "—"} | riesgo_sanitario=${f.clasificacion_riesgo_sanitario || "—"}`
+          : `Clasificación (dispositivo médico): ${f.clase_dispositivo || "—"}`;
+        folioCtx = `\n\n## CONTEXTO DEL FOLIO ACTIVO\nCódigo: ${f.codigo}\nProceso/Equipo: ${f.proceso_equipo}\nEstado: ${f.estado}\nNorma: ${f.norma_folio}\nAlcance: ${f.alcance ?? "—"}\n${clasifLine}\nFolio_id: ${folio_id}\n\nRiesgos actuales (${(riesgos ?? []).length}):\n${(riesgos ?? []).map((r: any) => `#${r.numero_id} S:${r.severidad} O:${r.ocurrencia} D:${r.deteccion} NPR:${r.npr} ${r.dictamen} — ${r.peligro}`).join("\n")}`;
       }
     }
 
