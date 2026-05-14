@@ -188,9 +188,19 @@ export function AssistantPanel({ open, onOpenChange, folioId = null, folioCodigo
 
   async function insertarRiesgo(input: any) {
     try {
-      const { data, error } = await supabase.functions.invoke("chat-insertar-riesgo", { body: input });
-      if (error) throw error;
-      if ((data as any)?.error) throw new Error((data as any).error);
+      const url = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/chat-insertar-riesgo`;
+      const res = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session?.access_token ?? ""}`,
+        },
+        body: JSON.stringify(input),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error((data as any)?.error ?? `Error ${res.status}`);
+      }
       toast({ title: "Riesgo insertado", description: `#${(data as any).riesgo.numero_id} creado correctamente.` });
       setMessages((m) => [...m, { role: "assistant", content: `✅ Riesgo #${(data as any).riesgo.numero_id} insertado en el folio.` }]);
     } catch (e: any) {
