@@ -455,6 +455,10 @@ export type Database = {
           alcance: string | null
           beneficio_clinico: string
           clase_dispositivo: string
+          clasificacion_categoria: string
+          clasificacion_condicion_venta: string
+          clasificacion_riesgo_sanitario: string
+          clasificacion_tipo: string
           codigo: string
           conclusion: string | null
           control_cambios_id: string | null
@@ -482,6 +486,10 @@ export type Database = {
           alcance?: string | null
           beneficio_clinico?: string
           clase_dispositivo?: string
+          clasificacion_categoria?: string
+          clasificacion_condicion_venta?: string
+          clasificacion_riesgo_sanitario?: string
+          clasificacion_tipo?: string
           codigo: string
           conclusion?: string | null
           control_cambios_id?: string | null
@@ -509,6 +517,10 @@ export type Database = {
           alcance?: string | null
           beneficio_clinico?: string
           clase_dispositivo?: string
+          clasificacion_categoria?: string
+          clasificacion_condicion_venta?: string
+          clasificacion_riesgo_sanitario?: string
+          clasificacion_tipo?: string
           codigo?: string
           conclusion?: string | null
           control_cambios_id?: string | null
