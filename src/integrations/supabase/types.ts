@@ -55,6 +55,39 @@ export type Database = {
           },
         ]
       }
+      agent_prompts: {
+        Row: {
+          activo: boolean
+          created_at: string
+          id: string
+          nombre: string
+          system_prompt: string
+          updated_at: string
+          updated_by: string | null
+          version: string
+        }
+        Insert: {
+          activo?: boolean
+          created_at?: string
+          id?: string
+          nombre: string
+          system_prompt: string
+          updated_at?: string
+          updated_by?: string | null
+          version?: string
+        }
+        Update: {
+          activo?: boolean
+          created_at?: string
+          id?: string
+          nombre?: string
+          system_prompt?: string
+          updated_at?: string
+          updated_by?: string | null
+          version?: string
+        }
+        Relationships: []
+      }
       audit_trail: {
         Row: {
           accion: string
@@ -101,6 +134,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      chat_uso_mensual: {
+        Row: {
+          mensajes_consumidos: number
+          month: number
+          org_id: string
+          updated_at: string
+          year: number
+        }
+        Insert: {
+          mensajes_consumidos?: number
+          month: number
+          org_id: string
+          updated_at?: string
+          year: number
+        }
+        Update: {
+          mensajes_consumidos?: number
+          month?: number
+          org_id?: string
+          updated_at?: string
+          year?: number
+        }
+        Relationships: []
       }
       email_send_log: {
         Row: {
