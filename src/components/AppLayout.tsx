@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { Badge } from "@/components/ui/badge";
+import { FloatingAssistantButton } from "@/components/FloatingAssistantButton";
 
 const roleLabels: Record<string, string> = {
   admin: "Administrador",
@@ -78,6 +79,7 @@ export function AppLayout() {
               <Outlet />
             </main>
           </div>
+          <FloatingAssistantButton />
         </div>
       </SidebarProvider>
     </ProtectedRoute>
