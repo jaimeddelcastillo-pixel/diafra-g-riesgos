@@ -26,6 +26,7 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const folio_id: string = body.folio_id;
     if (!folio_id) return jsonErr("folio_id requerido", 400);
+    const conversacion_id: string | null = body.conversacion_id ?? null;
 
     // Validar estado del folio (Borrador)
     const { data: folio, error: fErr } = await userClient
@@ -60,6 +61,16 @@ Deno.serve(async (req) => {
       .select("id, numero_id, npr")
       .single();
     if (iErr) return jsonErr(iErr.message, 500);
+
+    // Marcar conversación con bandera de IDs insertados
+    if (conversacion_id) {
+      try {
+        await userClient
+          .from("chat_conversaciones")
+          .update({ tiene_riesgos_insertados: true })
+          .eq("id", conversacion_id);
+      } catch (e) { console.error("flag conv fail", e); }
+    }
 
     return new Response(JSON.stringify({ ok: true, riesgo: inserted }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

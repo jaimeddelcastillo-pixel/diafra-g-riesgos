@@ -135,6 +135,87 @@ export type Database = {
           },
         ]
       }
+      chat_conversaciones: {
+        Row: {
+          agente: string
+          created_at: string
+          created_by: string | null
+          folio_id: string | null
+          id: string
+          mensajes_count: number
+          org_id: string
+          tiene_riesgos_insertados: boolean
+          titulo: string
+          ultimo_mensaje_en: string
+        }
+        Insert: {
+          agente?: string
+          created_at?: string
+          created_by?: string | null
+          folio_id?: string | null
+          id?: string
+          mensajes_count?: number
+          org_id: string
+          tiene_riesgos_insertados?: boolean
+          titulo?: string
+          ultimo_mensaje_en?: string
+        }
+        Update: {
+          agente?: string
+          created_at?: string
+          created_by?: string | null
+          folio_id?: string | null
+          id?: string
+          mensajes_count?: number
+          org_id?: string
+          tiene_riesgos_insertados?: boolean
+          titulo?: string
+          ultimo_mensaje_en?: string
+        }
+        Relationships: []
+      }
+      chat_mensajes: {
+        Row: {
+          agente: string | null
+          contenido: string
+          conversacion_id: string | null
+          created_at: string
+          documentos_adjuntos: Json | null
+          folio_id: string | null
+          id: string
+          org_id: string
+          role: string
+          tokens_usados: number | null
+          user_id: string | null
+        }
+        Insert: {
+          agente?: string | null
+          contenido?: string
+          conversacion_id?: string | null
+          created_at?: string
+          documentos_adjuntos?: Json | null
+          folio_id?: string | null
+          id?: string
+          org_id: string
+          role: string
+          tokens_usados?: number | null
+          user_id?: string | null
+        }
+        Update: {
+          agente?: string | null
+          contenido?: string
+          conversacion_id?: string | null
+          created_at?: string
+          documentos_adjuntos?: Json | null
+          folio_id?: string | null
+          id?: string
+          org_id?: string
+          role?: string
+          tokens_usados?: number | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       chat_uso_mensual: {
         Row: {
           mensajes_consumidos: number

@@ -151,6 +151,7 @@ Deno.serve(async (req) => {
     const messages: Array<{ role: "user" | "assistant"; content: any }> = body.messages ?? [];
     const folio_id: string | null = body.folio_id ?? null;
     const agente_override: "dm" | "farma" | null = body.agente ?? null;
+    let conversacion_id: string | null = body.conversacion_id ?? null;
 
     const member = await getOrgContext(adminClient, user.id);
     if (!member) {
@@ -208,12 +209,39 @@ Deno.serve(async (req) => {
 
     const orgCtx = `\n\n## CONTEXTO DE LA ORGANIZACIÓN\nNombre: ${org.nombre}\nNorma aplicable: ${org.norma_aplicable}\nMetodología: ${org.metodologia}\nUsa detectabilidad: ${org.usar_detectabilidad}\nUmbral NPR Alto: ${org.umbral_npr_alto}\nUmbral NPR Medio: ${org.umbral_npr_medio}`;
 
-    const systemPrompt = (promptRow as any).system_prompt + orgCtx + folioCtx;
+    // --- Conversación: crear o reanudar ---
+    let resumeNote = "";
+    let isNewConversation = false;
+    if (conversacion_id) {
+      const { data: conv } = await adminClient
+        .from("chat_conversaciones")
+        .select("id, titulo, ultimo_mensaje_en, folio_id, agente")
+        .eq("id", conversacion_id)
+        .eq("org_id", org.id)
+        .maybeSingle();
+      if (!conv) conversacion_id = null;
+      else {
+        const fecha = new Date(conv.ultimo_mensaje_en).toLocaleDateString("es-MX", { day: "numeric", month: "long" });
+        resumeNote = `\n\n## CONTINUACIÓN DE CONVERSACIÓN\nRetomando nuestra conversación del ${fecha} sobre "${conv.titulo}". Mantén la coherencia con el historial previo.`;
+      }
+    }
+    if (!conversacion_id) {
+      const { data: created } = await adminClient
+        .from("chat_conversaciones")
+        .insert({ org_id: org.id, folio_id, agente, created_by: user.id })
+        .select("id")
+        .single();
+      conversacion_id = created?.id ?? null;
+      isNewConversation = true;
+    }
+
+    const systemPrompt = (promptRow as any).system_prompt + orgCtx + folioCtx + resumeNote;
 
     // Persistir el último mensaje user + bump
     const lastUser = [...messages].reverse().find((m) => m.role === "user");
     if (lastUser) {
       await adminClient.from("chat_mensajes").insert({
+        conversacion_id,
         org_id: org.id, folio_id, user_id: user.id,
         role: "user",
         contenido: typeof lastUser.content === "string" ? lastUser.content : JSON.stringify(lastUser.content),
@@ -259,6 +287,8 @@ Deno.serve(async (req) => {
 
     const stream = new ReadableStream({
       async start(controller) {
+        // Emitir primero el id de conversación como evento custom
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: "conversacion", id: conversacion_id })}\n\n`));
         let buffer = "";
         let currentToolInputJson = "";
         let currentToolBlock: any = null;
@@ -308,6 +338,7 @@ Deno.serve(async (req) => {
           // Persistir respuesta del asistente
           try {
             await adminClient.from("chat_mensajes").insert({
+              conversacion_id,
               org_id: org.id, folio_id, user_id: user.id,
               role: "assistant",
               contenido: fullText,
@@ -315,6 +346,27 @@ Deno.serve(async (req) => {
               agente,
               documentos_adjuntos: toolUses.length ? { tool_uses: toolUses } : null,
             });
+
+            // Auto-título tras primer turno
+            if (isNewConversation && conversacion_id) {
+              let titulo = "";
+              if (folio_id) {
+                const { data: f } = await adminClient
+                  .from("folios").select("codigo, proceso_equipo")
+                  .eq("id", folio_id).maybeSingle();
+                if (f) titulo = `[${f.codigo}] ${f.proceso_equipo ?? ""}`.trim();
+              }
+              if (!titulo) {
+                const firstUserText = typeof lastUser?.content === "string"
+                  ? lastUser.content
+                  : JSON.stringify(lastUser?.content ?? "");
+                titulo = (firstUserText || "Conversación").slice(0, 50);
+              }
+              await adminClient
+                .from("chat_conversaciones")
+                .update({ titulo })
+                .eq("id", conversacion_id);
+            }
           } catch (e) { console.error("persist assistant fail", e); }
           controller.close();
         }
