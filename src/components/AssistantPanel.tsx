@@ -1,0 +1,351 @@
+import { useEffect, useRef, useState } from "react";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Bot, User, Send, Paperclip, Loader2, AlertTriangle, Sparkles, FileText } from "lucide-react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
+
+type Msg = { role: "user" | "assistant"; content: any; toolUses?: any[] };
+
+interface Props {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  folioId?: string | null;
+  folioCodigo?: string | null;
+}
+
+const PLAN_LIMITS: Record<string, number> = {
+  trial: 30, starter: 30, pro: 300, professional: 300, enterprise: -1,
+};
+
+export function AssistantPanel({ open, onOpenChange, folioId = null, folioCodigo = null }: Props) {
+  const { org, session } = useAuth();
+  const [messages, setMessages] = useState<Msg[]>([]);
+  const [input, setInput] = useState("");
+  const [streaming, setStreaming] = useState(false);
+  const [usage, setUsage] = useState<{ used: number; limit: number } | null>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [agente, setAgente] = useState<"dm" | "farma">("dm");
+
+  // Norma multi → selector
+  const showAgenteSelector = org?.norma_aplicable === "MULTI";
+
+  useEffect(() => {
+    if (!org) return;
+    if (org.norma_aplicable === "NOM-059") setAgente("farma");
+    else setAgente("dm");
+  }, [org?.norma_aplicable]);
+
+  useEffect(() => {
+    if (!open || !org) return;
+    refreshUsage();
+  }, [open, org?.id]);
+
+  useEffect(() => {
+    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+  }, [messages, streaming]);
+
+  async function refreshUsage() {
+    if (!org) return;
+    const now = new Date();
+    const { data } = await supabase
+      .from("chat_uso_mensual")
+      .select("mensajes_consumidos")
+      .eq("org_id", org.id)
+      .eq("year", now.getUTCFullYear())
+      .eq("month", now.getUTCMonth() + 1)
+      .maybeSingle();
+    const limit = PLAN_LIMITS[org.plan] ?? 30;
+    setUsage({ used: data?.mensajes_consumidos ?? 0, limit });
+  }
+
+  async function sendMessage() {
+    const text = input.trim();
+    if (!text || streaming || !session) return;
+    const next = [...messages, { role: "user" as const, content: text }];
+    setMessages(next);
+    setInput("");
+    setStreaming(true);
+
+    try {
+      const url = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/chat-asistente`;
+      const res = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          messages: next.map((m) => ({ role: m.role, content: m.content })),
+          folio_id: folioId,
+          agente: showAgenteSelector ? agente : undefined,
+        }),
+      });
+
+      if (res.status === 429) {
+        const data = await res.json();
+        toast({ title: "Límite alcanzado", description: data.message ?? "Sin créditos este mes", variant: "destructive" });
+        setStreaming(false);
+        await refreshUsage();
+        return;
+      }
+      if (!res.ok || !res.body) {
+        const t = await res.text();
+        toast({ title: "Error", description: t.slice(0, 200), variant: "destructive" });
+        setStreaming(false);
+        return;
+      }
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let assistantText = "";
+      const toolUses: any[] = [];
+      let currentToolJson = "";
+      let currentTool: any = null;
+
+      setMessages((m) => [...m, { role: "assistant", content: "" }]);
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          try {
+            const evt = JSON.parse(line.slice(6));
+            if (evt.type === "content_block_start" && evt.content_block?.type === "tool_use") {
+              currentTool = { ...evt.content_block };
+              currentToolJson = "";
+            }
+            if (evt.type === "content_block_delta") {
+              if (evt.delta?.type === "text_delta") {
+                assistantText += evt.delta.text;
+                setMessages((m) => {
+                  const arr = [...m];
+                  arr[arr.length - 1] = { role: "assistant", content: assistantText, toolUses: [...toolUses] };
+                  return arr;
+                });
+              }
+              if (evt.delta?.type === "input_json_delta") currentToolJson += evt.delta.partial_json ?? "";
+            }
+            if (evt.type === "content_block_stop" && currentTool) {
+              try { currentTool.input = JSON.parse(currentToolJson || "{}"); } catch { currentTool.input = {}; }
+              toolUses.push(currentTool);
+              currentTool = null;
+              setMessages((m) => {
+                const arr = [...m];
+                arr[arr.length - 1] = { role: "assistant", content: assistantText, toolUses: [...toolUses] };
+                return arr;
+              });
+            }
+          } catch { /* skip */ }
+        }
+      }
+
+      await refreshUsage();
+    } catch (e: any) {
+      toast({ title: "Error", description: e.message, variant: "destructive" });
+    } finally {
+      setStreaming(false);
+    }
+  }
+
+  async function handleFile(file: File) {
+    if (!org || !session) return;
+    const path = `${org.id}/${Date.now()}-${file.name}`;
+    const { error } = await supabase.storage.from("chat-documentos").upload(path, file);
+    if (error) {
+      toast({ title: "Error subiendo archivo", description: error.message, variant: "destructive" });
+      return;
+    }
+    setMessages((m) => [...m, { role: "user", content: `📎 Adjunté: ${file.name}` }, { role: "assistant", content: "Analizando documento..." }]);
+    try {
+      const { data, error: fnErr } = await supabase.functions.invoke("chat-analizar-documento", {
+        body: { storage_path: path, nombre_archivo: file.name, mime_type: file.type, folio_id: folioId },
+      });
+      if (fnErr) throw fnErr;
+      const a = data.analisis;
+      const md = `**Tipo:** ${a.tipo}\n\n**Resumen:** ${a.resumen}\n\n${a.puntos_clave?.length ? `**Puntos clave:**\n${a.puntos_clave.map((p: string) => `- ${p}`).join("\n")}\n\n` : ""}${a.riesgos_detectados?.length ? `**Riesgos detectados:** ${a.riesgos_detectados.length}\n\n` : ""}${a.accion_sugerida ? `_${a.accion_sugerida}_` : ""}`;
+      setMessages((m) => {
+        const arr = [...m]; arr[arr.length - 1] = { role: "assistant", content: md }; return arr;
+      });
+    } catch (e: any) {
+      setMessages((m) => {
+        const arr = [...m]; arr[arr.length - 1] = { role: "assistant", content: `Error analizando: ${e.message ?? e}` }; return arr;
+      });
+    }
+  }
+
+  async function insertarRiesgo(input: any) {
+    try {
+      const { data, error } = await supabase.functions.invoke("chat-insertar-riesgo", { body: input });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
+      toast({ title: "Riesgo insertado", description: `#${(data as any).riesgo.numero_id} creado correctamente.` });
+      setMessages((m) => [...m, { role: "assistant", content: `✅ Riesgo #${(data as any).riesgo.numero_id} insertado en el folio.` }]);
+    } catch (e: any) {
+      toast({ title: "No se pudo insertar", description: e.message ?? String(e), variant: "destructive" });
+    }
+  }
+
+  const limit = usage?.limit ?? 0;
+  const used = usage?.used ?? 0;
+  const pct = limit === -1 ? 0 : limit === 0 ? 0 : (used / limit) * 100;
+
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent className="w-full sm:max-w-xl flex flex-col p-0">
+        <SheetHeader className="bg-primary text-primary-foreground px-4 py-3 space-y-1">
+          <SheetTitle className="text-primary-foreground flex items-center gap-2 text-base">
+            <Sparkles className="h-4 w-4" />
+            Asistente IA — {agente === "dm" ? "Agent DM (NOM-241)" : "Agent Farma (NOM-059)"}
+          </SheetTitle>
+          <div className="flex items-center justify-between text-xs text-primary-foreground/80">
+            <span>{folioCodigo ? `Contexto: ${folioCodigo}` : "Sin folio activo"}</span>
+            {usage && (
+              <span>
+                {limit === -1 ? "Ilimitado" : `${used}/${limit} mensajes`}
+              </span>
+            )}
+          </div>
+          {showAgenteSelector && (
+            <div className="flex gap-1 pt-1">
+              <button onClick={() => setAgente("dm")}
+                className={`px-2 py-0.5 text-xs rounded ${agente === "dm" ? "bg-white text-primary" : "bg-primary-foreground/10"}`}>
+                Agent DM
+              </button>
+              <button onClick={() => setAgente("farma")}
+                className={`px-2 py-0.5 text-xs rounded ${agente === "farma" ? "bg-white text-primary" : "bg-primary-foreground/10"}`}>
+                Agent Farma
+              </button>
+            </div>
+          )}
+        </SheetHeader>
+
+        {limit !== -1 && pct >= 80 && pct < 100 && (
+          <div className="bg-warning/10 text-foreground border-b border-warning/30 px-4 py-2 text-xs flex items-center gap-2">
+            <AlertTriangle className="h-3 w-3 text-warning" />
+            Has usado el {Math.floor(pct)}% de tus mensajes este mes.
+          </div>
+        )}
+        {limit !== -1 && pct >= 100 && (
+          <div className="bg-destructive/10 text-foreground border-b border-destructive/30 px-4 py-2 text-xs flex items-center gap-2">
+            <AlertTriangle className="h-3 w-3 text-destructive" />
+            Sin mensajes este mes. Mejora tu plan para continuar.
+          </div>
+        )}
+
+        <ScrollArea className="flex-1 px-4 py-3" ref={scrollRef as any}>
+          <div className="space-y-4">
+            {messages.length === 0 && (
+              <div className="text-center text-muted-foreground text-sm py-12">
+                <Bot className="h-10 w-10 mx-auto mb-2 opacity-40" />
+                <p>Hola, soy tu asistente de gestión de riesgos.</p>
+                <p className="text-xs mt-1">Pregúntame sobre AMEF, ICH-Q9, normativas o adjunta un documento.</p>
+              </div>
+            )}
+            {messages.map((m, i) => (
+              <MessageBubble key={i} msg={m} onInsertarRiesgo={insertarRiesgo} folioId={folioId} />
+            ))}
+            {streaming && (
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Loader2 className="h-3 w-3 animate-spin" />
+                Pensando...
+              </div>
+            )}
+          </div>
+        </ScrollArea>
+
+        <div className="border-t p-3 flex flex-col gap-2">
+          <div className="flex gap-2 items-end">
+            <input ref={fileInputRef} type="file" hidden
+              accept=".pdf,image/*,.docx,.xlsx"
+              onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); e.target.value = ""; }} />
+            <Button variant="outline" size="icon" onClick={() => fileInputRef.current?.click()} disabled={streaming}>
+              <Paperclip className="h-4 w-4" />
+            </Button>
+            <Textarea
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder="Escribe tu pregunta..."
+              className="min-h-[44px] max-h-32 resize-none"
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+              }}
+            />
+            <Button onClick={sendMessage} disabled={streaming || !input.trim()}>
+              {streaming ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+            </Button>
+          </div>
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
+}
+
+function MessageBubble({ msg, onInsertarRiesgo, folioId }: { msg: Msg; onInsertarRiesgo: (i: any) => void; folioId: string | null }) {
+  const isUser = msg.role === "user";
+  return (
+    <div className={`flex gap-2 ${isUser ? "flex-row-reverse" : ""}`}>
+      <div className={`h-7 w-7 rounded-full flex items-center justify-center shrink-0 ${isUser ? "bg-accent" : "bg-primary"}`}>
+        {isUser ? <User className="h-3.5 w-3.5 text-accent-foreground" /> : <Bot className="h-3.5 w-3.5 text-primary-foreground" />}
+      </div>
+      <div className={`rounded-md px-3 py-2 text-sm max-w-[85%] ${isUser ? "bg-accent/10" : "bg-muted/50"}`}>
+        {typeof msg.content === "string" ? (
+          <div className="prose prose-sm max-w-none [&_p]:my-1 [&_ul]:my-1 [&_ol]:my-1">
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
+          </div>
+        ) : null}
+        {msg.toolUses?.map((t, i) => {
+          if (t.name === "proponer_riesgo") {
+            const r = t.input;
+            const npr = (r.severidad ?? 0) * (r.ocurrencia ?? 0) * (r.deteccion ?? 0);
+            return (
+              <div key={i} className="mt-2 border border-accent/30 rounded-md p-3 bg-card">
+                <div className="flex items-center gap-2 mb-2">
+                  <Sparkles className="h-3 w-3 text-accent" />
+                  <span className="text-xs font-semibold">Riesgo sugerido</span>
+                  <Badge variant="outline" className="text-xs">NPR {npr}</Badge>
+                </div>
+                <div className="text-xs space-y-0.5">
+                  <div><strong>Peligro:</strong> {r.peligro}</div>
+                  <div><strong>Situación:</strong> {r.situacion_peligrosa}</div>
+                  <div><strong>Efecto:</strong> {r.efecto_dano}</div>
+                  <div className="text-muted-foreground">S:{r.severidad} O:{r.ocurrencia} D:{r.deteccion}</div>
+                </div>
+                <div className="flex gap-2 mt-2">
+                  <Button size="sm" className="h-7 text-xs"
+                    disabled={!r.folio_id && !folioId}
+                    onClick={() => onInsertarRiesgo({ ...r, folio_id: r.folio_id ?? folioId })}>
+                    Insertar
+                  </Button>
+                </div>
+                {!r.folio_id && !folioId && (
+                  <p className="text-xs text-muted-foreground mt-1">Abre un folio para poder insertar este riesgo.</p>
+                )}
+              </div>
+            );
+          }
+          if (t.name === "buscar_folio") {
+            return (
+              <div key={i} className="mt-2 text-xs text-muted-foreground flex items-center gap-1">
+                <FileText className="h-3 w-3" /> Buscando folios: <em>{t.input?.query}</em>
+              </div>
+            );
+          }
+          return null;
+        })}
+      </div>
+    </div>
+  );
+}
