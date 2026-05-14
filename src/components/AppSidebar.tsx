@@ -1,4 +1,4 @@
-import { LayoutDashboard, FolderOpen, Settings, BookOpen, ShieldCheck, LogOut, LifeBuoy, Ticket, Library } from "lucide-react";
+import { LayoutDashboard, FolderOpen, Settings, BookOpen, ShieldCheck, LogOut, LifeBuoy, Ticket, Library, Sparkles } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -19,6 +19,7 @@ import {
 const adminNavItems = [
   { title: "Panel TRACEA", url: "/admin", icon: ShieldCheck },
   { title: "Tickets", url: "/admin/tickets", icon: Ticket },
+  { title: "Agentes IA", url: "/admin/agentes-ia", icon: Sparkles },
 ];
 
 const orgNavItems = [
