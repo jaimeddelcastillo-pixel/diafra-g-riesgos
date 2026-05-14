@@ -49,10 +49,19 @@ Deno.serve(async (req) => {
       causa_potencial: body.causa_potencial ?? "",
       etapa_proceso: body.etapa_proceso ?? "",
       controles_actuales: body.controles_actuales ?? "",
+      controles_prevencion: body.controles_prevencion ?? "",
+      controles_deteccion: body.controles_deteccion ?? "",
       severidad: clamp(body.severidad ?? 1),
       ocurrencia: clamp(body.ocurrencia ?? 1),
       deteccion: clamp(body.deteccion ?? 1),
-      justificacion_aceptabilidad: body.justificacion ?? "",
+      justificacion_aceptabilidad: body.justificacion ?? body.justificacion_aceptabilidad ?? "",
+      requiere_accion: body.requiere_accion === true,
+      accion_propuesta: body.accion_propuesta ?? "",
+      responsable: body.responsable ?? "",
+      fecha_compromiso: body.fecha_compromiso || null,
+      sev_residual: clamp(body.sev_residual ?? body.severidad ?? 1),
+      ocu_residual: clamp(body.ocu_residual ?? body.ocurrencia ?? 1),
+      det_residual: clamp(body.det_residual ?? body.deteccion ?? 1),
     };
 
     const { data: inserted, error: iErr } = await userClient
