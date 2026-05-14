@@ -495,18 +495,34 @@ function MessageBubble({ msg, onInsertarRiesgo, folioId }: { msg: Msg; onInserta
           if (t.name === "proponer_riesgo") {
             const r = t.input;
             const npr = (r.severidad ?? 0) * (r.ocurrencia ?? 0) * (r.deteccion ?? 0);
+            const nprRes = (r.sev_residual ?? 0) * (r.ocu_residual ?? 0) * (r.det_residual ?? 0);
             return (
               <div key={i} className="mt-2 border border-accent/30 rounded-md p-3 bg-card">
                 <div className="flex items-center gap-2 mb-2">
                   <Sparkles className="h-3 w-3 text-accent" />
                   <span className="text-xs font-semibold">Riesgo sugerido</span>
                   <Badge variant="outline" className="text-xs">NPR {npr}</Badge>
+                  {nprRes > 0 && <Badge variant="outline" className="text-xs">NPR residual {nprRes}</Badge>}
+                  {r.requiere_accion && <Badge className="text-xs">Requiere acción</Badge>}
                 </div>
                 <div className="text-xs space-y-0.5">
+                  {r.etapa_proceso && <div><strong>Etapa:</strong> {r.etapa_proceso}</div>}
                   <div><strong>Peligro:</strong> {r.peligro}</div>
                   <div><strong>Situación:</strong> {r.situacion_peligrosa}</div>
+                  {r.secuencia_eventos && <div><strong>Secuencia:</strong> {r.secuencia_eventos}</div>}
                   <div><strong>Efecto:</strong> {r.efecto_dano}</div>
+                  {r.causa_potencial && <div><strong>Causa:</strong> {r.causa_potencial}</div>}
+                  {(r.controles_prevencion || r.controles_actuales) && (
+                    <div><strong>Prevención:</strong> {r.controles_prevencion || r.controles_actuales}</div>
+                  )}
+                  {r.controles_deteccion && <div><strong>Detección:</strong> {r.controles_deteccion}</div>}
                   <div className="text-muted-foreground">S:{r.severidad} O:{r.ocurrencia} D:{r.deteccion}</div>
+                  {nprRes > 0 && (
+                    <div className="text-muted-foreground">Residual → S:{r.sev_residual} O:{r.ocu_residual} D:{r.det_residual}</div>
+                  )}
+                  {r.accion_propuesta && <div><strong>Acción:</strong> {r.accion_propuesta}</div>}
+                  {r.responsable && <div><strong>Responsable:</strong> {r.responsable}{r.fecha_compromiso ? ` — ${r.fecha_compromiso}` : ""}</div>}
+                  {r.justificacion && <div className="text-muted-foreground italic">{r.justificacion}</div>}
                 </div>
                 <div className="flex gap-2 mt-2">
                   <Button size="sm" className="h-7 text-xs"
@@ -525,6 +541,28 @@ function MessageBubble({ msg, onInsertarRiesgo, folioId }: { msg: Msg; onInserta
             return (
               <div key={i} className="mt-2 text-xs text-muted-foreground flex items-center gap-1">
                 <FileText className="h-3 w-3" /> Buscando folios: <em>{t.input?.query}</em>
+              </div>
+            );
+          }
+          if (t.name === "crear_folio") {
+            return (
+              <div key={i} className="mt-2 text-xs text-muted-foreground flex items-center gap-1">
+                <FileText className="h-3 w-3" /> Creando folio: <em>{t.input?.proceso_equipo}</em>
+              </div>
+            );
+          }
+          if (t.name === "actualizar_folio") {
+            const keys = Object.keys(t.input ?? {}).filter((k) => k !== "folio_id");
+            return (
+              <div key={i} className="mt-2 text-xs text-muted-foreground flex items-center gap-1">
+                <FileText className="h-3 w-3" /> Actualizando folio: <em>{keys.join(", ")}</em>
+              </div>
+            );
+          }
+          if (t.name === "consultar_config_org" || t.name === "listar_riesgos_folio") {
+            return (
+              <div key={i} className="mt-2 text-xs text-muted-foreground flex items-center gap-1">
+                <FileText className="h-3 w-3" /> {t.name === "consultar_config_org" ? "Consultando configuración" : "Listando riesgos del folio"}
               </div>
             );
           }
