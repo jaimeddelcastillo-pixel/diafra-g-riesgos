@@ -536,6 +536,18 @@ Deno.serve(async (req) => {
                   const r = await execCrearFolio(adminClient, org.id, user.id, tb.input ?? {});
                   toolResults.push({ type: "tool_result", tool_use_id: tb.id, content: JSON.stringify(r) });
                 }
+              } else if (tb.name === "consultar_config_org") {
+                executedToolCalls++;
+                const r = await execConsultarConfigOrg(org);
+                toolResults.push({ type: "tool_result", tool_use_id: tb.id, content: JSON.stringify(r) });
+              } else if (tb.name === "listar_riesgos_folio") {
+                executedToolCalls++;
+                const r = await execListarRiesgosFolio(adminClient, org.id, tb.input?.folio_id ?? folio_id);
+                toolResults.push({ type: "tool_result", tool_use_id: tb.id, content: JSON.stringify(r) });
+              } else if (tb.name === "actualizar_folio") {
+                executedToolCalls++;
+                const r = await execActualizarFolio(adminClient, org.id, tb.input ?? {});
+                toolResults.push({ type: "tool_result", tool_use_id: tb.id, content: JSON.stringify(r) });
               } else {
                 toolResults.push({ type: "tool_result", tool_use_id: tb.id, content: "Herramienta desconocida.", is_error: true });
               }
