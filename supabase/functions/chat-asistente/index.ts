@@ -326,7 +326,7 @@ Deno.serve(async (req) => {
       isNewConversation = true;
     }
 
-    const systemPrompt = (promptRow as any).system_prompt + orgCtx + folioCtx + resumeNote;
+    const systemPrompt = (promptRow as any).system_prompt + orgCtx + folioCtx + resumeNote + TOOL_RULES_ADDENDUM;
 
     // Persistir el último mensaje user + bump
     const lastUser = [...messages].reverse().find((m) => m.role === "user");
@@ -341,90 +341,114 @@ Deno.serve(async (req) => {
       await bumpUsage(adminClient, org.id);
     }
 
-    // Llamar a Claude con stream
-    const anthRes = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": ANTHROPIC_API_KEY,
-        "anthropic-version": "2023-06-01",
-      },
-      body: JSON.stringify({
-        model: CLAUDE_MODEL,
-        max_tokens: 4096,
-        system: systemPrompt,
-        tools: TOOLS,
-        messages,
-        stream: true,
-      }),
-    });
-
-    if (!anthRes.ok) {
-      const errText = await anthRes.text();
-      console.error("Anthropic error:", anthRes.status, errText);
-      return new Response(JSON.stringify({ error: "anthropic_error", detail: errText }), {
-        status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    // Capture full assistant response to persist after stream ends
+    // --- Loop agéntico server-side ---
+    const turnMessages: any[] = [...messages];
+    const allToolUses: any[] = [];
     let fullText = "";
-    const toolUses: any[] = [];
     let tokensIn = 0, tokensOut = 0;
+    let executedToolCalls = 0;
+    let proposalEmitted = false;
 
-    const reader = anthRes.body!.getReader();
-    const decoder = new TextDecoder();
     const encoder = new TextEncoder();
 
     const stream = new ReadableStream({
       async start(controller) {
-        // Emitir primero el id de conversación como evento custom
         controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: "conversacion", id: conversacion_id })}\n\n`));
-        let buffer = "";
-        let currentToolInputJson = "";
-        let currentToolBlock: any = null;
+
         try {
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            buffer += decoder.decode(value, { stream: true });
-            const lines = buffer.split("\n");
-            buffer = lines.pop() ?? "";
-            for (const line of lines) {
-              if (!line.startsWith("data: ")) {
-                // forward also event lines untouched
-                controller.enqueue(encoder.encode(line + "\n"));
-                continue;
-              }
-              const payload = line.slice(6);
-              try {
-                const evt = JSON.parse(payload);
-                if (evt.type === "content_block_start" && evt.content_block?.type === "tool_use") {
-                  currentToolBlock = { ...evt.content_block };
-                  currentToolInputJson = "";
-                }
-                if (evt.type === "content_block_delta") {
-                  if (evt.delta?.type === "text_delta") fullText += evt.delta.text ?? "";
-                  if (evt.delta?.type === "input_json_delta") currentToolInputJson += evt.delta.partial_json ?? "";
-                }
-                if (evt.type === "content_block_stop" && currentToolBlock) {
-                  try { currentToolBlock.input = JSON.parse(currentToolInputJson || "{}"); }
-                  catch { currentToolBlock.input = {}; }
-                  toolUses.push(currentToolBlock);
-                  currentToolBlock = null;
-                }
-                if (evt.type === "message_delta" && evt.usage) {
-                  tokensOut = evt.usage.output_tokens ?? tokensOut;
-                }
-                if (evt.type === "message_start" && evt.message?.usage) {
-                  tokensIn = evt.message.usage.input_tokens ?? tokensIn;
-                }
-              } catch { /* ignore parse errors of partial */ }
-              controller.enqueue(encoder.encode(line + "\n"));
+          // Hasta 5 vueltas de seguridad (3 tools + finalización)
+          for (let round = 0; round < 5; round++) {
+            const limitReached = executedToolCalls >= MAX_TOOL_CALLS_PER_TURN;
+            const sysForCall = limitReached
+              ? systemPrompt + "\n\n[AVISO INTERNO] Se alcanzó el límite de 3 búsquedas en este turno. Procede con la información disponible y entrega la respuesta final al usuario."
+              : systemPrompt;
+
+            const anthRes = await fetch("https://api.anthropic.com/v1/messages", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "x-api-key": ANTHROPIC_API_KEY,
+                "anthropic-version": "2023-06-01",
+              },
+              body: JSON.stringify({
+                model: CLAUDE_MODEL,
+                max_tokens: 4096,
+                system: sysForCall,
+                tools: limitReached ? [TOOLS.find((t) => t.name === "proponer_riesgo")] : TOOLS,
+                messages: turnMessages,
+              }),
+            });
+
+            if (!anthRes.ok) {
+              const errText = await anthRes.text();
+              console.error("Anthropic error:", anthRes.status, errText);
+              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: "content_block_delta", delta: { type: "text_delta", text: `\n\n_Error del modelo: ${errText.slice(0, 200)}_` } })}\n\n`));
+              break;
             }
+
+            const data = await anthRes.json();
+            tokensIn += data.usage?.input_tokens ?? 0;
+            tokensOut += data.usage?.output_tokens ?? 0;
+
+            const blocks = data.content ?? [];
+            const toolUseBlocks: any[] = [];
+
+            // Emitir bloques al cliente como SSE sintéticos
+            for (const b of blocks) {
+              if (b.type === "text") {
+                fullText += b.text;
+                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: "content_block_delta", delta: { type: "text_delta", text: b.text } })}\n\n`));
+              } else if (b.type === "tool_use") {
+                toolUseBlocks.push(b);
+                allToolUses.push(b);
+                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: "content_block_start", content_block: { type: "tool_use", id: b.id, name: b.name } })}\n\n`));
+                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: "content_block_delta", delta: { type: "input_json_delta", partial_json: JSON.stringify(b.input ?? {}) } })}\n\n`));
+                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: "content_block_stop" })}\n\n`));
+              }
+            }
+
+            if (data.stop_reason !== "tool_use" || toolUseBlocks.length === 0) break;
+
+            // Construir tool_results
+            turnMessages.push({ role: "assistant", content: blocks });
+            const toolResults: any[] = [];
+            let stopAfter = false;
+
+            for (const tb of toolUseBlocks) {
+              if (tb.name === "proponer_riesgo") {
+                proposalEmitted = true;
+                stopAfter = true;
+                toolResults.push({
+                  type: "tool_result",
+                  tool_use_id: tb.id,
+                  content: "Propuesta enviada al usuario para revisión en la UI. NO repitas la propuesta y espera la decisión del usuario.",
+                });
+              } else if (tb.name === "buscar_folio") {
+                if (executedToolCalls >= MAX_TOOL_CALLS_PER_TURN) {
+                  toolResults.push({ type: "tool_result", tool_use_id: tb.id, content: "Límite de búsquedas alcanzado. Procede con la información disponible.", is_error: true });
+                } else {
+                  executedToolCalls++;
+                  const r = await execBuscarFolio(adminClient, org.id, tb.input?.query ?? "");
+                  toolResults.push({ type: "tool_result", tool_use_id: tb.id, content: JSON.stringify(r) });
+                }
+              } else if (tb.name === "crear_folio") {
+                if (executedToolCalls >= MAX_TOOL_CALLS_PER_TURN) {
+                  toolResults.push({ type: "tool_result", tool_use_id: tb.id, content: "Límite de búsquedas alcanzado. Procede con la información disponible.", is_error: true });
+                } else {
+                  executedToolCalls++;
+                  const r = await execCrearFolio(adminClient, org.id, user.id, tb.input ?? {});
+                  toolResults.push({ type: "tool_result", tool_use_id: tb.id, content: JSON.stringify(r) });
+                }
+              } else {
+                toolResults.push({ type: "tool_result", tool_use_id: tb.id, content: "Herramienta desconocida.", is_error: true });
+              }
+            }
+
+            turnMessages.push({ role: "user", content: toolResults });
+            if (stopAfter) break;
           }
         } catch (e) {
-          console.error("stream error", e);
+          console.error("agentic loop error", e);
         } finally {
           // Persistir respuesta del asistente
           try {
@@ -435,10 +459,9 @@ Deno.serve(async (req) => {
               contenido: fullText,
               tokens_usados: tokensIn + tokensOut,
               agente,
-              documentos_adjuntos: toolUses.length ? { tool_uses: toolUses } : null,
+              documentos_adjuntos: allToolUses.length ? { tool_uses: allToolUses } : null,
             });
 
-            // Auto-título tras primer turno
             if (isNewConversation && conversacion_id) {
               let titulo = "";
               if (folio_id) {
