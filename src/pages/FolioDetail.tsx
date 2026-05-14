@@ -274,7 +274,19 @@ function SeccionDescripcion({ folio, locked, onSaved }: { folio: Folio; locked: 
           />
           <FormField label="Modelo / Ref." value={folio.numero_modelo} className="col-span-2" />
           <FormField label="Lote / Rev." value={folio.numero_lote} className="col-span-2" />
-          <FormField label="Clase" value={folio.clase_dispositivo} className="col-span-2 border-r-0" />
+          {getClasificacionMode(folio.norma_folio, folio.clasificacion_categoria) === "dm" ? (
+            <FormField label="Clase" value={folio.clase_dispositivo} className="col-span-2 border-r-0" />
+          ) : (
+            <FormField
+              label="Clasificación"
+              value={
+                [folio.clasificacion_tipo, folio.clasificacion_condicion_venta, folio.clasificacion_riesgo_sanitario]
+                  .filter(Boolean)
+                  .join(" · ")
+              }
+              className="col-span-2 border-r-0"
+            />
+          )}
         </div>
         <div className="grid grid-cols-12">
           <FormField label="Proceso / Equipo Analizado" value={folio.proceso_equipo} className="col-span-4" />
