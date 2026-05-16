@@ -408,6 +408,24 @@ export function RiesgoWizardDialog({
   const ayudas2 = getAyudasPaso2(normaKey);
   const ayudasC = getAyudasControles(normaKey);
 
+  const abrirAsesor = () => {
+    const contexto =
+      step === 1
+        ? "Estoy en el Paso 1 (Identificar el peligro). Ayúdame a redactarlo bien según la norma."
+        : step === 2
+          ? "Estoy en el Paso 2 (Secuencia de eventos). Ayúdame a describir la cadena de fallos y la situación peligrosa."
+          : step === 3
+            ? `Estoy en el Paso 3 (Evaluación). Mi peligro es: "${s.peligro || "—"}". Ayúdame a justificar S=${s.severidad}, O=${s.ocurrencia}${usaDet ? `, D=${s.deteccion}` : ""} (NPR=${npr}).`
+            : step === 4
+              ? `Estoy en el Paso 4 (Controles). NPR inicial=${npr}, residual=${nprRes}. Sugiéreme controles de prevención y detección apropiados.`
+              : `Estoy en el Paso 5 (Revisión) del ID #${nextNumeroId}. ¿Algo que deba reforzar antes de guardar?`;
+    window.dispatchEvent(
+      new CustomEvent("tracea:open-assistant", {
+        detail: { folioId, folioCodigo, mensajeInicial: contexto },
+      }),
+    );
+  };
+
   return (
     <Dialog open={open} onOpenChange={(o) => !o && (reset(), onClose())}>
       <DialogContent className="max-w-4xl w-[96vw] h-[95vh] sm:h-auto sm:max-h-[92vh] p-0 flex flex-col gap-0 overflow-hidden">
@@ -417,9 +435,21 @@ export function RiesgoWizardDialog({
             <h2 className="text-lg font-bold">
               Nuevo ID #{String(nextNumeroId).padStart(2, "0")} — Paso {step} de 5
             </h2>
-            <Badge variant="secondary" className="text-[10px]">
-              {normaConfig.nombre}
-            </Badge>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                onClick={abrirAsesor}
+                className="h-7 gap-1.5 text-xs"
+                title="Abrir asesor IA en paralelo"
+              >
+                <Sparkles className="h-3.5 w-3.5" /> Asesor IA
+              </Button>
+              <Badge variant="secondary" className="text-[10px]">
+                {normaConfig.nombre}
+              </Badge>
+            </div>
           </div>
           <div className="flex gap-1.5">
             {STEPS.map((st) => (
