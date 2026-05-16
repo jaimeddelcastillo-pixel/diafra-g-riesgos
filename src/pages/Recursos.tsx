@@ -58,7 +58,7 @@ interface OrgDocumento {
 }
 
 interface ReferenciaDoc {
-  id: "pno" | "formato" | "guia";
+  id: "pno" | "formato";
   icon: typeof ClipboardList;
   iconClass: string;
   titulo: string;
@@ -110,27 +110,6 @@ const REFERENCIAS: ReferenciaDoc[] = [
         "Compatible con la matriz NPR (Severidad × Ocurrencia × Detectabilidad).",
         "Incluye sección de Comité Técnico y Dictamen del Responsable Sanitario.",
         "Pensada para diligenciar antes de cargarla al sistema o adaptar a tu proceso.",
-      ],
-    },
-  },
-  {
-    id: "guia",
-    icon: Bot,
-    iconClass: "text-[#8587E8]",
-    titulo: "Guía: Agente IA TRACEA Risk Manager",
-    descripcion:
-      "Configura tu asistente de IA en Gemini, ChatGPT o Claude. Incluye el System Prompt listo para usar con el protocolo NOM-241-SSA1-2025.",
-    badgeText: "Bonus exclusivo",
-    badgeClass: "bg-[#8587E8]/15 text-[#8587E8] border-[#8587E8]/30",
-    storagePath: "guia-agente-ia.pdf",
-    buttonLabel: "Descargar PDF",
-    preview: {
-      titulo: "Guía del Agente IA TRACEA Risk Manager",
-      cuerpo: [
-        "Paso a paso para configurar el agente en Gemini, ChatGPT o Claude.",
-        "Incluye System Prompt completo alineado a NOM-241-SSA1-2025 y FEUM / ISO 14971.",
-        "Recomendaciones para alimentar el agente con tus documentos internos.",
-        "Buenas prácticas para validación y uso responsable de IA.",
       ],
     },
   },
@@ -499,11 +478,6 @@ export default function Recursos() {
     } finally {
       setVerificando(null);
     }
-  };
-
-  const scrollToGuia = () => {
-    const el = document.getElementById("ref-guia");
-    el?.scrollIntoView({ behavior: "smooth", block: "center" });
   };
 
   return (
