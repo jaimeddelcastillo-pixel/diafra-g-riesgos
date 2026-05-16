@@ -965,6 +965,15 @@ export function RiesgoFormDialog({ open, onClose, folioId, riesgo, nextNumeroId,
           </TabsContent>
         </Tabs>
       </DialogContent>
+      <CausaRaizSheet
+        open={causaRaizOpen}
+        onClose={() => setCausaRaizOpen(false)}
+        peligro={form.peligro || form.peligro_modo_falla}
+        proceso={procesoEquipo || form.etapa_proceso || ""}
+        norma={normaFolio || "NOM-241"}
+        causaActual={form.causa_potencial}
+        onApply={handleAplicarCausaRaiz}
+      />
     </Dialog>
   );
 }
