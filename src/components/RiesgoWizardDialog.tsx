@@ -377,6 +377,15 @@ export function RiesgoWizardDialog({
       dictamen: "Pendiente" as const,
     };
 
+    if (extraJustificacion.trim()) {
+      payload.justificacion_aceptabilidad = [
+        payload.justificacion_aceptabilidad,
+        extraJustificacion.trim(),
+      ]
+        .filter(Boolean)
+        .join("\n\n");
+    }
+
     const { error } = await supabase.from("riesgos").insert(payload);
     setSaving(false);
     if (error) {
@@ -1126,6 +1135,30 @@ export function RiesgoWizardDialog({
         )}
         </div>
       </DialogContent>
+      <CausaRaizSheet
+        open={causaRaizOpen}
+        onClose={() => setCausaRaizOpen(false)}
+        peligro={s.peligro || s.peligro_modo_falla}
+        proceso={
+          (s.etapa_proceso === "__otra__" ? s.etapa_otra : s.etapa_proceso) ||
+          procesoEquipo ||
+          ""
+        }
+        norma={normaKey}
+        causaActual={s.causas.filter((c) => c.trim()).join("; ")}
+        onApply={(p: CausaRaizPayload) => {
+          const nuevasCausas = [p.causaRaiz, ...p.causasSecundarias].filter(Boolean);
+          const previas = s.causas.filter((c) => c.trim());
+          const dedup = Array.from(new Set([...previas, ...nuevasCausas]));
+          setS({ ...s, causas: dedup.length ? dedup : [""] });
+          setExtraJustificacion((prev) => formatJustificacion6M(prev, p));
+          setCausaRaizAplicado(true);
+          toast({
+            title: "Análisis aplicado",
+            description: `Causa raíz: ${p.causaRaiz}`,
+          });
+        }}
+      />
     </Dialog>
   );
 }
