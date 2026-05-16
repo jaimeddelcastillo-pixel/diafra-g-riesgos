@@ -1075,6 +1075,28 @@ export function RiesgoWizardDialog({
             </div>
           )}
         </div>
+        {/* fin columna wizard */}
+        </div>
+        {asistenteAbierto && (
+          <div
+            className={cn(
+              "md:flex-[2] md:max-w-md min-h-0 flex flex-col",
+              vistaMovil === "wizard" && "hidden md:flex",
+            )}
+          >
+            <WizardAsistente
+              folioId={folioId}
+              contextoSistema={construirContextoIA()}
+              paso={step}
+              onApply={aplicarSugerencia}
+              onClose={() => {
+                setAsistenteAbierto(false);
+                setVistaMovil("wizard");
+              }}
+            />
+          </div>
+        )}
+        </div>
       </DialogContent>
     </Dialog>
   );
