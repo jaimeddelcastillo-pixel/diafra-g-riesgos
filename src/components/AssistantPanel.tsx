@@ -29,13 +29,14 @@ interface Props {
   onOpenChange: (v: boolean) => void;
   folioId?: string | null;
   folioCodigo?: string | null;
+  mensajeInicial?: string | null;
 }
 
 const PLAN_LIMITS: Record<string, number> = {
   trial: 30, starter: 30, pro: 300, professional: 300, enterprise: -1,
 };
 
-export function AssistantPanel({ open, onOpenChange, folioId = null, folioCodigo = null }: Props) {
+export function AssistantPanel({ open, onOpenChange, folioId = null, folioCodigo = null, mensajeInicial = null }: Props) {
   const { org, session } = useAuth();
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
