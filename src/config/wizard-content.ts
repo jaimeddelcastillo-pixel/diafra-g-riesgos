@@ -193,3 +193,138 @@ export const POBLACIONES_VULNERABLES = [
 ];
 
 export type WizardNorma = NormaKey;
+
+// ── Ishikawa 6M — ejemplos por categoría y norma ──────────────────────────────
+export type Categoria6M =
+  | "mano_obra"
+  | "maquina"
+  | "metodo"
+  | "material"
+  | "medio_ambiente"
+  | "medicion";
+
+export const CATEGORIAS_6M: Array<{
+  key: Categoria6M;
+  titulo: string;
+  pregunta: string;
+}> = [
+  {
+    key: "mano_obra",
+    titulo: "Mano de obra",
+    pregunta: "¿Qué factores humanos pueden contribuir?",
+  },
+  {
+    key: "maquina",
+    titulo: "Máquina",
+    pregunta: "¿Qué fallas de equipo pueden contribuir?",
+  },
+  {
+    key: "metodo",
+    titulo: "Método",
+    pregunta: "¿Qué problemas de proceso o procedimiento?",
+  },
+  {
+    key: "material",
+    titulo: "Material",
+    pregunta: "¿Qué factores de materiales o insumos?",
+  },
+  {
+    key: "medio_ambiente",
+    titulo: "Medio ambiente",
+    pregunta: "¿Qué condiciones ambientales pueden influir?",
+  },
+  {
+    key: "medicion",
+    titulo: "Medición",
+    pregunta: "¿Qué problemas de medición o detección?",
+  },
+];
+
+const EJEMPLOS_6M: Record<NormaWizardKey, Record<Categoria6M, string[]>> = {
+  "NOM-241": {
+    mano_obra: [
+      "Capacitación insuficiente del operador",
+      "Fatiga por jornadas extendidas",
+      "Alta rotación de personal",
+      "Error en transcripción de registro",
+    ],
+    maquina: [
+      "Calibración vencida",
+      "Desgaste mecánico no detectado",
+      "Falla de sensor crítico",
+      "Interferencia electromagnética (EMI)",
+    ],
+    metodo: [
+      "PNO desactualizado",
+      "Instrucción ambigua",
+      "Falta de verificación doble",
+      "Validación de proceso vencida",
+    ],
+    material: [
+      "Lixiviables del envase",
+      "Material no calificado",
+      "Cambio de proveedor sin evaluación",
+      "Lote fuera de especificación",
+    ],
+    medio_ambiente: [
+      "Temperatura fuera de rango",
+      "Humedad relativa elevada",
+      "Clasificación de área comprometida",
+      "Iluminación insuficiente",
+    ],
+    medicion: [
+      "Instrumento sin calibración trazable",
+      "Método de inspección subjetivo",
+      "Muestreo insuficiente",
+      "Criterio de aceptación poco claro",
+    ],
+  },
+  "NOM-059": {
+    mano_obra: [
+      "Error en pesada de API",
+      "Cálculo incorrecto de dosis",
+      "Omisión de paso en BPR",
+      "Falta de calificación del analista",
+    ],
+    maquina: [
+      "Temporizador descalibrado",
+      "Mezclador fuera de velocidad validada",
+      "Falla de CIP/SIP",
+      "HVAC fuera de parámetros",
+    ],
+    metodo: [
+      "CPP no definido",
+      "Validación de proceso vencida",
+      "Método analítico no transferido",
+      "Cambio sin control de cambios",
+    ],
+    material: [
+      "API fuera de especificación",
+      "Excipiente con variabilidad de lote",
+      "Contaminación cruzada",
+      "Material caducado",
+    ],
+    medio_ambiente: [
+      "Presión diferencial negativa",
+      "HR fuera de límite",
+      "Temperatura de almacén fuera de rango",
+      "Conteo de partículas elevado",
+    ],
+    medicion: [
+      "Método analítico no validado",
+      "OOT no detectado",
+      "Límites de especificación incorrectos",
+      "Sistema cromatográfico sin SST",
+    ],
+  },
+};
+
+export function getEjemplos6M(
+  norma: string | null | undefined,
+): Record<Categoria6M, string[]> {
+  return EJEMPLOS_6M[normalizaNorma(norma)];
+}
+
+export function getNormaLabel(norma: string | null | undefined): string {
+  return normalizaNorma(norma);
+}
