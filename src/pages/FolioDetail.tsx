@@ -976,7 +976,7 @@ function SeccionRiesgoResidualGlobal({
 }
 
 // ─── Sección Riesgos ──────────────────────────────────────────────────────────
-function SeccionRiesgos({ riesgos, locked, folioId, folioCodigo, procesoEquipo, normaFolio }: { riesgos: Riesgo[]; locked: boolean; folioId: string; folioCodigo: string; procesoEquipo: string; normaFolio?: string | null }) {
+function SeccionRiesgos({ riesgos, locked, folioId, folioCodigo, procesoEquipo, normaFolio, folioEstado }: { riesgos: Riesgo[]; locked: boolean; folioId: string; folioCodigo: string; procesoEquipo: string; normaFolio?: string | null; folioEstado?: string }) {
   const [riesgoForm, setRiesgoForm] = useState<{ open: boolean; riesgo: Riesgo | null }>({ open: false, riesgo: null });
   const [wizardOpen, setWizardOpen] = useState(false);
   const { toast } = useToast();
@@ -1188,7 +1188,7 @@ function SeccionRiesgos({ riesgos, locked, folioId, folioCodigo, procesoEquipo, 
           riesgo={riesgoForm.riesgo}
           nextNumeroId={nextNumeroId}
           normaFolio={normaFolio}
-          folioEstado={folio?.estado}
+          folioEstado={folioEstado}
           procesoEquipo={procesoEquipo}
         />
       )}
@@ -1576,7 +1576,7 @@ export default function FolioDetail() {
         {/* Comité con firma conectada */}
         <SeccionComite comite={comite} folioId={folio.id} folioEstado={folio.estado} onSaved={handleRefresh} />
 
-        <SeccionRiesgos riesgos={riesgos} locked={locked} folioId={folio.id} folioCodigo={folio.codigo} procesoEquipo={folio.proceso_equipo || ""} normaFolio={folio.norma_folio} />
+        <SeccionRiesgos riesgos={riesgos} locked={locked} folioId={folio.id} folioCodigo={folio.codigo} procesoEquipo={folio.proceso_equipo || ""} normaFolio={folio.norma_folio} folioEstado={folio.estado} />
 
         {/* Evidencias — pestaña documental para auditor */}
         <SeccionEvidencias riesgos={riesgos} folioCodigo={folio.codigo} folioId={folio.id} normaFolio={folio.norma_folio} />
