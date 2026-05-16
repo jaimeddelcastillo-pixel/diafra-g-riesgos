@@ -11,6 +11,7 @@ import { useFolioDetail, getNPRLevel, getEstadoStyle } from "@/hooks/useFolios";
 import type { Folio, Riesgo, FolioComite } from "@/hooks/useFolios";
 import { Skeleton } from "@/components/ui/skeleton";
 import { RiesgoFormDialog } from "@/components/RiesgoFormDialog";
+import { RiesgoWizardDialog } from "@/components/RiesgoWizardDialog";
 import { SeccionDictamen } from "@/components/SeccionDictamen";
 import { SeccionEvidencias } from "@/components/SeccionEvidencias";
 import { supabase } from "@/integrations/supabase/client";
@@ -975,8 +976,9 @@ function SeccionRiesgoResidualGlobal({
 }
 
 // ─── Sección Riesgos ──────────────────────────────────────────────────────────
-function SeccionRiesgos({ riesgos, locked, folioId, normaFolio }: { riesgos: Riesgo[]; locked: boolean; folioId: string; normaFolio?: string | null }) {
+function SeccionRiesgos({ riesgos, locked, folioId, folioCodigo, procesoEquipo, normaFolio }: { riesgos: Riesgo[]; locked: boolean; folioId: string; folioCodigo: string; procesoEquipo: string; normaFolio?: string | null }) {
   const [riesgoForm, setRiesgoForm] = useState<{ open: boolean; riesgo: Riesgo | null }>({ open: false, riesgo: null });
+  const [wizardOpen, setWizardOpen] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const nc = getNormaConfig(normaFolio);
@@ -1170,7 +1172,7 @@ function SeccionRiesgos({ riesgos, locked, folioId, normaFolio }: { riesgos: Rie
               variant="outline"
               size="sm"
               className="gap-1 text-xs"
-              onClick={() => setRiesgoForm({ open: true, riesgo: null })}
+              onClick={() => setWizardOpen(true)}
             >
               <Plus className="h-3 w-3" /> Agregar Riesgo
             </Button>
@@ -1184,6 +1186,17 @@ function SeccionRiesgos({ riesgos, locked, folioId, normaFolio }: { riesgos: Rie
           onClose={() => setRiesgoForm({ open: false, riesgo: null })}
           folioId={folioId}
           riesgo={riesgoForm.riesgo}
+          nextNumeroId={nextNumeroId}
+          normaFolio={normaFolio}
+        />
+      )}
+      {wizardOpen && (
+        <RiesgoWizardDialog
+          open={wizardOpen}
+          onClose={() => setWizardOpen(false)}
+          folioId={folioId}
+          folioCodigo={folioCodigo}
+          procesoEquipo={procesoEquipo}
           nextNumeroId={nextNumeroId}
           normaFolio={normaFolio}
         />
