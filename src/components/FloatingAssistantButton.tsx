@@ -10,6 +10,7 @@ const HIDDEN_ROUTES = ["/login", "/register", "/precios", "/unsubscribe", "/chec
 export function FloatingAssistantButton() {
   const [open, setOpen] = useState(false);
   const [overrideFolio, setOverrideFolio] = useState<{ id: string; codigo: string } | null>(null);
+  const [initialMessage, setInitialMessage] = useState<string | null>(null);
   const location = useLocation();
   const params = useParams();
 
@@ -27,10 +28,13 @@ export function FloatingAssistantButton() {
 
   useEffect(() => {
     const handler = (e: Event) => {
-      const detail = (e as CustomEvent).detail as { folioId?: string; folioCodigo?: string } | undefined;
+      const detail = (e as CustomEvent).detail as
+        | { folioId?: string; folioCodigo?: string; mensajeInicial?: string }
+        | undefined;
       if (detail?.folioId) {
         setOverrideFolio({ id: detail.folioId, codigo: detail.folioCodigo || "" });
       }
+      if (detail?.mensajeInicial) setInitialMessage(detail.mensajeInicial);
       setOpen(true);
     };
     window.addEventListener("tracea:open-assistant", handler);
@@ -55,10 +59,14 @@ export function FloatingAssistantButton() {
         open={open}
         onOpenChange={(o) => {
           setOpen(o);
-          if (!o) setOverrideFolio(null);
+          if (!o) {
+            setOverrideFolio(null);
+            setInitialMessage(null);
+          }
         }}
         folioId={effectiveFolioId}
         folioCodigo={effectiveFolioCodigo}
+        mensajeInicial={initialMessage}
       />
     </>
   );
