@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import {
-  ClipboardList, LayoutTemplate, Bot, Sparkles, Upload, Download, Trash2,
+  ClipboardList, LayoutTemplate, Upload, Download, Trash2,
   FileText, Eye, Inbox, RotateCcw, Shield, History, Copy, CheckCircle2, AlertTriangle, Loader2,
 } from "lucide-react";
 import {
