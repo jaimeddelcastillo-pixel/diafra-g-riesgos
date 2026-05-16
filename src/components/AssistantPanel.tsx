@@ -60,6 +60,10 @@ export function AssistantPanel({ open, onOpenChange, folioId = null, folioCodigo
   }, [org?.norma_aplicable]);
 
   useEffect(() => {
+    if (open && mensajeInicial) setInput(mensajeInicial);
+  }, [open, mensajeInicial]);
+
+  useEffect(() => {
     if (!open || !org) return;
     refreshUsage();
     refreshConversaciones();
