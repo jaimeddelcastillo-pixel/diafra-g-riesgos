@@ -16,6 +16,8 @@ import {
   Sparkles,
   Trash2,
   Check,
+  Bot,
+  X,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -37,6 +39,7 @@ import {
   getFundamentoNormativo,
   POBLACIONES_VULNERABLES,
 } from "@/config/wizard-content";
+import { WizardAsistente, type WizardApplyField } from "@/components/wizard/WizardAsistente";
 
 interface Props {
   open: boolean;
@@ -248,6 +251,8 @@ export function RiesgoWizardDialog({
   const [step, setStep] = useState(1);
   const [s, setS] = useState<WizardState>(initialState);
   const [saving, setSaving] = useState(false);
+  const [asistenteAbierto, setAsistenteAbierto] = useState(false);
+  const [vistaMovil, setVistaMovil] = useState<"wizard" | "chat">("wizard");
 
   const normaConfig = getNormaConfig(normaFolio);
   const usaDet = normaConfig.usarDetectabilidad;
@@ -408,27 +413,85 @@ export function RiesgoWizardDialog({
   const ayudas2 = getAyudasPaso2(normaKey);
   const ayudasC = getAyudasControles(normaKey);
 
-  const abrirAsesor = () => {
-    const contexto =
-      step === 1
-        ? "Estoy en el Paso 1 (Identificar el peligro). Ayúdame a redactarlo bien según la norma."
-        : step === 2
-          ? "Estoy en el Paso 2 (Secuencia de eventos). Ayúdame a describir la cadena de fallos y la situación peligrosa."
-          : step === 3
-            ? `Estoy en el Paso 3 (Evaluación). Mi peligro es: "${s.peligro || "—"}". Ayúdame a justificar S=${s.severidad}, O=${s.ocurrencia}${usaDet ? `, D=${s.deteccion}` : ""} (NPR=${npr}).`
-            : step === 4
-              ? `Estoy en el Paso 4 (Controles). NPR inicial=${npr}, residual=${nprRes}. Sugiéreme controles de prevención y detección apropiados.`
-              : `Estoy en el Paso 5 (Revisión) del ID #${nextNumeroId}. ¿Algo que deba reforzar antes de guardar?`;
-    window.dispatchEvent(
-      new CustomEvent("tracea:open-assistant", {
-        detail: { folioId, folioCodigo, mensajeInicial: contexto },
-      }),
-    );
+  const construirContextoIA = () => {
+    const etapa = s.etapa_proceso === "__otra__" ? s.etapa_otra : s.etapa_proceso;
+    const causas = s.causas.filter((c) => c.trim()).join("; ");
+    const pasos = s.pasos.filter((p) => p.trim()).join(" → ");
+    return [
+      `Folio: ${folioCodigo} — Proceso: ${procesoEquipo || "N/D"}`,
+      `Norma: ${normaConfig.nombre} (${normaKey}) — Detectabilidad: ${usaDet ? "sí" : "no"}`,
+      `ID en creación: #${nextNumeroId} — Paso actual del wizard: ${step} de 5`,
+      `Datos capturados hasta ahora:`,
+      `• Peligro: ${s.peligro || "—"}`,
+      `• Etapa: ${etapa || "—"}`,
+      `• Modo de falla: ${s.peligro_modo_falla || "—"}`,
+      `• Causas: ${causas || "—"}`,
+      `• Secuencia: ${pasos || "—"}`,
+      `• Situación peligrosa: ${s.situacion_peligrosa || "—"}`,
+      `• Efecto/daño: ${s.efecto_dano || "—"}`,
+      `• S=${s.severidad}, O=${s.ocurrencia}${usaDet ? `, D=${s.deteccion}` : ""} → NPR=${npr}`,
+      `• Controles prevención: ${s.controles_prevencion.filter((x) => x.trim()).join("; ") || "—"}`,
+      `• Controles detección: ${s.controles_deteccion.filter((x) => x.trim()).join("; ") || "—"}`,
+      `• NPR residual: ${nprRes}`,
+    ].join("\n");
+  };
+
+  const aplicarSugerencia = (field: WizardApplyField, value: string | number) => {
+    setS((prev) => {
+      const next = { ...prev };
+      switch (field) {
+        case "severidad":
+          next.severidad = Math.max(1, Math.min(10, Number(value) || 1));
+          break;
+        case "ocurrencia":
+          next.ocurrencia = Math.max(1, Math.min(10, Number(value) || 1));
+          break;
+        case "deteccion":
+          next.deteccion = Math.max(1, Math.min(10, Number(value) || 1));
+          break;
+        case "peligro":
+          next.peligro = String(value);
+          break;
+        case "peligro_modo_falla":
+          next.peligro_modo_falla = String(value);
+          break;
+        case "situacion_peligrosa":
+          next.situacion_peligrosa = String(value);
+          break;
+        case "efecto_dano":
+          next.efecto_dano = String(value);
+          break;
+        case "causa": {
+          const causas = prev.causas.filter((c) => c.trim());
+          next.causas = [...causas, String(value)];
+          break;
+        }
+        case "control_prevencion": {
+          const arr = prev.controles_prevencion.filter((c) => c.trim());
+          next.controles_prevencion = [...arr, String(value)];
+          break;
+        }
+        case "control_deteccion": {
+          const arr = prev.controles_deteccion.filter((c) => c.trim());
+          next.controles_deteccion = [...arr, String(value)];
+          break;
+        }
+        case "accion_propuesta":
+          next.accion_propuesta = String(value);
+          break;
+      }
+      return next;
+    });
   };
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && (reset(), onClose())}>
-      <DialogContent className="max-w-4xl w-[96vw] h-[95vh] sm:h-auto sm:max-h-[92vh] p-0 flex flex-col gap-0 overflow-hidden">
+      <DialogContent
+        className={cn(
+          "p-0 flex flex-col gap-0 overflow-hidden w-[96vw] h-[95vh] sm:h-auto sm:max-h-[92vh]",
+          asistenteAbierto ? "max-w-6xl" : "max-w-4xl",
+        )}
+      >
         {/* Header con barra de progreso */}
         <div className="border-b bg-primary text-primary-foreground p-4">
           <div className="flex items-baseline justify-between mb-3">
@@ -439,12 +502,18 @@ export function RiesgoWizardDialog({
               <Button
                 type="button"
                 size="sm"
-                variant="secondary"
-                onClick={abrirAsesor}
+                variant={asistenteAbierto ? "default" : "secondary"}
+                onClick={() => {
+                  const next = !asistenteAbierto;
+                  setAsistenteAbierto(next);
+                  if (next) setVistaMovil("chat");
+                  else setVistaMovil("wizard");
+                }}
                 className="h-7 gap-1.5 text-xs"
-                title="Abrir asesor IA en paralelo"
+                title="Consultar Asistente IA en paralelo"
               >
-                <Sparkles className="h-3.5 w-3.5" /> Asesor IA
+                {asistenteAbierto ? <X className="h-3.5 w-3.5" /> : <Bot className="h-3.5 w-3.5" />}
+                {asistenteAbierto ? "Cerrar" : "Consultar"} Asistente
               </Button>
               <Badge variant="secondary" className="text-[10px]">
                 {normaConfig.nombre}
@@ -467,7 +536,46 @@ export function RiesgoWizardDialog({
               />
             ))}
           </div>
+          {/* Tabs móviles cuando el asistente está abierto */}
+          {asistenteAbierto && (
+            <div className="md:hidden mt-3 flex gap-1.5 bg-primary-foreground/10 rounded-md p-1">
+              <button
+                type="button"
+                onClick={() => setVistaMovil("wizard")}
+                className={cn(
+                  "flex-1 text-xs py-1.5 rounded-sm font-medium transition-colors",
+                  vistaMovil === "wizard"
+                    ? "bg-primary-foreground text-primary"
+                    : "text-primary-foreground/70",
+                )}
+              >
+                Wizard
+              </button>
+              <button
+                type="button"
+                onClick={() => setVistaMovil("chat")}
+                className={cn(
+                  "flex-1 text-xs py-1.5 rounded-sm font-medium transition-colors inline-flex items-center justify-center gap-1",
+                  vistaMovil === "chat"
+                    ? "bg-primary-foreground text-primary"
+                    : "text-primary-foreground/70",
+                )}
+              >
+                <Bot className="h-3 w-3" /> Asistente
+              </button>
+            </div>
+          )}
         </div>
+
+        {/* Split layout: wizard | asistente */}
+        <div className="flex-1 min-h-0 flex flex-col md:flex-row overflow-hidden">
+          <div
+            className={cn(
+              "flex-1 min-h-0 flex flex-col",
+              asistenteAbierto && "md:flex-[3]",
+              asistenteAbierto && vistaMovil === "chat" && "hidden md:flex",
+            )}
+          >
 
         {/* Contenido del paso */}
         <div className="flex-1 overflow-y-auto p-4 sm:p-6">
