@@ -1188,6 +1188,8 @@ function SeccionRiesgos({ riesgos, locked, folioId, folioCodigo, procesoEquipo, 
           riesgo={riesgoForm.riesgo}
           nextNumeroId={nextNumeroId}
           normaFolio={normaFolio}
+          folioEstado={folio?.estado}
+          procesoEquipo={procesoEquipo}
         />
       )}
       {wizardOpen && (
