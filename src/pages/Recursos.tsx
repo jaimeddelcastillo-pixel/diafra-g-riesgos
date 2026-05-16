@@ -958,37 +958,6 @@ export default function Recursos() {
         </Card>
       </section>
 
-      {/* SECCIÓN 3 — Banner Agente IA */}
-      <section>
-        <div
-          className="rounded-lg p-6 md:p-8 text-white"
-          style={{ backgroundColor: "#042C53" }}
-        >
-          <div className="flex flex-col md:flex-row items-start md:items-center gap-4 md:gap-6">
-            <div className="rounded-full bg-white/10 p-3 shrink-0">
-              <Sparkles className="h-6 w-6" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <h3 className="text-lg md:text-xl font-semibold">
-                ¿Listo para configurar tu Agente IA?
-              </h3>
-              <p className="text-sm md:text-base text-white/80 mt-1">
-                Con tus documentos subidos, tu asistente conocerá exactamente tus criterios de
-                aceptabilidad, tu escala NPR y tus responsables. Análisis más precisos desde el
-                primer día.
-              </p>
-            </div>
-            <Button
-              variant="secondary"
-              onClick={scrollToGuia}
-              className="bg-white text-[#042C53] hover:bg-white/90 shrink-0"
-            >
-              Ver Guía del Agente IA
-            </Button>
-          </div>
-        </div>
-      </section>
-
       {/* Modal Vista previa */}
       <Dialog open={previewDoc !== null} onOpenChange={(o) => !o && setPreviewDoc(null)}>
         <DialogContent className="max-w-lg">
