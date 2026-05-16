@@ -40,6 +40,12 @@ import {
   POBLACIONES_VULNERABLES,
 } from "@/config/wizard-content";
 import { WizardAsistente, type WizardApplyField } from "@/components/wizard/WizardAsistente";
+import {
+  CausaRaizSheet,
+  formatJustificacion6M,
+  type CausaRaizPayload,
+} from "@/components/causa-raiz/CausaRaizSheet";
+import { Search } from "lucide-react";
 
 interface Props {
   open: boolean;
@@ -253,6 +259,9 @@ export function RiesgoWizardDialog({
   const [saving, setSaving] = useState(false);
   const [asistenteAbierto, setAsistenteAbierto] = useState(false);
   const [vistaMovil, setVistaMovil] = useState<"wizard" | "chat">("wizard");
+  const [causaRaizOpen, setCausaRaizOpen] = useState(false);
+  const [causaRaizAplicado, setCausaRaizAplicado] = useState(false);
+  const [extraJustificacion, setExtraJustificacion] = useState("");
 
   const normaConfig = getNormaConfig(normaFolio);
   const usaDet = normaConfig.usarDetectabilidad;
@@ -366,6 +375,15 @@ export function RiesgoWizardDialog({
       det_residual: usaDet ? s.det_residual : 1,
       dictamen: "Pendiente" as const,
     };
+
+    if (extraJustificacion.trim()) {
+      payload.justificacion_aceptabilidad = [
+        payload.justificacion_aceptabilidad,
+        extraJustificacion.trim(),
+      ]
+        .filter(Boolean)
+        .join("\n\n");
+    }
 
     const { error } = await supabase.from("riesgos").insert(payload);
     setSaving(false);
@@ -656,6 +674,24 @@ export function RiesgoWizardDialog({
                   setItems={(i) => setS({ ...s, causas: i })}
                   placeholder="Ej: Falta de mantenimiento preventivo"
                 />
+                <div className="flex items-center gap-2 pt-1">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setCausaRaizOpen(true)}
+                    disabled={!s.peligro.trim()}
+                    className="h-7 gap-1.5 text-xs"
+                  >
+                    <Search className="h-3.5 w-3.5" />
+                    Analizar causa raíz
+                  </Button>
+                  {causaRaizAplicado && (
+                    <span className="inline-flex items-center gap-1 text-[11px] text-green-600 dark:text-green-400 font-medium">
+                      <Check className="h-3 w-3" /> Análisis aplicado
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
           )}
@@ -1098,6 +1134,30 @@ export function RiesgoWizardDialog({
         )}
         </div>
       </DialogContent>
+      <CausaRaizSheet
+        open={causaRaizOpen}
+        onClose={() => setCausaRaizOpen(false)}
+        peligro={s.peligro || s.peligro_modo_falla}
+        proceso={
+          (s.etapa_proceso === "__otra__" ? s.etapa_otra : s.etapa_proceso) ||
+          procesoEquipo ||
+          ""
+        }
+        norma={normaKey}
+        causaActual={s.causas.filter((c) => c.trim()).join("; ")}
+        onApply={(p: CausaRaizPayload) => {
+          const nuevasCausas = [p.causaRaiz, ...p.causasSecundarias].filter(Boolean);
+          const previas = s.causas.filter((c) => c.trim());
+          const dedup = Array.from(new Set([...previas, ...nuevasCausas]));
+          setS({ ...s, causas: dedup.length ? dedup : [""] });
+          setExtraJustificacion((prev) => formatJustificacion6M(prev, p));
+          setCausaRaizAplicado(true);
+          toast({
+            title: "Análisis aplicado",
+            description: `Causa raíz: ${p.causaRaiz}`,
+          });
+        }}
+      />
     </Dialog>
   );
 }

@@ -1,109 +1,123 @@
-# Plan — Wizard de creación de IDs de Riesgo
+# Plan — Análisis de Causa Raíz (Ishikawa 6M + 5 Porqués)
 
 ## Objetivo
-Reemplazar el formulario técnico vacío que abre el botón "Agregar ID" dentro de un Folio en estado **Borrador** por un wizard guiado de 5 pasos en lenguaje accesible, optimizado para tablet/móvil de planta, que llena los mismos campos de `riesgos` ya existentes — adaptándose automáticamente a la norma del folio (NOM-241, NOM-059, MULTI).
+Agregar dos herramientas opcionales de análisis de causa raíz, disponibles desde cualquier ID de riesgo en folio Borrador, con asistencia del agente IA y que escriben de vuelta a `causa_potencial` y `justificacion_aceptabilidad` del riesgo.
 
 ## Alcance
-- **Sí:** UI del wizard, validaciones, lógica de adaptación por norma, NPR en tiempo real, persistencia en `riesgos` con `origen='wizard'`, integración con AssistantPanel.
-- **No (fuera de scope):** cambios de esquema, comité, firmas, dictamen, PDF, agente IA backend.
+- **Sí:** UI del Sheet con pestañas, lógica de chips/cadena, llamadas al agente IA para proponer y validar, integración con campos existentes de `riesgos`, audit trail.
+- **No (fuera de scope):** cambios de esquema (todo entra en columnas ya existentes), comité, firmas, PDF, sugerencia automática desde el chat libre del agente (eso vive en el system prompt del backend — fuera de este sprint).
 
 ## Activación
-- En `FolioDetail.tsx`, cuando `folio.estado === 'Borrador'`, el botón **Agregar ID** abre `<RiesgoWizardDialog>` en lugar de `<RiesgoFormDialog>`.
-- Se mantiene `RiesgoFormDialog` para **editar** IDs existentes (modo avanzado / técnico). El wizard es solo para crear.
-- Layout: `Dialog` shadcn a pantalla completa en móvil (`h-[100dvh]`), `max-w-4xl` en desktop.
+Botón secundario **🔍 Analizar causa raíz** visible solo cuando el folio padre está en estado `Borrador`:
+1. En **RiesgoWizardDialog** dentro del Paso 1 (al lado del campo "Causas") y Paso 4 (cuando NPR residual ≥ umbral medio, como sugerencia destacada).
+2. En **RiesgoFormDialog** (edición de IDs existentes) en la sección de causas.
 
-## Archivos a crear / tocar
+Abre `CausaRaizSheet` (Sheet lateral, `max-w-2xl`) sin cerrar el dialog padre.
+
+## Archivos
 
 ### Nuevos
-1. `src/components/wizard/RiesgoWizardDialog.tsx` — contenedor del wizard (estado global, navegación, persistencia).
-2. `src/components/wizard/WizardProgress.tsx` — barra de progreso "Paso X de 5" + indicadores clickeables (solo retroceso).
-3. `src/components/wizard/steps/Step1Peligro.tsx`
-4. `src/components/wizard/steps/Step2Secuencia.tsx`
-5. `src/components/wizard/steps/Step3Evaluacion.tsx` — sliders + panel NPR.
-6. `src/components/wizard/steps/Step4Controles.tsx` — controles + recálculo residual + acción correctiva condicional.
-7. `src/components/wizard/steps/Step5Revision.tsx` — preview tabla regulatoria + 3 botones acción.
-8. `src/components/wizard/NPRPanel.tsx` — semáforo grande reutilizable con animación.
-9. `src/components/wizard/CausaList.tsx` — input + botón "+ Agregar" reutilizable (causas, pasos, controles).
-10. `src/config/wizard-content.ts` — **catálogos adaptativos por norma**: ejemplos de peligros (chips), descripciones de S/O/D en tiempo real, ayudas de secuencia, placeholders, fundamento normativo. Una sola fuente de verdad consumida por todos los pasos.
+1. `src/components/causa-raiz/CausaRaizSheet.tsx` — contenedor con shadcn `Tabs` (Ishikawa | 5 Porqués), estado compartido, callback `onApply(payload)`.
+2. `src/components/causa-raiz/IshikawaPanel.tsx` — 6 cards (Accordion), inputs por categoría, chips con badge "IA" para sugerencias, selector de "causa principal", botón Continuar.
+3. `src/components/causa-raiz/IshikawaDiagram.tsx` — SVG inline (sin librería): espina horizontal con peligro a la derecha, 6 ramas etiquetadas, sub-ramas dinámicas por causa. Color `--primary` cuando llena, `muted` cuando vacía.
+4. `src/components/causa-raiz/CincoPorquesPanel.tsx` — timeline vertical de 1 a 5 niveles, input por nivel, botón "✨ ¿Es suficientemente profundo?", indicador ✅/⚠️ por nivel, resumen final y botón "Aplicar al ID".
+5. `src/components/causa-raiz/useCausaRaizAI.ts` — hook que envuelve `fetch` a `chat-asistente` (no-streaming wrapper) para 2 prompts: `proponerIshikawa(peligro, proceso, norma)` y `evaluarPorque(cadena, norma)`. Devuelve JSON parseado con manejo de errores y toasts.
 
 ### Modificar
-- `src/pages/FolioDetail.tsx` — montar `<RiesgoWizardDialog>` para "Agregar"; mantener `<RiesgoFormDialog>` para "Editar".
-- `src/config/normas.ts` — agregar helper `getEjemplosPeligros(norma)`, `getDescripcionSeveridad(norma, valor)`, `getDescripcionOcurrencia(valor)`, `getDescripcionDetectabilidad(valor)`, `getEjemplosPasosSecuencia(norma)`, `getFundamentoNormativo(norma)`. Reutiliza catálogos ya existentes donde aplica.
+- `src/components/RiesgoWizardDialog.tsx` — botón en Paso 1 (junto a "Causas") y banner en Paso 4 (cuando `nprRes ≥ umbralNPRMedio`). Al aplicar, mergear resultado al estado del wizard antes de guardar.
+- `src/components/RiesgoFormDialog.tsx` — botón en sección de causas. Al aplicar, hacer `UPDATE` directo sobre `riesgos` + audit trail.
+- `src/config/wizard-content.ts` — agregar `getEjemplos6M(norma)` con 6 listas (Mano de obra, Máquina, Método, Material, Medio ambiente, Medición) indexadas por NOM-241/NOM-059.
+- `supabase/functions/chat-asistente/index.ts` — agregar 2 herramientas internas opcionales (`proponer_ishikawa`, `evaluar_porque`) o, más simple, manejar los prompts vía system prompt extendido. **Decisión: manejar como prompts especiales sin tools nuevas** — el hook pasa un mensaje estructurado y el modelo responde JSON.
 
 ### Sin cambios
-- Tabla `riesgos`: ya tiene todos los campos (`peligro`, `etapa_proceso`, `peligro_modo_falla`, `causa_potencial`, `secuencia_eventos`, `situacion_peligrosa`, `efecto_dano`, `severidad/ocurrencia/deteccion`, `controles_prevencion`, `controles_deteccion`, `sev_residual/ocu_residual/det_residual`, `accion_propuesta`, `responsable`, `fecha_compromiso`). Multi-valor (causas, pasos, controles) se serializa como lista numerada en el texto: `"1. ...\n2. ..."`.
-- No se agrega columna `origen` a riesgos (no existe). Para trazabilidad: registrar en `audit_trail` con `accion='wizard_create'`.
+- Tabla `riesgos`: usa `causa_potencial` (texto multilinea) y `justificacion_aceptabilidad` (texto). Sin migración.
+- Tabla `audit_trail`: insert con `accion='causa_raiz_ishikawa'` o `'causa_raiz_5porques'`, `valor_nuevo` = snapshot del análisis.
 
-## Lógica por paso
+## Lógica por componente
 
-### Paso 1 — Peligro
-- Campos: `peligro` (string), `etapa_proceso` (select desde `folio.proceso_equipo` parseado por líneas + "Otra etapa" → input libre), `peligro_modo_falla`, `causa_potencial` (array → join "; ").
-- Chips de ejemplos clickeables que rellenan `peligro` según norma del folio.
-- Validación: los 4 obligatorios, mínimo 1 causa.
+### IshikawaPanel
+- Estado: `Record<Categoria6M, Array<{ texto: string; origenIA: boolean; principal: boolean }>>`.
+- Por card: input + botón "+ Agregar", chips con X para eliminar y checkbox circular para marcar principal.
+- "✨ Proponer causas con IA": llama `proponerIshikawa({ peligro, proceso, norma })`, recibe `{ mano_obra: string[], maquina: string[], ... }`, prefilla chips con `origenIA: true` que el usuario acepta (X) o conserva.
+- Validación: ≥1 causa principal seleccionada habilita "Continuar a 5 Porqués →".
+- Debajo: `<IshikawaDiagram peligro={...} causas={...} />`.
 
-### Paso 2 — Secuencia
-- `secuencia_eventos` (array 2–8 pasos), `situacion_peligrosa`, `efecto_dano`.
-- Chips sugeridos para pasos según norma.
-- Ayudas y placeholders adaptados (NOM-241 vs NOM-059).
+### IshikawaDiagram (SVG)
+- Viewbox 800x300, espina centrada, 6 ramas (3 arriba / 3 abajo) en ángulos fijos.
+- Por cada causa, una sub-rama corta con texto truncado a 20 chars + tooltip nativo `<title>`.
+- Sin librerías externas.
 
-### Paso 3 — Evaluación
-- 3 sliders shadcn `<Slider>` con `thumb` agrandado (custom CSS `[&_[role=slider]]:h-7 [&_[role=slider]]:w-7`) para tablet.
-- Si `folio.detectabilidad_aplicable === false` → ocultar slider D, NPR = S×O.
-- Panel NPR central: número grande + semáforo con color token (`bg-npr-critical/high/low`) + transición `transition-colors duration-300`.
-- Badge ⚠️ "Severidad Crítica" cuando S ≥ `umbralSeveridadCritica` de la norma.
-- **NOM-059 únicamente:** si S ∈ {8,9,10}, mostrar `<RadioGroup>` población vulnerable. Si elige vulnerable y S<10, sugerencia visual "S+1 recomendado" con botón "Aplicar sugerencia" (no autoaplica). Justificación se guarda en `justificacion_aceptabilidad`.
+### CincoPorquesPanel
+- Estado: `{ causaInicial: string, niveles: Array<{ respuesta: string, evaluacion?: 'raiz'|'superficial'|null }> }`.
+- Nivel 1 pregunta "¿Por qué {causaInicial}?", siguientes "¿Por qué {respuestaNivelAnterior}?".
+- Mínimo 3, máximo 5. Botón "+ Agregar porqué" hasta nivel 5.
+- "✨ ¿Es suficientemente profundo?" por nivel: llama `evaluarPorque({ cadena, norma })` → marca ✅/⚠️ y muestra texto del modelo.
+- Resumen final tipo flecha: `Causa → Por qué 1 → ... → CAUSA RAÍZ` (último nivel con respuesta).
+- Botón "✅ Aplicar al ID" — dispara `onApply`.
 
-### Paso 4 — Controles
-- `controles_prevencion` y `controles_deteccion` (arrays → join "; ").
-- Tras llenar, aparecen mini-sliders residuales con valores iniciales = sliders del paso 3.
-- NPR residual en vivo.
-- **Si NPR residual ≥ `umbralNPRMedio`:** `requiere_accion=true` y se exigen `accion_propuesta`, `responsable`, `fecha_compromiso`.
+### Payload de aplicación (`onApply`)
+```ts
+{
+  causaRaiz: string,                    // del último porqué o causa principal Ishikawa
+  causasSecundarias: string[],          // todas las causas Ishikawa (no principales)
+  resumen6M: Record<Categoria, string[]>, // para justificacion_aceptabilidad
+  origen: 'ishikawa' | '5porques' | 'ambos',
+  cadenaPorques?: string[],
+}
+```
 
-### Paso 5 — Revisión
-- Tabla regulatoria con todos los campos + NPR inicial/residual + % reducción + fundamento normativo según norma.
-- Botones:
-  - **Guardar ID** → `supabase.from('riesgos').insert(...)` + audit + cerrar.
-  - **Guardar y agregar otro** → mismo insert + reset estado a Paso 1.
-  - **Guardar y continuar con Asistente IA** → insert + cerrar wizard + abrir `AssistantPanel` con `folio_id` precargado (usar evento custom o prop callback).
+### Mapeo a campos del riesgo
+- `causa_potencial`:  
+  ```
+  {causas_existentes}
+  
+  [CAUSA RAÍZ — {origen}] {causaRaiz}
+  {causasSecundarias numeradas}
+  ```
+- `justificacion_aceptabilidad`: append `\n\n[Análisis 6M]\n• Mano de obra: ...\n• Máquina: ...\n...` solo categorías con contenido.
+- Wizard: mergea al estado en memoria, persiste con el INSERT final.
+- FormDialog: `UPDATE` directo + audit insert.
+- Badge verde "✅ Análisis de causa raíz completado" en la tarjeta del ID, con tooltip mostrando resumen.
+
+## Llamadas al agente IA
+
+Reutiliza endpoint `chat-asistente` con mensajes estructurados (sin tools nuevas):
+
+**Prompt Ishikawa:**
+> "Como experto en {norma}, analiza el peligro '{peligro}' en el proceso '{proceso}'. Devuelve SOLO JSON válido con 6 listas de 2-4 causas potenciales: `{mano_obra, maquina, metodo, material, medio_ambiente, medicion}`."
+
+**Prompt 5 Porqués:**
+> "Evalúa si esta cadena de porqués llega a causa raíz según {norma}. Cadena: {causa} → {p1} → {p2} → ... Devuelve JSON: `{esCausaRaiz: boolean, justificacion: string, sugerencia: string|null}`."
+
+El hook hace `JSON.parse` con fallback a texto si falla. Stream se consume completo antes de parsear (no streaming UI para estas llamadas — toasts de "Pensando…").
 
 ## Adaptación por norma
-- Detección: `getNormaConfig(folio.norma_folio)`.
-- Para folios con `norma_folio='MULTI'`: al abrir el wizard, **modal previo de 1 pregunta** "¿Dispositivo médico o medicamento?" que setea un estado interno `modoWizard` y selecciona los catálogos correspondientes.
-- Todo el contenido textual vive en `wizard-content.ts` indexado por `'NOM-241' | 'NOM-059'`.
+- `getEjemplos6M(folio.norma_folio)` desde `wizard-content.ts`.
+- Para `MULTI`: heredar el `modoWizard` ya seleccionado en el wizard; en `RiesgoFormDialog`, usar el `clasificacion_categoria` del folio o un mini-selector al abrir el Sheet.
 
 ## Diseño
-- Tokens: `primary` (Navy/Cobalt ya en design system). Nada de colores hardcoded.
-- Header: `<WizardProgress>` sticky.
-- Footer: botones **Anterior** / **Siguiente** (`Guardar` en paso 5). Disabled hasta validación.
-- Sliders: thumb 28×28 px, track gruesa, descripción dinámica debajo en `text-sm text-muted-foreground`.
-- Tooltips ❓ vía `<Tooltip>` shadcn en labels técnicos.
-- Responsive: `grid-cols-1 md:grid-cols-2` donde aplica; sliders full-width siempre.
-- Animaciones: `transition-all duration-300` en cambios de semáforo y avance de paso.
-
-## Validación
-- Hook `useWizardState` interno con `errors` por paso, función `canAdvance(step)`.
-- No permitir click en "Siguiente" sin validar; mostrar errores inline con `text-destructive`.
-
-## Persistencia
-- Un solo INSERT al final (paso 5). Mientras tanto, estado en memoria.
-- Opcional v2: borrador local en `sessionStorage` por folio (no en este plan).
+- Tokens existentes: `primary` (Navy), `accent` (Cobalt/Teal), `muted` para estados vacíos. Badge IA usa `bg-accent/15 text-accent`.
+- shadcn: `Sheet`, `Tabs`, `Accordion`, `Badge`, `Button`, `Input`, `Textarea`, `Checkbox`.
+- Sheet `side="right"` con `className="max-w-2xl w-full sm:w-[90vw]"`.
+- Responsive: cards apiladas en móvil, diagrama SVG con `width="100%"` y `preserveAspectRatio`.
 
 ## Trazabilidad
-- `audit_trail` insert con `tabla='riesgos'`, `accion='wizard_create'`, `valor_nuevo` = snapshot completo.
+- Audit insert con `tabla='riesgos'`, `registro_id={riesgo.id || 'pendiente:wizard'}`, `accion` específica, `valor_nuevo` = payload completo del análisis.
 
 ## Orden de implementación
-1. `wizard-content.ts` + helpers en `normas.ts`.
-2. `RiesgoWizardDialog` + `WizardProgress` + esqueleto de pasos.
-3. Paso 1 y Paso 2 (formularios sencillos + chips).
-4. Paso 3 (sliders + NPR panel + lógica S≥9 + población vulnerable).
-5. Paso 4 (controles + residual + acción correctiva).
-6. Paso 5 (preview + 3 acciones + insert + audit).
-7. Wire-up en `FolioDetail.tsx` + selector MULTI inicial.
-8. QA responsive (móvil 375, tablet 768, desktop).
+1. `wizard-content.ts` — `getEjemplos6M` + tipos de categorías.
+2. `useCausaRaizAI.ts` — wrapper de llamadas al edge function + parseo JSON.
+3. `IshikawaDiagram.tsx` — SVG con props.
+4. `IshikawaPanel.tsx` — 6M + chips + IA + selector principal.
+5. `CincoPorquesPanel.tsx` — timeline + evaluación IA.
+6. `CausaRaizSheet.tsx` — Tabs + onApply.
+7. Integración en `RiesgoWizardDialog.tsx` (Paso 1 + banner Paso 4).
+8. Integración en `RiesgoFormDialog.tsx` con UPDATE + audit + badge.
+9. QA móvil/tablet/desktop.
 
 ## Riesgos / consideraciones
-- Multi-valor serializado como texto unido con "; " — compatible con `RiesgoFormDialog` y PDF existentes (que ya tratan los campos como string).
-- Si más adelante se quiere estructura `jsonb`, requeriría migración separada — fuera de scope.
-- El selector MULTI no persiste en BD (sólo controla UI del wizard); la categoría real del folio ya vive en `clasificacion_categoria`.
+- Los archivos `src/components/wizard/steps/Step1Peligro.tsx` y `Step4Controles.tsx` **no existen** (el wizard vive en un único `RiesgoWizardDialog.tsx`). El plan integra ahí en lugar de crear esos archivos.
+- El campo `causa_potencial` es texto plano: el formato propuesto preserva legibilidad pero no es estructurado. Migrar a JSONB queda fuera de scope.
+- La sugerencia automática del agente en el chat libre requiere editar el system prompt del edge function — se incluye una línea breve, pero el flujo de "abrir el Sheet desde el chat" se entrega como evento custom (`tracea:abrir-causa-raiz`) que el dialog escucha, sin reabrir el wizard.
 
-¿Apruebo y arranco con el paso 1 del orden de implementación?
+¿Apruebo y arranco con el paso 1?
