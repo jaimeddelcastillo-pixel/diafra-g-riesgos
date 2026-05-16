@@ -42,7 +42,6 @@ import {
 import { WizardAsistente, type WizardApplyField } from "@/components/wizard/WizardAsistente";
 import {
   CausaRaizSheet,
-  formatCausaPotencial,
   formatJustificacion6M,
   type CausaRaizPayload,
 } from "@/components/causa-raiz/CausaRaizSheet";
