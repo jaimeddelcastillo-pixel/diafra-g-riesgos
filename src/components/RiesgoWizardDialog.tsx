@@ -40,6 +40,13 @@ import {
   POBLACIONES_VULNERABLES,
 } from "@/config/wizard-content";
 import { WizardAsistente, type WizardApplyField } from "@/components/wizard/WizardAsistente";
+import {
+  CausaRaizSheet,
+  formatCausaPotencial,
+  formatJustificacion6M,
+  type CausaRaizPayload,
+} from "@/components/causa-raiz/CausaRaizSheet";
+import { Search } from "lucide-react";
 
 interface Props {
   open: boolean;
@@ -253,6 +260,9 @@ export function RiesgoWizardDialog({
   const [saving, setSaving] = useState(false);
   const [asistenteAbierto, setAsistenteAbierto] = useState(false);
   const [vistaMovil, setVistaMovil] = useState<"wizard" | "chat">("wizard");
+  const [causaRaizOpen, setCausaRaizOpen] = useState(false);
+  const [causaRaizAplicado, setCausaRaizAplicado] = useState(false);
+  const [extraJustificacion, setExtraJustificacion] = useState("");
 
   const normaConfig = getNormaConfig(normaFolio);
   const usaDet = normaConfig.usarDetectabilidad;
@@ -656,6 +666,24 @@ export function RiesgoWizardDialog({
                   setItems={(i) => setS({ ...s, causas: i })}
                   placeholder="Ej: Falta de mantenimiento preventivo"
                 />
+                <div className="flex items-center gap-2 pt-1">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setCausaRaizOpen(true)}
+                    disabled={!s.peligro.trim()}
+                    className="h-7 gap-1.5 text-xs"
+                  >
+                    <Search className="h-3.5 w-3.5" />
+                    Analizar causa raíz
+                  </Button>
+                  {causaRaizAplicado && (
+                    <span className="inline-flex items-center gap-1 text-[11px] text-green-600 dark:text-green-400 font-medium">
+                      <Check className="h-3 w-3" /> Análisis aplicado
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
           )}
