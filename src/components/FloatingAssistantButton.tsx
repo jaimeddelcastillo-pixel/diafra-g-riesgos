@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useLocation, useParams } from "react-router-dom";
 import { Sparkles } from "lucide-react";
 import { AssistantPanel } from "./AssistantPanel";
@@ -9,6 +9,7 @@ const HIDDEN_ROUTES = ["/login", "/register", "/precios", "/unsubscribe", "/chec
 
 export function FloatingAssistantButton() {
   const [open, setOpen] = useState(false);
+  const [overrideFolio, setOverrideFolio] = useState<{ id: string; codigo: string } | null>(null);
   const location = useLocation();
   const params = useParams();
 
@@ -24,7 +25,22 @@ export function FloatingAssistantButton() {
     },
   });
 
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail as { folioId?: string; folioCodigo?: string } | undefined;
+      if (detail?.folioId) {
+        setOverrideFolio({ id: detail.folioId, codigo: detail.folioCodigo || "" });
+      }
+      setOpen(true);
+    };
+    window.addEventListener("tracea:open-assistant", handler);
+    return () => window.removeEventListener("tracea:open-assistant", handler);
+  }, []);
+
   if (HIDDEN_ROUTES.some((p) => location.pathname.startsWith(p))) return null;
+
+  const effectiveFolioId = overrideFolio?.id ?? folioId;
+  const effectiveFolioCodigo = overrideFolio?.codigo ?? folio?.codigo ?? null;
 
   return (
     <>
@@ -37,9 +53,12 @@ export function FloatingAssistantButton() {
       </button>
       <AssistantPanel
         open={open}
-        onOpenChange={setOpen}
-        folioId={folioId}
-        folioCodigo={folio?.codigo ?? null}
+        onOpenChange={(o) => {
+          setOpen(o);
+          if (!o) setOverrideFolio(null);
+        }}
+        folioId={effectiveFolioId}
+        folioCodigo={effectiveFolioCodigo}
       />
     </>
   );
