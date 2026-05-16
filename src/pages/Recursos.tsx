@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import {
-  ClipboardList, LayoutTemplate, Bot, Sparkles, Upload, Download, Trash2,
+  ClipboardList, LayoutTemplate, Upload, Download, Trash2,
   FileText, Eye, Inbox, RotateCcw, Shield, History, Copy, CheckCircle2, AlertTriangle, Loader2,
 } from "lucide-react";
 import {
@@ -58,7 +58,7 @@ interface OrgDocumento {
 }
 
 interface ReferenciaDoc {
-  id: "pno" | "formato" | "guia";
+  id: "pno" | "formato";
   icon: typeof ClipboardList;
   iconClass: string;
   titulo: string;
@@ -110,27 +110,6 @@ const REFERENCIAS: ReferenciaDoc[] = [
         "Compatible con la matriz NPR (Severidad × Ocurrencia × Detectabilidad).",
         "Incluye sección de Comité Técnico y Dictamen del Responsable Sanitario.",
         "Pensada para diligenciar antes de cargarla al sistema o adaptar a tu proceso.",
-      ],
-    },
-  },
-  {
-    id: "guia",
-    icon: Bot,
-    iconClass: "text-[#8587E8]",
-    titulo: "Guía: Agente IA TRACEA Risk Manager",
-    descripcion:
-      "Configura tu asistente de IA en Gemini, ChatGPT o Claude. Incluye el System Prompt listo para usar con el protocolo NOM-241-SSA1-2025.",
-    badgeText: "Bonus exclusivo",
-    badgeClass: "bg-[#8587E8]/15 text-[#8587E8] border-[#8587E8]/30",
-    storagePath: "guia-agente-ia.pdf",
-    buttonLabel: "Descargar PDF",
-    preview: {
-      titulo: "Guía del Agente IA TRACEA Risk Manager",
-      cuerpo: [
-        "Paso a paso para configurar el agente en Gemini, ChatGPT o Claude.",
-        "Incluye System Prompt completo alineado a NOM-241-SSA1-2025 y FEUM / ISO 14971.",
-        "Recomendaciones para alimentar el agente con tus documentos internos.",
-        "Buenas prácticas para validación y uso responsable de IA.",
       ],
     },
   },
@@ -499,11 +478,6 @@ export default function Recursos() {
     } finally {
       setVerificando(null);
     }
-  };
-
-  const scrollToGuia = () => {
-    const el = document.getElementById("ref-guia");
-    el?.scrollIntoView({ behavior: "smooth", block: "center" });
   };
 
   return (
@@ -982,37 +956,6 @@ export default function Recursos() {
             )}
           </CardContent>
         </Card>
-      </section>
-
-      {/* SECCIÓN 3 — Banner Agente IA */}
-      <section>
-        <div
-          className="rounded-lg p-6 md:p-8 text-white"
-          style={{ backgroundColor: "#042C53" }}
-        >
-          <div className="flex flex-col md:flex-row items-start md:items-center gap-4 md:gap-6">
-            <div className="rounded-full bg-white/10 p-3 shrink-0">
-              <Sparkles className="h-6 w-6" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <h3 className="text-lg md:text-xl font-semibold">
-                ¿Listo para configurar tu Agente IA?
-              </h3>
-              <p className="text-sm md:text-base text-white/80 mt-1">
-                Con tus documentos subidos, tu asistente conocerá exactamente tus criterios de
-                aceptabilidad, tu escala NPR y tus responsables. Análisis más precisos desde el
-                primer día.
-              </p>
-            </div>
-            <Button
-              variant="secondary"
-              onClick={scrollToGuia}
-              className="bg-white text-[#042C53] hover:bg-white/90 shrink-0"
-            >
-              Ver Guía del Agente IA
-            </Button>
-          </div>
-        </div>
       </section>
 
       {/* Modal Vista previa */}
