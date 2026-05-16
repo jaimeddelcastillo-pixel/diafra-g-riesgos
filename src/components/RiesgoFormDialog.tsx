@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, Upload, FileText, X, HelpCircle, ChevronDown, ChevronUp, ShieldCheck, Settings, FlaskConical, Plus, ArrowUp, ArrowDown, Trash2 } from "lucide-react";
+import { CalendarIcon, Upload, FileText, X, HelpCircle, ChevronDown, ChevronUp, ShieldCheck, Settings, FlaskConical, Plus, ArrowUp, ArrowDown, Trash2, Search, CheckCircle2 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -23,6 +23,12 @@ import {
   getNPRLevelByNorma,
   type CatalogoItem,
 } from "@/config/normas";
+import {
+  CausaRaizSheet,
+  formatCausaPotencial,
+  formatJustificacion6M,
+  type CausaRaizPayload,
+} from "@/components/causa-raiz/CausaRaizSheet";
 
 interface RiesgoFormProps {
   open: boolean;
@@ -32,6 +38,10 @@ interface RiesgoFormProps {
   nextNumeroId: number;
   /** Norma del folio (NOM-241 / NOM-059 / MULTI). Si MULTI, fallback NOM-241. */
   normaFolio?: string | null;
+  /** Estado del folio padre. El botón de causa raíz solo aparece en Borrador. */
+  folioEstado?: string;
+  /** Nombre del proceso/equipo del folio padre, para alimentar el análisis. */
+  procesoEquipo?: string;
 }
 
 const SCORES = Array.from({ length: 10 }, (_, i) => i + 1);
@@ -157,7 +167,7 @@ function CatalogoInline({
 }
 
 // ─── Formulario principal ─────────────────────────────────────────────────────
-export function RiesgoFormDialog({ open, onClose, folioId, riesgo, nextNumeroId, normaFolio }: RiesgoFormProps) {
+export function RiesgoFormDialog({ open, onClose, folioId, riesgo, nextNumeroId, normaFolio, folioEstado, procesoEquipo }: RiesgoFormProps) {
   const isEdit = !!riesgo;
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -165,6 +175,8 @@ export function RiesgoFormDialog({ open, onClose, folioId, riesgo, nextNumeroId,
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [activeTab, setActiveTab] = useState("identificacion");
+  const [causaRaizOpen, setCausaRaizOpen] = useState(false);
+  const [causaRaizAplicado, setCausaRaizAplicado] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Resolver configuración de norma (MULTI → NOM-241 por default)
@@ -399,6 +411,24 @@ export function RiesgoFormDialog({ open, onClose, folioId, riesgo, nextNumeroId,
   const fechaCompromisoDate = parseFecha(form.fecha_compromiso);
   const fechaEvidenciaDate = parseFecha(form.fecha_evidencia);
 
+  const puedeAnalizarCausaRaiz = !folioEstado || folioEstado === "Borrador";
+
+  const handleAplicarCausaRaiz = (p: CausaRaizPayload) => {
+    setForm((f) => ({
+      ...f,
+      causa_potencial: formatCausaPotencial(f.causa_potencial, p),
+      justificacion_aceptabilidad: formatJustificacion6M(
+        f.justificacion_aceptabilidad,
+        p,
+      ),
+    }));
+    setCausaRaizAplicado(true);
+    toast({
+      title: "Análisis aplicado",
+      description: `Causa raíz: ${p.causaRaiz}`,
+    });
+  };
+
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
@@ -561,6 +591,26 @@ export function RiesgoFormDialog({ open, onClose, folioId, riesgo, nextNumeroId,
                   rows={2}
                   placeholder="Escriba cada causa en una línea separada"
                 />
+                <div className="flex items-center gap-2">
+                  {puedeAnalizarCausaRaiz && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setCausaRaizOpen(true)}
+                      className="h-7 gap-1.5 text-xs"
+                    >
+                      <Search className="h-3.5 w-3.5" />
+                      Analizar causa raíz
+                    </Button>
+                  )}
+                  {causaRaizAplicado && (
+                    <span className="inline-flex items-center gap-1 text-[11px] text-green-600 dark:text-green-400 font-medium">
+                      <CheckCircle2 className="h-3 w-3" />
+                      Análisis aplicado
+                    </span>
+                  )}
+                </div>
               </div>
               <div className="space-y-1.5 col-span-2">
                 <Label className="text-xs">{t.efectoDano}</Label>
