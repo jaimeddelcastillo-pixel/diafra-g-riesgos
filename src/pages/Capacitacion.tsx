@@ -23,6 +23,7 @@ type Guia = {
   badgeTone: "navy" | "orange";
   storagePath: string;
   buttonLabel: string;
+  norma: "NOM-241" | "NOM-059";
 };
 
 const GUIAS: Guia[] = [
@@ -35,6 +36,7 @@ const GUIAS: Guia[] = [
     badgeTone: "navy",
     storagePath: "guia-s9-dm.pdf",
     buttonLabel: "Descargar PDF",
+    norma: "NOM-241",
   },
   {
     id: "guia-s9-med",
@@ -45,6 +47,7 @@ const GUIAS: Guia[] = [
     badgeTone: "orange",
     storagePath: "guia-s9-med.pdf",
     buttonLabel: "Descargar PDF",
+    norma: "NOM-059",
   },
   {
     id: "pno-amgr-01",
@@ -55,6 +58,7 @@ const GUIAS: Guia[] = [
     badgeTone: "navy",
     storagePath: "PNO-AMGR-01.pdf",
     buttonLabel: "Descargar PDF",
+    norma: "NOM-241",
   },
   {
     id: "pno-amgr-02",
@@ -65,6 +69,7 @@ const GUIAS: Guia[] = [
     badgeTone: "orange",
     storagePath: "PNO-AMGR-02.pdf",
     buttonLabel: "Descargar PDF",
+    norma: "NOM-059",
   },
 ];
 
@@ -132,13 +137,53 @@ function GuiaBadge({ tone, children }: { tone: "navy" | "orange"; children: Reac
   return <Badge variant="outline" className={cls}>{children}</Badge>;
 }
 
+function renderGuiaCard(g: Guia, onDownload: (g: Guia) => void) {
+  return (
+    <Card key={g.id} className="flex flex-col">
+      <CardHeader>
+        <div className="flex items-start justify-between gap-2">
+          <FileText
+            className={
+              g.badgeTone === "navy"
+                ? "h-8 w-8 text-[hsl(var(--primary))] shrink-0"
+                : "h-8 w-8 text-orange-500 shrink-0"
+            }
+          />
+          <GuiaBadge tone={g.badgeTone}>{g.badge}</GuiaBadge>
+        </div>
+        <CardTitle className="text-base mt-2">{g.titulo}</CardTitle>
+        <CardDescription className="text-sm">{g.descripcion}</CardDescription>
+      </CardHeader>
+      <CardContent className="mt-auto">
+        <Button onClick={() => onDownload(g)} className="w-full" variant="outline">
+          <Download className="h-4 w-4 mr-2" />
+          {g.buttonLabel}
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function Capacitacion() {
   const { org } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [progreso, setProgreso] = useState<Record<string, boolean>>({});
 
-  const tieneCurso = !!org?.plan && PLANES_CON_CURSO.includes(org.plan.toLowerCase());
+  const planLower = org?.plan?.toLowerCase() ?? "";
+  const tieneCurso =
+    !!planLower && (PLANES_CON_CURSO.includes(planLower) || planLower === "trial");
+
+  const norma = org?.norma_aplicable ?? null;
+  const showDM = norma === "NOM-241" || norma === "MULTI" || !norma;
+  const showMed = norma === "NOM-059" || norma === "MULTI" || !norma;
+  const isMulti = norma === "MULTI" || !norma;
+
+  const guiasDM = GUIAS.filter((g) => g.norma === "NOM-241");
+  const guiasMed = GUIAS.filter((g) => g.norma === "NOM-059");
+  const guiasVisibles = GUIAS.filter(
+    (g) => (g.norma === "NOM-241" && showDM) || (g.norma === "NOM-059" && showMed),
+  );
 
   useEffect(() => {
     (async () => {
@@ -234,37 +279,39 @@ export default function Capacitacion() {
           <Badge variant="secondary">Acceso libre</Badge>
         </div>
 
-        <div>
-          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">
-            Guías Técnicas
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {GUIAS.map((g) => (
-              <Card key={g.id} className="flex flex-col">
-                <CardHeader>
-                  <div className="flex items-start justify-between gap-2">
-                    <FileText
-                      className={
-                        g.badgeTone === "navy"
-                          ? "h-8 w-8 text-[hsl(var(--primary))] shrink-0"
-                          : "h-8 w-8 text-orange-500 shrink-0"
-                      }
-                    />
-                    <GuiaBadge tone={g.badgeTone}>{g.badge}</GuiaBadge>
-                  </div>
-                  <CardTitle className="text-base mt-2">{g.titulo}</CardTitle>
-                  <CardDescription className="text-sm">{g.descripcion}</CardDescription>
-                </CardHeader>
-                <CardContent className="mt-auto">
-                  <Button onClick={() => descargarGuia(g)} className="w-full" variant="outline">
-                    <Download className="h-4 w-4 mr-2" />
-                    {g.buttonLabel}
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
+        {isMulti ? (
+          <>
+            {guiasDM.length > 0 && (
+              <div>
+                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">
+                  Dispositivos Médicos · NOM-241
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {guiasDM.map((g) => renderGuiaCard(g, descargarGuia))}
+                </div>
+              </div>
+            )}
+            {guiasMed.length > 0 && (
+              <div className="mt-6">
+                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">
+                  Medicamentos · NOM-059
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {guiasMed.map((g) => renderGuiaCard(g, descargarGuia))}
+                </div>
+              </div>
+            )}
+          </>
+        ) : (
+          <div>
+            <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">
+              Guías Técnicas
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {guiasVisibles.map((g) => renderGuiaCard(g, descargarGuia))}
+            </div>
           </div>
-        </div>
+        )}
 
         <div>
           <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3 mt-6">
@@ -332,6 +379,7 @@ export default function Capacitacion() {
         ) : (
           <div className="space-y-4">
             {/* Curso NOM-241 activo */}
+            {showDM && (
             <Card>
               <CardHeader>
                 <div className="flex items-start justify-between gap-2">
@@ -413,8 +461,10 @@ export default function Capacitacion() {
                 </Accordion>
               </CardContent>
             </Card>
+            )}
 
             {/* Curso NOM-059 — Próximamente */}
+            {showMed && (
             <Card className="relative opacity-70">
               <div className="absolute top-3 right-3">
                 <Lock className="h-4 w-4 text-muted-foreground" />
@@ -436,6 +486,7 @@ export default function Capacitacion() {
                 <Badge variant="secondary">Próximamente</Badge>
               </CardContent>
             </Card>
+            )}
           </div>
         )}
       </section>
