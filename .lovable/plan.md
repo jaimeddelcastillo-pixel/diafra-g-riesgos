@@ -1,69 +1,39 @@
-# Plan — Módulo Capacitación
+## Cambios en `src/pages/Capacitacion.tsx`
 
-## 1. Navegación y ruta
-- Agregar entrada **Capacitación** (`GraduationCap`, ruta `/capacitacion`) en `src/components/AppSidebar.tsx`, entre *Recursos* y *Auditoría*.
-- Registrar la ruta en `src/App.tsx` dentro del `AppLayout` (protegida igual que el resto del shell autenticado).
+### 1. Filtrar por norma de la organización
+Leer `org.norma_aplicable` (`'NOM-241' | 'NOM-059' | 'MULTI' | null`). Definir:
+```ts
+const norma = org?.norma_aplicable ?? "MULTI";
+const showDM  = norma === "NOM-241" || norma === "MULTI" || !org?.norma_aplicable;
+const showMed = norma === "NOM-059" || norma === "MULTI" || !org?.norma_aplicable;
+```
 
-## 2. Página `src/pages/Capacitacion.tsx`
-Layout con header Navy (`bg-primary` token TRACEA) + título "Capacitación" + subtítulo. Dos secciones:
+**Sección 1 – Biblioteca:**
+- Anotar cada guía con `norma: "NOM-241" | "NOM-059"` (ya existe `badge`, lo reutilizo).
+- Filtrar `GUIAS` según `showDM` / `showMed`.
+- Cuando es MULTI/null: agrupar visualmente con dos subtítulos ("Dispositivos Médicos · NOM-241" y "Medicamentos · NOM-059") como separador. En caso de norma única, no mostrar separador (solo "Guías Técnicas").
 
-### Sección 1 — Biblioteca de Conocimiento (visible para todos)
-- **Subsección A — Guías Técnicas** (4 tarjetas):
-  1. Guía Técnica S≥9 — Dispositivos Médicos · badge NOM-241 (Cobalt) · PDF
-  2. Guía Técnica S≥9 — Medicamentos · badge NOM-059 (Orange) · PDF
-  3. PNO-AMGR-01 · badge NOM-241 · Word
-  4. PNO-AMGR-02 · badge NOM-059 · Word
-  - Cada tarjeta usa `signed URL` o `getPublicUrl` desde el bucket `tracea-recursos`. Los archivos se asumen subidos en ese bucket (rutas: `guia-s9-dm.pdf`, `guia-s9-med.pdf`, `PNO-AMGR-01.docx`, `PNO-AMGR-02.docx`). Si alguno falta, mostrar toast.
-- **Subsección B — Próximamente** (3 tarjetas grises con candado): Manual TRACEA, Glosario, Checklist COFEPRIS.
+**Sección 2 – Cursos:**
+- Renderizar Curso NOM-241 solo si `showDM`.
+- Renderizar Curso NOM-059 (Próximamente) solo si `showMed`.
+- Si por norma queda solo el de Medicamentos, ese se ve como tarjeta "Próximamente" (no hay curso activo aún) — mantener mismo card bloqueado.
 
-### Sección 2 — Curso de Certificación
-Header con badge dinámico según acceso.
-- Lógica de acceso: `tieneCurso = ["curso","starter","professional","enterprise"].includes(org.plan)`. Si `plan` es `null`/`trial`/`pendiente` → bloqueada.
-- **Sin acceso**: banner CTA "Adquirir Curso — $450 USD" → `/precios`, tarjetas de curso con overlay candado.
-- **Con acceso**: 
-  - Curso 1 — NOM-241 (activo): 4 módulos con lecciones. Progreso = % lecciones completadas leídas desde `capacitacion_progreso`. Lecciones "video" muestran thumbnail gris + Play + "Próximamente". Lecciones tipo download enlazan a la guía/PNO correspondiente y marcan completado al click. Lección 3.2 enlaza al chat (botón flotante existente).
-  - Curso 2 — NOM-059: tarjeta bloqueada "Próximamente".
+### 2. Acceso al curso para plan trial
+Actualizar lógica:
+```ts
+const tieneCurso =
+  !!org?.plan &&
+  (PLANES_CON_CURSO.includes(org.plan.toLowerCase()) || org.plan.toLowerCase() === "trial");
+```
+Esto da acceso completo a la Sección 2 a cuentas trial activadas manualmente por super_admin.
 
-## 3. Componentes auxiliares (mismo archivo o `src/components/capacitacion/`)
-- `GuiaCard` (título, descripción, badge, botón descarga, ícono).
-- `LeccionItem` (estado: disponible ✅ / próximamente / link).
-- `ModuloAccordion` usando `Accordion` shadcn.
-- `CursoBloqueadoCard` con overlay candado.
+### 3. No requiere cambios de código (informativo)
+Sobre la corrección 3: el super_admin puede ajustar `organizations.plan` desde `/admin`; no se toca código de Capacitación.
 
-## 4. Base de datos (migración)
-Nueva tabla `public.capacitacion_progreso`:
-- `id uuid pk default gen_random_uuid()`
-- `org_id uuid not null` (default `get_user_org_id()`)
-- `user_id uuid not null default auth.uid()`
-- `curso_id text not null` ("nom241" | "nom059")
-- `leccion_id text not null`
-- `completado boolean default false`
-- `completado_en timestamptz`
-- `created_at timestamptz default now()`
-- UNIQUE (`org_id`,`user_id`,`curso_id`,`leccion_id`)
-- RLS habilitado:
-  - SELECT/INSERT/UPDATE: `org_id = get_user_org_id() AND user_id = auth.uid()` (+ `is_super_admin()` para soporte).
-  - Sin DELETE para usuarios.
+### Archivos tocados
+- `src/pages/Capacitacion.tsx` (único).
+- Sin migraciones, sin cambios en sidebar/rutas, sin nuevas dependencias.
 
-## 5. Diseño
-- Tokens semánticos existentes: `bg-primary`, `text-primary-foreground`, `border`, `bg-card`. Badges via `Badge` shadcn con `className` que mapea Cobalt (`bg-[hsl(var(--primary))]`) y Orange (token existente o `bg-accent`).
-- Grid `grid-cols-1 md:grid-cols-2 gap-4`.
-- Barra de progreso: componente `Progress` shadcn.
-- Candado: ícono `Lock` de lucide sobre overlay `bg-muted/60 backdrop-blur-sm`.
-
-## 6. Hooks/datos
-- `useAuth()` → `org.plan` para gating.
-- `supabase.storage.from('tracea-recursos').createSignedUrl(...)` al pulsar descargar (los PDFs de guía y los Word PNO).
-- Para PNO-AMGR-01 ya existe `storagePath: "PNO-AMGR-01.pdf"` en `Recursos.tsx`; reutilizar nombre. Para los demás archivos, si aún no están en el bucket, dejar el botón con toast "Documento no disponible, contacte soporte" (el usuario podrá subirlos luego).
-
-## 7. Entregables / orden de ejecución
-1. Migración `capacitacion_progreso` + RLS.
-2. Agregar ítem sidebar + ruta.
-3. Crear `src/pages/Capacitacion.tsx` con ambas secciones.
-4. Implementar carga de progreso y marcado de lección completada (downloads).
-5. QA visual en preview (desktop + 634px viewport actual).
-
-## Notas técnicas
-- No tocar `client.ts` ni `types.ts` (autogenerados).
-- No mover lógica de planes; reusar `org.plan` ya expuesto en `useAuth`.
-- `modulos_activos` no existe aún en `organizations` → no se agrega ahora (queda para Fase 2 cuando se necesite control granular).
+### QA
+- Verificar visual con `norma = NOM-241` (solo DM), `NOM-059` (solo Med), y `MULTI` (ambos con separadores).
+- Verificar que plan `trial` muestra curso desbloqueado.
