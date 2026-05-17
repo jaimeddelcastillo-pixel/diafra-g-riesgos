@@ -1,4 +1,4 @@
-import { LayoutDashboard, FolderOpen, Settings, BookOpen, ShieldCheck, LogOut, LifeBuoy, Ticket, Library, Sparkles } from "lucide-react";
+import { LayoutDashboard, FolderOpen, Settings, BookOpen, ShieldCheck, LogOut, LifeBuoy, Ticket, Library, Sparkles, GraduationCap } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -27,6 +27,7 @@ const orgNavItems = [
   { title: "Mis Folios", url: "/folios", icon: FolderOpen },
   { title: "Catálogos", url: "/catalogos", icon: BookOpen },
   { title: "Recursos", url: "/recursos", icon: Library },
+  { title: "Capacitación", url: "/capacitacion", icon: GraduationCap },
   { title: "Auditoría", url: "/auditoria", icon: Settings },
   { title: "Configuración", url: "/configuracion", icon: Settings },
 ];
