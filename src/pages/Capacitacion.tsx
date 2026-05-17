@@ -1,0 +1,444 @@
+import { useEffect, useState } from "react";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import {
+  Accordion, AccordionContent, AccordionItem, AccordionTrigger,
+} from "@/components/ui/accordion";
+import {
+  GraduationCap, FileText, Download, Lock, Play, CheckCircle2,
+  BookOpen, Award, Sparkles, ExternalLink,
+} from "lucide-react";
+import { useNavigate } from "react-router-dom";
+
+type Guia = {
+  id: string;
+  titulo: string;
+  descripcion: string;
+  badge: string;
+  badgeTone: "navy" | "orange";
+  storagePath: string;
+  buttonLabel: string;
+};
+
+const GUIAS: Guia[] = [
+  {
+    id: "guia-s9-dm",
+    titulo: "Guía Técnica S≥9 — Dispositivos Médicos",
+    descripcion:
+      "Por qué un riesgo con NPR bajo puede seguir siendo crítico y cómo defenderlo ante COFEPRIS. NOM-241-SSA1-2025 e ISO 14971:2019.",
+    badge: "NOM-241",
+    badgeTone: "navy",
+    storagePath: "guia-s9-dm.pdf",
+    buttonLabel: "Descargar PDF",
+  },
+  {
+    id: "guia-s9-med",
+    titulo: "Guía Técnica S≥9 — Medicamentos",
+    descripcion:
+      "Severidad crítica en gestión de riesgos farmacéuticos. Incluye Regla S+1 para población vulnerable. NOM-059-SSA1-2015 e ICH Q9(R1):2023.",
+    badge: "NOM-059",
+    badgeTone: "orange",
+    storagePath: "guia-s9-med.pdf",
+    buttonLabel: "Descargar PDF",
+  },
+  {
+    id: "pno-amgr-01",
+    titulo: "PNO-AMGR-01 — Gestión de Riesgos DM",
+    descripcion:
+      "Procedimiento Normalizado proforma para implementar gestión de riesgos en dispositivos médicos. Incluye los 6 elementos ISO 14971 obligatorios.",
+    badge: "NOM-241",
+    badgeTone: "navy",
+    storagePath: "PNO-AMGR-01.pdf",
+    buttonLabel: "Descargar PDF",
+  },
+  {
+    id: "pno-amgr-02",
+    titulo: "PNO-AMGR-02 — Gestión de Riesgos Medicamentos",
+    descripcion:
+      "Procedimiento Normalizado proforma para medicamentos. Incluye principios ICH Q9(R1):2023 y escala S+1 para población vulnerable.",
+    badge: "NOM-059",
+    badgeTone: "orange",
+    storagePath: "PNO-AMGR-02.pdf",
+    buttonLabel: "Descargar PDF",
+  },
+];
+
+const PROXIMAMENTE = [
+  { titulo: "Manual de Usuario TRACEA", descripcion: "Guía completa para sacar el máximo provecho de la plataforma." },
+  { titulo: "Glosario Regulatorio NOM-241 / NOM-059", descripcion: "Definiciones clave para hablar el idioma de COFEPRIS." },
+  { titulo: "Checklist de Auditoría COFEPRIS", descripcion: "Lista de verificación previa a una visita regulatoria." },
+];
+
+type Leccion = {
+  id: string;
+  titulo: string;
+  tipo: "video" | "descarga" | "link";
+  refGuiaId?: string;       // si es descarga, apunta a una guía
+  link?: string;             // si es link, ruta interna
+  proximamente?: boolean;
+};
+
+type Modulo = { id: string; titulo: string; lecciones: Leccion[] };
+
+const MODULOS_NOM241: Modulo[] = [
+  {
+    id: "m1",
+    titulo: "Módulo 1: Introducción a la Gestión de Riesgos",
+    lecciones: [
+      { id: "1.1", titulo: "¿Qué es ISO 14971?", tipo: "video", proximamente: true },
+      { id: "1.2", titulo: "La jerarquía normativa mexicana", tipo: "video", proximamente: true },
+      { id: "1.3", titulo: "Descargar Guía S≥9 DM", tipo: "descarga", refGuiaId: "guia-s9-dm" },
+    ],
+  },
+  {
+    id: "m2",
+    titulo: "Módulo 2: El Archivo Maestro de Gestión de Riesgos",
+    lecciones: [
+      { id: "2.1", titulo: "Los 6 elementos obligatorios del ID", tipo: "video", proximamente: true },
+      { id: "2.2", titulo: "Cómo calcular el NPR", tipo: "video", proximamente: true },
+      { id: "2.3", titulo: "Descargar PNO-AMGR-01", tipo: "descarga", refGuiaId: "pno-amgr-01" },
+    ],
+  },
+  {
+    id: "m3",
+    titulo: "Módulo 3: Casos Prácticos",
+    lecciones: [
+      { id: "3.1", titulo: "Análisis completo de proceso", tipo: "video", proximamente: true },
+      { id: "3.2", titulo: "Ejercicio con el Asistente IA", tipo: "link", link: "/folios" },
+    ],
+  },
+  {
+    id: "m4",
+    titulo: "Módulo 4: Evaluación y Certificación",
+    lecciones: [
+      { id: "4.1", titulo: "Evaluación final", tipo: "video", proximamente: true },
+      { id: "4.2", titulo: "Constancia DC-3", tipo: "video", proximamente: true },
+    ],
+  },
+];
+
+const PLANES_CON_CURSO = ["curso", "starter", "professional", "enterprise"];
+
+function GuiaBadge({ tone, children }: { tone: "navy" | "orange"; children: React.ReactNode }) {
+  const cls =
+    tone === "navy"
+      ? "bg-[hsl(var(--primary))]/15 text-[hsl(var(--primary))] border-[hsl(var(--primary))]/30"
+      : "bg-orange-500/15 text-orange-600 dark:text-orange-400 border-orange-500/30";
+  return <Badge variant="outline" className={cls}>{children}</Badge>;
+}
+
+export default function Capacitacion() {
+  const { org } = useAuth();
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const [progreso, setProgreso] = useState<Record<string, boolean>>({});
+
+  const tieneCurso = !!org?.plan && PLANES_CON_CURSO.includes(org.plan.toLowerCase());
+
+  useEffect(() => {
+    (async () => {
+      if (!org?.id) return;
+      const { data } = await (supabase as any)
+        .from("capacitacion_progreso")
+        .select("curso_id,leccion_id,completado")
+        .eq("curso_id", "nom241");
+      const map: Record<string, boolean> = {};
+      (data ?? []).forEach((r: any) => {
+        if (r.completado) map[r.leccion_id] = true;
+      });
+      setProgreso(map);
+    })();
+  }, [org?.id]);
+
+  const descargarGuia = async (g: Guia) => {
+    const { data } = await supabase.storage
+      .from("tracea-recursos")
+      .createSignedUrl(g.storagePath, 60);
+    if (data?.signedUrl) {
+      window.open(data.signedUrl, "_blank");
+      return true;
+    }
+    const { data: pub } = supabase.storage.from("tracea-recursos").getPublicUrl(g.storagePath);
+    if (pub?.publicUrl) {
+      window.open(pub.publicUrl, "_blank");
+      return true;
+    }
+    toast({
+      title: "Documento no disponible",
+      description: "Este recurso aún no ha sido cargado por el equipo TRACEA.",
+      variant: "destructive",
+    });
+    return false;
+  };
+
+  const marcarCompletada = async (leccionId: string) => {
+    if (!org?.id) return;
+    await (supabase as any).from("capacitacion_progreso").upsert(
+      {
+        org_id: org.id,
+        curso_id: "nom241",
+        leccion_id: leccionId,
+        completado: true,
+        completado_en: new Date().toISOString(),
+      },
+      { onConflict: "org_id,user_id,curso_id,leccion_id" },
+    );
+    setProgreso((p) => ({ ...p, [leccionId]: true }));
+  };
+
+  const totalLecciones = MODULOS_NOM241.reduce((a, m) => a + m.lecciones.length, 0);
+  const completadas = Object.values(progreso).filter(Boolean).length;
+  const porcentaje = totalLecciones === 0 ? 0 : Math.round((completadas / totalLecciones) * 100);
+
+  const handleLeccionClick = async (l: Leccion) => {
+    if (l.proximamente) return;
+    if (l.tipo === "descarga" && l.refGuiaId) {
+      const g = GUIAS.find((x) => x.id === l.refGuiaId);
+      if (g) {
+        const ok = await descargarGuia(g);
+        if (ok) marcarCompletada(l.id);
+      }
+    } else if (l.tipo === "link" && l.link) {
+      marcarCompletada(l.id);
+      navigate(l.link);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="rounded-lg bg-[hsl(var(--primary))] text-primary-foreground p-6 md:p-8">
+        <div className="flex items-start gap-4">
+          <div className="p-3 rounded-lg bg-white/10">
+            <GraduationCap className="h-8 w-8" />
+          </div>
+          <div>
+            <h1 className="text-2xl md:text-3xl font-bold">Capacitación</h1>
+            <p className="text-primary-foreground/80 mt-1">
+              Aprende, certifícate y cumple con COFEPRIS
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* SECCIÓN 1 — Biblioteca de Conocimiento */}
+      <section className="space-y-4">
+        <div className="flex items-center gap-2">
+          <BookOpen className="h-5 w-5 text-[hsl(var(--primary))]" />
+          <h2 className="text-xl font-semibold">Biblioteca de Conocimiento</h2>
+          <Badge variant="secondary">Acceso libre</Badge>
+        </div>
+
+        <div>
+          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">
+            Guías Técnicas
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {GUIAS.map((g) => (
+              <Card key={g.id} className="flex flex-col">
+                <CardHeader>
+                  <div className="flex items-start justify-between gap-2">
+                    <FileText
+                      className={
+                        g.badgeTone === "navy"
+                          ? "h-8 w-8 text-[hsl(var(--primary))] shrink-0"
+                          : "h-8 w-8 text-orange-500 shrink-0"
+                      }
+                    />
+                    <GuiaBadge tone={g.badgeTone}>{g.badge}</GuiaBadge>
+                  </div>
+                  <CardTitle className="text-base mt-2">{g.titulo}</CardTitle>
+                  <CardDescription className="text-sm">{g.descripcion}</CardDescription>
+                </CardHeader>
+                <CardContent className="mt-auto">
+                  <Button onClick={() => descargarGuia(g)} className="w-full" variant="outline">
+                    <Download className="h-4 w-4 mr-2" />
+                    {g.buttonLabel}
+                  </Button>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3 mt-6">
+            Próximamente
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {PROXIMAMENTE.map((p) => (
+              <Card key={p.titulo} className="relative opacity-70">
+                <div className="absolute top-3 right-3">
+                  <Lock className="h-4 w-4 text-muted-foreground" />
+                </div>
+                <CardHeader>
+                  <CardTitle className="text-sm">{p.titulo}</CardTitle>
+                  <CardDescription className="text-xs">{p.descripcion}</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Badge variant="secondary" className="text-xs">Próximamente</Badge>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* SECCIÓN 2 — Curso de Certificación */}
+      <section className="space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <Award className="h-5 w-5 text-[hsl(var(--primary))]" />
+            <h2 className="text-xl font-semibold">Curso de Certificación</h2>
+          </div>
+          {tieneCurso ? (
+            <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30" variant="outline">
+              <Sparkles className="h-3 w-3 mr-1" /> Incluido en tu plan
+            </Badge>
+          ) : (
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="border-orange-500/30 text-orange-600 bg-orange-500/10">
+                Requiere Curso $450 USD
+              </Badge>
+              <Button size="sm" onClick={() => navigate("/precios")}>Ver planes</Button>
+            </div>
+          )}
+        </div>
+
+        {!tieneCurso ? (
+          <Card className="border-2 border-dashed">
+            <CardContent className="pt-6 text-center space-y-4">
+              <div className="mx-auto h-12 w-12 rounded-full bg-[hsl(var(--primary))]/10 flex items-center justify-center">
+                <Lock className="h-6 w-6 text-[hsl(var(--primary))]" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold">
+                  Certifica a tu equipo en Gestión de Riesgos NOM-241
+                </h3>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Con constancia DC-3 oficial STPS al finalizar la evaluación.
+                </p>
+              </div>
+              <Button size="lg" onClick={() => navigate("/precios")}>
+                Adquirir Curso — $450 USD
+              </Button>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="space-y-4">
+            {/* Curso NOM-241 activo */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <CardTitle className="text-lg">
+                      Gestión de Riesgos NOM-241 para Dispositivos Médicos
+                    </CardTitle>
+                    <CardDescription>
+                      4 módulos · {totalLecciones} lecciones · Constancia DC-3 al finalizar
+                    </CardDescription>
+                  </div>
+                  <GuiaBadge tone="navy">NOM-241</GuiaBadge>
+                </div>
+                <div className="mt-4 space-y-1">
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>Progreso</span>
+                    <span>{completadas}/{totalLecciones} · {porcentaje}%</span>
+                  </div>
+                  <Progress value={porcentaje} className="h-2" />
+                </div>
+              </CardHeader>
+              <CardContent>
+                <Accordion type="multiple" defaultValue={["m1"]} className="w-full">
+                  {MODULOS_NOM241.map((m) => (
+                    <AccordionItem key={m.id} value={m.id}>
+                      <AccordionTrigger className="text-sm font-medium">
+                        {m.titulo}
+                      </AccordionTrigger>
+                      <AccordionContent>
+                        <div className="space-y-2">
+                          {m.lecciones.map((l) => {
+                            const completada = progreso[l.id];
+                            const disabled = !!l.proximamente;
+                            return (
+                              <button
+                                key={l.id}
+                                onClick={() => handleLeccionClick(l)}
+                                disabled={disabled}
+                                className={`w-full flex items-center gap-3 p-3 rounded-md border text-left transition ${
+                                  disabled
+                                    ? "bg-muted/30 cursor-not-allowed"
+                                    : "hover:bg-muted/50"
+                                }`}
+                              >
+                                {l.tipo === "video" ? (
+                                  <div className="h-10 w-16 rounded bg-muted flex items-center justify-center shrink-0">
+                                    <Play className="h-4 w-4 text-muted-foreground" />
+                                  </div>
+                                ) : completada ? (
+                                  <CheckCircle2 className="h-5 w-5 text-emerald-500 shrink-0" />
+                                ) : l.tipo === "link" ? (
+                                  <ExternalLink className="h-5 w-5 text-[hsl(var(--primary))] shrink-0" />
+                                ) : (
+                                  <Download className="h-5 w-5 text-[hsl(var(--primary))] shrink-0" />
+                                )}
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-medium truncate">
+                                    Lección {l.id}: {l.titulo}
+                                  </p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {l.proximamente
+                                      ? "Próximamente"
+                                      : completada
+                                      ? "Completada"
+                                      : l.tipo === "descarga"
+                                      ? "Disponible — Descargar"
+                                      : l.tipo === "link"
+                                      ? "Disponible — Abrir"
+                                      : "Disponible"}
+                                  </p>
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
+                  ))}
+                </Accordion>
+              </CardContent>
+            </Card>
+
+            {/* Curso NOM-059 — Próximamente */}
+            <Card className="relative opacity-70">
+              <div className="absolute top-3 right-3">
+                <Lock className="h-4 w-4 text-muted-foreground" />
+              </div>
+              <CardHeader>
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <CardTitle className="text-lg">
+                      Gestión de Riesgos NOM-059 para Medicamentos
+                    </CardTitle>
+                    <CardDescription>
+                      Misma estructura con contenido ICH Q9(R1):2023 y NOM-059-SSA1-2015.
+                    </CardDescription>
+                  </div>
+                  <GuiaBadge tone="orange">NOM-059</GuiaBadge>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <Badge variant="secondary">Próximamente</Badge>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+      </section>
+    </div>
+  );
+}
