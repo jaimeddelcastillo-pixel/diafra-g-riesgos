@@ -58,7 +58,7 @@ interface OrgDocumento {
 }
 
 interface ReferenciaDoc {
-  id: "pno" | "formato";
+  id: "pno" | "pno-med" | "formato" | "formato-med";
   icon: typeof ClipboardList;
   iconClass: string;
   titulo: string;
@@ -70,7 +70,7 @@ interface ReferenciaDoc {
   preview: { titulo: string; cuerpo: string[] };
 }
 
-const REFERENCIAS: ReferenciaDoc[] = [
+const REFERENCIAS_NOM241: ReferenciaDoc[] = [
   {
     id: "pno",
     icon: ClipboardList,
@@ -109,6 +109,51 @@ const REFERENCIAS: ReferenciaDoc[] = [
         "Plantilla FEUM / ISO 14971 con secciones I a VII.",
         "Compatible con la matriz NPR (Severidad × Ocurrencia × Detectabilidad).",
         "Incluye sección de Comité Técnico y Dictamen del Responsable Sanitario.",
+        "Pensada para diligenciar antes de cargarla al sistema o adaptar a tu proceso.",
+      ],
+    },
+  },
+];
+
+const REFERENCIAS_NOM059: ReferenciaDoc[] = [
+  {
+    id: "pno-med",
+    icon: ClipboardList,
+    iconClass: "text-[hsl(var(--primary))]",
+    titulo: "PNO-AMGR-02 Gestión de Riesgos_Medicamentos",
+    descripcion:
+      "Procedimiento Normalizado de Operación bajo NOM-059-SSA1-2015 / FEUM / ICH Q9. Úsalo como guía para crear o actualizar el PNO de gestión de riesgos de medicamentos de tu organización.",
+    badgeText: "Documento de referencia",
+    badgeClass: "bg-[hsl(var(--primary))]/15 text-[hsl(var(--primary))] border-[hsl(var(--primary))]/30",
+    storagePath: "PNO-AMGR-02.pdf",
+    buttonLabel: "Descargar PDF",
+    preview: {
+      titulo: "PNO-AMGR-02 — Gestión de Riesgos_Medicamentos",
+      cuerpo: [
+        "Procedimiento alineado a NOM-059-SSA1-2015, FEUM e ICH Q9 (R1).",
+        "Define alcance, responsabilidades y criterios de aceptabilidad para medicamentos.",
+        "Incluye flujo de identificación, evaluación, control y verificación de riesgos de calidad.",
+        "Sirve como base editable para tu propio PNO interno de fabricación farmacéutica.",
+      ],
+    },
+  },
+  {
+    id: "formato-med",
+    icon: LayoutTemplate,
+    iconClass: "text-emerald-500",
+    titulo: "Formato Archivo Maestro de Riesgos — Medicamentos",
+    descripcion:
+      "Plantilla oficial TRACEA para análisis FEUM / ICH Q9. Compatible con el sistema de firmas electrónicas y checklist NOM-059-SSA1-2015 de la plataforma.",
+    badgeText: "Formato oficial",
+    badgeClass: "bg-emerald-500/15 text-emerald-600 border-emerald-500/30 dark:text-emerald-400",
+    storagePath: "formato-amgr-med.pdf",
+    buttonLabel: "Descargar PDF",
+    preview: {
+      titulo: "Formato Archivo Maestro de Gestión de Riesgos — Medicamentos",
+      cuerpo: [
+        "Plantilla FEUM / ICH Q9 con secciones I a VII.",
+        "Compatible con la matriz NPR (Severidad × Ocurrencia × Detectabilidad).",
+        "Incluye sección de Comité Técnico y Dictamen del Director Técnico.",
         "Pensada para diligenciar antes de cargarla al sistema o adaptar a tu proceso.",
       ],
     },
