@@ -415,14 +415,14 @@ export async function generateFolioPDF(
         folio.estado,
       ],
       ...(getClasificacionMode(folio.norma_folio, (folio as any).clasificacion_categoria) === "med"
-        ? [[
+        ? [([
             { content: "Tipo de medicamento:", styles: { fontStyle: "bold", fillColor: [248, 248, 248] } },
             { content: (folio as any).clasificacion_tipo || "—" },
             { content: "Condición de venta:", styles: { fontStyle: "bold", fillColor: [248, 248, 248] } },
             { content: (folio as any).clasificacion_condicion_venta || "—" },
             { content: "Nivel de riesgo sanitario:", styles: { fontStyle: "bold", fillColor: [248, 248, 248] } },
             { content: (folio as any).clasificacion_riesgo_sanitario || "—" },
-          ]]
+          ] as any)]
         : []),
       [
         { content: "Alcance:", styles: { fontStyle: "bold", fillColor: [248, 248, 248] } },
