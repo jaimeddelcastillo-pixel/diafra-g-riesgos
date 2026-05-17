@@ -1,123 +1,69 @@
-# Plan — Análisis de Causa Raíz (Ishikawa 6M + 5 Porqués)
+# Plan — Módulo Capacitación
 
-## Objetivo
-Agregar dos herramientas opcionales de análisis de causa raíz, disponibles desde cualquier ID de riesgo en folio Borrador, con asistencia del agente IA y que escriben de vuelta a `causa_potencial` y `justificacion_aceptabilidad` del riesgo.
+## 1. Navegación y ruta
+- Agregar entrada **Capacitación** (`GraduationCap`, ruta `/capacitacion`) en `src/components/AppSidebar.tsx`, entre *Recursos* y *Auditoría*.
+- Registrar la ruta en `src/App.tsx` dentro del `AppLayout` (protegida igual que el resto del shell autenticado).
 
-## Alcance
-- **Sí:** UI del Sheet con pestañas, lógica de chips/cadena, llamadas al agente IA para proponer y validar, integración con campos existentes de `riesgos`, audit trail.
-- **No (fuera de scope):** cambios de esquema (todo entra en columnas ya existentes), comité, firmas, PDF, sugerencia automática desde el chat libre del agente (eso vive en el system prompt del backend — fuera de este sprint).
+## 2. Página `src/pages/Capacitacion.tsx`
+Layout con header Navy (`bg-primary` token TRACEA) + título "Capacitación" + subtítulo. Dos secciones:
 
-## Activación
-Botón secundario **🔍 Analizar causa raíz** visible solo cuando el folio padre está en estado `Borrador`:
-1. En **RiesgoWizardDialog** dentro del Paso 1 (al lado del campo "Causas") y Paso 4 (cuando NPR residual ≥ umbral medio, como sugerencia destacada).
-2. En **RiesgoFormDialog** (edición de IDs existentes) en la sección de causas.
+### Sección 1 — Biblioteca de Conocimiento (visible para todos)
+- **Subsección A — Guías Técnicas** (4 tarjetas):
+  1. Guía Técnica S≥9 — Dispositivos Médicos · badge NOM-241 (Cobalt) · PDF
+  2. Guía Técnica S≥9 — Medicamentos · badge NOM-059 (Orange) · PDF
+  3. PNO-AMGR-01 · badge NOM-241 · Word
+  4. PNO-AMGR-02 · badge NOM-059 · Word
+  - Cada tarjeta usa `signed URL` o `getPublicUrl` desde el bucket `tracea-recursos`. Los archivos se asumen subidos en ese bucket (rutas: `guia-s9-dm.pdf`, `guia-s9-med.pdf`, `PNO-AMGR-01.docx`, `PNO-AMGR-02.docx`). Si alguno falta, mostrar toast.
+- **Subsección B — Próximamente** (3 tarjetas grises con candado): Manual TRACEA, Glosario, Checklist COFEPRIS.
 
-Abre `CausaRaizSheet` (Sheet lateral, `max-w-2xl`) sin cerrar el dialog padre.
+### Sección 2 — Curso de Certificación
+Header con badge dinámico según acceso.
+- Lógica de acceso: `tieneCurso = ["curso","starter","professional","enterprise"].includes(org.plan)`. Si `plan` es `null`/`trial`/`pendiente` → bloqueada.
+- **Sin acceso**: banner CTA "Adquirir Curso — $450 USD" → `/precios`, tarjetas de curso con overlay candado.
+- **Con acceso**: 
+  - Curso 1 — NOM-241 (activo): 4 módulos con lecciones. Progreso = % lecciones completadas leídas desde `capacitacion_progreso`. Lecciones "video" muestran thumbnail gris + Play + "Próximamente". Lecciones tipo download enlazan a la guía/PNO correspondiente y marcan completado al click. Lección 3.2 enlaza al chat (botón flotante existente).
+  - Curso 2 — NOM-059: tarjeta bloqueada "Próximamente".
 
-## Archivos
+## 3. Componentes auxiliares (mismo archivo o `src/components/capacitacion/`)
+- `GuiaCard` (título, descripción, badge, botón descarga, ícono).
+- `LeccionItem` (estado: disponible ✅ / próximamente / link).
+- `ModuloAccordion` usando `Accordion` shadcn.
+- `CursoBloqueadoCard` con overlay candado.
 
-### Nuevos
-1. `src/components/causa-raiz/CausaRaizSheet.tsx` — contenedor con shadcn `Tabs` (Ishikawa | 5 Porqués), estado compartido, callback `onApply(payload)`.
-2. `src/components/causa-raiz/IshikawaPanel.tsx` — 6 cards (Accordion), inputs por categoría, chips con badge "IA" para sugerencias, selector de "causa principal", botón Continuar.
-3. `src/components/causa-raiz/IshikawaDiagram.tsx` — SVG inline (sin librería): espina horizontal con peligro a la derecha, 6 ramas etiquetadas, sub-ramas dinámicas por causa. Color `--primary` cuando llena, `muted` cuando vacía.
-4. `src/components/causa-raiz/CincoPorquesPanel.tsx` — timeline vertical de 1 a 5 niveles, input por nivel, botón "✨ ¿Es suficientemente profundo?", indicador ✅/⚠️ por nivel, resumen final y botón "Aplicar al ID".
-5. `src/components/causa-raiz/useCausaRaizAI.ts` — hook que envuelve `fetch` a `chat-asistente` (no-streaming wrapper) para 2 prompts: `proponerIshikawa(peligro, proceso, norma)` y `evaluarPorque(cadena, norma)`. Devuelve JSON parseado con manejo de errores y toasts.
+## 4. Base de datos (migración)
+Nueva tabla `public.capacitacion_progreso`:
+- `id uuid pk default gen_random_uuid()`
+- `org_id uuid not null` (default `get_user_org_id()`)
+- `user_id uuid not null default auth.uid()`
+- `curso_id text not null` ("nom241" | "nom059")
+- `leccion_id text not null`
+- `completado boolean default false`
+- `completado_en timestamptz`
+- `created_at timestamptz default now()`
+- UNIQUE (`org_id`,`user_id`,`curso_id`,`leccion_id`)
+- RLS habilitado:
+  - SELECT/INSERT/UPDATE: `org_id = get_user_org_id() AND user_id = auth.uid()` (+ `is_super_admin()` para soporte).
+  - Sin DELETE para usuarios.
 
-### Modificar
-- `src/components/RiesgoWizardDialog.tsx` — botón en Paso 1 (junto a "Causas") y banner en Paso 4 (cuando `nprRes ≥ umbralNPRMedio`). Al aplicar, mergear resultado al estado del wizard antes de guardar.
-- `src/components/RiesgoFormDialog.tsx` — botón en sección de causas. Al aplicar, hacer `UPDATE` directo sobre `riesgos` + audit trail.
-- `src/config/wizard-content.ts` — agregar `getEjemplos6M(norma)` con 6 listas (Mano de obra, Máquina, Método, Material, Medio ambiente, Medición) indexadas por NOM-241/NOM-059.
-- `supabase/functions/chat-asistente/index.ts` — agregar 2 herramientas internas opcionales (`proponer_ishikawa`, `evaluar_porque`) o, más simple, manejar los prompts vía system prompt extendido. **Decisión: manejar como prompts especiales sin tools nuevas** — el hook pasa un mensaje estructurado y el modelo responde JSON.
+## 5. Diseño
+- Tokens semánticos existentes: `bg-primary`, `text-primary-foreground`, `border`, `bg-card`. Badges via `Badge` shadcn con `className` que mapea Cobalt (`bg-[hsl(var(--primary))]`) y Orange (token existente o `bg-accent`).
+- Grid `grid-cols-1 md:grid-cols-2 gap-4`.
+- Barra de progreso: componente `Progress` shadcn.
+- Candado: ícono `Lock` de lucide sobre overlay `bg-muted/60 backdrop-blur-sm`.
 
-### Sin cambios
-- Tabla `riesgos`: usa `causa_potencial` (texto multilinea) y `justificacion_aceptabilidad` (texto). Sin migración.
-- Tabla `audit_trail`: insert con `accion='causa_raiz_ishikawa'` o `'causa_raiz_5porques'`, `valor_nuevo` = snapshot del análisis.
+## 6. Hooks/datos
+- `useAuth()` → `org.plan` para gating.
+- `supabase.storage.from('tracea-recursos').createSignedUrl(...)` al pulsar descargar (los PDFs de guía y los Word PNO).
+- Para PNO-AMGR-01 ya existe `storagePath: "PNO-AMGR-01.pdf"` en `Recursos.tsx`; reutilizar nombre. Para los demás archivos, si aún no están en el bucket, dejar el botón con toast "Documento no disponible, contacte soporte" (el usuario podrá subirlos luego).
 
-## Lógica por componente
+## 7. Entregables / orden de ejecución
+1. Migración `capacitacion_progreso` + RLS.
+2. Agregar ítem sidebar + ruta.
+3. Crear `src/pages/Capacitacion.tsx` con ambas secciones.
+4. Implementar carga de progreso y marcado de lección completada (downloads).
+5. QA visual en preview (desktop + 634px viewport actual).
 
-### IshikawaPanel
-- Estado: `Record<Categoria6M, Array<{ texto: string; origenIA: boolean; principal: boolean }>>`.
-- Por card: input + botón "+ Agregar", chips con X para eliminar y checkbox circular para marcar principal.
-- "✨ Proponer causas con IA": llama `proponerIshikawa({ peligro, proceso, norma })`, recibe `{ mano_obra: string[], maquina: string[], ... }`, prefilla chips con `origenIA: true` que el usuario acepta (X) o conserva.
-- Validación: ≥1 causa principal seleccionada habilita "Continuar a 5 Porqués →".
-- Debajo: `<IshikawaDiagram peligro={...} causas={...} />`.
-
-### IshikawaDiagram (SVG)
-- Viewbox 800x300, espina centrada, 6 ramas (3 arriba / 3 abajo) en ángulos fijos.
-- Por cada causa, una sub-rama corta con texto truncado a 20 chars + tooltip nativo `<title>`.
-- Sin librerías externas.
-
-### CincoPorquesPanel
-- Estado: `{ causaInicial: string, niveles: Array<{ respuesta: string, evaluacion?: 'raiz'|'superficial'|null }> }`.
-- Nivel 1 pregunta "¿Por qué {causaInicial}?", siguientes "¿Por qué {respuestaNivelAnterior}?".
-- Mínimo 3, máximo 5. Botón "+ Agregar porqué" hasta nivel 5.
-- "✨ ¿Es suficientemente profundo?" por nivel: llama `evaluarPorque({ cadena, norma })` → marca ✅/⚠️ y muestra texto del modelo.
-- Resumen final tipo flecha: `Causa → Por qué 1 → ... → CAUSA RAÍZ` (último nivel con respuesta).
-- Botón "✅ Aplicar al ID" — dispara `onApply`.
-
-### Payload de aplicación (`onApply`)
-```ts
-{
-  causaRaiz: string,                    // del último porqué o causa principal Ishikawa
-  causasSecundarias: string[],          // todas las causas Ishikawa (no principales)
-  resumen6M: Record<Categoria, string[]>, // para justificacion_aceptabilidad
-  origen: 'ishikawa' | '5porques' | 'ambos',
-  cadenaPorques?: string[],
-}
-```
-
-### Mapeo a campos del riesgo
-- `causa_potencial`:  
-  ```
-  {causas_existentes}
-  
-  [CAUSA RAÍZ — {origen}] {causaRaiz}
-  {causasSecundarias numeradas}
-  ```
-- `justificacion_aceptabilidad`: append `\n\n[Análisis 6M]\n• Mano de obra: ...\n• Máquina: ...\n...` solo categorías con contenido.
-- Wizard: mergea al estado en memoria, persiste con el INSERT final.
-- FormDialog: `UPDATE` directo + audit insert.
-- Badge verde "✅ Análisis de causa raíz completado" en la tarjeta del ID, con tooltip mostrando resumen.
-
-## Llamadas al agente IA
-
-Reutiliza endpoint `chat-asistente` con mensajes estructurados (sin tools nuevas):
-
-**Prompt Ishikawa:**
-> "Como experto en {norma}, analiza el peligro '{peligro}' en el proceso '{proceso}'. Devuelve SOLO JSON válido con 6 listas de 2-4 causas potenciales: `{mano_obra, maquina, metodo, material, medio_ambiente, medicion}`."
-
-**Prompt 5 Porqués:**
-> "Evalúa si esta cadena de porqués llega a causa raíz según {norma}. Cadena: {causa} → {p1} → {p2} → ... Devuelve JSON: `{esCausaRaiz: boolean, justificacion: string, sugerencia: string|null}`."
-
-El hook hace `JSON.parse` con fallback a texto si falla. Stream se consume completo antes de parsear (no streaming UI para estas llamadas — toasts de "Pensando…").
-
-## Adaptación por norma
-- `getEjemplos6M(folio.norma_folio)` desde `wizard-content.ts`.
-- Para `MULTI`: heredar el `modoWizard` ya seleccionado en el wizard; en `RiesgoFormDialog`, usar el `clasificacion_categoria` del folio o un mini-selector al abrir el Sheet.
-
-## Diseño
-- Tokens existentes: `primary` (Navy), `accent` (Cobalt/Teal), `muted` para estados vacíos. Badge IA usa `bg-accent/15 text-accent`.
-- shadcn: `Sheet`, `Tabs`, `Accordion`, `Badge`, `Button`, `Input`, `Textarea`, `Checkbox`.
-- Sheet `side="right"` con `className="max-w-2xl w-full sm:w-[90vw]"`.
-- Responsive: cards apiladas en móvil, diagrama SVG con `width="100%"` y `preserveAspectRatio`.
-
-## Trazabilidad
-- Audit insert con `tabla='riesgos'`, `registro_id={riesgo.id || 'pendiente:wizard'}`, `accion` específica, `valor_nuevo` = payload completo del análisis.
-
-## Orden de implementación
-1. `wizard-content.ts` — `getEjemplos6M` + tipos de categorías.
-2. `useCausaRaizAI.ts` — wrapper de llamadas al edge function + parseo JSON.
-3. `IshikawaDiagram.tsx` — SVG con props.
-4. `IshikawaPanel.tsx` — 6M + chips + IA + selector principal.
-5. `CincoPorquesPanel.tsx` — timeline + evaluación IA.
-6. `CausaRaizSheet.tsx` — Tabs + onApply.
-7. Integración en `RiesgoWizardDialog.tsx` (Paso 1 + banner Paso 4).
-8. Integración en `RiesgoFormDialog.tsx` con UPDATE + audit + badge.
-9. QA móvil/tablet/desktop.
-
-## Riesgos / consideraciones
-- Los archivos `src/components/wizard/steps/Step1Peligro.tsx` y `Step4Controles.tsx` **no existen** (el wizard vive en un único `RiesgoWizardDialog.tsx`). El plan integra ahí en lugar de crear esos archivos.
-- El campo `causa_potencial` es texto plano: el formato propuesto preserva legibilidad pero no es estructurado. Migrar a JSONB queda fuera de scope.
-- La sugerencia automática del agente en el chat libre requiere editar el system prompt del edge function — se incluye una línea breve, pero el flujo de "abrir el Sheet desde el chat" se entrega como evento custom (`tracea:abrir-causa-raiz`) que el dialog escucha, sin reabrir el wizard.
-
-¿Apruebo y arranco con el paso 1?
+## Notas técnicas
+- No tocar `client.ts` ni `types.ts` (autogenerados).
+- No mover lógica de planes; reusar `org.plan` ya expuesto en `useAuth`.
+- `modulos_activos` no existe aún en `organizations` → no se agrega ahora (queda para Fase 2 cuando se necesite control granular).
