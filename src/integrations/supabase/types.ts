@@ -135,6 +135,42 @@ export type Database = {
           },
         ]
       }
+      capacitacion_progreso: {
+        Row: {
+          completado: boolean
+          completado_en: string | null
+          created_at: string
+          curso_id: string
+          id: string
+          leccion_id: string
+          org_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          completado?: boolean
+          completado_en?: string | null
+          created_at?: string
+          curso_id: string
+          id?: string
+          leccion_id: string
+          org_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Update: {
+          completado?: boolean
+          completado_en?: string | null
+          created_at?: string
+          curso_id?: string
+          id?: string
+          leccion_id?: string
+          org_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       chat_conversaciones: {
         Row: {
           agente: string
