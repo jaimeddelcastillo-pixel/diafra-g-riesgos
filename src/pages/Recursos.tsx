@@ -226,6 +226,15 @@ export default function Recursos() {
 
   const puedeEliminar = hasRole("admin");
 
+  /** Selección de referencias según la norma aplicable de la organización. */
+  const norma = org?.norma_aplicable ?? "NOM-241";
+  const REFERENCIAS: ReferenciaDoc[] =
+    norma === "NOM-059"
+      ? REFERENCIAS_NOM059
+      : norma === "MULTI"
+      ? [...REFERENCIAS_NOM241, ...REFERENCIAS_NOM059]
+      : REFERENCIAS_NOM241;
+
   const cargarDocs = async () => {
     if (!org?.id) return;
     setLoading(true);
