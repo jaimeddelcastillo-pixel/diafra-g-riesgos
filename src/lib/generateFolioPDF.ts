@@ -369,6 +369,18 @@ export async function generateFolioPDF(
               ]
                 .filter(Boolean)
                 .join(" · ") || "—";
+        // En medicamentos mostramos Queja/Devolución en la 3ª columna (en lugar de Clasificación
+        // resumida, que ahora se desglosa en su propia fila más abajo).
+        if (modo === "med") {
+          return [
+            { content: "Folio de Gestión:", styles: { fontStyle: "bold", cellWidth: 36, fillColor: [248, 248, 248] } },
+            { content: folio.codigo, styles: { fontStyle: "bold", fontSize: 9 } },
+            { content: "Versión:", styles: { fontStyle: "bold", cellWidth: 22, fillColor: [248, 248, 248] } },
+            { content: folio.numero_version || "1.0", styles: { fontStyle: "bold" } },
+            { content: "Queja/Devolución:", styles: { fontStyle: "bold", cellWidth: 36, fillColor: [248, 248, 248] } },
+            { content: (folio as any).queja_devolucion_id || "—" },
+          ];
+        }
         return [
           { content: "Folio de Gestión:", styles: { fontStyle: "bold", cellWidth: 36, fillColor: [248, 248, 248] } },
           { content: folio.codigo, styles: { fontStyle: "bold", fontSize: 9 } },
@@ -402,6 +414,16 @@ export async function generateFolioPDF(
         { content: "Estado:", styles: { fontStyle: "bold", fillColor: [248, 248, 248] } },
         folio.estado,
       ],
+      ...(getClasificacionMode(folio.norma_folio, (folio as any).clasificacion_categoria) === "med"
+        ? [[
+            { content: "Tipo de medicamento:", styles: { fontStyle: "bold", fillColor: [248, 248, 248] } },
+            { content: (folio as any).clasificacion_tipo || "—" },
+            { content: "Condición de venta:", styles: { fontStyle: "bold", fillColor: [248, 248, 248] } },
+            { content: (folio as any).clasificacion_condicion_venta || "—" },
+            { content: "Nivel de riesgo sanitario:", styles: { fontStyle: "bold", fillColor: [248, 248, 248] } },
+            { content: (folio as any).clasificacion_riesgo_sanitario || "—" },
+          ]]
+        : []),
       [
         { content: "Alcance:", styles: { fontStyle: "bold", fillColor: [248, 248, 248] } },
         { content: folio.alcance || "—", colSpan: 5 },
