@@ -137,6 +137,33 @@ function GuiaBadge({ tone, children }: { tone: "navy" | "orange"; children: Reac
   return <Badge variant="outline" className={cls}>{children}</Badge>;
 }
 
+function renderGuiaCard(g: Guia, onDownload: (g: Guia) => void) {
+  return (
+    <Card key={g.id} className="flex flex-col">
+      <CardHeader>
+        <div className="flex items-start justify-between gap-2">
+          <FileText
+            className={
+              g.badgeTone === "navy"
+                ? "h-8 w-8 text-[hsl(var(--primary))] shrink-0"
+                : "h-8 w-8 text-orange-500 shrink-0"
+            }
+          />
+          <GuiaBadge tone={g.badgeTone}>{g.badge}</GuiaBadge>
+        </div>
+        <CardTitle className="text-base mt-2">{g.titulo}</CardTitle>
+        <CardDescription className="text-sm">{g.descripcion}</CardDescription>
+      </CardHeader>
+      <CardContent className="mt-auto">
+        <Button onClick={() => onDownload(g)} className="w-full" variant="outline">
+          <Download className="h-4 w-4 mr-2" />
+          {g.buttonLabel}
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function Capacitacion() {
   const { org } = useAuth();
   const navigate = useNavigate();
