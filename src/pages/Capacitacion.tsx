@@ -67,8 +67,8 @@ const GUIAS: Guia[] = [
       "Procedimiento Normalizado proforma para medicamentos. Incluye principios ICH Q9(R1):2023 y escala S+1 para población vulnerable.",
     badge: "NOM-059",
     badgeTone: "orange",
-    storagePath: "PNO-AMGR-02.docx",
-    buttonLabel: "Descargar documento",
+    storagePath: "PNO-AMGR-02.pdf",
+    buttonLabel: "Descargar PDF",
     norma: "NOM-059",
   },
 ];
