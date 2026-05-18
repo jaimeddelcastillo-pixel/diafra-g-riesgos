@@ -403,7 +403,7 @@ function NuevoFolioDialog({ open, onClose }: { open: boolean; onClose: () => voi
             El código se genera automáticamente (GR-{new Date().getFullYear()}-XXX)
           </p>
           <div className="space-y-1.5">
-            <Label className="text-xs">Proceso / Equipo Analizado *</Label>
+            <Label className="text-xs">Proceso / Producto / Equipo / Sistema Analizado *</Label>
             <Input
               value={form.proceso_equipo}
               onChange={(e) => update("proceso_equipo", e.target.value)}
