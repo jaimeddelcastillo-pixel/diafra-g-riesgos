@@ -153,7 +153,7 @@ export function SeccionDictamen({ folio, riesgos, locked, onSaved }: Props) {
                 value={justificacion}
                 onChange={(e) => setJustificacion(e.target.value)}
                 rows={6}
-                placeholder={`Explicar por qué el ${t.beneficio.toLowerCase()} supera el riesgo residual identificado, citando evidencia clínica o técnica...`}
+                placeholder={`Explicar por qué el ${t.beneficio.toLowerCase()} supera el riesgo residual identificado, citando estudios, historial, estabilidad, experiencia, bibliografía, evaluación técnica o evidencia objetiva disponible...`}
               />
               <div className="flex justify-end gap-2">
                 <Button variant="outline" size="sm" onClick={() => setEditingJustificacion(false)} className="gap-1">

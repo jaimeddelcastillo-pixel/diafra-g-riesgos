@@ -167,7 +167,7 @@ export const NORMAS_CONFIG: Record<NormaKey, NormaConfig> = {
     catalogoOcurrencia: OCURRENCIA_NOM241,
     catalogoDetectabilidad: DETECTABILIDAD_NOM241,
     terminologia: {
-      beneficio: "Beneficio clínico",
+      beneficio: "Beneficio esperado",
       aprobadorFinal: "Responsable Sanitario",
       procesoEquipo: "Proceso / Equipo",
       objetoAnalisis: "Dispositivo médico",
@@ -193,7 +193,7 @@ export const NORMAS_CONFIG: Record<NormaKey, NormaConfig> = {
     catalogoOcurrencia: OCURRENCIA_NOM059,
     catalogoDetectabilidad: DETECTABILIDAD_NOM059,
     terminologia: {
-      beneficio: "Beneficio terapéutico",
+      beneficio: "Beneficio esperado",
       aprobadorFinal: "Director Técnico",
       procesoEquipo: "Etapa de fabricación",
       objetoAnalisis: "Producto / Lote",
@@ -220,7 +220,7 @@ export const NORMAS_CONFIG: Record<NormaKey, NormaConfig> = {
     catalogoOcurrencia: OCURRENCIA_NOM241,
     catalogoDetectabilidad: DETECTABILIDAD_NOM241,
     terminologia: {
-      beneficio: "Beneficio clínico / terapéutico",
+      beneficio: "Beneficio esperado",
       aprobadorFinal: "Responsable Sanitario / Director Técnico",
       procesoEquipo: "Proceso / Etapa",
       objetoAnalisis: "Producto",
