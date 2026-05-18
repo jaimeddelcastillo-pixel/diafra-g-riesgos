@@ -100,7 +100,7 @@ function evaluarChecklistNOM241(folio: Folio, riesgos: Riesgo[], comite: FolioCo
   items.push({ id: "fecha", label: `Acciones con fecha de compromiso${sinFecha > 0 ? ` (${sinFecha} sin fecha)` : ""}`, ok: sinFecha === 0, critico: true });
   items.push({ id: "evidencia_criticos", label: `Riesgos críticos con evidencia adjunta${criticoSinEvidencia > 0 ? ` (${criticoSinEvidencia} sin PDF)` : ""}`, ok: criticoSinEvidencia === 0, critico: true });
   items.push({ id: "verificacion", label: `Acciones implementadas con verificación${sinVerif > 0 ? ` (${sinVerif} sin verificar)` : ""}`, ok: sinVerif === 0, critico: false });
-  items.push({ id: "alarp", label: `Riesgos zona ALARP con justificación de aceptabilidad${alarpSinJust > 0 ? ` (${alarpSinJust} sin justificar)` : ""}`, ok: alarpSinJust === 0, critico: false });
+  items.push({ id: "alarp", label: `Riesgos en zona de reducción al mínimo posible con justificación de aceptabilidad${alarpSinJust > 0 ? ` (${alarpSinJust} sin justificar)` : ""}`, ok: alarpSinJust === 0, critico: false });
 
   // ── Informativos: clasificación según norma ──
   const modo = getClasificacionMode(folio.norma_folio, folio.clasificacion_categoria);

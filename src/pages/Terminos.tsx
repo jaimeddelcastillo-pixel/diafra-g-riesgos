@@ -35,8 +35,6 @@ export default function Terminos() {
         <li>NOM-241-SSA1-2025 (Buenas Prácticas de Fabricación — Dispositivos Médicos)</li>
         <li>NOM-251-SSA1-2009 (Buenas Prácticas de Higiene — Alimentos)</li>
         <li>NOM-059-SSA1-2015 (Buenas Prácticas de Fabricación — Medicamentos)</li>
-        <li>ISO 14971:2019 (Gestión de Riesgos — Dispositivos Médicos)</li>
-        <li>ISO 13485:2016 (Sistema de Gestión de Calidad — Dispositivos Médicos)</li>
         <li>FEUM — Farmacopea de los Estados Unidos Mexicanos A.C.</li>
       </ul>
       <p>Los servicios disponibles según el plan contratado incluyen:</p>

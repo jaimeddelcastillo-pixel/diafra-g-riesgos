@@ -62,7 +62,7 @@ export interface NormaConfig {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Catálogos NOM-241 (FEUM / ISO 14971 — dispositivos médicos / fabricación)
+// Catálogos NOM-241 y FEUM (dispositivos médicos / fabricación)
 // ─────────────────────────────────────────────────────────────────────────────
 
 const SEVERIDAD_NOM241: CatalogoItem[] = [
@@ -105,7 +105,7 @@ const DETECTABILIDAD_NOM241: CatalogoItem[] = [
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Catálogos NOM-059 (ICH Q9 — fabricación de medicamentos / GMP)
+// Catálogos NOM-059 y FEUM (fabricación de medicamentos / GMP)
 // ─────────────────────────────────────────────────────────────────────────────
 
 const SEVERIDAD_NOM059: CatalogoItem[] = [
@@ -157,8 +157,8 @@ export const NORMAS_CONFIG: Record<NormaKey, NormaConfig> = {
     nombre: "NOM-241",
     nombreLargo: "NOM-241-SSA1-2025 — Buenas prácticas de fabricación de dispositivos médicos",
     metodologia: "AMEF",
-    metodologiaNombre: "FEUM / ISO 14971",
-    normasReferencia: ["ISO 14971:2019", "NOM-241-SSA1-2025"],
+    metodologiaNombre: "Gestión de Riesgos NOM-241 y FEUM",
+    normasReferencia: ["NOM-241-SSA1-2025", "FEUM"],
     usarDetectabilidad: true,
     umbralNPRMedio: 60,
     umbralNPRAlto: 150,
@@ -171,20 +171,20 @@ export const NORMAS_CONFIG: Record<NormaKey, NormaConfig> = {
       aprobadorFinal: "Responsable Sanitario",
       procesoEquipo: "Proceso / Equipo",
       objetoAnalisis: "Dispositivo médico",
-      descripcionCorta: "Dispositivos médicos (ISO 14971 + NOM-241)",
+      descripcionCorta: "Dispositivos médicos (NOM-241 y FEUM)",
       efectoDano: "Efecto / Daño potencial",
     },
     codigoFormato: "FOR-SGC-11-01",
     badgeVariant: "navy",
-    badgeLabel: "ISO 14971",
+    badgeLabel: "NOM-241",
   },
   "NOM-059": {
     key: "NOM-059",
     nombre: "NOM-059",
     nombreLargo: "NOM-059-SSA1-2015 — Buenas prácticas de fabricación de medicamentos",
     metodologia: "ICH-Q9",
-    metodologiaNombre: "FEUM / ICH Q9",
-    normasReferencia: ["ICH Q9 (R1)", "NOM-059-SSA1-2015"],
+    metodologiaNombre: "Gestión de Riesgos NOM-059 y FEUM",
+    normasReferencia: ["NOM-059-SSA1-2015", "FEUM"],
     usarDetectabilidad: true,
     umbralNPRMedio: 60,
     umbralNPRAlto: 150,
@@ -197,12 +197,12 @@ export const NORMAS_CONFIG: Record<NormaKey, NormaConfig> = {
       aprobadorFinal: "Director Técnico",
       procesoEquipo: "Etapa de fabricación",
       objetoAnalisis: "Producto / Lote",
-      descripcionCorta: "Medicamentos (ICH Q9 + NOM-059)",
+      descripcionCorta: "Medicamentos (NOM-059 y FEUM)",
       efectoDano: "Efecto sobre calidad / paciente",
     },
     codigoFormato: "FOR-SGC-11-02",
     badgeVariant: "cobalt",
-    badgeLabel: "ICH Q9",
+    badgeLabel: "NOM-059",
   },
   // MULTI hereda de NOM-241 por default; el folio individual define la norma real.
   MULTI: {
@@ -210,8 +210,8 @@ export const NORMAS_CONFIG: Record<NormaKey, NormaConfig> = {
     nombre: "Multi-norma",
     nombreLargo: "Operación bajo NOM-241 y NOM-059",
     metodologia: "MULTI",
-    metodologiaNombre: "FEUM / ISO 14971 + ICH Q9 (según folio)",
-    normasReferencia: ["ISO 14971:2019", "NOM-241-SSA1-2025", "ICH Q9 (R1)", "NOM-059-SSA1-2015"],
+    metodologiaNombre: "Gestión de Riesgos COFEPRIS (NOM-241 y NOM-059)",
+    normasReferencia: ["NOM-241-SSA1-2025", "NOM-059-SSA1-2015", "FEUM"],
     usarDetectabilidad: true,
     umbralNPRMedio: 60,
     umbralNPRAlto: 150,

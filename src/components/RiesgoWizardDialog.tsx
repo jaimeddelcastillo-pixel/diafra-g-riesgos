@@ -806,7 +806,7 @@ export function RiesgoWizardDialog({
                         <div className="flex items-center justify-between gap-3 rounded bg-amber-50 dark:bg-amber-950/30 p-2 text-xs">
                           <span>
                             Para esta población se recomienda <strong>S = {s.severidad + 1}</strong>{" "}
-                            por mayor susceptibilidad — ICH Q9(R1).
+                            por mayor susceptibilidad — Requerido por NOM-059 y FEUM.
                           </span>
                           <Button
                             type="button"
@@ -820,7 +820,7 @@ export function RiesgoWizardDialog({
                                   (s.justificacion_aceptabilidad
                                     ? s.justificacion_aceptabilidad + " "
                                     : "") +
-                                  `S incrementado +1 por población vulnerable (${s.poblacion}) — ICH Q9(R1).`,
+                                  `S incrementado +1 por población vulnerable (${s.poblacion}) — Requerido por NOM-059 y FEUM.`,
                               })
                             }
                           >
