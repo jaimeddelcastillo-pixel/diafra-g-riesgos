@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Plus, ChevronRight, FileDown, FileSpreadsheet } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -14,8 +13,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { fetchOrgLogoDataUrl } from "@/lib/orgLogo";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
-import { Constants } from "@/integrations/supabase/types";
 import { useFolios, useAllRiesgos, getEstadoStyle, getNPRLevel } from "@/hooks/useFolios";
+import { OrigenAnalisisSelect } from "@/components/OrigenAnalisisSelect";
 import { Skeleton } from "@/components/ui/skeleton";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -321,7 +320,7 @@ async function exportarPDF(
 
 // ─── Formulario nuevo folio ───────────────────────────────────────────────────
 function NuevoFolioDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const { user } = useAuth();
+  const { user, org } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
@@ -329,7 +328,7 @@ function NuevoFolioDialog({ open, onClose }: { open: boolean; onClose: () => voi
 
   const [form, setForm] = useState({
     proceso_equipo: "",
-    origen: "Diseño" as string,
+    origen: "Diseño y Desarrollo" as string,
     desviacion_id: "",
     control_cambios_id: "",
     fecha_inicio: new Date().toISOString().slice(0, 10),
@@ -382,7 +381,7 @@ function NuevoFolioDialog({ open, onClose }: { open: boolean; onClose: () => voi
   const handleClose = () => {
     setForm({
       proceso_equipo: "",
-      origen: "Diseño",
+      origen: "Diseño y Desarrollo",
       desviacion_id: "",
       control_cambios_id: "",
       fecha_inicio: new Date().toISOString().slice(0, 10),
@@ -413,18 +412,11 @@ function NuevoFolioDialog({ open, onClose }: { open: boolean; onClose: () => voi
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs">Origen del Riesgo *</Label>
-            <Select value={form.origen} onValueChange={(v) => update("origen", v)}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {Constants.public.Enums.origen_riesgo.map((o) => (
-                  <SelectItem key={o} value={o}>
-                    {o}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <OrigenAnalisisSelect
+              norma={(org as any)?.norma_aplicable}
+              value={form.origen}
+              onChange={(v) => update("origen", v)}
+            />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
