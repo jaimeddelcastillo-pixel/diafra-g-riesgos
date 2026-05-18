@@ -44,6 +44,22 @@ const FAQ = [
     q: "¿Ofrecen prueba gratis?",
     a: "Ofrecemos demos guiadas con un especialista. Escríbenos a soporte@tracea.com.mx para agendar una sesión y conocer la plataforma antes de contratar.",
   },
+  {
+    q: "¿No es demasiado complejo para mi equipo operativo?",
+    a: "No. TRACEA está diseñado para que la complejidad regulatoria sea invisible para el usuario. El Asistente IA guía a tu equipo paso a paso en lenguaje simple — nadie necesita memorizar ISO 14971. El wizard de creación de riesgos traduce los requisitos técnicos a preguntas como ¿Qué puede salir mal? y ¿Qué tan grave sería? Al final tu equipo genera un análisis que cumple NOM-241, ISO 14971 y los estándares internacionales sin necesitar ser experto regulatorio.",
+  },
+  {
+    q: "¿Por qué usar los 6 elementos ISO 14971 si parece excesivo para mi operación?",
+    a: "Porque el agente IA los genera por ti — no es carga adicional para tu equipo. Y porque los 6 elementos te protegen más allá de COFEPRIS: si en el futuro necesitas certificación FDA, CE Mark o exportar a mercados internacionales, tu expediente ya cumple. Un análisis simplificado hoy puede costarte rehacerlo todo mañana. TRACEA es una inversión que escala con tu empresa.",
+  },
+  {
+    q: "¿TRACEA es para empresas grandes o también para PyMEs?",
+    a: "TRACEA está especialmente diseñado para PyMEs reguladas que no tienen un departamento de calidad de 10 personas. El Asistente IA actúa como tu experto regulatorio disponible 24/7. Lo que una empresa grande resuelve con un equipo de consultores a $3,000-5,000 USD por análisis, TRACEA lo hace desde $85 USD al mes. Tu tamaño no determina la calidad de tu gestión de riesgos — tu herramienta sí.",
+  },
+  {
+    q: "¿Qué pasa si mi proceso es muy operativo y no tan técnico?",
+    a: "TRACEA se adapta a tu nivel de madurez. Puedes empezar con análisis básicos y el agente IA los va enriqueciendo conforme tu equipo aprende. El sistema guarda todo el historial — cada mejora queda documentada como evidencia de mejora continua ante COFEPRIS. Además, el PNO proforma que incluye TRACEA en los Recursos te da una versión operativa lista para adaptar a tu empresa desde el primer día.",
+  },
 ];
 
 export default function Precios() {
