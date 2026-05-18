@@ -513,7 +513,7 @@ export type Database = {
           numero_modelo: string
           numero_version: string
           org_id: string
-          origen: Database["public"]["Enums"]["origen_riesgo"]
+          origen: string
           proceso_equipo: string
           riesgo_residual_global: string
           updated_at: string
@@ -544,7 +544,7 @@ export type Database = {
           numero_modelo?: string
           numero_version?: string
           org_id?: string
-          origen: Database["public"]["Enums"]["origen_riesgo"]
+          origen?: string
           proceso_equipo: string
           riesgo_residual_global?: string
           updated_at?: string
@@ -575,7 +575,7 @@ export type Database = {
           numero_modelo?: string
           numero_version?: string
           org_id?: string
-          origen?: Database["public"]["Enums"]["origen_riesgo"]
+          origen?: string
           proceso_equipo?: string
           riesgo_residual_global?: string
           updated_at?: string

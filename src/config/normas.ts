@@ -319,6 +319,118 @@ export const CLASIFICACION_MED_RIESGO: { valor: string; etiqueta: string }[] = [
 
 export type ClasificacionMode = "dm" | "med";
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Catálogo de orígenes del análisis de riesgo (agrupado por sección)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface OrigenGroup {
+  /** Título visible no seleccionable */
+  titulo: string;
+  /** Opciones del grupo */
+  opciones: string[];
+}
+
+/** Grupos comunes a todas las normas. */
+const ORIGENES_COMUNES: OrigenGroup[] = [
+  {
+    titulo: "Desarrollo / Diseño",
+    opciones: [
+      "Diseño y Desarrollo",
+      "Transferencia de Tecnología",
+      "Validación de Proceso",
+      "Escalamiento",
+    ],
+  },
+  {
+    titulo: "Operación / Proceso",
+    opciones: [
+      "Fabricación",
+      "Acondicionamiento",
+      "Limpieza y Sanitización",
+      "Sistema Crítico / Utilidades",
+      "Almacenamiento y Distribución",
+      "Laboratorio / Control de Calidad",
+    ],
+  },
+  {
+    titulo: "Sistema de Calidad",
+    opciones: [
+      "Desviación",
+      "CAPA",
+      "Control de Cambios",
+      "Auditoría / Hallazgo Regulatorio",
+      "Revisión Periódica",
+    ],
+  },
+  {
+    titulo: "Proveedores",
+    opciones: [
+      "Proveedor / Materia Prima",
+      "Material de Empaque",
+      "Fabricante Externo / Servicio Crítico",
+    ],
+  },
+];
+
+const ORIGENES_OTROS: OrigenGroup = {
+  titulo: "Otros",
+  opciones: [
+    "Mejora Continua",
+    "Revisión de Riesgo Residual",
+    "Otro",
+  ],
+};
+
+/** Postmercado para dispositivos médicos (NOM-241). */
+const ORIGENES_POSTMERCADO_DM: OrigenGroup = {
+  titulo: "Postmercado (Dispositivos Médicos)",
+  opciones: [
+    "Queja / Devolución",
+    "Tecnovigilancia",
+    "Retiro de Producto / Recall",
+    "ACSC",
+    "Evento Adverso",
+    "Tendencia / Recurrente",
+    "Producto Falsificado",
+  ],
+};
+
+/** Postmercado para medicamentos (NOM-059). */
+const ORIGENES_POSTMERCADO_MED: OrigenGroup = {
+  titulo: "Postmercado (Medicamentos)",
+  opciones: [
+    "Queja de Mercado",
+    "Farmacovigilancia",
+    "OOS / OOT",
+    "Retiro de Producto / Recall",
+    "Evento Adverso",
+    "Tendencia / Recurrente",
+    "Producto Falsificado",
+  ],
+};
+
+/**
+ * Devuelve los grupos de orígenes aplicables a la norma de la organización.
+ * - NOM-241 → comunes + postmercado DM + otros
+ * - NOM-059 → comunes + postmercado Med + otros
+ * - MULTI   → comunes + ambos postmercados + otros
+ */
+export function getOrigenesGrupos(norma: string | null | undefined): OrigenGroup[] {
+  const cfg = getNormaConfig(norma);
+  const postmercado: OrigenGroup[] =
+    cfg.key === "NOM-241"
+      ? [ORIGENES_POSTMERCADO_DM]
+      : cfg.key === "NOM-059"
+        ? [ORIGENES_POSTMERCADO_MED]
+        : [ORIGENES_POSTMERCADO_DM, ORIGENES_POSTMERCADO_MED];
+  return [...ORIGENES_COMUNES, ...postmercado, ORIGENES_OTROS];
+}
+
+/** Lista plana de todos los orígenes válidos para la norma. */
+export function getOrigenesValidos(norma: string | null | undefined): string[] {
+  return getOrigenesGrupos(norma).flatMap((g) => g.opciones);
+}
+
 /**
  * Determina si la sección de clasificación debe mostrar el bloque de
  * dispositivo médico ("dm") o de medicamento ("med").

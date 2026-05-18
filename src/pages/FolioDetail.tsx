@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { OrigenAnalisisSelect } from "@/components/OrigenAnalisisSelect";
 import { ArrowLeft, FileSignature, Lock, Printer, Plus, Pencil, Trash2, Save, X, History } from "lucide-react";
 import { useFolioDetail, getNPRLevel, getEstadoStyle } from "@/hooks/useFolios";
 import type { Folio, Riesgo, FolioComite } from "@/hooks/useFolios";
@@ -17,7 +18,6 @@ import { SeccionEvidencias } from "@/components/SeccionEvidencias";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
-import { Constants } from "@/integrations/supabase/types";
 import { generateFolioPDF } from "@/lib/generateFolioPDF";
 import {
   getNormaConfig,
@@ -325,18 +325,11 @@ function SeccionDescripcion({ folio, locked, onSaved }: { folio: Folio; locked: 
           </div>
           <div className="space-y-1">
             <label className="text-[10px] font-semibold text-muted-foreground uppercase">Origen</label>
-            <Select value={form.origen} onValueChange={(v) => setForm({ ...form, origen: v as any })}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {Constants.public.Enums.origen_riesgo.map((o) => (
-                  <SelectItem key={o} value={o}>
-                    {o}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <OrigenAnalisisSelect
+              norma={folio.norma_folio}
+              value={form.origen}
+              onChange={(v) => setForm({ ...form, origen: v as any })}
+            />
           </div>
           <div className="space-y-1">
             <label className="text-[10px] font-semibold text-muted-foreground uppercase">ID Desviación</label>
