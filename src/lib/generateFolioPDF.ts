@@ -391,7 +391,7 @@ export async function generateFolioPDF(
         ];
       })(),
       [
-        { content: "Proceso / Equipo Analizado:", styles: { fontStyle: "bold", fillColor: [248, 248, 248] } },
+        { content: "Proceso / Producto / Equipo / Sistema Analizado:", styles: { fontStyle: "bold", fillColor: [248, 248, 248] } },
         folio.proceso_equipo,
         { content: "Origen:", styles: { fontStyle: "bold", fillColor: [248, 248, 248] } },
         folio.origen || "—",
