@@ -116,7 +116,7 @@ export function SeccionDictamen({ folio, riesgos, locked, onSaved }: Props) {
         {/* Pregunta riesgos no aceptables — calculada automáticamente */}
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
           <span className="font-semibold">
-            ¿Existen riesgos residuales clasificados como NO ACEPTABLES o CONDICIONADOS?
+            ¿Existen riesgos residuales clasificados como NO ACEPTABLES o ACEPTABLES CON JUSTIFICACIÓN?
           </span>
           <span className="flex items-center gap-1">
             SÍ <span className={`inline-block w-4 h-4 border rounded ${hasNoAceptables ? "bg-foreground" : ""}`} />
