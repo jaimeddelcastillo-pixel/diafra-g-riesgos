@@ -290,7 +290,7 @@ function SeccionDescripcion({ folio, locked, onSaved }: { folio: Folio; locked: 
           )}
         </div>
         <div className="grid grid-cols-12">
-          <FormField label="Proceso / Equipo Analizado" value={folio.proceso_equipo} className="col-span-4" />
+          <FormField label="Proceso / Producto / Equipo / Sistema Analizado" value={folio.proceso_equipo} className="col-span-4" />
           <FormField
             label="Origen"
             value={
@@ -319,7 +319,7 @@ function SeccionDescripcion({ folio, locked, onSaved }: { folio: Folio; locked: 
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1">
             <label className="text-[10px] font-semibold text-muted-foreground uppercase">
-              Proceso / Equipo Analizado
+              Proceso / Producto / Equipo / Sistema Analizado
             </label>
             <Input value={form.proceso_equipo} onChange={(e) => setForm({ ...form, proceso_equipo: e.target.value })} />
           </div>
