@@ -466,7 +466,7 @@ export function RiesgoFormDialog({ open, onClose, folioId, riesgo, nextNumeroId,
           {/* ── Tab 1: Identificación (FEUM / ISO 14971 §5.4) ── */}
           <TabsContent value="identificacion" className="flex-1 overflow-y-auto space-y-3 pt-3">
             <p className="text-[10px] text-muted-foreground bg-muted/40 rounded px-2 py-1">
-              FEUM / ISO 14971 §5.4 — Identifique el peligro fuente, la secuencia de eventos y el modo de falla.
+              Requerido por NOM-241 y FEUM (o NOM-059 y FEUM) — Identifique el peligro fuente, la secuencia de eventos y el modo de falla.
             </p>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
@@ -632,7 +632,7 @@ export function RiesgoFormDialog({ open, onClose, folioId, riesgo, nextNumeroId,
           {/* ── Tab 2: Evaluación Inicial ── */}
           <TabsContent value="evaluacion" className="flex-1 overflow-y-auto space-y-3 pt-3">
             <p className="text-[10px] text-muted-foreground bg-muted/40 rounded px-2 py-1">
-              FEUM / ISO 14971 §6.1 — Evalúe la probabilidad de daño (S × O × D = NPR).
+              Requerido por NOM-241 y FEUM (o NOM-059 y FEUM) — Evalúe la probabilidad de daño (S × O × D = NPR).
             </p>
             <div className={`grid gap-3 ${usaDeteccion ? "grid-cols-4" : "grid-cols-3"}`}>
               <div className="space-y-1.5">
@@ -699,7 +699,7 @@ export function RiesgoFormDialog({ open, onClose, folioId, riesgo, nextNumeroId,
           {/* ── Tab 3: Controles (FEUM / ISO 14971 §6.2) ── */}
           <TabsContent value="controles" className="flex-1 overflow-y-auto space-y-3 pt-3">
             <p className="text-[10px] text-muted-foreground bg-muted/40 rounded px-2 py-1">
-              FEUM / ISO 14971 §6.2 — Documente los controles de prevención y detección existentes, y las acciones propuestas.
+              Requerido por NOM-241 y FEUM (o NOM-059 y FEUM) — Documente los controles de prevención y detección existentes, y las acciones propuestas.
             </p>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
@@ -786,7 +786,7 @@ export function RiesgoFormDialog({ open, onClose, folioId, riesgo, nextNumeroId,
               <div className="space-y-1.5 col-span-2">
                 <Label className="text-xs">
                   Justificación de Aceptabilidad{" "}
-                  <span className="text-muted-foreground font-normal normal-case">(ALARP — FEUM / ISO 14971 §7)</span>
+                  <span className="text-muted-foreground font-normal normal-case">(Reducción al mínimo posible — Requerido por NOM-241 y FEUM o NOM-059 y FEUM)</span>
                 </Label>
                 <Textarea
                   value={form.justificacion_aceptabilidad}
@@ -809,7 +809,7 @@ export function RiesgoFormDialog({ open, onClose, folioId, riesgo, nextNumeroId,
           {/* ── Tab 4: Evaluación Residual + Verificación (FEUM / ISO 14971 §6.5 / §8) ── */}
           <TabsContent value="residual" className="flex-1 overflow-y-auto space-y-3 pt-3">
             <p className="text-[10px] text-muted-foreground bg-muted/40 rounded px-2 py-1">
-              FEUM / ISO 14971 §6.5 / §8 — Registre la acción implementada, su verificación y la evaluación residual.
+              Requerido por NOM-241 y FEUM (o NOM-059 y FEUM) — Registre la acción implementada, su verificación y la evaluación residual.
             </p>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">

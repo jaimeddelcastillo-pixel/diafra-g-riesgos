@@ -397,8 +397,8 @@ export function AssistantPanel({ open, onOpenChange, folioId = null, folioCodigo
                 <p>Hola, soy tu asistente de gestión de riesgos.</p>
                 <p className="text-xs mt-1">
                   {agente === "dm"
-                    ? "Pregúntame sobre AMEF, ISO 14971, normativas o adjunta un documento."
-                    : "Pregúntame sobre ICH-Q9, normativas o adjunta un documento."}
+                    ? "Asistente de Gestión de Riesgos NOM-241 y FEUM. Pregúntame sobre análisis AMEF, normativas o adjunta un documento."
+                    : "Asistente de Gestión de Riesgos de Calidad NOM-059 y FEUM. Pregúntame sobre normativas o adjunta un documento."}
                 </p>
               </div>
             )}

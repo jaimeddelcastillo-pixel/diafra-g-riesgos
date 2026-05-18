@@ -84,7 +84,10 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const { isSuperAdmin, isImpersonating, loading, org } = useAuth();
   const normaConfig = getNormaConfig(org?.norma_aplicable);
-  const metodLabel = normaConfig.metodologia === "MULTI" ? "FEUM/ISO 14971/ICH-Q9" : (normaConfig.metodologia === "AMEF" ? "FEUM / ISO 14971" : normaConfig.metodologia);
+  const metodLabel =
+    normaConfig.key === "NOM-241" ? "NOM-241 y FEUM"
+    : normaConfig.key === "NOM-059" ? "NOM-059 y FEUM"
+    : "Gestión de Riesgos COFEPRIS";
 
   const { data: folios, isLoading: loadingFolios } = useFolios();
   const { data: allRisks, isLoading: loadingRisks } = useAllRiesgos();

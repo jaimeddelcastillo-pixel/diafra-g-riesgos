@@ -75,7 +75,7 @@ export function OrgFormatoCard() {
           <p className="text-xs text-muted-foreground">
             Estos valores aparecen en la cabecera y pie del Archivo Maestro de Gestión de Riesgos
             (UI, PDFs y correos), junto con el nombre de la organización. Personalízalos según tu
-            sistema de calidad (FEUM / ISO 14971 / NOM-241-SSA1-2025). Déjalos vacíos si tu
+            sistema de calidad (NOM-241 y FEUM o NOM-059 y FEUM). Déjalos vacíos si tu
             organización aún no asigna un código de formato controlado.
           </p>
 
