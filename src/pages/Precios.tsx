@@ -14,11 +14,11 @@ import { ContactDialog } from "@/components/ContactDialog";
 const FAQ = [
   {
     q: "¿Qué incluye exactamente el plan Starter?",
-    a: "Hasta 3 usuarios, folios ilimitados, matriz de riesgos completa (FEUM / ISO 14971 para NOM-241 o ICH Q9 para NOM-059), firma electrónica conforme a 21 CFR Part 11, checklist regulatorio adaptado a tu norma, 30 consultas mensuales al Asistente IA, Centro de Recursos TRACEA y soporte por correo. Ideal para equipos pequeños que inician su Sistema de Gestión de Riesgos bajo NOM-241 o NOM-059.",
+    a: "Hasta 3 usuarios, folios ilimitados, matriz de Gestión de Riesgos conforme a NOM-241 y FEUM (dispositivos médicos) o NOM-059 y FEUM (medicamentos), firma electrónica conforme a 21 CFR Part 11, checklist regulatorio adaptado a tu norma, 30 consultas mensuales al Asistente IA, Centro de Recursos TRACEA y soporte por correo. Ideal para equipos pequeños que inician su Sistema de Gestión de Riesgos bajo NOM-241 o NOM-059.",
   },
   {
     q: "¿Qué normas regulatorias soporta TRACEA?",
-    a: "TRACEA opera de forma nativa bajo dos normas mexicanas:\n\n• NOM-241-SSA1-2025 — Buenas Prácticas de Fabricación de dispositivos médicos. Usa la metodología FEUM / ISO 14971:2019. Aprobador final: Responsable Sanitario.\n\n• NOM-059-SSA1-2015 — Buenas Prácticas de Fabricación de medicamentos. Usa la metodología FEUM / ICH Q9 (R1). Aprobador final: Director Técnico.\n\nAl crear tu organización eliges la norma aplicable. La terminología, los catálogos de severidad/ocurrencia/detectabilidad, los umbrales de NPR y los formatos PDF se adaptan automáticamente. El plan Enterprise permite operar bajo ambas normas simultáneamente (modo multi-norma).",
+    a: "TRACEA opera de forma nativa bajo dos normas mexicanas:\n\n• NOM-241-SSA1-2025 — Buenas Prácticas de Fabricación de dispositivos médicos. Gestión de Riesgos conforme a NOM-241 y FEUM. Aprobador final: Responsable Sanitario.\n\n• NOM-059-SSA1-2015 — Buenas Prácticas de Fabricación de medicamentos. Gestión de Riesgos de Calidad conforme a NOM-059 y FEUM. Aprobador final: Director Técnico.\n\nAl crear tu organización eliges la norma aplicable. La terminología, los catálogos de severidad/ocurrencia/detectabilidad, los umbrales de NPR y los formatos PDF se adaptan automáticamente. El plan Enterprise permite operar bajo ambas normas simultáneamente (modo multi-norma).",
   },
   {
     q: "¿Puedo cambiar de plan en cualquier momento?",
@@ -34,11 +34,11 @@ const FAQ = [
   },
   {
     q: "¿Cuál es la diferencia entre el Curso, los Protocolos y una suscripción?",
-    a: "Son tres productos independientes con propósitos distintos:\n\nCURSO DE GESTIÓN DE RIESGOS ($450 USD, pago único): Es una compra única que permanece contigo independientemente de si mantienes una suscripción activa. Certifica a tu equipo en gestión de riesgos bajo NOM-241 (ISO 14971) o NOM-059 (ICH Q9), y te otorga las constancias DC-3 oficiales STPS por cada usuario — la evidencia más sólida de capacitación que puedes presentar ante una auditoría COFEPRIS. Incluye 30 días de acceso completo a la plataforma para práctica real.\n\nPROTOCOLOS DQ/IQ/OQ/PQ ($450 USD, pago único): Son formatos validados para la calificación de sistemas. Los Protocolos de Diseño (DQ) e Instalación (IQ) se entregan listos para usar. Los de Operación (OQ) y Desempeño (PQ) son guías ejecutables que tu organización completa con sus propios datos. Son indispensables cuando una empresa u organización necesita calificar o validar sus sistemas de software, equipos o procesos ante COFEPRIS — documentando que el sistema hace lo que dice que hace, de forma consistente y verificable.\n\nSUSCRIPCIÓN MENSUAL (Starter/Professional/Enterprise): Es el acceso continuo a la plataforma para gestionar tus análisis de riesgos en producción. Incluye todos los folios, firmas electrónicas, trazabilidad y el Asistente IA según tu plan. El Curso y los Protocolos son complementos que potencian tu suscripción pero también funcionan de forma independiente.",
+    a: "Son tres productos independientes con propósitos distintos:\n\nCURSO DE GESTIÓN DE RIESGOS ($450 USD, pago único): Es una compra única que permanece contigo independientemente de si mantienes una suscripción activa. Certifica a tu equipo en Gestión de Riesgos conforme a NOM-241 y FEUM (dispositivos médicos) o NOM-059 y FEUM (medicamentos), y te otorga las constancias DC-3 oficiales STPS por cada usuario — la evidencia más sólida de capacitación que puedes presentar ante una auditoría COFEPRIS. Incluye 30 días de acceso completo a la plataforma para práctica real.\n\nPROTOCOLOS DQ/IQ/OQ/PQ ($450 USD, pago único): Son formatos validados para la calificación de sistemas. Los Protocolos de Diseño (DQ) e Instalación (IQ) se entregan listos para usar. Los de Operación (OQ) y Desempeño (PQ) son guías ejecutables que tu organización completa con sus propios datos. Son indispensables cuando una empresa u organización necesita calificar o validar sus sistemas de software, equipos o procesos ante COFEPRIS — documentando que el sistema hace lo que dice que hace, de forma consistente y verificable.\n\nSUSCRIPCIÓN MENSUAL (Starter/Professional/Enterprise): Es el acceso continuo a la plataforma para gestionar tus análisis de riesgos en producción. Incluye todos los folios, firmas electrónicas, trazabilidad y el Asistente IA según tu plan. El Curso y los Protocolos son complementos que potencian tu suscripción pero también funcionan de forma independiente.",
   },
   {
     q: "¿TRACEA cumple con NOM-241-SSA1-2025 y NOM-059-SSA1-2015?",
-    a: "Sí. La plataforma soporta de forma nativa ambas normas mexicanas: NOM-241-SSA1-2025 (dispositivos médicos, alineada a FEUM / ISO 14971:2019) y NOM-059-SSA1-2015 (medicamentos, alineada a FEUM / ICH Q9 (R1)). Cada folio se ejecuta bajo la norma de tu organización con la terminología, catálogos y umbrales correspondientes.",
+    a: "Sí. La plataforma soporta de forma nativa ambas normas mexicanas: NOM-241-SSA1-2025 (dispositivos médicos, Gestión de Riesgos conforme a NOM-241 y FEUM) y NOM-059-SSA1-2015 (medicamentos, Gestión de Riesgos de Calidad conforme a NOM-059 y FEUM). Cada folio se ejecuta bajo la norma de tu organización con la terminología, catálogos y umbrales correspondientes.",
   },
   {
     q: "¿Ofrecen prueba gratis?",
@@ -46,11 +46,11 @@ const FAQ = [
   },
   {
     q: "¿No es demasiado complejo para mi equipo operativo?",
-    a: "No. TRACEA está diseñado para que la complejidad regulatoria sea invisible para el usuario. El Asistente IA guía a tu equipo paso a paso en lenguaje simple — nadie necesita memorizar ISO 14971. El wizard de creación de riesgos traduce los requisitos técnicos a preguntas como ¿Qué puede salir mal? y ¿Qué tan grave sería? Al final tu equipo genera un análisis que cumple NOM-241, ISO 14971 y los estándares internacionales sin necesitar ser experto regulatorio.",
+    a: "No. TRACEA está diseñado para que la complejidad regulatoria sea invisible para el usuario. El Asistente IA guía a tu equipo paso a paso en lenguaje simple — nadie necesita memorizar los requisitos técnicos. El wizard de creación de riesgos traduce los requisitos de Gestión de Riesgos NOM-241 y FEUM (o NOM-059 y FEUM) a preguntas como ¿Qué puede salir mal? y ¿Qué tan grave sería? Al final tu equipo genera un análisis que cumple los requerimientos COFEPRIS sin necesitar ser experto regulatorio.",
   },
   {
-    q: "¿Por qué usar los 6 elementos ISO 14971 si parece excesivo para mi operación?",
-    a: "Porque el agente IA los genera por ti — no es carga adicional para tu equipo. Y porque los 6 elementos te protegen más allá de COFEPRIS: si en el futuro necesitas certificación FDA, CE Mark o exportar a mercados internacionales, tu expediente ya cumple. Un análisis simplificado hoy puede costarte rehacerlo todo mañana. TRACEA es una inversión que escala con tu empresa.",
+    q: "¿Por qué usar los 6 datos requeridos para tu análisis de riesgo si parece excesivo para mi operación?",
+    a: "Porque el agente IA los genera por ti — no es carga adicional para tu equipo. Y porque los 6 datos requeridos por NOM-241 y FEUM (o NOM-059 y FEUM) te protegen más allá de COFEPRIS: si en el futuro necesitas certificación FDA, CE Mark o exportar a mercados internacionales, tu expediente ya cumple. Un análisis simplificado hoy puede costarte rehacerlo todo mañana. TRACEA es una inversión que escala con tu empresa.",
   },
   {
     q: "¿TRACEA es para empresas grandes o también para PyMEs?",
@@ -149,7 +149,7 @@ export default function Precios() {
             Planes que escalan con tu organización
           </h1>
           <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-            Plataforma de gestión de riesgos para NOM-241 (ISO 14971 — dispositivos médicos) y NOM-059 (ICH Q9 — medicamentos). Folios y matriz de riesgos ilimitados en todos los planes.
+            Plataforma de Gestión de Riesgos conforme a NOM-241 y FEUM (dispositivos médicos) y NOM-059 y FEUM (medicamentos). Folios y matriz de riesgos ilimitados en todos los planes.
           </p>
         </section>
 
