@@ -31,7 +31,7 @@ const GUIAS: Guia[] = [
     id: "guia-s9-dm",
     titulo: "Guía Técnica S≥9 — Dispositivos Médicos",
     descripcion:
-      "Por qué un riesgo con NPR bajo puede seguir siendo crítico y cómo defenderlo ante COFEPRIS. NOM-241-SSA1-2025 e ISO 14971:2019.",
+      "Por qué un riesgo con NPR bajo puede seguir siendo crítico y cómo defenderlo ante COFEPRIS. Gestión de Riesgos NOM-241 y FEUM.",
     badge: "NOM-241",
     badgeTone: "navy",
     storagePath: "guia-s9-dm.pdf",
@@ -42,7 +42,7 @@ const GUIAS: Guia[] = [
     id: "guia-s9-med",
     titulo: "Guía Técnica S≥9 — Medicamentos",
     descripcion:
-      "Severidad crítica en gestión de riesgos farmacéuticos. Incluye Regla S+1 para población vulnerable. NOM-059-SSA1-2015 e ICH Q9(R1):2023.",
+      "Severidad crítica en gestión de riesgos farmacéuticos. Incluye Regla S+1 para población vulnerable. Gestión de Riesgos NOM-059 y FEUM.",
     badge: "NOM-059",
     badgeTone: "orange",
     storagePath: "guia-s9-med.pdf",
@@ -53,7 +53,7 @@ const GUIAS: Guia[] = [
     id: "pno-amgr-01",
     titulo: "PNO-AMGR-01 — Gestión de Riesgos DM",
     descripcion:
-      "Procedimiento Normalizado proforma para implementar gestión de riesgos en dispositivos médicos. Incluye los 6 elementos ISO 14971 obligatorios.",
+      "Procedimiento Normalizado proforma para implementar gestión de riesgos en dispositivos médicos. Incluye los 6 datos requeridos para tu análisis de riesgo NOM-241 y FEUM.",
     badge: "NOM-241",
     badgeTone: "navy",
     storagePath: "PNO-AMGR-01.pdf",
@@ -64,7 +64,7 @@ const GUIAS: Guia[] = [
     id: "pno-amgr-02",
     titulo: "PNO-AMGR-02 — Gestión de Riesgos Medicamentos",
     descripcion:
-      "Procedimiento Normalizado proforma para medicamentos. Incluye principios ICH Q9(R1):2023 y escala S+1 para población vulnerable.",
+      "Procedimiento Normalizado proforma para medicamentos. Incluye los requisitos de Gestión de Riesgos de Calidad NOM-059 y FEUM, y escala S+1 para población vulnerable.",
     badge: "NOM-059",
     badgeTone: "orange",
     storagePath: "PNO-AMGR-02.pdf",
@@ -111,8 +111,8 @@ const CURSO_NOM241: Curso = {
       id: "m1",
       titulo: "Módulo 1: Introducción a la Gestión de Riesgos",
       lecciones: [
-        { id: "1.1", titulo: "¿Qué es ISO 14971?", tipo: "video", proximamente: true },
-        { id: "1.2", titulo: "La jerarquía normativa mexicana", tipo: "video", proximamente: true },
+        { id: "1.1", titulo: "¿Qué es la Gestión de Riesgos en dispositivos médicos?", tipo: "video", proximamente: true },
+        { id: "1.2", titulo: "NOM-241 y COFEPRIS: lo que necesitas saber", tipo: "video", proximamente: true },
         { id: "1.3", titulo: "Descargar Guía S≥9 DM", tipo: "descarga", refGuiaId: "guia-s9-dm" },
       ],
     },
@@ -120,8 +120,8 @@ const CURSO_NOM241: Curso = {
       id: "m2",
       titulo: "Módulo 2: El Archivo Maestro de Gestión de Riesgos",
       lecciones: [
-        { id: "2.1", titulo: "Los 6 elementos obligatorios del ID", tipo: "video", proximamente: true },
-        { id: "2.2", titulo: "Cómo calcular el NPR", tipo: "video", proximamente: true },
+        { id: "2.1", titulo: "Los 6 datos que necesita tu análisis de riesgo", tipo: "video", proximamente: true },
+        { id: "2.2", titulo: "Cómo evaluar el nivel de prioridad de cada riesgo", tipo: "video", proximamente: true },
         { id: "2.3", titulo: "Descargar PNO-AMGR-01", tipo: "descarga", refGuiaId: "pno-amgr-01" },
       ],
     },
@@ -147,7 +147,7 @@ const CURSO_NOM241: Curso = {
 const CURSO_NOM059: Curso = {
   id: "nom059",
   titulo: "Gestión de Riesgos NOM-059 para Medicamentos",
-  descripcion: "4 módulos · Basado en ICH Q9(R1):2023 y NOM-059-SSA1-2015",
+  descripcion: "4 módulos · Gestión de Riesgos NOM-059 y FEUM",
   badge: "NOM-059",
   badgeTone: "orange",
   modulos: [
@@ -155,8 +155,8 @@ const CURSO_NOM059: Curso = {
       id: "m1",
       titulo: "Módulo 1: Introducción al QRM Farmacéutico",
       lecciones: [
-        { id: "nom059-1-1", titulo: "¿Qué es ICH Q9(R1):2023?", tipo: "video", proximamente: true },
-        { id: "nom059-1-2", titulo: "La jerarquía normativa: NOM-059, ICH Q9, FEUM e ISO 14971", tipo: "video", proximamente: true },
+        { id: "nom059-1-1", titulo: "¿Qué es la Gestión de Riesgos de Calidad en medicamentos?", tipo: "video", proximamente: true },
+        { id: "nom059-1-2", titulo: "NOM-059 y COFEPRIS: lo que necesitas saber", tipo: "video", proximamente: true },
         { id: "nom059-1-3", titulo: "Descargar Guía S≥9 — Medicamentos", tipo: "descarga", refGuiaId: "guia-s9-med" },
       ],
     },
@@ -164,8 +164,8 @@ const CURSO_NOM059: Curso = {
       id: "m2",
       titulo: "Módulo 2: El Archivo Maestro de QRM",
       lecciones: [
-        { id: "nom059-2-1", titulo: "Los 6 elementos obligatorios del ID en medicamentos", tipo: "video", proximamente: true },
-        { id: "nom059-2-2", titulo: "CPPs, CQAs y el cálculo del NPR farmacéutico", tipo: "video", proximamente: true },
+        { id: "nom059-2-1", titulo: "Los 6 datos que necesita tu análisis de riesgo NOM-059", tipo: "video", proximamente: true },
+        { id: "nom059-2-2", titulo: "Parámetros críticos y cómo evaluar el nivel de riesgo", tipo: "video", proximamente: true },
         { id: "nom059-2-3", titulo: "Descargar PNO-AMGR-02 — Gestión de Riesgos Medicamentos", tipo: "descarga", refGuiaId: "pno-amgr-02" },
       ],
     },

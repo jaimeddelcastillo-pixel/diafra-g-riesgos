@@ -179,8 +179,8 @@ export function getAyudasControles(norma: string | null | undefined): {
 // ── Fundamento normativo (Paso 5) ────────────────────────────────────────────
 export function getFundamentoNormativo(norma: string | null | undefined): string {
   const n = normalizaNorma(norma);
-  if (n === "NOM-059") return "Fundamento: ICH Q9(R1):2023 §4 + NOM-059-SSA1-2015";
-  return "Fundamento: ISO 14971:2019 §6 + NOM-241-SSA1-2025";
+  if (n === "NOM-059") return "Requerido por NOM-059 y FEUM para tu expediente COFEPRIS";
+  return "Requerido por NOM-241 y FEUM para tu expediente COFEPRIS";
 }
 
 // ── Población vulnerable (NOM-059 únicamente, S ≥ 8) ─────────────────────────
