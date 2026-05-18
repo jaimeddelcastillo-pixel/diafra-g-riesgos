@@ -42,11 +42,10 @@ const TOOLS = [
     input_schema: {
       type: "object",
       properties: {
-        proceso_equipo: { type: "string", description: "Nombre del proceso o equipo. Obligatorio." },
+        proceso_equipo: { type: "string", description: "Nombre del proceso / producto / equipo / sistema. Obligatorio." },
         origen: {
           type: "string",
-          enum: ["Diseño", "Proceso", "Queja / Devolución", "Desviación", "Control de Cambios"],
-          description: "Origen del análisis. Default: Diseño",
+          description: "Origen del análisis (texto libre del catálogo agrupado, ej: 'Diseño y Desarrollo', 'Desviación', 'Tecnovigilancia', 'Farmacovigilancia', 'OOS / OOT', 'Control de Cambios'). Default: 'Diseño y Desarrollo'.",
         },
         alcance: { type: "string", description: "Alcance del análisis (opcional)." },
       },
@@ -156,7 +155,7 @@ async function execCrearFolio(
 ) {
   const proceso_equipo = String(input?.proceso_equipo ?? "").trim();
   if (!proceso_equipo) return { ok: false, error: "proceso_equipo es obligatorio." };
-  const origen = input?.origen ?? "Diseño";
+  const origen = input?.origen ?? "Diseño y Desarrollo";
   const alcance = String(input?.alcance ?? "").trim();
 
   const year = new Date().getUTCFullYear();
@@ -393,7 +392,7 @@ Deno.serve(async (req) => {
     if (folio_id) {
       const { data: folio } = await adminClient
         .from("folios")
-        .select("codigo, proceso_equipo, estado, norma_folio, alcance, beneficio_clinico, clase_dispositivo, clasificacion_categoria, clasificacion_tipo, clasificacion_condicion_venta, clasificacion_riesgo_sanitario")
+        .select("codigo, proceso_equipo, estado, norma_folio, origen, alcance, beneficio_clinico, clase_dispositivo, clasificacion_categoria, clasificacion_tipo, clasificacion_condicion_venta, clasificacion_riesgo_sanitario")
         .eq("id", folio_id)
         .maybeSingle();
       const { data: riesgos } = await adminClient
