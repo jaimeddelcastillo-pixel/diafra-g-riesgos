@@ -200,6 +200,7 @@ function diasParaPurga(deletedAt: string): number {
 
 export default function Recursos() {
   const { org, user, hasRole } = useAuth();
+  const isTrial = useIsTrial();
   const { toast } = useToast();
   const [docs, setDocs] = useState<OrgDocumento[]>([]);
   const [docsPapelera, setDocsPapelera] = useState<OrgDocumento[]>([]);
