@@ -485,7 +485,7 @@ export default function Capacitacion() {
                   Dispositivos Médicos · NOM-241
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {guiasDM.map((g) => renderGuiaCard(g, descargarGuia))}
+                  {guiasDM.map((g) => renderGuiaCard(g, descargarGuia, isTrial))}
                 </div>
               </div>
             )}
@@ -495,7 +495,7 @@ export default function Capacitacion() {
                   Medicamentos · NOM-059
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {guiasMed.map((g) => renderGuiaCard(g, descargarGuia))}
+                  {guiasMed.map((g) => renderGuiaCard(g, descargarGuia, isTrial))}
                 </div>
               </div>
             )}
@@ -506,7 +506,7 @@ export default function Capacitacion() {
               Guías Técnicas
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {guiasVisibles.map((g) => renderGuiaCard(g, descargarGuia))}
+              {guiasVisibles.map((g) => renderGuiaCard(g, descargarGuia, isTrial))}
             </div>
           </div>
         )}
