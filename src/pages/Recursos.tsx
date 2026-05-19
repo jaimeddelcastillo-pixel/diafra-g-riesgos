@@ -28,6 +28,9 @@ import {
 import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useIsTrial, TRIAL_DOWNLOAD_TOOLTIP } from "@/lib/trialRestrictions";
+import { Link } from "react-router-dom";
+import { Lock } from "lucide-react";
 
 type DocTipo =
   | "PNO"
