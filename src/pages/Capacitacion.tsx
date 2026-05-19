@@ -13,6 +13,11 @@ import {
   GraduationCap, FileText, Download, Lock, Play, CheckCircle2,
   BookOpen, Award, Sparkles, ExternalLink,
 } from "lucide-react";
+import { Link } from "react-router-dom";
+import {
+  Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { useIsTrial, TRIAL_DOWNLOAD_TOOLTIP } from "@/lib/trialRestrictions";
 import { useNavigate } from "react-router-dom";
 
 type Guia = {
@@ -204,7 +209,7 @@ function GuiaBadge({ tone, children }: { tone: "navy" | "orange"; children: Reac
   return <Badge variant="outline" className={cls}>{children}</Badge>;
 }
 
-function renderGuiaCard(g: Guia, onDownload: (g: Guia) => void) {
+function renderGuiaCard(g: Guia, onDownload: (g: Guia) => void, isTrial: boolean) {
   return (
     <Card key={g.id} className="flex flex-col">
       <CardHeader>
@@ -222,10 +227,31 @@ function renderGuiaCard(g: Guia, onDownload: (g: Guia) => void) {
         <CardDescription className="text-sm">{g.descripcion}</CardDescription>
       </CardHeader>
       <CardContent className="mt-auto">
-        <Button onClick={() => onDownload(g)} className="w-full" variant="outline">
-          <Download className="h-4 w-4 mr-2" />
-          {g.buttonLabel}
-        </Button>
+        {isTrial ? (
+          <TooltipProvider delayDuration={150}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span tabIndex={0} className="w-full inline-block">
+                  <Button disabled variant="outline" className="w-full" aria-disabled>
+                    <Lock className="h-4 w-4 mr-2" />
+                    {g.buttonLabel}
+                  </Button>
+                </span>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="max-w-xs text-xs">
+                {TRIAL_DOWNLOAD_TOOLTIP}{" "}
+                <Link to="/precios" className="underline font-medium">
+                  Ver planes
+                </Link>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        ) : (
+          <Button onClick={() => onDownload(g)} className="w-full" variant="outline">
+            <Download className="h-4 w-4 mr-2" />
+            {g.buttonLabel}
+          </Button>
+        )}
       </CardContent>
     </Card>
   );
@@ -237,6 +263,7 @@ export default function Capacitacion() {
   const { org } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const isTrial = useIsTrial();
   const [progreso, setProgreso] = useState<Record<string, boolean>>({});
 
   const planLower = org?.plan?.toLowerCase() ?? "";
@@ -308,6 +335,14 @@ export default function Capacitacion() {
   const handleLeccionClick = async (curso: Curso, l: Leccion) => {
     if (l.proximamente) return;
     if (l.tipo === "descarga" && l.refGuiaId) {
+      if (isTrial) {
+        toast({
+          title: "Descarga restringida en prueba gratuita",
+          description: TRIAL_DOWNLOAD_TOOLTIP,
+          variant: "destructive",
+        });
+        return;
+      }
       const g = GUIAS.find((x) => x.id === l.refGuiaId);
       if (g) {
         const ok = await descargarGuia(g);
@@ -450,7 +485,7 @@ export default function Capacitacion() {
                   Dispositivos Médicos · NOM-241
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {guiasDM.map((g) => renderGuiaCard(g, descargarGuia))}
+                  {guiasDM.map((g) => renderGuiaCard(g, descargarGuia, isTrial))}
                 </div>
               </div>
             )}
@@ -460,7 +495,7 @@ export default function Capacitacion() {
                   Medicamentos · NOM-059
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {guiasMed.map((g) => renderGuiaCard(g, descargarGuia))}
+                  {guiasMed.map((g) => renderGuiaCard(g, descargarGuia, isTrial))}
                 </div>
               </div>
             )}
@@ -471,7 +506,7 @@ export default function Capacitacion() {
               Guías Técnicas
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {guiasVisibles.map((g) => renderGuiaCard(g, descargarGuia))}
+              {guiasVisibles.map((g) => renderGuiaCard(g, descargarGuia, isTrial))}
             </div>
           </div>
         )}
