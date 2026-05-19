@@ -584,10 +584,31 @@ export default function Recursos() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="mt-auto pt-0 flex flex-col gap-2">
-                  <Button onClick={() => handleDescargarReferencia(ref)} className="w-full">
-                    <Download className="h-4 w-4" />
-                    {ref.buttonLabel}
-                  </Button>
+                  {isTrial ? (
+                    <TooltipProvider delayDuration={150}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span tabIndex={0} className="w-full">
+                            <Button disabled className="w-full" aria-disabled>
+                              <Lock className="h-4 w-4" />
+                              {ref.buttonLabel}
+                            </Button>
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="max-w-xs text-xs">
+                          {TRIAL_DOWNLOAD_TOOLTIP}{" "}
+                          <Link to="/precios" className="underline font-medium">
+                            Ver planes
+                          </Link>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  ) : (
+                    <Button onClick={() => handleDescargarReferencia(ref)} className="w-full">
+                      <Download className="h-4 w-4" />
+                      {ref.buttonLabel}
+                    </Button>
+                  )}
                   <Button variant="outline" onClick={() => setPreviewDoc(ref)} className="w-full">
                     <Eye className="h-4 w-4" />
                     Vista previa
