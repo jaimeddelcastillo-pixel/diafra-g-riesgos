@@ -13,6 +13,11 @@ import {
   GraduationCap, FileText, Download, Lock, Play, CheckCircle2,
   BookOpen, Award, Sparkles, ExternalLink,
 } from "lucide-react";
+import { Link } from "react-router-dom";
+import {
+  Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { useIsTrial, TRIAL_DOWNLOAD_TOOLTIP } from "@/lib/trialRestrictions";
 import { useNavigate } from "react-router-dom";
 
 type Guia = {
