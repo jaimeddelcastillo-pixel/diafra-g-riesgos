@@ -1,64 +1,106 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Check, Loader2, Sparkles, Mail } from "lucide-react";
+import { Check, Loader2, Sparkles, Mail, Upload, TrendingUp, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { ADDONS, PLANS, type AddonId, type PlanId } from "@/config/plans";
 import { ContactDialog } from "@/components/ContactDialog";
 
-const FAQ = [
+type FaqEntry =
+  | { type: "group"; title: string }
+  | { type: "item"; q: string; a: string };
+
+const FAQ: FaqEntry[] = [
+  { type: "group", title: "¿Qué es TRACEA?" },
   {
-    q: "¿Qué incluye exactamente el plan Starter?",
-    a: "Hasta 3 usuarios, folios ilimitados, matriz de Gestión de Riesgos conforme a NOM-241 y FEUM (dispositivos médicos) o NOM-059 y FEUM (medicamentos), firma electrónica conforme a 21 CFR Part 11, checklist regulatorio adaptado a tu norma, 30 consultas mensuales al Asistente IA, Centro de Recursos TRACEA y soporte por correo. Ideal para equipos pequeños que inician su Sistema de Gestión de Riesgos bajo NOM-241 o NOM-059.",
+    type: "item",
+    q: "¿Qué es TRACEA?",
+    a: "TRACEA es una plataforma de Gestión de Riesgos para empresas reguladas por COFEPRIS. Opera de forma nativa bajo NOM-241-SSA1-2025 (dispositivos médicos, Gestión de Riesgos conforme a NOM-241 y FEUM) y NOM-059-SSA1-2015 (medicamentos, Gestión de Riesgos de Calidad conforme a NOM-059 y FEUM). Centraliza la matriz de riesgos (AMEF), la firma electrónica conforme a 21 CFR Part 11, la trazabilidad, los formatos COFEPRIS y un Asistente IA experto que acompaña a tu equipo en cada paso.",
   },
   {
-    q: "¿Qué normas regulatorias soporta TRACEA?",
-    a: "TRACEA opera de forma nativa bajo dos normas mexicanas:\n\n• NOM-241-SSA1-2025 — Buenas Prácticas de Fabricación de dispositivos médicos. Gestión de Riesgos conforme a NOM-241 y FEUM. Aprobador final: Responsable Sanitario.\n\n• NOM-059-SSA1-2015 — Buenas Prácticas de Fabricación de medicamentos. Gestión de Riesgos de Calidad conforme a NOM-059 y FEUM. Aprobador final: Director Técnico.\n\nAl crear tu organización eliges la norma aplicable. La terminología, los catálogos de severidad/ocurrencia/detectabilidad, los umbrales de NPR y los formatos PDF se adaptan automáticamente. El plan Enterprise permite operar bajo ambas normas simultáneamente (modo multi-norma).",
+    type: "item",
+    q: "¿Necesito conocimientos técnicos para usar TRACEA?",
+    a: "No. TRACEA está diseñado para que la complejidad regulatoria sea invisible para el usuario. El Asistente IA guía a tu equipo paso a paso en lenguaje simple — nadie necesita memorizar requisitos técnicos. El wizard de creación de riesgos traduce los requisitos de Gestión de Riesgos NOM-241 y FEUM (o NOM-059 y FEUM) a preguntas como ¿qué puede salir mal? y ¿qué tan grave sería? El resultado es un análisis que cumple los requerimientos COFEPRIS sin necesitar ser experto regulatorio.",
   },
   {
-    q: "¿Puedo cambiar de plan en cualquier momento?",
-    a: "Sí. Puedes hacer upgrade o downgrade desde la sección de Configuración. El cobro se prorratea automáticamente según los días restantes del ciclo.",
+    type: "item",
+    q: "¿El DC-3 que emite TRACEA tiene validez oficial?",
+    a: "Sí. El DC-3 (Constancia de Competencias o Habilidades Laborales) que se genera al completar el Curso de Gestión de Riesgos es la constancia oficial reconocida por la STPS — la misma evidencia de capacitación que puedes presentar ante una auditoría COFEPRIS para acreditar la formación de tu equipo en gestión de riesgos bajo NOM-241 y FEUM o NOM-059 y FEUM.",
   },
   {
-    q: "¿Los precios incluyen IVA?",
-    a: "Los precios mostrados están en USD y no incluyen impuestos locales. Si tu organización requiere factura fiscal mexicana, contáctanos a soporte@tracea.com.mx.",
+    type: "item",
+    q: "¿TRACEA funciona para NOM-059 también?",
+    a: "Sí. TRACEA soporta de forma nativa NOM-059-SSA1-2015 (Buenas Prácticas de Fabricación de medicamentos) con Gestión de Riesgos de Calidad conforme a NOM-059 y FEUM. Al crear tu organización eliges la norma aplicable; la terminología, catálogos de severidad/ocurrencia/detectabilidad, umbrales de NPR y formatos PDF se adaptan automáticamente. El aprobador final es el Director Técnico. El plan Enterprise permite operar bajo NOM-241 y NOM-059 simultáneamente (modo multi-norma).",
+  },
+
+  { type: "group", title: "¿Vienes de otro sistema?" },
+  {
+    type: "item",
+    q: "Ya tengo un AMEF. ¿Debo rehacerlo todo?",
+    a: "No tienes que rehacer nada solo — el Asistente IA de TRACEA hace el trabajo por ti. La diferencia entre un AMEF simple y el análisis completo de TRACEA no es más trabajo para tu equipo: es más inteligencia del sistema. Mientras que un AMEF básico registra el riesgo, el análisis completo de TRACEA te ayuda a ENTENDERLO — identificando la cadena real de eventos, la causa raíz y los controles que realmente funcionan. El resultado: cuando llegue COFEPRIS no solo tienes un formato lleno, tienes evidencia de que tu empresa entiende y controla sus riesgos. Eso es lo que distingue una auditoría tranquila de una con observaciones mayores.",
   },
   {
-    q: "¿Qué método de pago aceptan?",
-    a: "Aceptamos tarjetas de crédito y débito Visa y Mastercard procesadas de forma segura a través de Stripe. También puedes pagar en efectivo mediante voucher OXXO Pay — disponible en cualquier tienda OXXO y 7-Eleven de México. Al elegir esta opción en el checkout recibirás un voucher con número de referencia válido por 24 horas. Nota: los pagos en OXXO pueden tardar hasta 24 horas en confirmarse.",
+    type: "item",
+    q: "¿Puedo importar mi AMEF actual a TRACEA?",
+    a: "Sí. El Asistente IA analiza tu AMEF existente en Excel, Word o PDF, identifica qué información ya tienes y propone los campos faltantes para completar el expediente conforme a NOM-241 y FEUM. No empiezas desde cero — empiezas desde donde estás y el Asistente enriquece tu análisis gradualmente. Muchos equipos descubren en ese proceso peligros que habían pasado por alto durante años.",
   },
   {
-    q: "¿Cuál es la diferencia entre el Curso, los Protocolos y una suscripción?",
-    a: "Son tres productos independientes con propósitos distintos:\n\nCURSO DE GESTIÓN DE RIESGOS ($450 USD, pago único): Es una compra única que permanece contigo independientemente de si mantienes una suscripción activa. Certifica a tu equipo en Gestión de Riesgos conforme a NOM-241 y FEUM (dispositivos médicos) o NOM-059 y FEUM (medicamentos), y te otorga las constancias DC-3 oficiales STPS por cada usuario — la evidencia más sólida de capacitación que puedes presentar ante una auditoría COFEPRIS. Incluye 30 días de acceso completo a la plataforma para práctica real.\n\nPROTOCOLOS DQ/IQ/OQ/PQ ($450 USD, pago único): Son formatos validados para la calificación de sistemas. Los Protocolos de Diseño (DQ) e Instalación (IQ) se entregan listos para usar. Los de Operación (OQ) y Desempeño (PQ) son guías ejecutables que tu organización completa con sus propios datos. Son indispensables cuando una empresa u organización necesita calificar o validar sus sistemas de software, equipos o procesos ante COFEPRIS — documentando que el sistema hace lo que dice que hace, de forma consistente y verificable.\n\nSUSCRIPCIÓN MENSUAL (Starter/Professional/Enterprise): Es el acceso continuo a la plataforma para gestionar tus análisis de riesgos en producción. Incluye todos los folios, firmas electrónicas, trazabilidad y el Asistente IA según tu plan. El Curso y los Protocolos son complementos que potencian tu suscripción pero también funcionan de forma independiente.",
-  },
-  {
-    q: "¿TRACEA cumple con NOM-241-SSA1-2025 y NOM-059-SSA1-2015?",
-    a: "Sí. La plataforma soporta de forma nativa ambas normas mexicanas: NOM-241-SSA1-2025 (dispositivos médicos, Gestión de Riesgos conforme a NOM-241 y FEUM) y NOM-059-SSA1-2015 (medicamentos, Gestión de Riesgos de Calidad conforme a NOM-059 y FEUM). Cada folio se ejecuta bajo la norma de tu organización con la terminología, catálogos y umbrales correspondientes.",
-  },
-  {
-    q: "¿Ofrecen prueba gratis?",
-    a: "Ofrecemos demos guiadas con un especialista. Escríbenos a soporte@tracea.com.mx para agendar una sesión y conocer la plataforma antes de contratar.",
-  },
-  {
+    type: "item",
     q: "¿No es demasiado complejo para mi equipo operativo?",
     a: "No. TRACEA está diseñado para que la complejidad regulatoria sea invisible para el usuario. El Asistente IA guía a tu equipo paso a paso en lenguaje simple — nadie necesita memorizar los requisitos técnicos. El wizard de creación de riesgos traduce los requisitos de Gestión de Riesgos NOM-241 y FEUM (o NOM-059 y FEUM) a preguntas como ¿Qué puede salir mal? y ¿Qué tan grave sería? Al final tu equipo genera un análisis que cumple los requerimientos COFEPRIS sin necesitar ser experto regulatorio.",
   },
   {
+    type: "item",
     q: "¿Por qué usar los 6 datos requeridos para tu análisis de riesgo si parece excesivo para mi operación?",
     a: "Porque el agente IA los genera por ti — no es carga adicional para tu equipo. Y porque los 6 datos requeridos por NOM-241 y FEUM (o NOM-059 y FEUM) te protegen más allá de COFEPRIS: si en el futuro necesitas certificación FDA, CE Mark o exportar a mercados internacionales, tu expediente ya cumple. Un análisis simplificado hoy puede costarte rehacerlo todo mañana. TRACEA es una inversión que escala con tu empresa.",
   },
   {
+    type: "item",
     q: "¿TRACEA es para empresas grandes o también para PyMEs?",
     a: "TRACEA está especialmente diseñado para PyMEs reguladas que no tienen un departamento de calidad de 10 personas. El Asistente IA actúa como tu experto regulatorio disponible 24/7. Lo que una empresa grande resuelve con un equipo de consultores a $3,000-5,000 USD por análisis, TRACEA lo hace desde $85 USD al mes. Tu tamaño no determina la calidad de tu gestión de riesgos — tu herramienta sí.",
   },
   {
+    type: "item",
     q: "¿Qué pasa si mi proceso es muy operativo y no tan técnico?",
     a: "TRACEA se adapta a tu nivel de madurez. Puedes empezar con análisis básicos y el agente IA los va enriqueciendo conforme tu equipo aprende. El sistema guarda todo el historial — cada mejora queda documentada como evidencia de mejora continua ante COFEPRIS. Además, el PNO proforma que incluye TRACEA en los Recursos te da una versión operativa lista para adaptar a tu empresa desde el primer día.",
+  },
+
+  { type: "group", title: "Sobre el servicio" },
+  {
+    type: "item",
+    q: "¿Mis datos están seguros?",
+    a: "Sí. TRACEA opera sobre infraestructura cloud con cifrado en tránsito (TLS) y en reposo, control de acceso por rol y políticas de seguridad por fila (RLS) que aíslan los datos de cada organización. La firma electrónica cumple 21 CFR Part 11 y cada cambio queda registrado en un Audit Trail inmutable con usuario, fecha, IP y valores previos/posteriores — la evidencia de integridad de datos que un auditor COFEPRIS espera ver.",
+  },
+  {
+    type: "item",
+    q: "¿Puedo cancelar en cualquier momento?",
+    a: "Sí. Las suscripciones son mensuales y puedes cancelar cuando quieras desde la sección de Configuración. No hay penalización ni contrato anual obligatorio. Mantienes el acceso hasta el final del ciclo pagado.",
+  },
+  {
+    type: "item",
+    q: "¿Qué pasa con mis datos al cancelar?",
+    a: "Tu información permanece disponible en modo lectura por 60 días después de cancelar para que puedas exportar tus folios, matrices de riesgo, evidencias y reportes PDF. Pasado ese plazo, los datos se eliminan de forma definitiva conforme a las políticas de retención. Puedes reactivar tu cuenta en cualquier momento durante la ventana de lectura y recuperar todo intacto.",
+  },
+  {
+    type: "item",
+    q: "¿El Asistente IA está disponible en todos los planes?",
+    a: "Sí. El Asistente IA experto en NOM-241 y NOM-059 está incluido en todos los planes. La diferencia entre planes está en el cupo mensual de consultas: 30 en Starter, mayor cupo en Professional y consultas ilimitadas en Enterprise. El Curso (compra única) también incluye acceso completo al Asistente durante los 30 días de práctica.",
+  },
+  {
+    type: "item",
+    q: "¿Puedo empezar con el Curso y luego suscribirme?",
+    a: "Sí, y es una ruta recomendada. El Curso de Gestión de Riesgos es una compra única que certifica a tu equipo con DC-3 STPS e incluye 30 días de acceso completo a la plataforma. Durante esos días puedes practicar con casos reales y, si decides continuar, contratar una suscripción mensual sin perder lo trabajado.",
+  },
+  {
+    type: "item",
+    q: "¿Necesito DC-3 para cumplir con COFEPRIS?",
+    a: "COFEPRIS exige evidencia documental de la capacitación del personal en los temas críticos de su rol — y el DC-3 oficial STPS es la forma más sólida de acreditarla. Tener constancias DC-3 emitidas por un curso especializado en Gestión de Riesgos NOM-241 y FEUM (o NOM-059 y FEUM) demuestra al auditor que tu equipo está formalmente capacitado, no solo informado. Es de las primeras evidencias que se solicitan en una visita de verificación.",
   },
 ];
 
@@ -328,22 +370,153 @@ export default function Precios() {
           </div>
         </section>
 
+        {/* Sección Responsable Sanitario + Director General */}
+        <section className="mb-20 bg-muted/30 rounded-2xl p-6 sm:p-10 md:p-12">
+          {/* Bloque superior — Responsable Sanitario */}
+          <div className="max-w-5xl mx-auto">
+            <h2 className="text-3xl sm:text-4xl font-bold text-center mb-4 text-foreground">
+              ¿Ya tienes un sistema de gestión de riesgos?
+            </h2>
+            <p className="text-center text-lg sm:text-xl text-foreground/80 font-medium max-w-3xl mx-auto mb-10 leading-relaxed">
+              Tu criterio regulatorio, documentado con la estructura que COFEPRIS exige ver.
+              <br className="hidden sm:block" />
+              Sin rehacer — sin perder lo que ya construiste.
+            </p>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+              {[
+                {
+                  Icon: Upload,
+                  title: "Tu AMEF, enriquecido",
+                  text: "El Asistente analiza lo que ya tienes y propone lo que falta. Tú validas cada dato antes de que quede registrado.",
+                },
+                {
+                  Icon: TrendingUp,
+                  title: "Tu firma, más respaldada",
+                  text: "Cada decisión que tomas queda documentada con la trazabilidad que un auditor COFEPRIS necesita ver. Tu criterio, con evidencia sólida.",
+                },
+                {
+                  Icon: Shield,
+                  title: "Tu auditoría, sin sorpresas",
+                  text: "No cambia tu metodología — la estructura. El resultado: un expediente que defiende cada decisión técnica que tomaste.",
+                },
+              ].map(({ Icon, title, text }) => (
+                <div key={title} className="flex flex-col items-start gap-3 p-4">
+                  <Icon className="w-8 h-8" style={{ color: "#185FA5" }} />
+                  <h3 className="font-semibold text-foreground text-lg">{title}</h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed">{text}</p>
+                </div>
+              ))}
+            </div>
+
+            <p className="text-center italic text-muted-foreground max-w-3xl mx-auto">
+              "Diseñado para Responsables Sanitarios que entienden que documentar bien no es burocracia — es su mejor defensa profesional."
+            </p>
+          </div>
+
+          <div className="h-px bg-border my-12 max-w-5xl mx-auto" />
+
+          {/* Bloque inferior — Director General */}
+          <div className="max-w-5xl mx-auto">
+            <h2 className="text-3xl sm:text-4xl font-bold text-center mb-4 text-foreground">
+              ¿Cuánto cuesta no estar preparado?
+            </h2>
+            <p className="text-center text-muted-foreground max-w-2xl mx-auto mb-10 leading-relaxed">
+              No necesitas contratar a alguien que sepa NOM-241, NOM-059 y COFEPRIS de memoria. Ya existe. Se llama TRACEA. Y cuesta menos que la primera semana de sueldo de un analista junior.
+            </p>
+
+            <div className="rounded-lg border overflow-hidden max-w-3xl mx-auto mb-8 overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="border-b-0 hover:bg-transparent">
+                    <TableHead style={{ backgroundColor: "#042C53" }} className="text-white font-semibold"></TableHead>
+                    <TableHead style={{ backgroundColor: "#042C53" }} className="text-white font-semibold text-center">
+                      Analista Junior
+                    </TableHead>
+                    <TableHead style={{ backgroundColor: "#042C53" }} className="text-white font-semibold text-center">
+                      TRACEA
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {[
+                    ["Costo mensual", "$15,000–25,000 MXN", "Desde $1,700 MXN"],
+                    ["Disponibilidad", "8 hrs/día", "24/7"],
+                    ["Conoce NOM-241 y FEUM", "En proceso", "Siempre actualizado"],
+                    ["Curva de aprendizaje", "3–6 meses", "Inmediata"],
+                    ["Rotación de personal", "Alta", "Ninguna"],
+                    ["Listo para auditoría", "Depende de su experiencia", "Siempre listo"],
+                  ].map(([label, a, b], i) => (
+                    <TableRow
+                      key={label}
+                      className="hover:bg-transparent"
+                      style={i % 2 === 0 ? { backgroundColor: "#E8F0F9" } : { backgroundColor: "#FFFFFF" }}
+                    >
+                      <TableCell className="font-medium text-foreground">{label}</TableCell>
+                      <TableCell className="text-center text-muted-foreground">{a}</TableCell>
+                      <TableCell className="text-center font-medium" style={{ color: "#042C53" }}>{b}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+
+            <div className="text-center space-y-2">
+              <Button
+                size="lg"
+                onClick={() =>
+                  document.getElementById("planes")?.scrollIntoView({ behavior: "smooth" })
+                }
+              >
+                Ver planes y precios
+              </Button>
+              <p className="text-xs text-muted-foreground">
+                Desde $85 USD/mes. Cancela cuando quieras.
+              </p>
+            </div>
+          </div>
+        </section>
+
         {/* FAQ */}
         <section className="max-w-3xl mx-auto">
           <header className="text-center mb-8">
             <h2 className="text-3xl font-bold mb-2 text-foreground">Preguntas frecuentes</h2>
             <p className="text-muted-foreground">Todo lo que necesitas saber antes de contratar.</p>
           </header>
-          <Accordion type="single" collapsible className="w-full">
-            {FAQ.map((item, i) => (
-              <AccordionItem key={i} value={`item-${i}`}>
-                <AccordionTrigger className="text-left">{item.q}</AccordionTrigger>
-                <AccordionContent className="text-muted-foreground whitespace-pre-line">
-                  {item.a}
-                </AccordionContent>
-              </AccordionItem>
-            ))}
-          </Accordion>
+          {(() => {
+            // Agrupa entradas por separadores 'group' y renderiza un Accordion por bloque
+            const blocks: { title: string; items: { q: string; a: string }[] }[] = [];
+            let current: { title: string; items: { q: string; a: string }[] } | null = null;
+            for (const entry of FAQ) {
+              if (entry.type === "group") {
+                current = { title: entry.title, items: [] };
+                blocks.push(current);
+              } else if (current) {
+                current.items.push({ q: entry.q, a: entry.a });
+              }
+            }
+            return blocks.map((block, bi) => (
+              <div key={block.title} className={bi === 0 ? "" : "mt-10"}>
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="h-px bg-border flex-1" />
+                  <h3 className="text-sm font-medium text-muted-foreground text-center">
+                    {block.title}
+                  </h3>
+                  <div className="h-px bg-border flex-1" />
+                </div>
+                <Accordion type="single" collapsible className="w-full">
+                  {block.items.map((item, i) => (
+                    <AccordionItem key={`${bi}-${i}`} value={`item-${bi}-${i}`}>
+                      <AccordionTrigger className="text-left">{item.q}</AccordionTrigger>
+                      <AccordionContent className="text-muted-foreground whitespace-pre-line">
+                        {item.a}
+                      </AccordionContent>
+                    </AccordionItem>
+                  ))}
+                </Accordion>
+              </div>
+            ));
+          })()}
 
           <div className="mt-10 text-center">
             <p className="text-muted-foreground mb-3">¿Tienes otra pregunta?</p>
