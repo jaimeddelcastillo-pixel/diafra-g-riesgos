@@ -205,6 +205,21 @@ export default function Admin() {
   const [editUserTarget, setEditUserTarget] = useState<TraceaUser | null>(null);
   const [editUserForm, setEditUserForm] = useState({ nombre: "", cargo: "" });
 
+  // ── Nueva organización (super_admin) ──
+  const [newOrgOpen, setNewOrgOpen] = useState(false);
+  const [newOrgForm, setNewOrgForm] = useState({
+    org_nombre: "",
+    org_slug: "",
+    norma_aplicable: "NOM-241",
+    plan: "trial",
+    trial_dias: 14,
+    max_users: 5,
+    admin_nombre: "",
+    admin_email: "",
+    admin_password: "",
+    admin_cargo: "",
+  });
+
   if (!isSuperAdmin()) return <Navigate to="/" replace />;
 
   const { data, isLoading } = useQuery<AdminData>({
