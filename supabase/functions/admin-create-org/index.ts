@@ -90,7 +90,7 @@ Deno.serve(async (req) => {
         slug: org_slug.trim(),
         plan,
         activo: true,
-        estado: "activa",
+        estado: "activo",
         norma_aplicable,
         metodologia,
         max_users: Math.max(1, Number(max_users)),
