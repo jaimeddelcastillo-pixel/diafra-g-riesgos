@@ -23,6 +23,8 @@ export interface OrgInfo {
   usar_detectabilidad?: boolean | null;
   umbral_npr_alto?: number | null;
   umbral_npr_medio?: number | null;
+  onboarding_completado?: boolean | null;
+  onboarding_saltado?: boolean | null;
 }
 
 interface AuthContextType {
@@ -41,6 +43,7 @@ interface AuthContextType {
   startImpersonation: (org: OrgInfo, motivo: string, ticketId?: string | null) => Promise<void>;
   stopImpersonation: () => Promise<void>;
   signOut: () => Promise<void>;
+  refreshOrg: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -81,7 +84,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             // Org membership (sistema multi-tenant)
             const { data: memberData } = await supabase
               .from("org_members")
-              .select("role, org_id, organizations(id, nombre, slug, plan, activo, max_users, trial_expires_at, logo_url, codigo_formato, version_formato, descripcion, estado, pending_price_id, norma_aplicable, metodologia, usar_detectabilidad, umbral_npr_alto, umbral_npr_medio)")
+              .select("role, org_id, organizations(id, nombre, slug, plan, activo, max_users, trial_expires_at, logo_url, codigo_formato, version_formato, descripcion, estado, pending_price_id, norma_aplicable, metodologia, usar_detectabilidad, umbral_npr_alto, umbral_npr_medio, onboarding_completado, onboarding_saltado)")
               .eq("user_id", session.user.id)
               .single();
 
@@ -137,6 +140,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     roles.includes(role) || roles.includes("super_admin");
 
   const isSuperAdmin = () => roles.includes("super_admin");
+
+  const refreshOrg = async () => {
+    if (!user || !_orgId) return;
+    const { data } = await supabase
+      .from("organizations")
+      .select("id, nombre, slug, plan, activo, max_users, trial_expires_at, logo_url, codigo_formato, version_formato, descripcion, estado, pending_price_id, norma_aplicable, metodologia, usar_detectabilidad, umbral_npr_alto, umbral_npr_medio, onboarding_completado, onboarding_saltado")
+      .eq("id", _orgId)
+      .maybeSingle();
+    if (data) setOrg(data as any);
+  };
 
   const startImpersonation = async (org: OrgInfo, motivo: string, ticketId?: string | null) => {
     if (!user) return;
@@ -212,6 +225,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       hasRole, isSuperAdmin,
       startImpersonation, stopImpersonation,
       signOut,
+      refreshOrg,
     }}>
       {children}
     </AuthContext.Provider>
