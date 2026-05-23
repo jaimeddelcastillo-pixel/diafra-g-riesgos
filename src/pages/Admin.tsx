@@ -416,6 +416,35 @@ export default function Admin() {
     onError: (e: any) => toast.error(e.message),
   });
 
+  const createOrgMutation = useMutation({
+    mutationFn: async (form: typeof newOrgForm) => {
+      const { data, error } = await supabase.functions.invoke("admin-create-org", {
+        body: form,
+      });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-stats"] });
+      toast.success("Organización creada con su administrador.");
+      setNewOrgOpen(false);
+      setNewOrgForm({
+        org_nombre: "",
+        org_slug: "",
+        norma_aplicable: "NOM-241",
+        plan: "trial",
+        trial_dias: 14,
+        max_users: 5,
+        admin_nombre: "",
+        admin_email: "",
+        admin_password: "",
+        admin_cargo: "",
+      });
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
   const metrics = data?.metrics;
   const orgs = data?.orgs ?? [];
   const alertas = data?.alertas;
