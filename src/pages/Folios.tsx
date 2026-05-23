@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -475,6 +475,18 @@ export default function Folios() {
   const [nuevoOpen, setNuevoOpen] = useState(false);
   const { data: folios, isLoading } = useFolios();
   const { data: allRiesgos, isLoading: loadingRiesgos } = useAllRiesgos();
+
+  // Auto-abrir diálogo de nuevo folio si viene ?wizard=1 (desde onboarding)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("wizard") === "1") {
+      setNuevoOpen(true);
+      // Limpiar query param sin recargar
+      const url = new URL(window.location.href);
+      url.searchParams.delete("wizard");
+      window.history.replaceState({}, "", url.toString());
+    }
+  }, []);
 
   // Agrupar riesgos por folio_id para acceso rápido
   const riesgosMap = new Map<string, any[]>();
