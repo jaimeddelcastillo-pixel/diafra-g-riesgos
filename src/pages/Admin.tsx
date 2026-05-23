@@ -205,6 +205,21 @@ export default function Admin() {
   const [editUserTarget, setEditUserTarget] = useState<TraceaUser | null>(null);
   const [editUserForm, setEditUserForm] = useState({ nombre: "", cargo: "" });
 
+  // ── Nueva organización (super_admin) ──
+  const [newOrgOpen, setNewOrgOpen] = useState(false);
+  const [newOrgForm, setNewOrgForm] = useState({
+    org_nombre: "",
+    org_slug: "",
+    norma_aplicable: "NOM-241",
+    plan: "trial",
+    trial_dias: 14,
+    max_users: 5,
+    admin_nombre: "",
+    admin_email: "",
+    admin_password: "",
+    admin_cargo: "",
+  });
+
   if (!isSuperAdmin()) return <Navigate to="/" replace />;
 
   const { data, isLoading } = useQuery<AdminData>({
@@ -401,6 +416,35 @@ export default function Admin() {
     onError: (e: any) => toast.error(e.message),
   });
 
+  const createOrgMutation = useMutation({
+    mutationFn: async (form: typeof newOrgForm) => {
+      const { data, error } = await supabase.functions.invoke("admin-create-org", {
+        body: form,
+      });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-stats"] });
+      toast.success("Organización creada con su administrador.");
+      setNewOrgOpen(false);
+      setNewOrgForm({
+        org_nombre: "",
+        org_slug: "",
+        norma_aplicable: "NOM-241",
+        plan: "trial",
+        trial_dias: 14,
+        max_users: 5,
+        admin_nombre: "",
+        admin_email: "",
+        admin_password: "",
+        admin_cargo: "",
+      });
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
   const metrics = data?.metrics;
   const orgs = data?.orgs ?? [];
   const alertas = data?.alertas;
@@ -534,10 +578,15 @@ export default function Admin() {
       {/* ── Tabla de organizaciones ── */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center gap-2">
-            <Building2 className="h-4 w-4" />
-            Organizaciones ({orgs.length})
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Building2 className="h-4 w-4" />
+              Organizaciones ({orgs.length})
+            </CardTitle>
+            <Button size="sm" className="gap-1 h-8" onClick={() => setNewOrgOpen(true)}>
+              <Building2 className="h-3.5 w-3.5" /> Nueva
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           {isLoading ? (
@@ -798,6 +847,141 @@ export default function Admin() {
           )}
         </CardContent>
       </Card>
+
+      {/* ── Dialog nueva organización ── */}
+      <Dialog open={newOrgOpen} onOpenChange={setNewOrgOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader><DialogTitle>Nueva organización (cliente)</DialogTitle></DialogHeader>
+          <div className="space-y-3 py-2 max-h-[70vh] overflow-y-auto">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="text-sm">Nombre empresa *</Label>
+                <Input
+                  value={newOrgForm.org_nombre}
+                  onChange={(e) => setNewOrgForm((f) => ({ ...f, org_nombre: e.target.value }))}
+                  placeholder="Acme S.A. de C.V."
+                />
+              </div>
+              <div>
+                <Label className="text-sm">Identificador (slug) *</Label>
+                <Input
+                  value={newOrgForm.org_slug}
+                  onChange={(e) =>
+                    setNewOrgForm((f) => ({
+                      ...f,
+                      org_slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-"),
+                    }))
+                  }
+                  placeholder="acme"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <Label className="text-sm">Norma</Label>
+                <Select
+                  value={newOrgForm.norma_aplicable}
+                  onValueChange={(v) => setNewOrgForm((f) => ({ ...f, norma_aplicable: v }))}
+                >
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="NOM-241">NOM-241 (dispositivos)</SelectItem>
+                    <SelectItem value="NOM-059">NOM-059 (medicamentos)</SelectItem>
+                    <SelectItem value="MULTI">Multi</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="text-sm">Plan</Label>
+                <Select
+                  value={newOrgForm.plan}
+                  onValueChange={(v) => setNewOrgForm((f) => ({ ...f, plan: v }))}
+                >
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="trial">Trial</SelectItem>
+                    <SelectItem value="pro">Pro</SelectItem>
+                    <SelectItem value="enterprise">Enterprise</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="text-sm">Días trial</Label>
+                <Input
+                  type="number"
+                  min={1}
+                  value={newOrgForm.trial_dias}
+                  onChange={(e) => setNewOrgForm((f) => ({ ...f, trial_dias: Number(e.target.value) }))}
+                  disabled={newOrgForm.plan !== "trial"}
+                />
+              </div>
+            </div>
+            <div>
+              <Label className="text-sm">Máx. usuarios</Label>
+              <Input
+                type="number"
+                min={1}
+                value={newOrgForm.max_users}
+                onChange={(e) => setNewOrgForm((f) => ({ ...f, max_users: Number(e.target.value) }))}
+              />
+            </div>
+            <div className="border-t pt-3 mt-2">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
+                Administrador inicial
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-sm">Nombre *</Label>
+                  <Input
+                    value={newOrgForm.admin_nombre}
+                    onChange={(e) => setNewOrgForm((f) => ({ ...f, admin_nombre: e.target.value }))}
+                  />
+                </div>
+                <div>
+                  <Label className="text-sm">Cargo</Label>
+                  <Input
+                    value={newOrgForm.admin_cargo}
+                    onChange={(e) => setNewOrgForm((f) => ({ ...f, admin_cargo: e.target.value }))}
+                  />
+                </div>
+                <div>
+                  <Label className="text-sm">Email *</Label>
+                  <Input
+                    type="email"
+                    value={newOrgForm.admin_email}
+                    onChange={(e) => setNewOrgForm((f) => ({ ...f, admin_email: e.target.value }))}
+                  />
+                </div>
+                <div>
+                  <Label className="text-sm">Contraseña *</Label>
+                  <Input
+                    type="text"
+                    value={newOrgForm.admin_password}
+                    onChange={(e) => setNewOrgForm((f) => ({ ...f, admin_password: e.target.value }))}
+                    placeholder="Mínimo 6 caracteres"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setNewOrgOpen(false)}>Cancelar</Button>
+            <Button
+              onClick={() => createOrgMutation.mutate(newOrgForm)}
+              disabled={
+                createOrgMutation.isPending ||
+                !newOrgForm.org_nombre.trim() ||
+                !newOrgForm.org_slug.trim() ||
+                !newOrgForm.admin_nombre.trim() ||
+                !newOrgForm.admin_email.trim() ||
+                newOrgForm.admin_password.length < 6
+              }
+            >
+              {createOrgMutation.isPending ? "Creando…" : "Crear organización"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* ── Dialog nuevo usuario TRACEA ── */}
       <Dialog open={newTraceaOpen} onOpenChange={setNewTraceaOpen}>
