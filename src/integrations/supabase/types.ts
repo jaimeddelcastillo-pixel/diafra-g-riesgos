@@ -768,6 +768,10 @@ export type Database = {
           metodologia: string
           nombre: string
           norma_aplicable: string
+          onboarding_completado: boolean
+          onboarding_completado_at: string | null
+          onboarding_completado_por: string | null
+          onboarding_saltado: boolean
           pending_price_id: string | null
           plan: string
           privacidad_aceptada_en: string | null
@@ -800,6 +804,10 @@ export type Database = {
           metodologia?: string
           nombre: string
           norma_aplicable?: string
+          onboarding_completado?: boolean
+          onboarding_completado_at?: string | null
+          onboarding_completado_por?: string | null
+          onboarding_saltado?: boolean
           pending_price_id?: string | null
           plan?: string
           privacidad_aceptada_en?: string | null
@@ -832,6 +840,10 @@ export type Database = {
           metodologia?: string
           nombre?: string
           norma_aplicable?: string
+          onboarding_completado?: boolean
+          onboarding_completado_at?: string | null
+          onboarding_completado_por?: string | null
+          onboarding_saltado?: boolean
           pending_price_id?: string | null
           plan?: string
           privacidad_aceptada_en?: string | null
