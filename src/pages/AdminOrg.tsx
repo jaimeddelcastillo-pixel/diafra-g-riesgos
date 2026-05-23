@@ -6,7 +6,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Users, FileText, CheckCircle2, Clock, PenLine, Archive, Gift, Loader2 } from "lucide-react";
+import { ArrowLeft, Users, FileText, CheckCircle2, Clock, PenLine, Archive, Gift, Loader2, RotateCcw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
@@ -96,6 +96,7 @@ export default function AdminOrg() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [activando, setActivando] = useState(false);
+  const [reseteando, setReseteando] = useState(false);
 
   if (!isSuperAdmin()) return <Navigate to="/" replace />;
 
@@ -147,6 +148,37 @@ export default function AdminOrg() {
     }
   };
 
+  const resetearOnboarding = async () => {
+    if (!id) return;
+    if (!confirm("¿Resetear el onboarding de esta organización? La próxima vez que cualquier miembro entre verá nuevamente la bienvenida guiada.")) return;
+    setReseteando(true);
+    try {
+      const { error } = await supabase
+        .from("organizations")
+        .update({
+          onboarding_completado: false,
+          onboarding_saltado: false,
+          onboarding_completado_at: null,
+          onboarding_completado_por: null,
+        })
+        .eq("id", id);
+      if (error) throw error;
+      toast({
+        title: "Onboarding reseteado",
+        description: `${org?.nombre} verá nuevamente el flujo de bienvenida en el próximo login.`,
+      });
+      queryClient.invalidateQueries({ queryKey: ["admin-org", id] });
+    } catch (err) {
+      toast({
+        title: "Error al resetear",
+        description: (err as Error).message,
+        variant: "destructive",
+      });
+    } finally {
+      setReseteando(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* ── Header ── */}
@@ -188,6 +220,17 @@ export default function AdminOrg() {
             ) : (
               <>
                 <Gift className="h-4 w-4 mr-1.5" /> Activar gratis (trial 14d)
+              </>
+            )}
+          </Button>
+        )}
+        {org && (
+          <Button onClick={resetearOnboarding} disabled={reseteando} size="sm" variant="outline">
+            {reseteando ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <>
+                <RotateCcw className="h-4 w-4 mr-1.5" /> Resetear onboarding
               </>
             )}
           </Button>
