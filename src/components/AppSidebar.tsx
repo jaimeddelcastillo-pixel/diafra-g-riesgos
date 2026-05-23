@@ -23,13 +23,13 @@ const adminNavItems = [
 ];
 
 const orgNavItems = [
-  { title: "Dashboard", url: "/", icon: LayoutDashboard },
-  { title: "Mis Folios", url: "/folios", icon: FolderOpen },
-  { title: "Catálogos", url: "/catalogos", icon: BookOpen },
-  { title: "Recursos", url: "/recursos", icon: Library },
-  { title: "Capacitación", url: "/capacitacion", icon: GraduationCap },
-  { title: "Auditoría", url: "/auditoria", icon: Settings },
-  { title: "Configuración", url: "/configuracion", icon: Settings },
+  { title: "Dashboard", url: "/", icon: LayoutDashboard, onboarding: undefined as string | undefined },
+  { title: "Mis Folios", url: "/folios", icon: FolderOpen, onboarding: "folios" },
+  { title: "Catálogos", url: "/catalogos", icon: BookOpen, onboarding: undefined },
+  { title: "Recursos", url: "/recursos", icon: Library, onboarding: "recursos" },
+  { title: "Capacitación", url: "/capacitacion", icon: GraduationCap, onboarding: "capacitacion" },
+  { title: "Auditoría", url: "/auditoria", icon: Settings, onboarding: undefined },
+  { title: "Configuración", url: "/configuracion", icon: Settings, onboarding: undefined },
 ];
 
 export function AppSidebar() {
@@ -47,11 +47,18 @@ export function AppSidebar() {
   const navItems = showOrgNav
     ? [
         ...orgNavItems,
-        ...(puedeAyuda ? [{ title: "Ayuda", url: "/soporte", icon: LifeBuoy }] : []),
+        ...(puedeAyuda ? [{ title: "Ayuda", url: "/soporte", icon: LifeBuoy, onboarding: undefined }] : []),
       ]
     : adminNavItems;
   const orgLabel = isImpersonating ? org?.nombre : (showAdminNav ? "Panel TRACEA" : (org?.nombre ?? "Gestión de Riesgos"));
   const orgLogo = showOrgNav ? getOrgLogoUrl(org?.logo_url) : null;
+
+  // Badge punto verde en "Mis Folios" por 24h tras elegir crear primer folio
+  const primerFolioAt = typeof window !== "undefined"
+    ? Number(localStorage.getItem("tracea_onboarding_first_folio_at") ?? 0)
+    : 0;
+  const mostrarBadgeFolios =
+    primerFolioAt > 0 && Date.now() - primerFolioAt < 24 * 60 * 60 * 1000;
 
   return (
     <Sidebar collapsible="icon">
@@ -101,9 +108,17 @@ export function AppSidebar() {
                       end={item.url === "/" || item.url === "/admin"}
                       className="hover:bg-sidebar-accent/50"
                       activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
+                      data-onboarding={(item as any).onboarding}
                     >
                       <item.icon className="mr-2 h-4 w-4" />
-                      {!collapsed && <span>{item.title}</span>}
+                      {!collapsed && (
+                        <span className="flex items-center gap-2">
+                          {item.title}
+                          {item.url === "/folios" && mostrarBadgeFolios && (
+                            <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" title="Nuevo" />
+                          )}
+                        </span>
+                      )}
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
