@@ -578,10 +578,15 @@ export default function Admin() {
       {/* ── Tabla de organizaciones ── */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center gap-2">
-            <Building2 className="h-4 w-4" />
-            Organizaciones ({orgs.length})
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Building2 className="h-4 w-4" />
+              Organizaciones ({orgs.length})
+            </CardTitle>
+            <Button size="sm" className="gap-1 h-8" onClick={() => setNewOrgOpen(true)}>
+              <Building2 className="h-3.5 w-3.5" /> Nueva
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           {isLoading ? (
