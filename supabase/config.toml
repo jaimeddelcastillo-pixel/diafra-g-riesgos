@@ -21,3 +21,5 @@ project_id = "zcaebecdcpyqdzfqipiq"
     verify_jwt = false
   [functions.stripe-webhook]
     verify_jwt = false
+  [functions.public-demo-signup]
+    verify_jwt = false

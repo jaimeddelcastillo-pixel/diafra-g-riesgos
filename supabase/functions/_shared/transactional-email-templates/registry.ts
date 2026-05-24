@@ -19,6 +19,7 @@ import { template as folioDictamen } from './folio-dictamen.tsx'
 import { template as trialPorVencer } from './trial-por-vencer.tsx'
 import { template as pagoFallido } from './pago-fallido.tsx'
 import { template as contactoSoporte } from './contacto-soporte.tsx'
+import { template as bienvenidaDemo } from './bienvenida-demo.tsx'
 
 export const TEMPLATES: Record<string, TemplateEntry> = {
   'bienvenida-usuario': bienvenidaUsuario,
@@ -31,4 +32,5 @@ export const TEMPLATES: Record<string, TemplateEntry> = {
   'trial-por-vencer': trialPorVencer,
   'pago-fallido': pagoFallido,
   'contacto-soporte': contactoSoporte,
+  'bienvenida-demo': bienvenidaDemo,
 }
