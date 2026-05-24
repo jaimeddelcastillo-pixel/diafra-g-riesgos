@@ -15,6 +15,7 @@ import { RiesgoFormDialog } from "@/components/RiesgoFormDialog";
 import { RiesgoWizardDialog } from "@/components/RiesgoWizardDialog";
 import { SeccionDictamen } from "@/components/SeccionDictamen";
 import { SeccionEvidencias } from "@/components/SeccionEvidencias";
+import { ComiteTab } from "@/components/comite/ComiteTab";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
@@ -1408,6 +1409,54 @@ export default function FolioDetail() {
   const handleEnviarAFirma = async () => {
     setEnviandoFirma(true);
     try {
+      // Validaciones de votación del comité (evidencia regulatoria)
+      const { data: votosFolio } = await supabase
+        .from("comite_votos")
+        .select("user_id, voto")
+        .eq("folio_id", folio.id);
+      const { data: comentariosFolio } = await supabase
+        .from("comite_comentarios")
+        .select("id, tipo, resuelto")
+        .eq("folio_id", folio.id);
+
+      const votos = votosFolio || [];
+      const rechazos = votos.filter((v) => v.voto === "rechaza").length;
+      const observ = votos.filter((v) => v.voto === "aprueba_con_observaciones").length;
+      const pendientes = comite.length - votos.filter((v) =>
+        comite.some((c) => c.user_id === v.user_id),
+      ).length;
+      const obsNoResueltas = (comentariosFolio || []).filter(
+        (c) => c.tipo === "observacion" && !c.resuelto,
+      ).length;
+
+      if (rechazos > 0) {
+        toast({
+          title: "⛔ Envío bloqueado",
+          description: `Hay ${rechazos} rechazo(s) activo(s) del comité. Resuelve las observaciones antes de enviar a firma.`,
+          variant: "destructive",
+        });
+        setEnviandoFirma(false);
+        return;
+      }
+      if (pendientes > 0) {
+        const ok = window.confirm(
+          `${pendientes} miembro(s) del comité aún no han votado. ¿Deseas continuar de todas formas?`,
+        );
+        if (!ok) {
+          setEnviandoFirma(false);
+          return;
+        }
+      }
+      if (observ > 0 || obsNoResueltas > 0) {
+        const ok = window.confirm(
+          `Hay ${observ + obsNoResueltas} observación(es) sin resolver. ¿Confirmas que fueron atendidas?`,
+        );
+        if (!ok) {
+          setEnviandoFirma(false);
+          return;
+        }
+      }
+
       const { data: result, error } = await supabase.functions.invoke("folio-workflow", {
         body: {
           accion: "enviar-a-firma",
@@ -1568,6 +1617,14 @@ export default function FolioDetail() {
 
         {/* Comité con firma conectada */}
         <SeccionComite comite={comite} folioId={folio.id} folioEstado={folio.estado} onSaved={handleRefresh} />
+
+        {/* II-B: Discusión y votación del comité técnico (pre-dictamen) */}
+        <ComiteTab
+          folioId={folio.id}
+          orgId={folio.org_id}
+          folioEstado={folio.estado}
+          comite={comite}
+        />
 
         <SeccionRiesgos riesgos={riesgos} locked={locked} folioId={folio.id} folioCodigo={folio.codigo} procesoEquipo={folio.proceso_equipo || ""} normaFolio={folio.norma_folio} folioEstado={folio.estado} />
 
