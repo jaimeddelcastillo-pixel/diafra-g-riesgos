@@ -68,7 +68,7 @@ function evaluarChecklistNOM241(folio: Folio, riesgos: Riesgo[], comite: FolioCo
 
   // ── Folio ──
   items.push({ id: "alcance", label: "Alcance del análisis capturado", ok: !!folio.alcance?.trim(), critico: true });
-  items.push({ id: "modelo", label: `Identificador del ${nc.terminologia.objetoAnalisis.toLowerCase()}`, ok: !!folio.numero_modelo?.trim(), critico: true });
+  items.push({ id: "modelo", label: "Identificación del proceso / dispositivo (opcional)", ok: !!folio.numero_modelo?.trim(), critico: false });
   items.push({ id: "beneficio", label: `${beneficio} documentado (${refs})`, ok: !!folio.beneficio_clinico?.trim(), critico: true });
   items.push({ id: "residual_global", label: `Evaluación de riesgo residual global (${refs})`, ok: !!folio.riesgo_residual_global?.trim(), critico: true });
   items.push({ id: "comite", label: "Al menos un miembro en el comité", ok: comite.length > 0, critico: true });
@@ -274,7 +274,7 @@ function SeccionDescripcion({ folio, locked, onSaved }: { folio: Folio; locked: 
             value={<span className="font-mono font-semibold text-primary">{folio.numero_version || "1.0"}</span>}
             className="col-span-2"
           />
-          <FormField label="Modelo / Ref." value={folio.numero_modelo} className="col-span-2" />
+          <FormField label="Identificación del proceso / dispositivo" value={folio.numero_modelo} className="col-span-2" />
           <FormField label="Lote / Rev." value={folio.numero_lote} className="col-span-2" />
           {getClasificacionMode(folio.norma_folio, folio.clasificacion_categoria) === "dm" ? (
             <FormField label="Clase" value={folio.clase_dispositivo} className="col-span-2 border-r-0" />
@@ -384,11 +384,11 @@ function SeccionDescripcion({ folio, locked, onSaved }: { folio: Folio; locked: 
               />
             </div>
             <div className="space-y-1">
-              <label className="text-[10px] font-semibold text-muted-foreground uppercase">Modelo / Referencia</label>
+              <label className="text-[10px] font-semibold text-muted-foreground uppercase">Identificación del proceso / dispositivo</label>
               <Input
                 value={form.numero_modelo}
                 onChange={(e) => setForm({ ...form, numero_modelo: e.target.value })}
-                placeholder="MOD-001"
+                placeholder="Ej. MAN-SGC-01, PCT-500, Lote XYZ…"
               />
             </div>
             <div className="space-y-1">

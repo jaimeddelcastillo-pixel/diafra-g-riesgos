@@ -399,7 +399,7 @@ export async function generateFolioPDF(
         folio.desviacion_id || "—",
       ],
       [
-        { content: "Número de Modelo:", styles: { fontStyle: "bold", fillColor: [248, 248, 248] } },
+        { content: "Identificación proceso/dispositivo:", styles: { fontStyle: "bold", fillColor: [248, 248, 248] } },
         folio.numero_modelo || "—",
         { content: "Número de Lote:", styles: { fontStyle: "bold", fillColor: [248, 248, 248] } },
         folio.numero_lote || "—",
