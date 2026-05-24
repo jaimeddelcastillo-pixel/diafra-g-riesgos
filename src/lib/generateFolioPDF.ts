@@ -488,8 +488,9 @@ export async function generateFolioPDF(
   try {
     const { data: votos } = await supabase
       .from("comite_votos")
-      .select("user_id, voto, comentario, updated_at");
-    const votosFolio = (votos || []).filter(() => true); // RLS ya filtra por org
+      .select("user_id, voto, comentario, updated_at")
+      .eq("folio_id", folio.id);
+    const votosFolio = votos || [];
     const { data: perfilesVoto } =
       votosFolio.length > 0
         ? await supabase
