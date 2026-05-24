@@ -157,8 +157,8 @@ async function validarCompletitudFolio(
     errores.push(`${t.beneficio} del ${t.objetoAnalisis.toLowerCase()} es obligatorio (${refs})`);
   if (!folio.riesgo_residual_global?.trim())
     errores.push(`Evaluación del riesgo residual global es obligatoria (${refs})`);
-  if (!folio.numero_modelo?.trim())
-    errores.push(`Identificación del ${t.objetoAnalisis.toLowerCase()} es obligatoria (${norma.nombreLargo})`);
+  // Identificación del proceso / dispositivo: opcional (Opción B).
+  // Aplica a folios de proceso, manual, lote o dispositivo físico indistintamente.
 
   // Verificar que tiene al menos un riesgo
   const { data: riesgos, count } = await admin
