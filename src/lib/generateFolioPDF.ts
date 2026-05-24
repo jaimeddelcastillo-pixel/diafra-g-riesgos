@@ -484,6 +484,80 @@ export async function generateFolioPDF(
     margin: tableMargin,
   });
 
+  // ─── II-B. VOTACIÓN DEL COMITÉ TÉCNICO (evidencia regulatoria COFEPRIS) ─────
+  try {
+    const { data: votos } = await supabase
+      .from("comite_votos")
+      .select("user_id, voto, comentario, updated_at");
+    const votosFolio = (votos || []).filter(() => true); // RLS ya filtra por org
+    const { data: perfilesVoto } =
+      votosFolio.length > 0
+        ? await supabase
+            .from("profiles")
+            .select("id, nombre, cargo")
+            .in("id", votosFolio.map((v) => v.user_id))
+        : { data: [] as any[] };
+    const perfilMap = new Map((perfilesVoto || []).map((p: any) => [p.id, p]));
+
+    y = (doc as any).lastAutoTable.finalY + 4;
+    y = sectionHeader(y, "II-B.", "VOTACIÓN DEL COMITÉ TÉCNICO");
+
+    const votoTxt = (v: string) =>
+      v === "aprueba"
+        ? "Aprueba"
+        : v === "aprueba_con_observaciones"
+          ? "Aprueba c/ obs."
+          : v === "rechaza"
+            ? "Rechaza"
+            : v;
+
+    drawTable({
+      startY: y,
+      head: [["NOMBRE", "CARGO", "VOTO", "FECHA", "OBSERVACIONES"]],
+      body:
+        votosFolio.length === 0
+          ? [["—", "—", "Sin votación registrada", "—", "—"]]
+          : votosFolio.map((v: any) => {
+              const p = perfilMap.get(v.user_id) as any;
+              return [
+                p?.nombre || "—",
+                p?.cargo || "—",
+                votoTxt(v.voto),
+                v.updated_at ? fmtDate(v.updated_at) : "—",
+                v.comentario || "—",
+              ];
+            }),
+      theme: "grid",
+      styles: {
+        fontSize: 8,
+        cellPadding: 3,
+        lineColor: [0, 0, 0],
+        lineWidth: 0.2,
+        minCellHeight: 11,
+        valign: "middle",
+      },
+      headStyles: {
+        fillColor: BAND_FILL,
+        textColor: [0, 0, 0],
+        fontStyle: "bold",
+        halign: "center",
+        lineColor: [0, 0, 0],
+        lineWidth: 0.2,
+      },
+      columnStyles: {
+        0: { cellWidth: 50 },
+        1: { cellWidth: 40 },
+        2: { cellWidth: 30, halign: "center" },
+        3: { cellWidth: 28, halign: "center" },
+        4: { cellWidth: "auto" as any },
+      },
+      margin: tableMargin,
+    });
+  } catch (e) {
+    // No bloquear la generación del PDF si falla la lectura de votos
+    console.warn("No se pudo incluir la sección de votación:", e);
+  }
+
   // ─── PÁGINAS DE RIESGOS (SECCIÓN III) ───────────────────────────────────────
   riesgos.forEach((r, idx) => {
     y = newPage();
