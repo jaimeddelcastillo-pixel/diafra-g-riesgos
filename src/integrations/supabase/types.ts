@@ -276,6 +276,78 @@ export type Database = {
         }
         Relationships: []
       }
+      comite_comentarios: {
+        Row: {
+          contenido: string
+          created_at: string
+          folio_id: string
+          id: string
+          org_id: string
+          resuelto: boolean
+          resuelto_en: string | null
+          resuelto_por: string | null
+          tipo: string
+          user_id: string
+        }
+        Insert: {
+          contenido: string
+          created_at?: string
+          folio_id: string
+          id?: string
+          org_id: string
+          resuelto?: boolean
+          resuelto_en?: string | null
+          resuelto_por?: string | null
+          tipo?: string
+          user_id: string
+        }
+        Update: {
+          contenido?: string
+          created_at?: string
+          folio_id?: string
+          id?: string
+          org_id?: string
+          resuelto?: boolean
+          resuelto_en?: string | null
+          resuelto_por?: string | null
+          tipo?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      comite_votos: {
+        Row: {
+          comentario: string | null
+          created_at: string
+          folio_id: string
+          id: string
+          org_id: string
+          updated_at: string
+          user_id: string
+          voto: string
+        }
+        Insert: {
+          comentario?: string | null
+          created_at?: string
+          folio_id: string
+          id?: string
+          org_id: string
+          updated_at?: string
+          user_id: string
+          voto: string
+        }
+        Update: {
+          comentario?: string | null
+          created_at?: string
+          folio_id?: string
+          id?: string
+          org_id?: string
+          updated_at?: string
+          user_id?: string
+          voto?: string
+        }
+        Relationships: []
+      }
       email_send_log: {
         Row: {
           created_at: string
