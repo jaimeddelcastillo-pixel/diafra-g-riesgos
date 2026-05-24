@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Users, FileText, CheckCircle2, Clock, PenLine, Archive, Gift, Loader2, RotateCcw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import PanelGestionFirmas from "@/components/admin/PanelGestionFirmas";
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -344,6 +345,9 @@ export default function AdminOrg() {
           </CardContent>
         </Card>
       </div>
+
+      {/* ── Gestión de firmas (solo super_admin) ── */}
+      {org && <PanelGestionFirmas orgId={org.id} />}
     </div>
   );
 }
