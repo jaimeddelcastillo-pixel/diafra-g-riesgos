@@ -85,7 +85,7 @@ export function PanelVotacion({
   // Realtime
   useEffect(() => {
     const ch = supabase
-      .channel(`comite-votos-${folioId}`)
+      .channel(`comite_votos:${orgId}:${folioId}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "comite_votos", filter: `folio_id=eq.${folioId}` },
@@ -95,7 +95,7 @@ export function PanelVotacion({
     return () => {
       supabase.removeChannel(ch);
     };
-  }, [folioId, qc]);
+  }, [folioId, orgId, qc]);
 
   const miMiembro = useMemo(
     () => comite.find((c) => c.user_id && c.user_id === user?.id),

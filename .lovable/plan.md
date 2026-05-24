@@ -1,106 +1,94 @@
-## Sistema de Comunicación del Comité Técnico — Plan
+## Plan: Corrección de 2 vulnerabilidades críticas de seguridad
 
-Implementación de votación formal + discusión por folio antes del dictamen del Responsable Sanitario (RS), como evidencia regulatoria COFEPRIS.
-
----
-
-### 1. Base de datos (1 migración)
-
-**Tablas nuevas:**
-
-`comite_votos`
-- `id`, `folio_id`, `user_id`, `org_id`, `voto` (`aprueba|rechaza|aprueba_con_observaciones`), `comentario`, `created_at`, `updated_at`
-- `UNIQUE(folio_id, user_id)`
-- Trigger CHECK: comentario obligatorio si voto ≠ `aprueba`
-- Trigger `set_updated_at`
-- Trigger `audit_trigger_func` (evidencia regulatoria)
-
-`comite_comentarios`
-- `id`, `folio_id`, `user_id`, `org_id`, `contenido`, `tipo` (`comentario|observacion|resolucion`), `resuelto`, `resuelto_por`, `resuelto_en`, `created_at`
-- Trigger de auditoría
-
-**RLS (ambas tablas):**
-- SELECT: `org_id = get_user_org_id() OR is_super_admin()`
-- INSERT/UPDATE: `user_id = auth.uid() AND org_id = get_user_org_id()`
-- UPDATE de `resuelto`: autor del comentario, admin o RS
-- DELETE: solo admin/super_admin
-
-**Realtime:** habilitar en ambas tablas para refresco automático de la pestaña.
+Orden de ejecución estricto: **Problema 2 → Problema 1 → Verificación**.
 
 ---
 
-### 2. Componentes nuevos
+### PASO 1 — Problema 2: Escalación de privilegios a `super_admin`
 
-```text
-src/components/comite/
-  ├── ComiteTab.tsx              ← layout 2 columnas (desktop) / stack (móvil)
-  ├── PanelVotacion.tsx          ← progreso, lista miembros, botones voto
-  ├── PanelComentarios.tsx       ← feed + nuevo comentario
-  └── ResumenConsenso.tsx        ← semáforo para RS (🟢🟡🔴⏳)
+**Migración SQL única** que ejecuta en orden:
+
+1. **Limpieza preventiva**: `DELETE FROM org_members WHERE role = 'super_admin'` (por si existiera alguna fila huérfana — los super_admin legítimos viven en `user_roles`).
+2. **Constraint duro** en `org_members`:
+   ```sql
+   ALTER TABLE public.org_members
+   ADD CONSTRAINT no_super_admin_in_org_members
+   CHECK (role <> 'super_admin');
+   ```
+3. **Reescritura de `is_super_admin()`** — eliminar rama de `org_members`, leer solo de `user_roles`:
+   ```sql
+   CREATE OR REPLACE FUNCTION public.is_super_admin()
+   RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER
+   SET search_path = public AS $$
+     SELECT EXISTS (SELECT 1 FROM public.user_roles
+                    WHERE user_id = auth.uid() AND role = 'super_admin')
+   $$;
+   ```
+4. **Endurecer `self_registration_org_members_insert`**:
+   ```sql
+   DROP POLICY "self_registration_org_members_insert" ON public.org_members;
+   CREATE POLICY "self_registration_org_members_insert"
+   ON public.org_members FOR INSERT TO authenticated
+   WITH CHECK (
+     user_id = auth.uid()
+     AND role = 'operador'
+     AND NOT EXISTS (SELECT 1 FROM public.org_members om WHERE om.user_id = auth.uid())
+     AND NOT EXISTS (SELECT 1 FROM public.org_members om2 WHERE om2.org_id = org_members.org_id)
+   );
+   ```
+   (Mantiene la lógica de "primer miembro de la org" pero ya no depende de la columna `role` siendo restringida solo por el CHECK.)
+5. **Revisar `has_role`**: actualmente lee de `org_members` y trata `super_admin` como comodín. Como ya no podrá existir `super_admin` en `org_members`, el comportamiento queda automáticamente seguro — no requiere cambio.
+
+---
+
+### PASO 2 — Problema 1: Aislamiento de canales Realtime por organización
+
+**A. Migración SQL**:
+
+```sql
+ALTER TABLE realtime.messages ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "realtime_org_isolation"
+ON realtime.messages FOR SELECT TO authenticated
+USING (
+  public.is_super_admin()
+  OR (
+    split_part(extension, ':', 1) IN ('comite_votos','comite_comentarios')
+    AND split_part(extension, ':', 2)::uuid = public.get_user_org_id()
+  )
+  -- Canales que NO siguen el formato 'tabla:org_id:...' quedan denegados implícitamente
+);
 ```
 
-- Hooks con React Query (`useComiteVotos`, `useComiteComentarios`) + subscripción realtime.
-- Visibles solo para miembros con rol `comite_tecnico`, `responsable_sanitario`, `admin`, `super_admin`.
-- `PanelVotacion` cruza `folio_comite` (miembros) con `comite_votos` para mostrar estado por miembro.
-- Voto modificable solo mientras el folio esté en `Borrador`.
-- Tipografía/colores: tokens semánticos existentes; los acentos verde/naranja/rojo se añaden como tokens HSL en `index.css` y `tailwind.config.ts` (no hex en componentes).
+> Nota técnica: en Supabase Realtime el nombre del canal lo emite el cliente vía `supabase.channel('...')`. El topic se expone en `realtime.messages.topic`. Validaremos con `split_part(topic, ':', 1/2)` usando el formato `{tabla}:{org_id}:{folio_id}`. Cualquier suscripción a un canal sin org_id válido será rechazada por RLS.
+
+**B. Cambios en frontend** — pasar `orgId` y construir canales con formato seguro `{tabla}:{org_id}:{folio_id}`:
+
+- `src/components/comite/PanelVotacion.tsx` → canal `comite_votos:${orgId}:${folioId}`
+- `src/components/comite/PanelComentarios.tsx` → canal `comite_comentarios:${orgId}:${folioId}`
+- `ComiteTab.tsx` ya recibe `orgId` y lo pasa a ambos paneles ✅ (no requiere cambio estructural).
 
 ---
 
-### 3. Integración en FolioDetail
+### PASO 3 — Verificación
 
-`src/pages/FolioDetail.tsx`:
-- Añadir un bloque de pestañas (shadcn `Tabs`) envolviendo las secciones actuales: **Folio | Riesgos | Comité | Dictamen | Evidencias | Historial**. Mantengo el contenido actual, solo agrupo en `TabsContent`.
-- Tab **Comité** = `<ComiteTab folio={folio} comite={comite} />`.
-
-### 4. Bloqueos en flujo de firma
-
-En el handler "Enviar a Firma" de `FolioDetail.tsx` (no existe `FolioFirma.tsx` separado; la transición vive en `folio-workflow` + UI del detalle):
-- Consultar `comite_votos` del folio.
-- **Rojo (bloqueo):** rechazos activos → toast destructivo, abort.
-- **Naranja (confirm):** observaciones sin resolver → `AlertDialog` confirmación.
-- **Amarillo (confirm):** miembros sin votar → `AlertDialog` confirmación.
-- Sin issues → continúa como hoy.
-
-### 5. Notificaciones in-app
-
-- No existe sistema de notificaciones in-app. Para no inflar el scope, **dejo fuera** la creación de un sistema de notificaciones nuevo y en su lugar:
-  - Realtime refresh de la pestaña Comité para todos los miembros conectados.
-  - Toast local al autor del voto/comentario.
-- Marco `// TODO notificación in-app` en los puntos de inserción para cuando exista el módulo de notificaciones.
-- ⚠️ Confírmame si prefieres que cree ahora una tabla `notificaciones` mínima + bell en el header — añade ~1 archivo más.
-
-### 6. PDF del dictamen
-
-`src/lib/generateFolioPDF.ts`: añadir sección **"Votación del Comité Técnico"** con tabla `Nombre | Cargo | Voto | Fecha | Observaciones`, leyendo `comite_votos` + `folio_comite` antes de generar. Si no hay votos, sección omitida con nota "Sin votación registrada".
+1. Ejecutar `supabase--linter` para confirmar que ambas alertas desaparecen.
+2. Confirmar que el panel del comité sigue actualizando en tiempo real para el usuario correcto.
+3. Marcar ambos findings como resueltos vía `security--manage_security_finding`.
+4. Actualizar `security--update_memory` documentando: (a) `is_super_admin` solo lee `user_roles`, (b) CHECK constraint en `org_members.role`, (c) RLS en `realtime.messages` con formato de canal `{tabla}:{org_id}:{folio_id}`.
 
 ---
 
-### Detalles técnicos
+### Archivos afectados
 
-- Validación cliente con `zod` (comentario requerido si voto ≠ `aprueba`, máx 2000 chars).
-- Optimistic update + invalidación de `["comite-votos", folioId]` y `["comite-comentarios", folioId]`.
-- Animación de entrada de comentario nuevo con `transition-all` + `animate-in fade-in slide-in-from-top-2` (Tailwind).
-- Avatar con iniciales desde `profiles.nombre`.
+- **Nuevas migraciones**: 2 (una por problema, en orden).
+- **Frontend**: `src/components/comite/PanelVotacion.tsx`, `src/components/comite/PanelComentarios.tsx`.
+- **Sin cambios**: `ComiteTab.tsx`, `FolioDetail.tsx`, edge functions.
 
-### Archivos finales
+### Riesgos y mitigaciones
 
-**Nuevos (5):**
-- `supabase/migrations/<timestamp>_comite_votacion.sql`
-- `src/components/comite/ComiteTab.tsx`
-- `src/components/comite/PanelVotacion.tsx`
-- `src/components/comite/PanelComentarios.tsx`
-- `src/components/comite/ResumenConsenso.tsx`
+- **`is_super_admin` cambia comportamiento**: si existe un super_admin que solo está en `org_members` y no en `user_roles`, perdería privilegios. Mitigación: la migración hace `INSERT INTO user_roles SELECT user_id, 'super_admin' FROM org_members WHERE role='super_admin' ON CONFLICT DO NOTHING` antes del DELETE.
+- **Canales viejos en caché**: usuarios con sesión abierta se reconectarán automáticamente al hacer re-render; sin downtime.
+- **Formato de topic Realtime**: si Supabase usa `realtime:{topic}` internamente, ajustaremos el `split_part` tras probar con `supabase--read_query` sobre `realtime.messages`.
 
-**Modificados (3):**
-- `src/pages/FolioDetail.tsx` (pestañas + bloqueos pre-firma)
-- `src/lib/generateFolioPDF.ts` (sección votación)
-- `src/index.css` + `tailwind.config.ts` (tokens HSL vote-approve/observe/reject)
-
----
-
-### Preguntas antes de codear
-
-1. **Notificaciones in-app**: ¿creo módulo mínimo ahora o dejo `TODO`?
-2. **Voto modificable**: ¿solo en `Borrador` (mi propuesta) o también en `En Firma` hasta que el RS firme?
-3. **¿Quién puede comentar?** ¿Solo comité + RS, o también admin/operador del folio?
+¿Apruebas? Procedo en el orden indicado: migración 1 (privilegios) → migración 2 (Realtime) → cambios frontend → verificación.

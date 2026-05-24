@@ -90,7 +90,7 @@ export function PanelComentarios({
 
   useEffect(() => {
     const ch = supabase
-      .channel(`comite-comentarios-${folioId}`)
+      .channel(`comite_comentarios:${orgId}:${folioId}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "comite_comentarios", filter: `folio_id=eq.${folioId}` },
@@ -100,7 +100,7 @@ export function PanelComentarios({
     return () => {
       supabase.removeChannel(ch);
     };
-  }, [folioId, qc]);
+  }, [folioId, orgId, qc]);
 
   const publicar = async () => {
     if (!user) return;
