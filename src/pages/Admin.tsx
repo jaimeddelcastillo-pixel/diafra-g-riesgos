@@ -25,6 +25,7 @@ import {
   Users, FileText, CheckCircle2, ChevronDown, ChevronUp,
   UserPlus, KeyRound, ShieldCheck, Trash2, Mail,
   MoreHorizontal, Pause, Play, RefreshCw, Send, ArrowUpDown,
+  Sparkles, CalendarPlus,
 } from "lucide-react";
 import { toast } from "sonner";
 
