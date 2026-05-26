@@ -759,8 +759,6 @@ export default function Admin() {
             <CardTitle className="text-base flex items-center gap-2">
               <ShieldCheck className="h-4 w-4 text-primary" /> Equipo TRACEA
             </CardTitle>
-
-
             <Button size="sm" className="gap-1 h-8" onClick={() => setNewTraceaOpen(true)}>
               <UserPlus className="h-3.5 w-3.5" /> Nuevo
             </Button>
