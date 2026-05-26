@@ -752,6 +752,145 @@ export default function Admin() {
         </CardContent>
       </Card>
 
+      {/* ── Demos activas ── */}
+      {(() => {
+        const demos = orgs.filter((o) => o.plan === "trial-demo");
+        if (demos.length === 0) return null;
+        return (
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-primary" />
+                Demos activas ({demos.length})
+              </CardTitle>
+              <p className="text-xs text-muted-foreground mt-1">
+                Cuentas trial-demo creadas desde la landing (usetracea.mx). Vencen automáticamente.
+              </p>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b text-muted-foreground text-xs uppercase tracking-wide">
+                      <th className="text-left pb-2 font-medium">Organización</th>
+                      <th className="text-left pb-2 font-medium">Creada</th>
+                      <th className="text-left pb-2 font-medium">Días restantes</th>
+                      <th className="text-left pb-2 font-medium">Último folio</th>
+                      <th className="text-left pb-2 font-medium">Estado</th>
+                      <th className="text-left pb-2 font-medium">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {demos.map((org) => {
+                      const dias = org.trial_expires_at ? diasParaVencer(org.trial_expires_at) : null;
+                      const vencido = dias !== null && dias < 0;
+                      const estado = (org as any).estado as string | undefined;
+                      return (
+                        <tr key={org.id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
+                          <td className="py-3">
+                            <div>
+                              <span className="font-medium">{org.nombre}</span>
+                              <span className="block text-[10px] font-mono text-muted-foreground">{org.slug}</span>
+                            </div>
+                          </td>
+                          <td className="py-3 text-xs text-muted-foreground">
+                            {tiempoDesde(org.created_at)}
+                          </td>
+                          <td className="py-3">
+                            {dias === null ? (
+                              <span className="text-xs text-muted-foreground">—</span>
+                            ) : vencido ? (
+                              <span className="text-xs text-destructive font-medium">Vencida</span>
+                            ) : (
+                              <span className={`text-xs font-medium ${dias <= 3 ? "text-amber-600" : "text-foreground"}`}>
+                                {dias}d
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-3 text-xs text-muted-foreground">
+                            {tiempoDesde(org.ultimo_folio_at)}
+                          </td>
+                          <td className="py-3">
+                            <Badge
+                              variant="outline"
+                              className={`text-[10px] ${
+                                estado === "suspendido" ? "bg-orange-100 text-orange-700 border-orange-200" :
+                                org.activo ? "bg-green-100 text-green-700 border-green-200" :
+                                "bg-gray-100 text-gray-600 border-gray-200"
+                              }`}
+                            >
+                              {estado === "suspendido" ? "Suspendida" : org.activo ? "Activa" : "Inactiva"}
+                            </Badge>
+                          </td>
+                          <td className="py-3">
+                            <div className="flex items-center gap-1">
+                              <Button
+                                variant="default"
+                                size="sm"
+                                className="h-7 text-xs gap-1"
+                                onClick={() => { setChangePlanOrg(org); setChangePlanValue("pro"); }}
+                              >
+                                <ArrowUpDown className="h-3 w-3" /> Convertir
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-7 text-xs gap-1"
+                                onClick={() => {
+                                  const base = org.trial_expires_at && new Date(org.trial_expires_at) > new Date()
+                                    ? new Date(org.trial_expires_at)
+                                    : new Date();
+                                  base.setDate(base.getDate() + 14);
+                                  updateOrgMutation.mutate({
+                                    id: org.id,
+                                    plan: org.plan,
+                                    trial_expires_at: base.toISOString(),
+                                    max_users: org.max_users,
+                                  });
+                                }}
+                              >
+                                <CalendarPlus className="h-3 w-3" /> +14d
+                              </Button>
+                              {estado === "suspendido" || !org.activo ? (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-7 text-xs gap-1"
+                                  onClick={() => orgActionMutation.mutate({ action: "reactivar", org_id: org.id })}
+                                >
+                                  <Play className="h-3 w-3" /> Reactivar
+                                </Button>
+                              ) : (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-7 text-xs gap-1"
+                                  onClick={() => orgActionMutation.mutate({ action: "suspender", org_id: org.id })}
+                                >
+                                  <Pause className="h-3 w-3" /> Desactivar
+                                </Button>
+                              )}
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7"
+                                onClick={() => navigate(`/admin/org/${org.id}`)}
+                              >
+                                <LogIn className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        );
+      })()}
+
       {/* ── Equipo TRACEA ── */}
       <Card>
         <CardHeader className="pb-3">
