@@ -1,4 +1,4 @@
-import { LayoutDashboard, FolderOpen, Settings, BookOpen, ShieldCheck, LogOut, LifeBuoy, Ticket, Library, Sparkles, GraduationCap } from "lucide-react";
+import { LayoutDashboard, FolderOpen, Settings, BookOpen, ShieldCheck, LogOut, LifeBuoy, Ticket, Library, Sparkles, GraduationCap, FileBadge } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -20,6 +20,7 @@ const adminNavItems = [
   { title: "Panel TRACEA", url: "/admin", icon: ShieldCheck },
   { title: "Tickets", url: "/admin/tickets", icon: Ticket },
   { title: "Agentes IA", url: "/admin/agentes-ia", icon: Sparkles },
+  { title: "Protocolos (addon)", url: "/admin/protocolos", icon: FileBadge },
 ];
 
 const orgNavItems = [
@@ -27,6 +28,7 @@ const orgNavItems = [
   { title: "Mis Folios", url: "/folios", icon: FolderOpen, onboarding: "folios" },
   { title: "Catálogos", url: "/catalogos", icon: BookOpen, onboarding: undefined },
   { title: "Recursos", url: "/recursos", icon: Library, onboarding: "recursos" },
+  { title: "Mis Protocolos", url: "/mis-protocolos", icon: FileBadge, onboarding: undefined },
   { title: "Capacitación", url: "/capacitacion", icon: GraduationCap, onboarding: "capacitacion" },
   { title: "Auditoría", url: "/auditoria", icon: Settings, onboarding: undefined },
   { title: "Configuración", url: "/configuracion", icon: Settings, onboarding: undefined },
