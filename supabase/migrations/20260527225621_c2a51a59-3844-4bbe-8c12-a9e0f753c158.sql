@@ -1,0 +1,1 @@
+ALTER TABLE public.organizations ADD COLUMN IF NOT EXISTS dc3_adicionales_disponibles INTEGER NOT NULL DEFAULT 0;

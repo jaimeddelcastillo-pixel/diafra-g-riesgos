@@ -16,6 +16,7 @@ const PRICE_CATALOG: Record<string, { mode: "subscription" | "payment"; producto
   // Addons (pago único)
   price_1TQ7kVKfwzAg4OKvjU9mVaun: { mode: "payment", producto: "curso" },
   price_1TQ7lbKfwzAg4OKvwQwizz4f: { mode: "payment", producto: "protocolos" },
+  price_1TbRUHKfwzAg4OKvWE8uMR6y: { mode: "payment", producto: "dc3_extra" },
 };
 
 Deno.serve(async (req) => {
@@ -59,6 +60,7 @@ Deno.serve(async (req) => {
 
     const body = await req.json().catch(() => ({}));
     const priceId = String(body.priceId || "");
+    const requestedQty = Math.max(1, Math.min(100, Number(body.quantity) || 1));
     const config = PRICE_CATALOG[priceId];
     if (!config) {
       return new Response(JSON.stringify({ error: "Price ID no autorizado" }), {
@@ -134,7 +136,15 @@ Deno.serve(async (req) => {
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       mode: config.mode,
-      line_items: [{ price: priceId, quantity: 1 }],
+      line_items: [
+        config.producto === "dc3_extra"
+          ? {
+              price: priceId,
+              quantity: requestedQty,
+              adjustable_quantity: { enabled: true, minimum: 1, maximum: 100 },
+            }
+          : { price: priceId, quantity: 1 },
+      ],
       success_url: `${appUrl}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${appUrl}/planes?cancelled=1`,
       allow_promotion_codes: true,

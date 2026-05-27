@@ -28,6 +28,7 @@ export interface OrgInfo {
   tiene_curso_pagado?: boolean | null;
   curso_expira_en?: string | null;
   dc3_emitidos?: number | null;
+  dc3_adicionales_disponibles?: number | null;
 }
 
 interface AuthContextType {
@@ -87,7 +88,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             // Org membership (sistema multi-tenant)
             const { data: memberData } = await supabase
               .from("org_members")
-              .select("role, org_id, organizations(id, nombre, slug, plan, activo, max_users, trial_expires_at, logo_url, codigo_formato, version_formato, descripcion, estado, pending_price_id, norma_aplicable, metodologia, usar_detectabilidad, umbral_npr_alto, umbral_npr_medio, onboarding_completado, onboarding_saltado, tiene_curso_pagado, curso_expira_en, dc3_emitidos)")
+              .select("role, org_id, organizations(id, nombre, slug, plan, activo, max_users, trial_expires_at, logo_url, codigo_formato, version_formato, descripcion, estado, pending_price_id, norma_aplicable, metodologia, usar_detectabilidad, umbral_npr_alto, umbral_npr_medio, onboarding_completado, onboarding_saltado, tiene_curso_pagado, curso_expira_en, dc3_emitidos, dc3_adicionales_disponibles)")
               .eq("user_id", session.user.id)
               .single();
 
@@ -148,7 +149,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!user || !_orgId) return;
     const { data } = await supabase
       .from("organizations")
-      .select("id, nombre, slug, plan, activo, max_users, trial_expires_at, logo_url, codigo_formato, version_formato, descripcion, estado, pending_price_id, norma_aplicable, metodologia, usar_detectabilidad, umbral_npr_alto, umbral_npr_medio, onboarding_completado, onboarding_saltado, tiene_curso_pagado, curso_expira_en, dc3_emitidos")
+      .select("id, nombre, slug, plan, activo, max_users, trial_expires_at, logo_url, codigo_formato, version_formato, descripcion, estado, pending_price_id, norma_aplicable, metodologia, usar_detectabilidad, umbral_npr_alto, umbral_npr_medio, onboarding_completado, onboarding_saltado, tiene_curso_pagado, curso_expira_en, dc3_emitidos, dc3_adicionales_disponibles")
       .eq("id", _orgId)
       .maybeSingle();
     if (data) setOrg(data as any);
