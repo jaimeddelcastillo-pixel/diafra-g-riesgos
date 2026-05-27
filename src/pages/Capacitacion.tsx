@@ -79,9 +79,29 @@ const GUIAS: Guia[] = [
 ];
 
 const PROXIMAMENTE = [
-  { titulo: "Manual de Usuario TRACEA", descripcion: "Guía completa para sacar el máximo provecho de la plataforma." },
-  { titulo: "Glosario Regulatorio NOM-241 / NOM-059", descripcion: "Definiciones clave para hablar el idioma de COFEPRIS." },
   { titulo: "Checklist de Auditoría COFEPRIS", descripcion: "Lista de verificación previa a una visita regulatoria." },
+];
+
+type Recurso = {
+  id: string;
+  titulo: string;
+  descripcion: string;
+  storagePath: string;
+};
+
+const RECURSOS_TRACEA: Recurso[] = [
+  {
+    id: "manual-tracea",
+    titulo: "Manual de Usuario TRACEA",
+    descripcion: "Guía completa para sacar el máximo provecho de la plataforma.",
+    storagePath: "manual-tracea.pdf",
+  },
+  {
+    id: "glosario-regulatorio",
+    titulo: "Glosario Regulatorio NOM-241 / NOM-059",
+    descripcion: "Definiciones clave para hablar el idioma de COFEPRIS.",
+    storagePath: "glosario-regulatorio.pdf",
+  },
 ];
 
 type Leccion = {
