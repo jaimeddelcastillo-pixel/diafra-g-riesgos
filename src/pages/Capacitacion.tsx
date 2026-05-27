@@ -79,9 +79,29 @@ const GUIAS: Guia[] = [
 ];
 
 const PROXIMAMENTE = [
-  { titulo: "Manual de Usuario TRACEA", descripcion: "Guía completa para sacar el máximo provecho de la plataforma." },
-  { titulo: "Glosario Regulatorio NOM-241 / NOM-059", descripcion: "Definiciones clave para hablar el idioma de COFEPRIS." },
   { titulo: "Checklist de Auditoría COFEPRIS", descripcion: "Lista de verificación previa a una visita regulatoria." },
+];
+
+type Recurso = {
+  id: string;
+  titulo: string;
+  descripcion: string;
+  storagePath: string;
+};
+
+const RECURSOS_TRACEA: Recurso[] = [
+  {
+    id: "manual-tracea",
+    titulo: "Manual de Usuario TRACEA",
+    descripcion: "Guía completa para sacar el máximo provecho de la plataforma.",
+    storagePath: "manual-tracea.pdf",
+  },
+  {
+    id: "glosario-regulatorio",
+    titulo: "Glosario Regulatorio NOM-241 / NOM-059",
+    descripcion: "Definiciones clave para hablar el idioma de COFEPRIS.",
+    storagePath: "glosario-regulatorio.pdf",
+  },
 ];
 
 type Leccion = {
@@ -317,6 +337,26 @@ export default function Capacitacion() {
     return false;
   };
 
+  const descargarRecurso = async (r: Recurso) => {
+    const { data } = await supabase.storage
+      .from("tracea-recursos")
+      .createSignedUrl(r.storagePath, 60);
+    if (data?.signedUrl) {
+      window.open(data.signedUrl, "_blank");
+      return;
+    }
+    const { data: pub } = supabase.storage.from("tracea-recursos").getPublicUrl(r.storagePath);
+    if (pub?.publicUrl) {
+      window.open(pub.publicUrl, "_blank");
+      return;
+    }
+    toast({
+      title: "Documento no disponible",
+      description: "Este recurso aún no ha sido cargado por el equipo TRACEA.",
+      variant: "destructive",
+    });
+  };
+
   const marcarCompletada = async (cursoId: string, leccionId: string) => {
     if (!org?.id) return;
     await (supabase as any).from("capacitacion_progreso").upsert(
@@ -510,6 +550,32 @@ export default function Capacitacion() {
             </div>
           </div>
         )}
+
+        <div>
+          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3 mt-6">
+            Manual y Glosario
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {RECURSOS_TRACEA.map((r) => (
+              <Card key={r.id} className="flex flex-col">
+                <CardHeader>
+                  <div className="flex items-start justify-between gap-2">
+                    <BookOpen className="h-8 w-8 text-[hsl(var(--primary))] shrink-0" />
+                    <Badge variant="secondary">TRACEA</Badge>
+                  </div>
+                  <CardTitle className="text-base mt-2">{r.titulo}</CardTitle>
+                  <CardDescription className="text-sm">{r.descripcion}</CardDescription>
+                </CardHeader>
+                <CardContent className="mt-auto">
+                  <Button onClick={() => descargarRecurso(r)} className="w-full" variant="outline">
+                    <Download className="h-4 w-4 mr-2" />
+                    Descargar PDF
+                  </Button>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
 
         <div>
           <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3 mt-6">
