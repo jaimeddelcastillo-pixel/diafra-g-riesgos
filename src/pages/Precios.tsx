@@ -99,6 +99,11 @@ const FAQ: FaqEntry[] = [
   },
   {
     type: "item",
+    q: "¿Qué pasa después del mes de prueba incluido en el Curso?",
+    a: "Al terminar el mes, puedes continuar con cualquier plan desde $85 USD/mes. Si decides no continuar, tu DC-3 y guías descargadas son tuyas para siempre. No hay cargos automáticos — tú decides si continuar.",
+  },
+  {
+    type: "item",
     q: "¿Necesito DC-3 para cumplir con COFEPRIS?",
     a: "COFEPRIS exige evidencia documental de la capacitación del personal en los temas críticos de su rol — y el DC-3 oficial STPS es la forma más sólida de acreditarla. Tener constancias DC-3 emitidas por un curso especializado en Gestión de Riesgos NOM-241 y FEUM (o NOM-059 y FEUM) demuestra al auditor que tu equipo está formalmente capacitado, no solo informado. Es de las primeras evidencias que se solicitan en una visita de verificación.",
   },
@@ -316,15 +321,32 @@ export default function Precios() {
                     <div className="flex items-start justify-between gap-2">
                       <CardTitle>{addon.nombre}</CardTitle>
                       {addon.badge && (
-                        <Badge variant="secondary" className="shrink-0">
+                        <Badge
+                          variant="secondary"
+                          className={
+                            addon.badge.toLowerCase().includes("lanzamiento")
+                              ? "shrink-0 bg-orange-500/15 text-orange-600 dark:text-orange-400 border border-orange-500/30"
+                              : "shrink-0"
+                          }
+                        >
                           {addon.badge}
                         </Badge>
                       )}
                     </div>
                     <CardDescription>{addon.descripcion}</CardDescription>
                     <div className="pt-2">
+                      {addon.precioAnterior && (
+                        <span className="text-xl text-muted-foreground line-through mr-2">
+                          {addon.precioAnterior}
+                        </span>
+                      )}
                       <span className="text-3xl font-bold text-foreground">{addon.precio}</span>
                       <span className="text-muted-foreground text-sm ml-2">pago único</span>
+                      {addon.precioAnterior && (
+                        <p className="text-xs text-orange-600 dark:text-orange-400 mt-1 font-medium">
+                          Precio de lanzamiento — primeros 20 clientes
+                        </p>
+                      )}
                     </div>
                   </CardHeader>
                   <CardContent>

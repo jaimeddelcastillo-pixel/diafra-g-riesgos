@@ -873,6 +873,9 @@ export type Database = {
           cancelled_at: string | null
           codigo_formato: string
           created_at: string
+          curso_aviso_5d_enviado_at: string | null
+          curso_expira_en: string | null
+          dc3_emitidos: number
           descripcion: string
           estado: Database["public"]["Enums"]["org_estado"]
           id: string
@@ -897,6 +900,7 @@ export type Database = {
           subscription_status: string | null
           terminos_aceptados_en: string | null
           terminos_version: string | null
+          tiene_curso_pagado: boolean
           trial_expires_at: string | null
           umbral_npr_alto: number
           umbral_npr_medio: number
@@ -909,6 +913,9 @@ export type Database = {
           cancelled_at?: string | null
           codigo_formato?: string
           created_at?: string
+          curso_aviso_5d_enviado_at?: string | null
+          curso_expira_en?: string | null
+          dc3_emitidos?: number
           descripcion?: string
           estado?: Database["public"]["Enums"]["org_estado"]
           id?: string
@@ -933,6 +940,7 @@ export type Database = {
           subscription_status?: string | null
           terminos_aceptados_en?: string | null
           terminos_version?: string | null
+          tiene_curso_pagado?: boolean
           trial_expires_at?: string | null
           umbral_npr_alto?: number
           umbral_npr_medio?: number
@@ -945,6 +953,9 @@ export type Database = {
           cancelled_at?: string | null
           codigo_formato?: string
           created_at?: string
+          curso_aviso_5d_enviado_at?: string | null
+          curso_expira_en?: string | null
+          dc3_emitidos?: number
           descripcion?: string
           estado?: Database["public"]["Enums"]["org_estado"]
           id?: string
@@ -969,6 +980,7 @@ export type Database = {
           subscription_status?: string | null
           terminos_aceptados_en?: string | null
           terminos_version?: string | null
+          tiene_curso_pagado?: boolean
           trial_expires_at?: string | null
           umbral_npr_alto?: number
           umbral_npr_medio?: number

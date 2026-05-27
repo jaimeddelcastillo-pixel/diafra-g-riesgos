@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/accordion";
 import {
   GraduationCap, FileText, Download, Lock, Play, CheckCircle2,
-  BookOpen, Award, Sparkles, ExternalLink,
+  BookOpen, Award, Sparkles, ExternalLink, CalendarClock,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import {
@@ -219,7 +219,12 @@ const CURSO_NOM059: Curso = {
   ],
 };
 
-const PLANES_CON_CURSO = ["curso", "starter", "professional", "enterprise"];
+// Acceso al curso completo (videos + evaluación + DC-3):
+// solo organizaciones que pagaron el curso explícitamente o que tienen plan Enterprise.
+// Guías y PNOs siguen siendo accesibles para todos los planes.
+const CURSO_PRICE_ID = "price_1TQ7kVKfwzAg4OKvjU9mVaun";
+const CURSO_CHECKOUT_LABEL = "Curso + DC-3 + 1 Mes TRACEA — $85 USD lanzamiento";
+const DC3_EXTRA_LABEL = "Ya tengo plan TRACEA — solo DC-3 $35 USD por usuario";
 
 function GuiaBadge({ tone, children }: { tone: "navy" | "orange"; children: React.ReactNode }) {
   const cls =
@@ -285,10 +290,13 @@ export default function Capacitacion() {
   const { toast } = useToast();
   const isTrial = useIsTrial();
   const [progreso, setProgreso] = useState<Record<string, boolean>>({});
+  const [loadingCheckout, setLoadingCheckout] = useState(false);
 
   const planLower = org?.plan?.toLowerCase() ?? "";
   const tieneCurso =
-    !!planLower && (PLANES_CON_CURSO.includes(planLower) || planLower === "trial");
+    (org as any)?.tiene_curso_pagado === true || planLower === "enterprise";
+  const cursoExpira = (org as any)?.curso_expira_en as string | null | undefined;
+  const dc3Emitidos = ((org as any)?.dc3_emitidos as number | null | undefined) ?? 0;
 
   const norma = org?.norma_aplicable ?? null;
   const showDM = norma === "NOM-241" || norma === "MULTI" || !norma;
@@ -300,6 +308,34 @@ export default function Capacitacion() {
   const guiasVisibles = GUIAS.filter(
     (g) => (g.norma === "NOM-241" && showDM) || (g.norma === "NOM-059" && showMed),
   );
+
+  const iniciarCheckoutCurso = async () => {
+    setLoadingCheckout(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("create-checkout", {
+        body: { priceId: CURSO_PRICE_ID },
+      });
+      if (error) throw error;
+      if (data?.url) {
+        window.location.href = data.url;
+        return;
+      }
+      throw new Error("No se recibió URL de checkout");
+    } catch (err) {
+      toast({
+        title: "No se pudo iniciar el pago",
+        description: (err as Error).message,
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingCheckout(false);
+    }
+  };
+
+  const contactarDC3Extra = () => {
+    window.location.href =
+      "mailto:soporte@tracea.com.mx?subject=DC-3%20adicional%20-%20%2435%20USD%20por%20usuario";
+  };
 
   useEffect(() => {
     (async () => {
@@ -608,18 +644,44 @@ export default function Capacitacion() {
             <h2 className="text-xl font-semibold">Curso de Certificación</h2>
           </div>
           {tieneCurso ? (
-            <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30" variant="outline">
-              <Sparkles className="h-3 w-3 mr-1" /> Incluido en tu plan
-            </Badge>
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge
+                className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30"
+                variant="outline"
+              >
+                <Sparkles className="h-3 w-3 mr-1" /> 1 DC-3 incluido
+              </Badge>
+              <Badge variant="outline" className="border-muted-foreground/30">
+                DC-3 emitidos: {dc3Emitidos}
+              </Badge>
+              <Button size="sm" variant="outline" onClick={contactarDC3Extra}>
+                DC-3 adicional — $35 USD por usuario
+              </Button>
+            </div>
           ) : (
             <div className="flex items-center gap-2">
               <Badge variant="outline" className="border-orange-500/30 text-orange-600 bg-orange-500/10">
-                Requiere Curso $450 USD
+                Lanzamiento — primeros 20 clientes
               </Badge>
-              <Button size="sm" onClick={() => navigate("/precios")}>Ver planes</Button>
             </div>
           )}
         </div>
+
+        {tieneCurso && cursoExpira && (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/40 rounded-md px-3 py-2">
+            <CalendarClock className="h-4 w-4" />
+            <span>
+              Tu acceso vence el{" "}
+              <span className="font-medium text-foreground">
+                {new Date(cursoExpira).toLocaleDateString("es-MX", {
+                  day: "2-digit",
+                  month: "long",
+                  year: "numeric",
+                })}
+              </span>
+            </span>
+          </div>
+        )}
 
         {!tieneCurso ? (
           <Card className="border-2 border-dashed">
@@ -631,13 +693,32 @@ export default function Capacitacion() {
                 <h3 className="text-lg font-semibold">
                   Certifica a tu equipo en Gestión de Riesgos
                 </h3>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Con constancia DC-3 oficial STPS al finalizar la evaluación.
+                <p className="text-sm text-muted-foreground mt-1 max-w-xl mx-auto">
+                  Curso completo NOM-241 o NOM-059 + Constancia DC-3 oficial STPS + 1 mes
+                  de acceso plan Starter con hasta 3 usuarios.
                 </p>
               </div>
-              <Button size="lg" onClick={() => navigate("/precios")}>
-                Adquirir Curso — $450 USD
-              </Button>
+              <div className="flex flex-col sm:flex-row gap-2 justify-center items-center">
+                <Button
+                  size="lg"
+                  onClick={iniciarCheckoutCurso}
+                  disabled={loadingCheckout}
+                  className="bg-[hsl(var(--primary))] hover:bg-[hsl(var(--primary))]/90"
+                >
+                  {CURSO_CHECKOUT_LABEL}
+                </Button>
+                <Button
+                  size="lg"
+                  variant="outline"
+                  onClick={contactarDC3Extra}
+                  disabled={loadingCheckout}
+                >
+                  {DC3_EXTRA_LABEL}
+                </Button>
+              </div>
+              <p className="text-xs text-orange-600 dark:text-orange-400 font-medium">
+                Precio de lanzamiento — primeros 20 clientes
+              </p>
             </CardContent>
           </Card>
         ) : (
