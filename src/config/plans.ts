@@ -22,6 +22,7 @@ export interface Addon {
   nombre: string;
   priceId: string;
   precio: string;
+  precioAnterior?: string;
   descripcion: string;
   features: string[];
   badge?: string;
@@ -88,26 +89,23 @@ export const PLANS: Plan[] = [
 export const ADDONS: Addon[] = [
   {
     id: "curso",
-    nombre: "Curso de Gestión de Riesgos NOM-241 y NOM-059",
+    nombre: "Curso + DC-3 + 1 Mes TRACEA",
     priceId: "price_1TQ7kVKfwzAg4OKvjU9mVaun",
-    precio: "$450 USD",
+    precio: "$85 USD",
+    precioAnterior: "$150 USD",
     descripcion:
-      "Capacita y certifica a tu equipo en Gestión de Riesgos conforme a NOM-241 y FEUM (dispositivos médicos) o NOM-059 y FEUM (medicamentos). Acceso completo a la plataforma por 30 días.",
-    badge: "Incluye DC-3 oficial STPS",
+      "Certifícate en Gestión de Riesgos NOM-241 o NOM-059 con constancia DC-3 oficial STPS y prueba TRACEA 1 mes completo con hasta 3 usuarios. Incluye curso, evaluación, 1 DC-3 (extras $35 USD) y acceso Starter. Sin compromiso. Precio de lanzamiento — primeros 20 clientes.",
+    badge: "Lanzamiento — primeros 20 clientes",
     features: [
-      "Hasta 3 usuarios incluidos",
-      "30 días de acceso completo a la plataforma",
-      "Manual técnico NOM-241 y FEUM y NOM-059 y FEUM",
-      "Videos de capacitación",
-      "Agente IA TRACEA Risk Manager",
-      "Ejercicio práctico guiado",
-      "Evaluación de conocimientos",
-      "Constancia DC-3 por usuario",
-      "PNO de referencia TRACEA",
-      "Formato Proforma TRACEA",
+      "Curso completo NOM-241 o NOM-059",
+      "Evaluación final con 20 preguntas",
+      "1 Constancia DC-3 oficial STPS",
+      "1 mes de acceso plan Starter (hasta 3 usuarios)",
+      "Guías técnicas descargables",
+      "DC-3 adicionales: $35 USD por usuario",
     ],
     notaPie:
-      "¿Necesitas más de 3 usuarios? DC-3 adicionales a $35 USD por usuario — Contáctanos: soporte@tracea.com.mx",
+      "DC-3 adicionales a $35 USD por usuario — soporte@tracea.com.mx",
   },
   {
     id: "protocolos",
