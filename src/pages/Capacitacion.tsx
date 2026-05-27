@@ -564,6 +564,7 @@ export default function Capacitacion() {
   };
 
   return (
+    <>
     <div className="space-y-6">
       {/* Header */}
       <div className="rounded-lg bg-[hsl(var(--primary))] text-primary-foreground p-6 md:p-8">
