@@ -17,6 +17,11 @@ import { Link } from "react-router-dom";
 import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  Dialog, DialogContent, DialogDescription, DialogFooter,
+  DialogHeader, DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { useIsTrial, TRIAL_DOWNLOAD_TOOLTIP } from "@/lib/trialRestrictions";
 import { useNavigate } from "react-router-dom";
 
@@ -223,6 +228,8 @@ const CURSO_NOM059: Curso = {
 // solo organizaciones que pagaron el curso explícitamente o que tienen plan Enterprise.
 // Guías y PNOs siguen siendo accesibles para todos los planes.
 const CURSO_PRICE_ID = "price_1TQ7kVKfwzAg4OKvjU9mVaun";
+const DC3_EXTRA_PRICE_ID = "price_1TbRUHKfwzAg4OKvWE8uMR6y";
+const DC3_UNIT_PRICE_USD = 35;
 const CURSO_CHECKOUT_LABEL = "Curso + DC-3 + 1 Mes TRACEA — $85 USD lanzamiento";
 const DC3_EXTRA_LABEL = "Ya tengo plan TRACEA — solo DC-3 $35 USD por usuario";
 
@@ -285,18 +292,23 @@ function renderGuiaCard(g: Guia, onDownload: (g: Guia) => void, isTrial: boolean
 const progresoKey = (cursoId: string, leccionId: string) => `${cursoId}::${leccionId}`;
 
 export default function Capacitacion() {
-  const { org } = useAuth();
+  const { org, orgRole } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const isTrial = useIsTrial();
   const [progreso, setProgreso] = useState<Record<string, boolean>>({});
   const [loadingCheckout, setLoadingCheckout] = useState(false);
+  const [dc3DialogOpen, setDc3DialogOpen] = useState(false);
+  const [dc3Qty, setDc3Qty] = useState(1);
 
   const planLower = org?.plan?.toLowerCase() ?? "";
   const tieneCurso =
     (org as any)?.tiene_curso_pagado === true || planLower === "enterprise";
   const cursoExpira = (org as any)?.curso_expira_en as string | null | undefined;
   const dc3Emitidos = ((org as any)?.dc3_emitidos as number | null | undefined) ?? 0;
+  const dc3Saldo =
+    ((org as any)?.dc3_adicionales_disponibles as number | null | undefined) ?? 0;
+  const isAdmin = orgRole === "admin" || orgRole === "super_admin";
 
   const norma = org?.norma_aplicable ?? null;
   const showDM = norma === "NOM-241" || norma === "MULTI" || !norma;
@@ -332,9 +344,32 @@ export default function Capacitacion() {
     }
   };
 
-  const contactarDC3Extra = () => {
-    window.location.href =
-      "mailto:soporte@tracea.com.mx?subject=DC-3%20adicional%20-%20%2435%20USD%20por%20usuario";
+  const abrirDialogoDC3 = () => {
+    setDc3Qty(1);
+    setDc3DialogOpen(true);
+  };
+
+  const comprarDC3Extra = async () => {
+    setLoadingCheckout(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("create-checkout", {
+        body: { priceId: DC3_EXTRA_PRICE_ID, quantity: dc3Qty },
+      });
+      if (error) throw error;
+      if (data?.url) {
+        window.location.href = data.url;
+        return;
+      }
+      throw new Error("No se recibió URL de checkout");
+    } catch (err) {
+      toast({
+        title: "No se pudo iniciar el pago",
+        description: (err as Error).message,
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingCheckout(false);
+    }
   };
 
   useEffect(() => {
