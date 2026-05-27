@@ -28,6 +28,7 @@ export interface OrgInfo {
   tiene_curso_pagado?: boolean | null;
   curso_expira_en?: string | null;
   dc3_emitidos?: number | null;
+  dc3_adicionales_disponibles?: number | null;
 }
 
 interface AuthContextType {
