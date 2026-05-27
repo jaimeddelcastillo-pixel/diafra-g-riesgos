@@ -99,6 +99,11 @@ const FAQ: FaqEntry[] = [
   },
   {
     type: "item",
+    q: "¿Qué pasa después del mes de prueba incluido en el Curso?",
+    a: "Al terminar el mes, puedes continuar con cualquier plan desde $85 USD/mes. Si decides no continuar, tu DC-3 y guías descargadas son tuyas para siempre. No hay cargos automáticos — tú decides si continuar.",
+  },
+  {
+    type: "item",
     q: "¿Necesito DC-3 para cumplir con COFEPRIS?",
     a: "COFEPRIS exige evidencia documental de la capacitación del personal en los temas críticos de su rol — y el DC-3 oficial STPS es la forma más sólida de acreditarla. Tener constancias DC-3 emitidas por un curso especializado en Gestión de Riesgos NOM-241 y FEUM (o NOM-059 y FEUM) demuestra al auditor que tu equipo está formalmente capacitado, no solo informado. Es de las primeras evidencias que se solicitan en una visita de verificación.",
   },
