@@ -8,6 +8,7 @@ const PRICE_TO_PRODUCT: Record<string, string> = {
   price_1TQ7jKKfwzAg4OKvjXcDjzgn: "enterprise",
   price_1TQ7kVKfwzAg4OKvjU9mVaun: "curso",
   price_1TQ7lbKfwzAg4OKvwQwizz4f: "protocolos",
+  price_1TbRUHKfwzAg4OKvWE8uMR6y: "dc3_extra",
 };
 
 const PLAN_LIMITS: Record<string, number> = {
@@ -216,6 +217,28 @@ Deno.serve(async (req) => {
               );
             }
           }
+          // DC-3 adicional: incrementar saldo según cantidad comprada.
+          let dc3Qty = 0;
+          if (producto === "dc3_extra") {
+            try {
+              const li = await stripe.checkout.sessions.listLineItems(session.id, { limit: 10 });
+              dc3Qty = li.data.reduce((sum, item) => sum + (item.quantity ?? 0), 0);
+            } catch (_e) {
+              dc3Qty = 1;
+            }
+            if (dc3Qty > 0) {
+              const { data: orgRow } = await supabase
+                .from("organizations")
+                .select("dc3_adicionales_disponibles")
+                .eq("id", orgId)
+                .maybeSingle();
+              const saldoActual = ((orgRow as any)?.dc3_adicionales_disponibles as number | undefined) ?? 0;
+              await supabase
+                .from("organizations")
+                .update({ dc3_adicionales_disponibles: saldoActual + dc3Qty })
+                .eq("id", orgId);
+            }
+          }
           // Registrar addon
           await supabase.from("addon_purchases").insert({
             org_id: orgId,
@@ -225,7 +248,7 @@ Deno.serve(async (req) => {
               ? session.payment_intent
               : session.payment_intent?.id ?? null,
             monto_usd: (session.amount_total ?? 0) / 100,
-            metadata: { price_id: priceId },
+            metadata: { price_id: priceId, ...(producto === "dc3_extra" ? { quantity: dc3Qty } : {}) },
           });
         }
         break;
