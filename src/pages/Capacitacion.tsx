@@ -553,6 +553,32 @@ export default function Capacitacion() {
 
         <div>
           <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3 mt-6">
+            Manual y Glosario
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {RECURSOS_TRACEA.map((r) => (
+              <Card key={r.id} className="flex flex-col">
+                <CardHeader>
+                  <div className="flex items-start justify-between gap-2">
+                    <BookOpen className="h-8 w-8 text-[hsl(var(--primary))] shrink-0" />
+                    <Badge variant="secondary">TRACEA</Badge>
+                  </div>
+                  <CardTitle className="text-base mt-2">{r.titulo}</CardTitle>
+                  <CardDescription className="text-sm">{r.descripcion}</CardDescription>
+                </CardHeader>
+                <CardContent className="mt-auto">
+                  <Button onClick={() => descargarRecurso(r)} className="w-full" variant="outline">
+                    <Download className="h-4 w-4 mr-2" />
+                    Descargar PDF
+                  </Button>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3 mt-6">
             Próximamente
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
