@@ -1,0 +1,192 @@
+import { useEffect, useState, useCallback } from "react";
+import { Navigate, useNavigate, useParams } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { ArrowLeft, Plus, Trash2, Save } from "lucide-react";
+import { toast } from "sonner";
+
+const META = 20;
+const BLOQUES = [
+  { v: "marco_regulatorio", l: "Marco regulatorio" },
+  { v: "metodologia", l: "Metodología" },
+  { v: "casos_practicos", l: "Casos prácticos" },
+  { v: "flujo_aprobacion", l: "Flujo de aprobación" },
+];
+
+type Pregunta = {
+  id: string;
+  curso_id: string;
+  pregunta: string;
+  opcion_a: string; opcion_b: string; opcion_c: string; opcion_d: string;
+  respuesta_correcta: "A" | "B" | "C" | "D";
+  justificacion: string;
+  bloque: string;
+  orden: number;
+  activo: boolean;
+};
+
+export default function AdminCursoEvaluacion() {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const { isSuperAdmin, loading } = useAuth();
+  const [cursoNorma, setCursoNorma] = useState<string>("");
+  const [preguntas, setPreguntas] = useState<Pregunta[]>([]);
+  const [load, setLoad] = useState(true);
+
+  const fetchAll = useCallback(async () => {
+    if (!id) return;
+    const { data: c } = await (supabase as any).from("cursos").select("norma").eq("id", id).maybeSingle();
+    setCursoNorma(c?.norma ?? "");
+    const { data } = await (supabase as any)
+      .from("curso_evaluacion_preguntas")
+      .select("*")
+      .eq("curso_id", id)
+      .order("orden", { ascending: true });
+    setPreguntas(data ?? []);
+    setLoad(false);
+  }, [id]);
+
+  useEffect(() => { fetchAll(); }, [fetchAll]);
+
+  if (loading) return null;
+  if (!isSuperAdmin()) return <Navigate to="/" replace />;
+  if (load) return <div className="p-6 text-sm text-muted-foreground">Cargando...</div>;
+
+  const activas = preguntas.filter((p) => p.activo).length;
+  const completo = activas >= META;
+
+  const agregar = async () => {
+    const nextOrden = (preguntas[preguntas.length - 1]?.orden ?? 0) + 1;
+    const { error } = await (supabase as any).from("curso_evaluacion_preguntas").insert({
+      curso_id: id, pregunta: "Nueva pregunta",
+      opcion_a: "", opcion_b: "", opcion_c: "", opcion_d: "",
+      respuesta_correcta: "A", bloque: "marco_regulatorio", orden: nextOrden,
+    });
+    if (error) toast.error(error.message); else { toast.success("Pregunta agregada"); fetchAll(); }
+  };
+
+  const guardar = async (p: Pregunta) => {
+    const { error } = await (supabase as any).from("curso_evaluacion_preguntas").update({
+      pregunta: p.pregunta, opcion_a: p.opcion_a, opcion_b: p.opcion_b,
+      opcion_c: p.opcion_c, opcion_d: p.opcion_d, respuesta_correcta: p.respuesta_correcta,
+      justificacion: p.justificacion, bloque: p.bloque, activo: p.activo,
+    }).eq("id", p.id);
+    if (error) toast.error(error.message); else toast.success("Pregunta guardada");
+  };
+
+  const eliminar = async (pid: string) => {
+    if (!confirm("¿Eliminar pregunta?")) return;
+    const { error } = await (supabase as any).from("curso_evaluacion_preguntas").delete().eq("id", pid);
+    if (error) toast.error(error.message); else { toast.success("Eliminada"); fetchAll(); }
+  };
+
+  const upd = (pid: string, patch: Partial<Pregunta>) => {
+    setPreguntas((prev) => prev.map((x) => (x.id === pid ? { ...x, ...patch } : x)));
+  };
+
+  return (
+    <div className="container mx-auto p-6 space-y-6">
+      <Button variant="ghost" size="sm" onClick={() => navigate("/admin/cursos")}>
+        <ArrowLeft className="h-4 w-4 mr-2" /> Volver a cursos
+      </Button>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold">Evaluación · {cursoNorma}</h1>
+          <p className="text-sm text-muted-foreground">Banco de preguntas del examen final.</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Badge
+            variant="outline"
+            className={
+              completo
+                ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30"
+                : "bg-yellow-500/15 text-yellow-700 dark:text-yellow-400 border-yellow-500/30"
+            }
+          >
+            {activas} de {META} preguntas cargadas
+          </Badge>
+          {completo ? (
+            <Badge className="bg-emerald-500 text-white">Evaluación completa</Badge>
+          ) : (
+            <Badge variant="outline" className="border-yellow-500/40 text-yellow-700 dark:text-yellow-400">
+              Faltan {META - activas}
+            </Badge>
+          )}
+          <Button size="sm" onClick={agregar}><Plus className="h-4 w-4 mr-2" /> Agregar pregunta</Button>
+        </div>
+      </div>
+
+      {preguntas.length === 0 && (
+        <Card><CardContent className="py-6 text-sm text-muted-foreground">
+          Aún no hay preguntas. Agrega la primera.
+        </CardContent></Card>
+      )}
+
+      {preguntas.map((p, i) => (
+        <Card key={p.id}>
+          <CardHeader>
+            <CardTitle className="text-base">Pregunta {i + 1}</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <Textarea value={p.pregunta} onChange={(e) => upd(p.id, { pregunta: e.target.value })} />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+              {(["a","b","c","d"] as const).map((k) => (
+                <div key={k}>
+                  <Label className="text-xs">Opción {k.toUpperCase()}</Label>
+                  <Input
+                    value={(p as any)[`opcion_${k}`]}
+                    onChange={(e) => upd(p.id, { [`opcion_${k}`]: e.target.value } as any)}
+                  />
+                </div>
+              ))}
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+              <div>
+                <Label className="text-xs">Respuesta correcta</Label>
+                <Select value={p.respuesta_correcta} onValueChange={(v) => upd(p.id, { respuesta_correcta: v as any })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {["A","B","C","D"].map((x) => <SelectItem key={x} value={x}>{x}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="text-xs">Bloque</Label>
+                <Select value={p.bloque} onValueChange={(v) => upd(p.id, { bloque: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {BLOQUES.map((b) => <SelectItem key={b.v} value={b.v}>{b.l}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex items-end gap-2">
+                <Switch checked={p.activo} onCheckedChange={(v) => upd(p.id, { activo: v })} />
+                <Label className="text-xs">Activa</Label>
+              </div>
+            </div>
+            <div>
+              <Label className="text-xs">Justificación</Label>
+              <Textarea value={p.justificacion} onChange={(e) => upd(p.id, { justificacion: e.target.value })} />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button size="sm" variant="ghost" onClick={() => eliminar(p.id)}>
+                <Trash2 className="h-4 w-4 mr-1 text-destructive" /> Eliminar
+              </Button>
+              <Button size="sm" onClick={() => guardar(p)}>
+                <Save className="h-4 w-4 mr-2" /> Guardar
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+}
