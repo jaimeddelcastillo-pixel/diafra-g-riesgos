@@ -337,6 +337,26 @@ export default function Capacitacion() {
     return false;
   };
 
+  const descargarRecurso = async (r: Recurso) => {
+    const { data } = await supabase.storage
+      .from("tracea-recursos")
+      .createSignedUrl(r.storagePath, 60);
+    if (data?.signedUrl) {
+      window.open(data.signedUrl, "_blank");
+      return;
+    }
+    const { data: pub } = supabase.storage.from("tracea-recursos").getPublicUrl(r.storagePath);
+    if (pub?.publicUrl) {
+      window.open(pub.publicUrl, "_blank");
+      return;
+    }
+    toast({
+      title: "Documento no disponible",
+      description: "Este recurso aún no ha sido cargado por el equipo TRACEA.",
+      variant: "destructive",
+    });
+  };
+
   const marcarCompletada = async (cursoId: string, leccionId: string) => {
     if (!org?.id) return;
     await (supabase as any).from("capacitacion_progreso").upsert(
