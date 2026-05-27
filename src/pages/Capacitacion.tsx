@@ -785,5 +785,46 @@ export default function Capacitacion() {
         )}
       </section>
     </div>
+      {/* Dialog: comprar DC-3 adicionales */}
+      <Dialog open={dc3DialogOpen} onOpenChange={setDc3DialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Comprar DC-3 adicionales</DialogTitle>
+            <DialogDescription>
+              Cada DC-3 adicional cuesta $35 USD. Selecciona cuántos necesitas. Se sumarán a tu saldo disponible al confirmar el pago.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <label className="text-sm font-medium">Cantidad</label>
+            <Input
+              type="number"
+              min={1}
+              max={100}
+              value={dc3Qty}
+              onChange={(e) =>
+                setDc3Qty(Math.max(1, Math.min(100, Number(e.target.value) || 1)))
+              }
+            />
+            <div className="text-sm text-muted-foreground">
+              Total estimado:{" "}
+              <span className="font-semibold text-foreground">
+                ${(dc3Qty * DC3_UNIT_PRICE_USD).toFixed(2)} USD
+              </span>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Podrás ajustar la cantidad nuevamente en la página de pago de Stripe.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDc3DialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={comprarDC3Extra} disabled={loadingCheckout}>
+              Ir al pago
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
