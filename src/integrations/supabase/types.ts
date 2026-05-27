@@ -875,6 +875,7 @@ export type Database = {
           created_at: string
           curso_aviso_5d_enviado_at: string | null
           curso_expira_en: string | null
+          dc3_adicionales_disponibles: number
           dc3_emitidos: number
           descripcion: string
           estado: Database["public"]["Enums"]["org_estado"]
@@ -915,6 +916,7 @@ export type Database = {
           created_at?: string
           curso_aviso_5d_enviado_at?: string | null
           curso_expira_en?: string | null
+          dc3_adicionales_disponibles?: number
           dc3_emitidos?: number
           descripcion?: string
           estado?: Database["public"]["Enums"]["org_estado"]
@@ -955,6 +957,7 @@ export type Database = {
           created_at?: string
           curso_aviso_5d_enviado_at?: string | null
           curso_expira_en?: string | null
+          dc3_adicionales_disponibles?: number
           dc3_emitidos?: number
           descripcion?: string
           estado?: Database["public"]["Enums"]["org_estado"]
