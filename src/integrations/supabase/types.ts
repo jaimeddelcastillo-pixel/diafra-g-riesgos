@@ -390,6 +390,192 @@ export type Database = {
         }
         Relationships: []
       }
+      curso_evaluacion_preguntas: {
+        Row: {
+          activo: boolean
+          bloque: string
+          created_at: string
+          curso_id: string
+          id: string
+          justificacion: string
+          opcion_a: string
+          opcion_b: string
+          opcion_c: string
+          opcion_d: string
+          orden: number
+          pregunta: string
+          respuesta_correcta: string
+          updated_at: string
+        }
+        Insert: {
+          activo?: boolean
+          bloque: string
+          created_at?: string
+          curso_id: string
+          id?: string
+          justificacion?: string
+          opcion_a: string
+          opcion_b: string
+          opcion_c: string
+          opcion_d: string
+          orden?: number
+          pregunta: string
+          respuesta_correcta: string
+          updated_at?: string
+        }
+        Update: {
+          activo?: boolean
+          bloque?: string
+          created_at?: string
+          curso_id?: string
+          id?: string
+          justificacion?: string
+          opcion_a?: string
+          opcion_b?: string
+          opcion_c?: string
+          opcion_d?: string
+          orden?: number
+          pregunta?: string
+          respuesta_correcta?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "curso_evaluacion_preguntas_curso_id_fkey"
+            columns: ["curso_id"]
+            isOneToOne: false
+            referencedRelation: "cursos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      curso_lecciones: {
+        Row: {
+          activo: boolean
+          archivo_storage: string | null
+          created_at: string
+          id: string
+          leccion_id: string
+          modulo_id: string
+          orden: number
+          proximamente: boolean
+          tipo: string
+          titulo: string
+          updated_at: string
+          url_video: string | null
+        }
+        Insert: {
+          activo?: boolean
+          archivo_storage?: string | null
+          created_at?: string
+          id?: string
+          leccion_id: string
+          modulo_id: string
+          orden?: number
+          proximamente?: boolean
+          tipo?: string
+          titulo: string
+          updated_at?: string
+          url_video?: string | null
+        }
+        Update: {
+          activo?: boolean
+          archivo_storage?: string | null
+          created_at?: string
+          id?: string
+          leccion_id?: string
+          modulo_id?: string
+          orden?: number
+          proximamente?: boolean
+          tipo?: string
+          titulo?: string
+          updated_at?: string
+          url_video?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "curso_lecciones_modulo_id_fkey"
+            columns: ["modulo_id"]
+            isOneToOne: false
+            referencedRelation: "curso_modulos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      curso_modulos: {
+        Row: {
+          activo: boolean
+          created_at: string
+          curso_id: string
+          descripcion: string
+          id: string
+          orden: number
+          titulo: string
+          updated_at: string
+        }
+        Insert: {
+          activo?: boolean
+          created_at?: string
+          curso_id: string
+          descripcion?: string
+          id?: string
+          orden?: number
+          titulo: string
+          updated_at?: string
+        }
+        Update: {
+          activo?: boolean
+          created_at?: string
+          curso_id?: string
+          descripcion?: string
+          id?: string
+          orden?: number
+          titulo?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "curso_modulos_curso_id_fkey"
+            columns: ["curso_id"]
+            isOneToOne: false
+            referencedRelation: "cursos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cursos: {
+        Row: {
+          activo: boolean
+          created_at: string
+          descripcion: string
+          id: string
+          norma: string
+          orden: number
+          titulo: string
+          updated_at: string
+        }
+        Insert: {
+          activo?: boolean
+          created_at?: string
+          descripcion?: string
+          id?: string
+          norma: string
+          orden?: number
+          titulo: string
+          updated_at?: string
+        }
+        Update: {
+          activo?: boolean
+          created_at?: string
+          descripcion?: string
+          id?: string
+          norma?: string
+          orden?: number
+          titulo?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       email_send_log: {
         Row: {
           created_at: string
