@@ -18,6 +18,9 @@ import AdminOrg from "./pages/AdminOrg";
 import AdminTickets from "./pages/AdminTickets";
 import AdminAgentes from "./pages/AdminAgentes";
 import AdminProtocolos from "./pages/AdminProtocolos";
+import AdminCursos from "./pages/AdminCursos";
+import AdminCursoEditor from "./pages/AdminCursoEditor";
+import AdminCursoEvaluacion from "./pages/AdminCursoEvaluacion";
 import MisProtocolos from "./pages/MisProtocolos";
 import Soporte from "./pages/Soporte";
 import Login from "./pages/Login";
@@ -62,6 +65,9 @@ const App = () => (
               <Route path="/admin/tickets" element={<AdminTickets />} />
               <Route path="/admin/agentes-ia" element={<AdminAgentes />} />
               <Route path="/admin/protocolos" element={<AdminProtocolos />} />
+              <Route path="/admin/cursos" element={<AdminCursos />} />
+              <Route path="/admin/cursos/:id" element={<AdminCursoEditor />} />
+              <Route path="/admin/cursos/:id/evaluacion" element={<AdminCursoEvaluacion />} />
               <Route path="/mis-protocolos" element={<MisProtocolos />} />
               <Route path="/soporte" element={<Soporte />} />
               <Route path="/soporte/:id" element={<Soporte />} />
