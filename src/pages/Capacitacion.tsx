@@ -689,9 +689,29 @@ export default function Capacitacion() {
               <Badge variant="outline" className="border-muted-foreground/30">
                 DC-3 emitidos: {dc3Emitidos}
               </Badge>
-              <Button size="sm" variant="outline" onClick={contactarDC3Extra}>
-                DC-3 adicional — $35 USD por usuario
-              </Button>
+              <Badge variant="outline" className="border-muted-foreground/30">
+                DC-3 disponibles: {dc3Saldo}
+              </Badge>
+              {isAdmin ? (
+                <Button size="sm" variant="outline" onClick={abrirDialogoDC3}>
+                  Comprar más DC-3 — $35 USD c/u
+                </Button>
+              ) : (
+                <TooltipProvider delayDuration={150}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span tabIndex={0}>
+                        <Button size="sm" variant="outline" disabled>
+                          Comprar más DC-3
+                        </Button>
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="max-w-xs text-xs">
+                      Solo el Administrador de la organización puede comprar DC-3 adicionales.
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
             </div>
           ) : (
             <div className="flex items-center gap-2">
@@ -745,7 +765,12 @@ export default function Capacitacion() {
                 <Button
                   size="lg"
                   variant="outline"
-                  onClick={contactarDC3Extra}
+                  onClick={isAdmin ? abrirDialogoDC3 : undefined}
+                  disabled={!isAdmin || loadingCheckout}
+                  title={!isAdmin ? "Solo el Administrador puede comprar DC-3" : undefined}
+                >
+                  {DC3_EXTRA_LABEL}
+                </Button>
                   disabled={loadingCheckout}
                 >
                   {DC3_EXTRA_LABEL}
