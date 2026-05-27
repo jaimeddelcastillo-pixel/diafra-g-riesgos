@@ -321,15 +321,32 @@ export default function Precios() {
                     <div className="flex items-start justify-between gap-2">
                       <CardTitle>{addon.nombre}</CardTitle>
                       {addon.badge && (
-                        <Badge variant="secondary" className="shrink-0">
+                        <Badge
+                          variant="secondary"
+                          className={
+                            addon.badge.toLowerCase().includes("lanzamiento")
+                              ? "shrink-0 bg-orange-500/15 text-orange-600 dark:text-orange-400 border border-orange-500/30"
+                              : "shrink-0"
+                          }
+                        >
                           {addon.badge}
                         </Badge>
                       )}
                     </div>
                     <CardDescription>{addon.descripcion}</CardDescription>
                     <div className="pt-2">
+                      {addon.precioAnterior && (
+                        <span className="text-xl text-muted-foreground line-through mr-2">
+                          {addon.precioAnterior}
+                        </span>
+                      )}
                       <span className="text-3xl font-bold text-foreground">{addon.precio}</span>
                       <span className="text-muted-foreground text-sm ml-2">pago único</span>
+                      {addon.precioAnterior && (
+                        <p className="text-xs text-orange-600 dark:text-orange-400 mt-1 font-medium">
+                          Precio de lanzamiento — primeros 20 clientes
+                        </p>
+                      )}
                     </div>
                   </CardHeader>
                   <CardContent>
