@@ -240,10 +240,30 @@ Deno.serve(async (req) => {
         if (!orgId) break;
 
         if (session.mode === "payment" && producto === "curso") {
-          await supabase
+          const { data: orgCurr } = await supabase
             .from("organizations")
-            .update({ estado: "activo", pending_price_id: null })
-            .eq("id", orgId);
+            .select("plan, max_users")
+            .eq("id", orgId)
+            .maybeSingle();
+          const planActual = (orgCurr as any)?.plan as string | undefined;
+          const maxActual = ((orgCurr as any)?.max_users as number | undefined) ?? 0;
+          const debeAplicarStarter =
+            !planActual || planActual === "trial" || planActual === "curso";
+          const cursoExpiraEn = new Date(
+            Date.now() + 30 * 24 * 60 * 60 * 1000,
+          ).toISOString();
+          const updates: Record<string, unknown> = {
+            estado: "activo",
+            pending_price_id: null,
+            tiene_curso_pagado: true,
+            curso_expira_en: cursoExpiraEn,
+            curso_aviso_5d_enviado_at: null,
+          };
+          if (debeAplicarStarter) {
+            updates.plan = "starter";
+            updates.max_users = Math.max(maxActual, 3);
+          }
+          await supabase.from("organizations").update(updates).eq("id", orgId);
         }
         break;
       }
