@@ -24,6 +24,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { useIsTrial, TRIAL_DOWNLOAD_TOOLTIP } from "@/lib/trialRestrictions";
 import { useNavigate } from "react-router-dom";
+import { useCurso, type CursoDB, type LeccionDB } from "@/hooks/useCurso";
 
 type Guia = {
   id: string;
@@ -109,120 +110,27 @@ const RECURSOS_TRACEA: Recurso[] = [
   },
 ];
 
-type Leccion = {
-  id: string;
-  titulo: string;
-  tipo: "video" | "descarga" | "link" | "assistant";
-  refGuiaId?: string;
-  link?: string;
-  mensajeIA?: string;
-  proximamente?: boolean;
+// Mapas de comportamiento que NO viven en la BD (relaciones a guías PDF y mensajes IA).
+// El contenido editable (título, video, próximamente, etc.) viene de la BD vía useCurso().
+const DESCARGA_GUIA_MAP: Record<string, string> = {
+  "1.3": "guia-s9-dm",
+  "2.3": "pno-amgr-01",
+  "nom059-1-3": "guia-s9-med",
+  "nom059-2-3": "pno-amgr-02",
 };
 
-type Modulo = { id: string; titulo: string; lecciones: Leccion[] };
-
-type Curso = {
-  id: "nom241" | "nom059";
-  titulo: string;
-  descripcion: string;
-  badge: string;
-  badgeTone: "navy" | "orange";
-  modulos: Modulo[];
+const PRACTICA_MAP: Record<string, { link?: string; mensajeIA?: string }> = {
+  "3.2": { link: "/folios" },
+  "nom059-3-2": {
+    mensajeIA:
+      "Estoy tomando el Curso de Gestión de Riesgos NOM-059. Quiero practicar con un ejercicio guiado. Por favor inicia el protocolo de análisis de riesgos para medicamentos como si fuera mi primer folio de práctica.",
+  },
 };
 
-const CURSO_NOM241: Curso = {
-  id: "nom241",
-  titulo: "Gestión de Riesgos NOM-241 para Dispositivos Médicos",
-  descripcion: "4 módulos · Constancia DC-3 al finalizar",
-  badge: "NOM-241",
-  badgeTone: "navy",
-  modulos: [
-    {
-      id: "m1",
-      titulo: "Módulo 1: Introducción a la Gestión de Riesgos",
-      lecciones: [
-        { id: "1.1", titulo: "¿Qué es la Gestión de Riesgos en dispositivos médicos?", tipo: "video", proximamente: true },
-        { id: "1.2", titulo: "NOM-241 y COFEPRIS: lo que necesitas saber", tipo: "video", proximamente: true },
-        { id: "1.3", titulo: "Descargar Guía S≥9 DM", tipo: "descarga", refGuiaId: "guia-s9-dm" },
-      ],
-    },
-    {
-      id: "m2",
-      titulo: "Módulo 2: El Archivo Maestro de Gestión de Riesgos",
-      lecciones: [
-        { id: "2.1", titulo: "Los 6 datos que necesita tu análisis de riesgo", tipo: "video", proximamente: true },
-        { id: "2.2", titulo: "Cómo evaluar el nivel de prioridad de cada riesgo", tipo: "video", proximamente: true },
-        { id: "2.3", titulo: "Descargar PNO-AMGR-01", tipo: "descarga", refGuiaId: "pno-amgr-01" },
-      ],
-    },
-    {
-      id: "m3",
-      titulo: "Módulo 3: Casos Prácticos",
-      lecciones: [
-        { id: "3.1", titulo: "Análisis completo de proceso", tipo: "video", proximamente: true },
-        { id: "3.2", titulo: "Ejercicio con el Asistente IA", tipo: "link", link: "/folios" },
-      ],
-    },
-    {
-      id: "m4",
-      titulo: "Módulo 4: Evaluación y Certificación",
-      lecciones: [
-        { id: "4.1", titulo: "Evaluación final", tipo: "video", proximamente: true },
-        { id: "4.2", titulo: "Constancia DC-3", tipo: "video", proximamente: true },
-      ],
-    },
-  ],
-};
-
-const CURSO_NOM059: Curso = {
-  id: "nom059",
-  titulo: "Gestión de Riesgos NOM-059 para Medicamentos",
-  descripcion: "4 módulos · Gestión de Riesgos NOM-059 y FEUM",
-  badge: "NOM-059",
-  badgeTone: "orange",
-  modulos: [
-    {
-      id: "m1",
-      titulo: "Módulo 1: Introducción al QRM Farmacéutico",
-      lecciones: [
-        { id: "nom059-1-1", titulo: "¿Qué es la Gestión de Riesgos de Calidad en medicamentos?", tipo: "video", proximamente: true },
-        { id: "nom059-1-2", titulo: "NOM-059 y COFEPRIS: lo que necesitas saber", tipo: "video", proximamente: true },
-        { id: "nom059-1-3", titulo: "Descargar Guía S≥9 — Medicamentos", tipo: "descarga", refGuiaId: "guia-s9-med" },
-      ],
-    },
-    {
-      id: "m2",
-      titulo: "Módulo 2: El Archivo Maestro de QRM",
-      lecciones: [
-        { id: "nom059-2-1", titulo: "Los 6 datos que necesita tu análisis de riesgo NOM-059", tipo: "video", proximamente: true },
-        { id: "nom059-2-2", titulo: "Parámetros críticos y cómo evaluar el nivel de riesgo", tipo: "video", proximamente: true },
-        { id: "nom059-2-3", titulo: "Descargar PNO-AMGR-02 — Gestión de Riesgos Medicamentos", tipo: "descarga", refGuiaId: "pno-amgr-02" },
-      ],
-    },
-    {
-      id: "m3",
-      titulo: "Módulo 3: Casos Prácticos",
-      lecciones: [
-        { id: "nom059-3-1", titulo: "Análisis de riesgo: proceso de llenado aséptico", tipo: "video", proximamente: true },
-        {
-          id: "nom059-3-2",
-          titulo: "Practicar con el Asistente IA — Medicamentos",
-          tipo: "assistant",
-          mensajeIA:
-            "Estoy tomando el Curso de Gestión de Riesgos NOM-059. Quiero practicar con un ejercicio guiado. Por favor inicia el protocolo de análisis de riesgos para medicamentos como si fuera mi primer folio de práctica.",
-        },
-      ],
-    },
-    {
-      id: "m4",
-      titulo: "Módulo 4: Evaluación y Certificación",
-      lecciones: [
-        { id: "nom059-4-1", titulo: "Evaluación final NOM-059", tipo: "video", proximamente: true },
-        { id: "nom059-4-2", titulo: "Constancia DC-3", tipo: "video", proximamente: true },
-      ],
-    },
-  ],
-};
+const cursoLegacyId = (norma: "NOM-241" | "NOM-059") =>
+  norma === "NOM-241" ? "nom241" : "nom059";
+const badgeTone = (norma: "NOM-241" | "NOM-059"): "navy" | "orange" =>
+  norma === "NOM-241" ? "navy" : "orange";
 
 // Acceso al curso completo (videos + evaluación + DC-3):
 // solo organizaciones que pagaron el curso explícitamente o que tienen plan Enterprise.
@@ -314,6 +222,9 @@ export default function Capacitacion() {
   const showDM = norma === "NOM-241" || norma === "MULTI" || !norma;
   const showMed = norma === "NOM-059" || norma === "MULTI" || !norma;
   const isMulti = norma === "MULTI" || !norma;
+
+  const { curso: cursoDM, loading: loadingDM } = useCurso(showDM ? "NOM-241" : null);
+  const { curso: cursoMed, loading: loadingMed } = useCurso(showMed ? "NOM-059" : null);
 
   const guiasDM = GUIAS.filter((g) => g.norma === "NOM-241");
   const guiasMed = GUIAS.filter((g) => g.norma === "NOM-059");
@@ -443,9 +354,16 @@ export default function Capacitacion() {
     setProgreso((p) => ({ ...p, [progresoKey(cursoId, leccionId)]: true }));
   };
 
-  const handleLeccionClick = async (curso: Curso, l: Leccion) => {
+  const handleLeccionClick = async (cursoLegacy: string, l: LeccionDB) => {
     if (l.proximamente) return;
-    if (l.tipo === "descarga" && l.refGuiaId) {
+    if (l.tipo === "video" && l.url_video) {
+      window.open(l.url_video, "_blank");
+      marcarCompletada(cursoLegacy, l.leccion_id);
+      return;
+    }
+    if (l.tipo === "descarga") {
+      const refGuiaId = DESCARGA_GUIA_MAP[l.leccion_id];
+      if (!refGuiaId) return;
       if (isTrial) {
         toast({
           title: "Descarga restringida en prueba gratuita",
@@ -454,30 +372,51 @@ export default function Capacitacion() {
         });
         return;
       }
-      const g = GUIAS.find((x) => x.id === l.refGuiaId);
+      const g = GUIAS.find((x) => x.id === refGuiaId);
       if (g) {
         const ok = await descargarGuia(g);
-        if (ok) marcarCompletada(curso.id, l.id);
+        if (ok) marcarCompletada(cursoLegacy, l.leccion_id);
       }
-    } else if (l.tipo === "link" && l.link) {
-      marcarCompletada(curso.id, l.id);
-      navigate(l.link);
-    } else if (l.tipo === "assistant" && l.mensajeIA) {
-      marcarCompletada(curso.id, l.id);
-      window.dispatchEvent(
-        new CustomEvent("tracea:open-assistant", { detail: { mensajeInicial: l.mensajeIA } }),
-      );
+      return;
+    }
+    if (l.tipo === "practica") {
+      const cfg = PRACTICA_MAP[l.leccion_id];
+      if (cfg?.link) {
+        marcarCompletada(cursoLegacy, l.leccion_id);
+        navigate(cfg.link);
+      } else if (cfg?.mensajeIA) {
+        marcarCompletada(cursoLegacy, l.leccion_id);
+        window.dispatchEvent(
+          new CustomEvent("tracea:open-assistant", { detail: { mensajeInicial: cfg.mensajeIA } }),
+        );
+      }
     }
   };
 
-  const renderCurso = (curso: Curso, defaultOpen = false) => {
+  const renderCurso = (curso: CursoDB | null, loading: boolean, defaultOpen = false) => {
+    if (loading) {
+      return (
+        <Card>
+          <CardContent className="py-6 text-sm text-muted-foreground">Cargando curso...</CardContent>
+        </Card>
+      );
+    }
+    if (!curso) return null;
+    const cursoLegacy = cursoLegacyId(curso.norma);
+    const tone = badgeTone(curso.norma);
     const completables = curso.modulos.flatMap((m) =>
       m.lecciones.filter((l) => !l.proximamente),
     );
     const total = completables.length;
-    const completadas = completables.filter((l) => progreso[progresoKey(curso.id, l.id)]).length;
+    const completadas = completables.filter(
+      (l) => progreso[progresoKey(cursoLegacy, l.leccion_id)],
+    ).length;
     const porcentaje = total === 0 ? 0 : Math.round((completadas / total) * 100);
     const totalLecciones = curso.modulos.reduce((a, m) => a + m.lecciones.length, 0);
+    const descripcionSuffix = curso.descripcion.includes("·")
+      ? curso.descripcion.split("·").slice(-1)[0].trim()
+      : curso.descripcion;
+    const firstModuloId = curso.modulos[0]?.id;
 
     return (
       <Card key={curso.id}>
@@ -486,10 +425,10 @@ export default function Capacitacion() {
             <div>
               <CardTitle className="text-lg">{curso.titulo}</CardTitle>
               <CardDescription>
-                {curso.modulos.length} módulos · {totalLecciones} lecciones · {curso.descripcion.split("·").slice(-1)[0].trim()}
+                {curso.modulos.length} módulos · {totalLecciones} lecciones · {descripcionSuffix}
               </CardDescription>
             </div>
-            <GuiaBadge tone={curso.badgeTone}>{curso.badge}</GuiaBadge>
+            <GuiaBadge tone={tone}>{curso.norma}</GuiaBadge>
           </div>
           <div className="mt-4 space-y-1">
             <div className="flex justify-between text-xs text-muted-foreground">
@@ -500,22 +439,26 @@ export default function Capacitacion() {
           </div>
         </CardHeader>
         <CardContent>
-          <Accordion type="multiple" defaultValue={defaultOpen ? ["m1"] : []} className="w-full">
+          <Accordion
+            type="multiple"
+            defaultValue={defaultOpen && firstModuloId ? [firstModuloId] : []}
+            className="w-full"
+          >
             {curso.modulos.map((m) => (
               <AccordionItem key={m.id} value={m.id}>
                 <AccordionTrigger className="text-sm font-medium">{m.titulo}</AccordionTrigger>
                 <AccordionContent>
                   <div className="space-y-2">
                     {m.lecciones.map((l) => {
-                      const completada = progreso[progresoKey(curso.id, l.id)];
+                      const completada = progreso[progresoKey(cursoLegacy, l.leccion_id)];
                       const disabled = !!l.proximamente;
-                      const numeroVisible = l.id.startsWith("nom059-")
-                        ? l.id.replace("nom059-", "").replace("-", ".")
-                        : l.id;
+                      const numeroVisible = l.leccion_id.startsWith("nom059-")
+                        ? l.leccion_id.replace("nom059-", "").replace("-", ".")
+                        : l.leccion_id;
                       return (
                         <button
                           key={l.id}
-                          onClick={() => handleLeccionClick(curso, l)}
+                          onClick={() => handleLeccionClick(cursoLegacy, l)}
                           disabled={disabled}
                           className={`w-full flex items-center gap-3 p-3 rounded-md border text-left transition ${
                             disabled ? "bg-muted/30 cursor-not-allowed" : "hover:bg-muted/50"
@@ -527,8 +470,10 @@ export default function Capacitacion() {
                             </div>
                           ) : completada ? (
                             <CheckCircle2 className="h-5 w-5 text-emerald-500 shrink-0" />
-                          ) : l.tipo === "link" || l.tipo === "assistant" ? (
+                          ) : l.tipo === "practica" ? (
                             <ExternalLink className="h-5 w-5 text-[hsl(var(--primary))] shrink-0" />
+                          ) : l.tipo === "evaluacion" ? (
+                            <Award className="h-5 w-5 text-[hsl(var(--primary))] shrink-0" />
                           ) : (
                             <Download className="h-5 w-5 text-[hsl(var(--primary))] shrink-0" />
                           )}
@@ -543,10 +488,10 @@ export default function Capacitacion() {
                                 ? "Completada"
                                 : l.tipo === "descarga"
                                 ? "Disponible — Descargar"
-                                : l.tipo === "assistant"
-                                ? "Disponible — Abrir Asistente IA"
-                                : l.tipo === "link"
-                                ? "Disponible — Abrir"
+                                : l.tipo === "practica"
+                                ? "Disponible — Practicar"
+                                : l.tipo === "evaluacion"
+                                ? "Disponible — Iniciar evaluación"
                                 : "Disponible"}
                             </p>
                           </div>
@@ -780,8 +725,8 @@ export default function Capacitacion() {
           </Card>
         ) : (
           <div className="space-y-4">
-            {showDM && renderCurso(CURSO_NOM241, true)}
-            {showMed && renderCurso(CURSO_NOM059, !showDM)}
+            {showDM && renderCurso(cursoDM, loadingDM, true)}
+            {showMed && renderCurso(cursoMed, loadingMed, !showDM)}
           </div>
         )}
       </section>
