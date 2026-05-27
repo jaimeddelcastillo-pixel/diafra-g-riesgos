@@ -644,18 +644,44 @@ export default function Capacitacion() {
             <h2 className="text-xl font-semibold">Curso de Certificación</h2>
           </div>
           {tieneCurso ? (
-            <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30" variant="outline">
-              <Sparkles className="h-3 w-3 mr-1" /> Incluido en tu plan
-            </Badge>
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge
+                className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30"
+                variant="outline"
+              >
+                <Sparkles className="h-3 w-3 mr-1" /> 1 DC-3 incluido
+              </Badge>
+              <Badge variant="outline" className="border-muted-foreground/30">
+                DC-3 emitidos: {dc3Emitidos}
+              </Badge>
+              <Button size="sm" variant="outline" onClick={contactarDC3Extra}>
+                DC-3 adicional — $35 USD por usuario
+              </Button>
+            </div>
           ) : (
             <div className="flex items-center gap-2">
               <Badge variant="outline" className="border-orange-500/30 text-orange-600 bg-orange-500/10">
-                Requiere Curso $450 USD
+                Lanzamiento — primeros 20 clientes
               </Badge>
-              <Button size="sm" onClick={() => navigate("/precios")}>Ver planes</Button>
             </div>
           )}
         </div>
+
+        {tieneCurso && cursoExpira && (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/40 rounded-md px-3 py-2">
+            <CalendarClock className="h-4 w-4" />
+            <span>
+              Tu acceso vence el{" "}
+              <span className="font-medium text-foreground">
+                {new Date(cursoExpira).toLocaleDateString("es-MX", {
+                  day: "2-digit",
+                  month: "long",
+                  year: "numeric",
+                })}
+              </span>
+            </span>
+          </div>
+        )}
 
         {!tieneCurso ? (
           <Card className="border-2 border-dashed">
@@ -667,13 +693,32 @@ export default function Capacitacion() {
                 <h3 className="text-lg font-semibold">
                   Certifica a tu equipo en Gestión de Riesgos
                 </h3>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Con constancia DC-3 oficial STPS al finalizar la evaluación.
+                <p className="text-sm text-muted-foreground mt-1 max-w-xl mx-auto">
+                  Curso completo NOM-241 o NOM-059 + Constancia DC-3 oficial STPS + 1 mes
+                  de acceso plan Starter con hasta 3 usuarios.
                 </p>
               </div>
-              <Button size="lg" onClick={() => navigate("/precios")}>
-                Adquirir Curso — $450 USD
-              </Button>
+              <div className="flex flex-col sm:flex-row gap-2 justify-center items-center">
+                <Button
+                  size="lg"
+                  onClick={iniciarCheckoutCurso}
+                  disabled={loadingCheckout}
+                  className="bg-[hsl(var(--primary))] hover:bg-[hsl(var(--primary))]/90"
+                >
+                  {CURSO_CHECKOUT_LABEL}
+                </Button>
+                <Button
+                  size="lg"
+                  variant="outline"
+                  onClick={contactarDC3Extra}
+                  disabled={loadingCheckout}
+                >
+                  {DC3_EXTRA_LABEL}
+                </Button>
+              </div>
+              <p className="text-xs text-orange-600 dark:text-orange-400 font-medium">
+                Precio de lanzamiento — primeros 20 clientes
+              </p>
             </CardContent>
           </Card>
         ) : (
