@@ -20,7 +20,7 @@ const PLAN_LABELS: Record<string, string> = {
   starter: "Starter",
   professional: "Professional",
   enterprise: "Enterprise",
-  curso: "Curso TRACEA",
+  curso: "Curso + DC-3 + 1 Mes TRACEA",
 };
 
 const APP_URL = Deno.env.get("APP_URL") ?? "https://tracea.com.mx";
@@ -166,12 +166,38 @@ Deno.serve(async (req) => {
           // Si la compra única ya pagada incluye el "curso", también activamos
           // la cuenta para que pueda entrar a la plataforma 30 días.
           if (producto === "curso") {
+            // Obtener plan actual para no degradar si ya tiene plan pagado
+            const { data: orgCurr } = await supabase
+              .from("organizations")
+              .select("plan, max_users")
+              .eq("id", orgId)
+              .maybeSingle();
+
+            const planActual = (orgCurr as any)?.plan as string | undefined;
+            const maxActual = ((orgCurr as any)?.max_users as number | undefined) ?? 0;
+            const debeAplicarStarter =
+              !planActual || planActual === "trial" || planActual === "curso";
+
+            const cursoExpiraEn = new Date(
+              Date.now() + 30 * 24 * 60 * 60 * 1000,
+            ).toISOString();
+
+            const updates: Record<string, unknown> = {
+              estado: "activo",
+              pending_price_id: null,
+              tiene_curso_pagado: true,
+              curso_expira_en: cursoExpiraEn,
+              curso_aviso_5d_enviado_at: null,
+              stripe_customer_id: customerId,
+            };
+            if (debeAplicarStarter) {
+              updates.plan = "starter";
+              updates.max_users = Math.max(maxActual, 3);
+            }
+
             await supabase
               .from("organizations")
-              .update({
-                estado: "activo",
-                pending_price_id: null,
-              })
+              .update(updates)
               .eq("id", orgId);
 
             const contact = await getOrgContact(supabase, orgId);
@@ -183,7 +209,7 @@ Deno.serve(async (req) => {
                 {
                   nombre: contact.nombre,
                   organizacion: contact.org_nombre,
-                  plan: "curso",
+                  plan: PLAN_LABELS.curso,
                   link: `${APP_URL}/login`,
                 },
                 `bienvenida-org-${orgId}-curso-${session.id}`,
