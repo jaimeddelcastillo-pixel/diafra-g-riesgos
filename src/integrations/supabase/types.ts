@@ -14,6 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
+      addon_archivos: {
+        Row: {
+          activo: boolean
+          created_at: string
+          descripcion: string
+          id: string
+          mime_type: string | null
+          nombre: string
+          orden: number
+          producto: string
+          size_bytes: number | null
+          storage_path: string
+          updated_at: string
+        }
+        Insert: {
+          activo?: boolean
+          created_at?: string
+          descripcion?: string
+          id?: string
+          mime_type?: string | null
+          nombre: string
+          orden?: number
+          producto: string
+          size_bytes?: number | null
+          storage_path: string
+          updated_at?: string
+        }
+        Update: {
+          activo?: boolean
+          created_at?: string
+          descripcion?: string
+          id?: string
+          mime_type?: string | null
+          nombre?: string
+          orden?: number
+          producto?: string
+          size_bytes?: number | null
+          storage_path?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       addon_purchases: {
         Row: {
           id: string
