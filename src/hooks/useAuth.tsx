@@ -25,6 +25,9 @@ export interface OrgInfo {
   umbral_npr_medio?: number | null;
   onboarding_completado?: boolean | null;
   onboarding_saltado?: boolean | null;
+  tiene_curso_pagado?: boolean | null;
+  curso_expira_en?: string | null;
+  dc3_emitidos?: number | null;
 }
 
 interface AuthContextType {
