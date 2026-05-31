@@ -84,10 +84,6 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const { isSuperAdmin, isImpersonating, loading, org } = useAuth();
   const normaConfig = getNormaConfig(org?.norma_aplicable);
-  const metodLabel =
-    normaConfig.key === "NOM-241" ? "NOM-241 y FEUM"
-    : normaConfig.key === "NOM-059" ? "NOM-059 y FEUM"
-    : "Gestión de Riesgos COFEPRIS";
 
   const { data: folios, isLoading: loadingFolios } = useFolios();
   const { data: allRisks, isLoading: loadingRisks } = useAllRiesgos();
@@ -212,7 +208,7 @@ export default function Dashboard() {
           value={isLoading ? <Skeleton className="h-8 w-12" /> : risks.length}
           icon={ShieldAlert}
           color="text-accent"
-          sub={`${foliosConRiesgo.length} folios con ${metodLabel}`}
+          sub={`${foliosConRiesgo.length} folios con riesgos capturados`}
         />
         <KPICard
           label="Riesgos Críticos"
@@ -346,7 +342,7 @@ export default function Dashboard() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-base flex items-center justify-between">
-              Avance captura {metodLabel}
+              Avance de captura
               <span
                 className={`text-sm font-bold ${avanceAMEF >= 80 ? "text-green-600" : avanceAMEF >= 50 ? "text-amber-600" : "text-red-600"}`}
               >
@@ -378,7 +374,7 @@ export default function Dashboard() {
                   <span className="font-mono text-primary">{f.codigo}</span>
                   <span className="text-muted-foreground truncate max-w-[140px]">{f.proceso_equipo}</span>
                   <Badge variant="outline" className="text-[9px]">
-                    Sin {metodLabel}
+                    Sin riesgos
                   </Badge>
                 </div>
               ))}
