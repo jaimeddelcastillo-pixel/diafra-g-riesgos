@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
+import { useAuth } from "@/hooks/useAuth";
 
 export type Folio = Tables<"folios">;
 export type Riesgo = Tables<"riesgos">;
@@ -8,16 +9,19 @@ export type FolioComite = Tables<"folio_comite">;
 export type AuditEntry = Tables<"audit_trail">;
 
 export function useFolios() {
+  const { orgId, isSuperAdmin } = useAuth();
   return useQuery({
-    queryKey: ["folios"],
+    queryKey: ["folios", orgId ?? "all"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("folios")
-        .select("*")
-        .order("codigo", { ascending: true });
+      let q = supabase.from("folios").select("*").order("codigo", { ascending: true });
+      // Super admin sin org seleccionada ve todo; con orgId (real o impersonado) filtra
+      if (orgId) q = q.eq("org_id", orgId);
       if (error) throw error;
-      return data as Folio[];
+      const { data, error } = await q;
+      if (error) throw error;
+      return (data ?? []) as Folio[];
     },
+    enabled: orgId != null || isSuperAdmin(),
   });
 }
 
