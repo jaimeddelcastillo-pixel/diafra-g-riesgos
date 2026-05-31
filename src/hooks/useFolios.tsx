@@ -14,9 +14,7 @@ export function useFolios() {
     queryKey: ["folios", orgId ?? "all"],
     queryFn: async () => {
       let q = supabase.from("folios").select("*").order("codigo", { ascending: true });
-      // Super admin sin org seleccionada ve todo; con orgId (real o impersonado) filtra
       if (orgId) q = q.eq("org_id", orgId);
-      if (error) throw error;
       const { data, error } = await q;
       if (error) throw error;
       return (data ?? []) as Folio[];
