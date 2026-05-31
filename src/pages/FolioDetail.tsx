@@ -515,7 +515,7 @@ function SeccionComite({
   folioEstado: string;
   onSaved: () => void;
 }) {
-  const { user } = useAuth();
+  const { user, orgId } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [firmando, setFirmando] = useState(false);
