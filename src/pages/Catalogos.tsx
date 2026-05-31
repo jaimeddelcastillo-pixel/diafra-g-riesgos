@@ -60,17 +60,9 @@ export default function Catalogos() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-2">
-        <div className="flex items-center gap-3 flex-wrap">
-          <h1 className="text-2xl font-bold">Catálogos</h1>
-          <Badge variant="outline" className="text-xs">
-            {config.nombre}
-          </Badge>
-          <Badge variant="secondary" className="text-xs">
-            {config.metodologiaNombre}
-          </Badge>
-        </div>
+        <h1 className="text-2xl font-bold">Catálogos</h1>
         <p className="text-sm text-muted-foreground">
-          Escalas de evaluación 1–10 — {config.terminologia.descripcionCorta}
+          Escalas de evaluación 1–10
         </p>
       </div>
 
