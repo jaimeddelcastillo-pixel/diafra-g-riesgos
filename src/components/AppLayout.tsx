@@ -19,7 +19,7 @@ const roleLabels: Record<string, string> = {
 };
 
 export function AppLayout() {
-  const { profile, roles, signOut, isImpersonating, impersonatedOrg, stopImpersonation } = useAuth();
+  const { profile, roles, org, signOut, isImpersonating, impersonatedOrg, stopImpersonation } = useAuth();
   const navigate = useNavigate();
 
   const initials = profile?.nombre
@@ -27,6 +27,14 @@ export function AppLayout() {
     : "??";
 
   const primaryRole = roles.find((r) => r === "super_admin") ?? roles[0];
+
+  const norma = org?.norma_aplicable;
+  const headerLabel =
+    norma === "NOM-241"
+      ? "GESTIÓN DE RIESGOS / NOM-241 / FEUM"
+      : norma === "NOM-059"
+      ? "GESTIÓN DE RIESGOS / NOM-059 / FEUM"
+      : "GESTIÓN DE RIESGOS";
 
   return (
     <ProtectedRoute>
@@ -55,7 +63,7 @@ export function AppLayout() {
               <div className="flex items-center gap-2">
                 <SidebarTrigger />
                 <span className="text-xs text-muted-foreground font-medium tracking-wide">
-                  GESTIÓN DE RIESGOS
+                  {headerLabel}
                 </span>
               </div>
               <div className="flex items-center gap-3">
