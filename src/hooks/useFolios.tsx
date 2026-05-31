@@ -50,28 +50,36 @@ export function useFolioDetail(id: string | undefined) {
 }
 
 export function useAllRiesgos() {
+  const { orgId, isSuperAdmin } = useAuth();
   return useQuery({
-    queryKey: ["all-riesgos"],
+    queryKey: ["all-riesgos", orgId ?? "all"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("riesgos").select("*, folios(codigo)");
+      let q = supabase.from("riesgos").select("*, folios!inner(codigo, org_id)");
+      if (orgId) q = q.eq("folios.org_id", orgId);
+      const { data, error } = await q;
       if (error) throw error;
-      return data as (Riesgo & { folios: { codigo: string } | null })[];
+      return (data ?? []) as (Riesgo & { folios: { codigo: string; org_id: string } | null })[];
     },
+    enabled: orgId != null || isSuperAdmin(),
   });
 }
 
 export function useAuditTrail() {
+  const { orgId, isSuperAdmin } = useAuth();
   return useQuery({
-    queryKey: ["audit-trail"],
+    queryKey: ["audit-trail", orgId ?? "all"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let q = supabase
         .from("audit_trail")
         .select("*")
         .order("created_at", { ascending: false })
         .limit(100);
+      if (orgId) q = q.eq("org_id", orgId);
+      const { data, error } = await q;
       if (error) throw error;
-      return data as AuditEntry[];
+      return (data ?? []) as AuditEntry[];
     },
+    enabled: orgId != null || isSuperAdmin(),
   });
 }
 
