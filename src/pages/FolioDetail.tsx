@@ -515,7 +515,7 @@ function SeccionComite({
   folioEstado: string;
   onSaved: () => void;
 }) {
-  const { user } = useAuth();
+  const { user, orgId } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [firmando, setFirmando] = useState(false);
@@ -529,11 +529,19 @@ function SeccionComite({
     "Declaro bajo protesta de decir verdad que he revisado el contenido íntegro de este Análisis de Gestión de Riesgos, que la información es correcta y completa conforme a la normativa aplicable, y que mi firma electrónica registrada en este sistema tiene el mismo valor legal que mi firma autógrafa.";
 
   const { data: profiles } = useQuery({
-    queryKey: ["profiles-firmas"],
+    queryKey: ["profiles-firmas", orgId ?? "all"],
     queryFn: async () => {
+      if (orgId) {
+        const { data } = await supabase
+          .from("org_members")
+          .select("profiles!inner(id, nombre, cargo, firma_url)")
+          .eq("org_id", orgId);
+        return (data ?? []).map((r: any) => r.profiles);
+      }
       const { data } = await supabase.from("profiles").select("id, nombre, cargo, firma_url");
       return data || [];
     },
+    enabled: orgId != null,
   });
 
   const getFirmaPath = (userId: string | null): string | null => {
