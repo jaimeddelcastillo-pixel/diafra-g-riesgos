@@ -177,7 +177,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       throw error;
     }
     setImpersonationLogId(data.id);
-    setImpersonatedOrg(org);
+    // Cargar el registro completo de la organización para que
+    // campos como norma_aplicable, metodologia, etc. estén disponibles
+    // mientras se impersona (los headers y vistas dependen de esto).
+    const { data: fullOrg } = await supabase
+      .from("organizations")
+      .select("id, nombre, slug, plan, activo, max_users, trial_expires_at, logo_url, codigo_formato, version_formato, descripcion, estado, pending_price_id, norma_aplicable, metodologia, usar_detectabilidad, umbral_npr_alto, umbral_npr_medio, onboarding_completado, onboarding_saltado, tiene_curso_pagado, curso_expira_en, dc3_emitidos, dc3_adicionales_disponibles")
+      .eq("id", org.id)
+      .maybeSingle();
+    setImpersonatedOrg((fullOrg as any) ?? org);
 
     // Si hay ticket vinculado, agregar nota interna automática
     if (ticketId) {
