@@ -539,7 +539,7 @@ export default function Capacitacion() {
             {guiasDM.length > 0 && (
               <div>
                 <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">
-                  Dispositivos Médicos · NOM-241
+                  Dispositivos Médicos
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {guiasDM.map((g) => renderGuiaCard(g, descargarGuia, isTrial))}
@@ -549,7 +549,7 @@ export default function Capacitacion() {
             {guiasMed.length > 0 && (
               <div className="mt-6">
                 <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">
-                  Medicamentos · NOM-059
+                  Medicamentos
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {guiasMed.map((g) => renderGuiaCard(g, descargarGuia, isTrial))}
