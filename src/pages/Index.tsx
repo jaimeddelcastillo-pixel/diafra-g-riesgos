@@ -18,7 +18,6 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useNavigate, Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { getNormaConfig } from "@/config/normas";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -82,8 +81,7 @@ function ProgressBar({ value, max, color = "bg-primary" }: { value: number; max:
 // ─── Dashboard principal ──────────────────────────────────────────────────────
 export default function Dashboard() {
   const navigate = useNavigate();
-  const { isSuperAdmin, isImpersonating, loading, org } = useAuth();
-  const normaConfig = getNormaConfig(org?.norma_aplicable);
+  const { isSuperAdmin, isImpersonating, loading } = useAuth();
 
   const { data: folios, isLoading: loadingFolios } = useFolios();
   const { data: allRisks, isLoading: loadingRisks } = useAllRiesgos();
