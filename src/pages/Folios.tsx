@@ -16,6 +16,13 @@ import { useToast } from "@/hooks/use-toast";
 import { useFolios, useAllRiesgos, getEstadoStyle, getNPRLevel } from "@/hooks/useFolios";
 import { OrigenAnalisisSelect } from "@/components/OrigenAnalisisSelect";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  getTiposDisponibles,
+  getTipoLabel,
+  formatTipoFolio,
+  type TipoFolioKey,
+} from "@/config/tipos-folio";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
