@@ -1,4 +1,4 @@
-import { LayoutDashboard, FolderOpen, Settings, BookOpen, ShieldCheck, LogOut, LifeBuoy, Ticket, Library, Sparkles, GraduationCap, FileBadge } from "lucide-react";
+import { LayoutDashboard, FolderOpen, Settings, BookOpen, ShieldCheck, LogOut, LifeBuoy, Ticket, Library, Sparkles, GraduationCap, FileBadge, FileText } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -22,6 +22,7 @@ const adminNavItems = [
   { title: "Agentes IA", url: "/admin/agentes-ia", icon: Sparkles },
   { title: "Protocolos (addon)", url: "/admin/protocolos", icon: FileBadge },
   { title: "Cursos", url: "/admin/cursos", icon: GraduationCap },
+  { title: "Gestión de Folios", url: "/admin/folios", icon: FileText },
 ];
 
 const orgNavItems = [
