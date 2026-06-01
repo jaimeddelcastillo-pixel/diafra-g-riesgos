@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Bot, User, Send, Paperclip, Loader2, AlertTriangle, Sparkles, FileText, Plus, History, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { Bot, User, Send, Paperclip, Loader2, AlertTriangle, Sparkles, FileText, Plus, History, PanelLeftClose, PanelLeftOpen, Maximize2, Minimize2 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { useAuth } from "@/hooks/useAuth";
@@ -49,6 +49,7 @@ export function AssistantPanel({ open, onOpenChange, folioId = null, folioCodigo
   const [conversaciones, setConversaciones] = useState<Conversacion[]>([]);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [loadingConv, setLoadingConv] = useState(false);
+  const [composerExpanded, setComposerExpanded] = useState(false);
 
   // Norma multi → selector
   const showAgenteSelector = org?.norma_aplicable === "MULTI";
