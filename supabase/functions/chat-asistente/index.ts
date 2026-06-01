@@ -591,9 +591,31 @@ Deno.serve(async (req) => {
               } else if (tb.name === "crear_folio") {
                 if (executedToolCalls >= MAX_TOOL_CALLS_PER_TURN) {
                   toolResults.push({ type: "tool_result", tool_use_id: tb.id, content: "Límite de búsquedas alcanzado. Procede con la información disponible.", is_error: true });
+                } else if (activeFolioId) {
+                  toolResults.push({
+                    type: "tool_result",
+                    tool_use_id: tb.id,
+                    content: JSON.stringify({
+                      ok: true,
+                      reused: true,
+                      folio_id: activeFolioId,
+                      codigo: activeFolioCodigo,
+                      message: `Ya existe un folio activo en esta conversación (${activeFolioCodigo}). No se creó un duplicado. Usa este folio para listar/proponer riesgos.`,
+                    }),
+                  });
                 } else {
                   executedToolCalls++;
                   const r = await execCrearFolio(adminClient, org.id, user.id, tb.input ?? {});
+                  if (r?.ok && r?.folio_id) {
+                    activeFolioId = r.folio_id;
+                    activeFolioCodigo = r.codigo ?? null;
+                    activeFolioTitulo = `[${r.codigo}] ${r.proceso_equipo ?? ""}`.trim();
+                    await adminClient
+                      .from("chat_conversaciones")
+                      .update({ folio_id: activeFolioId, titulo: activeFolioTitulo })
+                      .eq("id", conversacion_id)
+                      .eq("org_id", org.id);
+                  }
                   toolResults.push({ type: "tool_result", tool_use_id: tb.id, content: JSON.stringify(r) });
                 }
               } else if (tb.name === "consultar_config_org") {
@@ -602,7 +624,7 @@ Deno.serve(async (req) => {
                 toolResults.push({ type: "tool_result", tool_use_id: tb.id, content: JSON.stringify(r) });
               } else if (tb.name === "listar_riesgos_folio") {
                 executedToolCalls++;
-                const r = await execListarRiesgosFolio(adminClient, org.id, tb.input?.folio_id ?? folio_id);
+                const r = await execListarRiesgosFolio(adminClient, org.id, activeFolioId ?? tb.input?.folio_id ?? folio_id);
                 toolResults.push({ type: "tool_result", tool_use_id: tb.id, content: JSON.stringify(r) });
               } else if (tb.name === "actualizar_folio") {
                 executedToolCalls++;
