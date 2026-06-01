@@ -510,6 +510,15 @@ function groupConversaciones(rows: Conversacion[]) {
     .map(([label, items]) => ({ label, items }));
 }
 
+function inferMimeType(fileName: string) {
+  const lower = fileName.toLowerCase();
+  if (lower.endsWith(".pdf")) return "application/pdf";
+  if (lower.endsWith(".docx")) return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+  if (lower.endsWith(".png")) return "image/png";
+  if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) return "image/jpeg";
+  return "application/octet-stream";
+}
+
 function MessageBubble({ msg, onInsertarRiesgo, folioId }: { msg: Msg; onInsertarRiesgo: (i: any) => void; folioId: string | null }) {
   const isUser = msg.role === "user";
   return (
