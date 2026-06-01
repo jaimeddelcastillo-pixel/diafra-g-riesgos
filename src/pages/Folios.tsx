@@ -514,6 +514,7 @@ function NuevoFolioDialog({ open, onClose }: { open: boolean; onClose: () => voi
 export default function Folios() {
   const navigate = useNavigate();
   const [nuevoOpen, setNuevoOpen] = useState(false);
+  const [tipoFiltro, setTipoFiltro] = useState<string>("todos");
   const { data: folios, isLoading } = useFolios();
   const { data: allRiesgos, isLoading: loadingRiesgos } = useAllRiesgos();
 
@@ -537,9 +538,20 @@ export default function Folios() {
   });
 
   const cargando = isLoading || loadingRiesgos;
-  const lista = folios || [];
+  const todos = folios || [];
 
   const { org } = useAuth();
+  const tiposDisponibles = getTiposDisponibles((org as any)?.norma_aplicable);
+
+  const lista =
+    tipoFiltro === "todos"
+      ? todos
+      : tipoFiltro === "_historico"
+        ? todos.filter((f) => !f.tipo_folio)
+        : todos.filter((f) => f.tipo_folio === tipoFiltro);
+
+  const hayHistorico = todos.some((f) => !f.tipo_folio);
+
   const handleExportCSV = () => exportarCSV(lista, riesgosMap);
   const handleExportPDF = () => exportarPDF(lista, riesgosMap, org);
 
@@ -583,6 +595,52 @@ export default function Folios() {
       </div>
 
       <NuevoFolioDialog open={nuevoOpen} onClose={() => setNuevoOpen(false)} />
+
+      {/* Filtros por tipo */}
+      {!cargando && todos.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={() => setTipoFiltro("todos")}
+            className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
+              tipoFiltro === "todos"
+                ? "bg-primary text-primary-foreground border-primary"
+                : "bg-background text-muted-foreground border-border hover:bg-muted"
+            }`}
+          >
+            Todos ({todos.length})
+          </button>
+          {tiposDisponibles.map((t) => {
+            const count = todos.filter((f) => f.tipo_folio === t.key).length;
+            return (
+              <button
+                key={t.key}
+                onClick={() => setTipoFiltro(t.key)}
+                className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
+                  tipoFiltro === t.key
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "bg-background text-muted-foreground border-border hover:bg-muted"
+                }`}
+                title={t.descripcion}
+              >
+                {t.short} ({count})
+              </button>
+            );
+          })}
+          {hayHistorico && (
+            <button
+              onClick={() => setTipoFiltro("_historico")}
+              className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
+                tipoFiltro === "_historico"
+                  ? "bg-primary text-primary-foreground border-primary"
+                  : "bg-background text-muted-foreground border-border hover:bg-muted"
+              }`}
+              title="Folios creados antes de la codificación por tipo"
+            >
+              Sin tipo ({todos.filter((f) => !f.tipo_folio).length})
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Resumen rápido */}
       {!cargando && lista.length > 0 && (
