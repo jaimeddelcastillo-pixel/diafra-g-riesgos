@@ -48,6 +48,7 @@ const TOOLS = [
           description: "Origen del análisis (texto libre del catálogo agrupado, ej: 'Diseño y Desarrollo', 'Desviación', 'Tecnovigilancia', 'Farmacovigilancia', 'OOS / OOT', 'Control de Cambios'). Default: 'Diseño y Desarrollo'.",
         },
         alcance: { type: "string", description: "Alcance del análisis (opcional)." },
+        tipo: { type: "string", enum: ["SGC", "FAB", "SIS", "CAL", "PRD", "PMS", "FV"], description: "Tipo de folio. Si no viene, el sistema usa SGC." },
       },
       required: ["proceso_equipo"],
     },
@@ -276,6 +277,7 @@ const TOOL_RULES_ADDENDUM = `
 ## REGLAS DE USO DE HERRAMIENTAS (obligatorias)
 1. Si el usuario dice EXPLÍCITAMENTE "el folio no existe", "crea el folio GR-XXXX" o "crea un nuevo folio", NO llames a buscar_folio. Llama directamente a crear_folio.
 2. Si llamas a buscar_folio y devuelve { found: false }, NO repitas la búsqueda con otra query parecida. Pregunta al usuario si desea crear el folio o, si ya lo confirmó, llama a crear_folio.
+2.1. Si crear_folio devuelve ok=true con folio_id/codigo, ese folio queda activo en la conversación. NO llames crear_folio otra vez para el mismo proceso; usa ese folio_id para listar_riesgos_folio y proponer_riesgo.
 3. Máximo 8 llamadas a herramientas por turno del usuario. Tras alcanzar ese tope, recibirás un aviso y deberás responder con la información disponible sin más búsquedas.
 4. proponer_riesgo es terminal: tras llamarla NO sigas ejecutando otras herramientas en el mismo turno (espera la decisión del usuario).
 5. consultar_config_org y listar_riesgos_folio: máximo UNA llamada por turno cada una; reutiliza el resultado.
@@ -375,7 +377,7 @@ Deno.serve(async (req) => {
 
     const body = await req.json();
     const messages: Array<{ role: "user" | "assistant"; content: any }> = body.messages ?? [];
-    const folio_id: string | null = body.folio_id ?? null;
+    let folio_id: string | null = body.folio_id ?? null;
     const agente_override: "dm" | "farma" | null = body.agente ?? null;
     let conversacion_id: string | null = body.conversacion_id ?? null;
 
@@ -415,34 +417,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Folio context
-    let folioCtx = "";
-    if (folio_id) {
-      const { data: folio } = await adminClient
-        .from("folios")
-        .select("codigo, proceso_equipo, estado, norma_folio, origen, alcance, beneficio_clinico, clase_dispositivo, clasificacion_categoria, clasificacion_tipo, clasificacion_condicion_venta, clasificacion_riesgo_sanitario")
-        .eq("id", folio_id)
-        .maybeSingle();
-      const { data: riesgos } = await adminClient
-        .from("riesgos")
-        .select("numero_id, peligro, situacion_peligrosa, severidad, ocurrencia, deteccion, npr, dictamen")
-        .eq("folio_id", folio_id)
-        .order("numero_id");
-      if (folio) {
-        const f: any = folio;
-        const isMed =
-          f.norma_folio === "NOM-059" ||
-          (f.norma_folio === "MULTI" && f.clasificacion_categoria === "medicamento");
-        const clasifLine = isMed
-          ? `Clasificación (medicamento): tipo=${f.clasificacion_tipo || "—"} | venta=${f.clasificacion_condicion_venta || "—"} | riesgo_sanitario=${f.clasificacion_riesgo_sanitario || "—"}`
-          : `Clasificación (dispositivo médico): ${f.clase_dispositivo || "—"}`;
-        folioCtx = `\n\n## CONTEXTO DEL FOLIO ACTIVO\nCódigo: ${f.codigo}\nProceso/Producto/Equipo/Sistema: ${f.proceso_equipo}\nOrigen del análisis: ${f.origen ?? "—"}\nEstado: ${f.estado}\nNorma: ${f.norma_folio}\nAlcance: ${f.alcance ?? "—"}\n${clasifLine}\nFolio_id: ${folio_id}\n\nRiesgos actuales (${(riesgos ?? []).length}):\n${(riesgos ?? []).map((r: any) => `#${r.numero_id} S:${r.severidad} O:${r.ocurrencia} D:${r.deteccion} NPR:${r.npr} ${r.dictamen} — ${r.peligro}`).join("\n")}`;
-      }
-    }
-
-    const orgCtx = `\n\n## CONTEXTO DE LA ORGANIZACIÓN\nNombre: ${org.nombre}\nNorma aplicable: ${org.norma_aplicable}\nMetodología: ${org.metodologia}\nUsa detectabilidad: ${org.usar_detectabilidad}\nUmbral NPR Alto: ${org.umbral_npr_alto}\nUmbral NPR Medio: ${org.umbral_npr_medio}`;
-
-    // --- Conversación: crear o reanudar ---
+    // --- Conversación: crear o reanudar antes de construir contexto de folio ---
     let resumeNote = "";
     let isNewConversation = false;
     if (conversacion_id) {
@@ -456,6 +431,15 @@ Deno.serve(async (req) => {
       else {
         const fecha = new Date(conv.ultimo_mensaje_en).toLocaleDateString("es-MX", { day: "numeric", month: "long" });
         resumeNote = `\n\n## CONTINUACIÓN DE CONVERSACIÓN\nRetomando nuestra conversación del ${fecha} sobre "${conv.titulo}". Mantén la coherencia con el historial previo.`;
+        if (!folio_id && conv.folio_id) {
+          const { data: convFolio } = await adminClient
+            .from("folios")
+            .select("id")
+            .eq("id", conv.folio_id)
+            .eq("org_id", org.id)
+            .maybeSingle();
+          if (convFolio) folio_id = conv.folio_id;
+        }
       }
     }
     if (!conversacion_id) {
@@ -468,6 +452,38 @@ Deno.serve(async (req) => {
       isNewConversation = true;
     }
 
+    // Folio context
+    let folioCtx = "";
+    let activeFolioId: string | null = folio_id;
+    let activeFolioCodigo: string | null = null;
+    let activeFolioTitulo: string | null = null;
+    if (folio_id) {
+      const { data: folio } = await adminClient
+        .from("folios")
+        .select("codigo, proceso_equipo, estado, norma_folio, origen, alcance, beneficio_clinico, clase_dispositivo, clasificacion_categoria, clasificacion_tipo, clasificacion_condicion_venta, clasificacion_riesgo_sanitario")
+        .eq("id", folio_id)
+        .maybeSingle();
+      const { data: riesgos } = await adminClient
+        .from("riesgos")
+        .select("numero_id, peligro, situacion_peligrosa, severidad, ocurrencia, deteccion, npr, dictamen")
+        .eq("folio_id", folio_id)
+        .order("numero_id");
+      if (folio) {
+        const f: any = folio;
+        activeFolioCodigo = f.codigo;
+        activeFolioTitulo = `[${f.codigo}] ${f.proceso_equipo ?? ""}`.trim();
+        const isMed =
+          f.norma_folio === "NOM-059" ||
+          (f.norma_folio === "MULTI" && f.clasificacion_categoria === "medicamento");
+        const clasifLine = isMed
+          ? `Clasificación (medicamento): tipo=${f.clasificacion_tipo || "—"} | venta=${f.clasificacion_condicion_venta || "—"} | riesgo_sanitario=${f.clasificacion_riesgo_sanitario || "—"}`
+          : `Clasificación (dispositivo médico): ${f.clase_dispositivo || "—"}`;
+        folioCtx = `\n\n## CONTEXTO DEL FOLIO ACTIVO\nCódigo: ${f.codigo}\nProceso/Producto/Equipo/Sistema: ${f.proceso_equipo}\nOrigen del análisis: ${f.origen ?? "—"}\nEstado: ${f.estado}\nNorma: ${f.norma_folio}\nAlcance: ${f.alcance ?? "—"}\n${clasifLine}\nFolio_id: ${folio_id}\n\nRiesgos actuales (${(riesgos ?? []).length}):\n${(riesgos ?? []).map((r: any) => `#${r.numero_id} S:${r.severidad} O:${r.ocurrencia} D:${r.deteccion} NPR:${r.npr} ${r.dictamen} — ${r.peligro}`).join("\n")}`;
+      }
+    }
+
+    const orgCtx = `\n\n## CONTEXTO DE LA ORGANIZACIÓN\nNombre: ${org.nombre}\nNorma aplicable: ${org.norma_aplicable}\nMetodología: ${org.metodologia}\nUsa detectabilidad: ${org.usar_detectabilidad}\nUmbral NPR Alto: ${org.umbral_npr_alto}\nUmbral NPR Medio: ${org.umbral_npr_medio}`;
+
     const systemPrompt = (promptRow as any).system_prompt + orgCtx + folioCtx + resumeNote + TOOL_RULES_ADDENDUM;
 
     // Persistir el último mensaje user + bump
@@ -475,7 +491,7 @@ Deno.serve(async (req) => {
     if (lastUser) {
       await adminClient.from("chat_mensajes").insert({
         conversacion_id,
-        org_id: org.id, folio_id, user_id: user.id,
+        org_id: org.id, folio_id: activeFolioId, user_id: user.id,
         role: "user",
         contenido: typeof lastUser.content === "string" ? lastUser.content : JSON.stringify(lastUser.content),
         agente,
@@ -534,6 +550,7 @@ Deno.serve(async (req) => {
 
             const blocks = data.content ?? [];
             const toolUseBlocks: any[] = [];
+            const delayedProposalIds = new Set<string>();
 
             // Emitir bloques al cliente como SSE sintéticos
             for (const b of blocks) {
@@ -541,6 +558,14 @@ Deno.serve(async (req) => {
                 fullText += b.text;
                 controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: "content_block_delta", delta: { type: "text_delta", text: b.text } })}\n\n`));
               } else if (b.type === "tool_use") {
+                if (b.name === "proponer_riesgo" && activeFolioId) {
+                  b.input = { ...(b.input ?? {}), folio_id: activeFolioId };
+                }
+                if (b.name === "proponer_riesgo" && !activeFolioId) {
+                  delayedProposalIds.add(b.id);
+                  toolUseBlocks.push(b);
+                  continue;
+                }
                 toolUseBlocks.push(b);
                 allToolUses.push(b);
                 controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: "content_block_start", content_block: { type: "tool_use", id: b.id, name: b.name } })}\n\n`));
@@ -558,6 +583,14 @@ Deno.serve(async (req) => {
 
             for (const tb of toolUseBlocks) {
               if (tb.name === "proponer_riesgo") {
+                if (delayedProposalIds.has(tb.id)) {
+                  toolResults.push({
+                    type: "tool_result",
+                    tool_use_id: tb.id,
+                    content: "Aún no había folio activo al emitir esta propuesta. Primero fija el folio creado; después vuelve a llamar proponer_riesgo usando exactamente ese folio_id. No llames crear_folio otra vez.",
+                  });
+                  continue;
+                }
                 proposalEmitted = true;
                 stopAfter = true;
                 toolResults.push({
@@ -576,9 +609,31 @@ Deno.serve(async (req) => {
               } else if (tb.name === "crear_folio") {
                 if (executedToolCalls >= MAX_TOOL_CALLS_PER_TURN) {
                   toolResults.push({ type: "tool_result", tool_use_id: tb.id, content: "Límite de búsquedas alcanzado. Procede con la información disponible.", is_error: true });
+                } else if (activeFolioId) {
+                  toolResults.push({
+                    type: "tool_result",
+                    tool_use_id: tb.id,
+                    content: JSON.stringify({
+                      ok: true,
+                      reused: true,
+                      folio_id: activeFolioId,
+                      codigo: activeFolioCodigo,
+                      message: `Ya existe un folio activo en esta conversación (${activeFolioCodigo}). No se creó un duplicado. Usa este folio para listar/proponer riesgos.`,
+                    }),
+                  });
                 } else {
                   executedToolCalls++;
                   const r = await execCrearFolio(adminClient, org.id, user.id, tb.input ?? {});
+                  if (r?.ok && r?.folio_id) {
+                    activeFolioId = r.folio_id;
+                    activeFolioCodigo = r.codigo ?? null;
+                    activeFolioTitulo = `[${r.codigo}] ${r.proceso_equipo ?? ""}`.trim();
+                    await adminClient
+                      .from("chat_conversaciones")
+                      .update({ folio_id: activeFolioId, titulo: activeFolioTitulo })
+                      .eq("id", conversacion_id)
+                      .eq("org_id", org.id);
+                  }
                   toolResults.push({ type: "tool_result", tool_use_id: tb.id, content: JSON.stringify(r) });
                 }
               } else if (tb.name === "consultar_config_org") {
@@ -587,7 +642,7 @@ Deno.serve(async (req) => {
                 toolResults.push({ type: "tool_result", tool_use_id: tb.id, content: JSON.stringify(r) });
               } else if (tb.name === "listar_riesgos_folio") {
                 executedToolCalls++;
-                const r = await execListarRiesgosFolio(adminClient, org.id, tb.input?.folio_id ?? folio_id);
+                const r = await execListarRiesgosFolio(adminClient, org.id, activeFolioId ?? tb.input?.folio_id ?? folio_id);
                 toolResults.push({ type: "tool_result", tool_use_id: tb.id, content: JSON.stringify(r) });
               } else if (tb.name === "actualizar_folio") {
                 executedToolCalls++;
@@ -608,7 +663,7 @@ Deno.serve(async (req) => {
           try {
             await adminClient.from("chat_mensajes").insert({
               conversacion_id,
-              org_id: org.id, folio_id, user_id: user.id,
+              org_id: org.id, folio_id: activeFolioId, user_id: user.id,
               role: "assistant",
               contenido: fullText,
               tokens_usados: tokensIn + tokensOut,
@@ -617,8 +672,8 @@ Deno.serve(async (req) => {
             });
 
             if (isNewConversation && conversacion_id) {
-              let titulo = "";
-              if (folio_id) {
+              let titulo = activeFolioTitulo ?? "";
+              if (!titulo && folio_id) {
                 const { data: f } = await adminClient
                   .from("folios").select("codigo, proceso_equipo")
                   .eq("id", folio_id).maybeSingle();

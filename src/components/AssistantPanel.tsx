@@ -50,6 +50,7 @@ export function AssistantPanel({ open, onOpenChange, folioId = null, folioCodigo
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [loadingConv, setLoadingConv] = useState(false);
   const [composerExpanded, setComposerExpanded] = useState(false);
+  const [insertedRiskKeys, setInsertedRiskKeys] = useState<Set<string>>(() => new Set());
 
   // Norma multi → selector
   const showAgenteSelector = org?.norma_aplicable === "MULTI";
@@ -123,6 +124,7 @@ export function AssistantPanel({ open, onOpenChange, folioId = null, folioCodigo
     setConversacionId(null);
     setMessages([]);
     setInput("");
+    setInsertedRiskKeys(new Set());
   }
 
   async function cargarConversacion(id: string) {
@@ -287,6 +289,11 @@ export function AssistantPanel({ open, onOpenChange, folioId = null, folioCodigo
   }
 
   async function insertarRiesgo(input: any) {
+    const riskKey = input.__risk_key ?? JSON.stringify({ folio_id: input.folio_id, peligro: input.peligro, situacion_peligrosa: input.situacion_peligrosa, efecto_dano: input.efecto_dano });
+    if (insertedRiskKeys.has(riskKey)) {
+      toast({ title: "Riesgo ya insertado", description: "Esta tarjeta ya fue aplicada al folio." });
+      return;
+    }
     try {
       const url = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/chat-insertar-riesgo`;
       const res = await fetch(url, {
@@ -301,8 +308,9 @@ export function AssistantPanel({ open, onOpenChange, folioId = null, folioCodigo
       if (!res.ok) {
         throw new Error((data as any)?.error ?? `Error ${res.status}`);
       }
-      toast({ title: "Riesgo insertado", description: `#${(data as any).riesgo.numero_id} creado correctamente.` });
-      setMessages((m) => [...m, { role: "assistant", content: `✅ Riesgo #${(data as any).riesgo.numero_id} insertado en el folio.` }]);
+      setInsertedRiskKeys((prev) => new Set(prev).add(riskKey));
+      toast({ title: (data as any).duplicate ? "Riesgo ya existía" : "Riesgo insertado", description: `#${(data as any).riesgo.numero_id} en el folio.` });
+      setMessages((m) => [...m, { role: "assistant", content: `✅ Riesgo #${(data as any).riesgo.numero_id} ${(data as any).duplicate ? "ya existía" : "insertado"} en el folio.` }]);
       refreshConversaciones();
     } catch (e: any) {
       toast({ title: "No se pudo insertar", description: e.message ?? String(e), variant: "destructive" });
@@ -420,7 +428,7 @@ export function AssistantPanel({ open, onOpenChange, folioId = null, folioCodigo
               </div>
             )}
             {messages.map((m, i) => (
-              <MessageBubble key={i} msg={m} onInsertarRiesgo={insertarRiesgo} folioId={folioId} />
+              <MessageBubble key={i} msg={m} onInsertarRiesgo={insertarRiesgo} folioId={folioId} insertedRiskKeys={insertedRiskKeys} />
             ))}
             {streaming && (
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -532,7 +540,7 @@ function inferMimeType(fileName: string) {
   return "application/octet-stream";
 }
 
-function MessageBubble({ msg, onInsertarRiesgo, folioId }: { msg: Msg; onInsertarRiesgo: (i: any) => void; folioId: string | null }) {
+function MessageBubble({ msg, onInsertarRiesgo, folioId, insertedRiskKeys }: { msg: Msg; onInsertarRiesgo: (i: any) => void; folioId: string | null; insertedRiskKeys: Set<string> }) {
   const isUser = msg.role === "user";
   return (
     <div className={`flex gap-2 ${isUser ? "flex-row-reverse" : ""}`}>
@@ -550,6 +558,8 @@ function MessageBubble({ msg, onInsertarRiesgo, folioId }: { msg: Msg; onInserta
             const r = t.input;
             const npr = (r.severidad ?? 0) * (r.ocurrencia ?? 0) * (r.deteccion ?? 0);
             const nprRes = (r.sev_residual ?? 0) * (r.ocu_residual ?? 0) * (r.det_residual ?? 0);
+            const riskKey = JSON.stringify({ folio_id: r.folio_id ?? folioId, peligro: r.peligro, situacion_peligrosa: r.situacion_peligrosa, efecto_dano: r.efecto_dano });
+            const alreadyInserted = insertedRiskKeys.has(riskKey);
             return (
               <div key={i} className="mt-2 border border-accent/30 rounded-md p-3 bg-card">
                 <div className="flex items-center gap-2 mb-2">
@@ -580,9 +590,9 @@ function MessageBubble({ msg, onInsertarRiesgo, folioId }: { msg: Msg; onInserta
                 </div>
                 <div className="flex gap-2 mt-2">
                   <Button size="sm" className="h-7 text-xs"
-                    disabled={!r.folio_id && !folioId}
-                    onClick={() => onInsertarRiesgo({ ...r, folio_id: r.folio_id ?? folioId })}>
-                    Insertar
+                    disabled={alreadyInserted || (!r.folio_id && !folioId)}
+                    onClick={() => onInsertarRiesgo({ ...r, folio_id: r.folio_id ?? folioId, __risk_key: riskKey })}>
+                    {alreadyInserted ? "Insertado" : "Insertar"}
                   </Button>
                 </div>
                 {!r.folio_id && !folioId && (
