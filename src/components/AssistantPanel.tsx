@@ -164,11 +164,19 @@ export function AssistantPanel({ open, onOpenChange, folioId = null, folioCodigo
   }
 
   async function sendMessage() {
-    const text = input.trim();
-    if (!text || streaming || !session) return;
-    const next = [...messages, { role: "user" as const, content: text }];
+    if (streaming || !session) return;
+    if (attachment?.status === "processing") return;
+    const userText = input.trim();
+    let composed = userText;
+    if (attachment?.status === "ready") {
+      const prefix = buildAttachmentPrefix(attachment.file.name, attachment.text);
+      composed = prefix + (userText || ATTACHMENT_DEFAULT_PROMPT);
+    }
+    if (!composed) return;
+    const next = [...messages, { role: "user" as const, content: composed }];
     setMessages(next);
     setInput("");
+    setAttachment(null);
     setStreaming(true);
 
     try {
