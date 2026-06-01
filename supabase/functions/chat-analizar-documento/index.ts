@@ -3,6 +3,7 @@
 // y aplica visión si es escaneado). Devuelve resumen estructurado y clasificación.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import JSZip from "npm:jszip@3.10.1";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -42,21 +43,28 @@ Deno.serve(async (req) => {
     if (dErr || !file) return j({ error: dErr?.message ?? "no descargable" }, 500);
 
     const buffer = await file.arrayBuffer();
-    const base64 = btoa(String.fromCharCode(...new Uint8Array(buffer)));
 
     let userContent: any[] = [];
     if (mime_type === "application/pdf") {
+      const base64 = arrayBufferToBase64(buffer);
       userContent.push({
         type: "document",
         source: { type: "base64", media_type: "application/pdf", data: base64 },
       });
     } else if ((mime_type as string).startsWith("image/")) {
+      const base64 = arrayBufferToBase64(buffer);
       userContent.push({
         type: "image",
         source: { type: "base64", media_type: mime_type, data: base64 },
       });
+    } else if (isWordMime(mime_type, nombre_archivo)) {
+      const extracted = await extractDocxText(buffer);
+      if (!extracted.trim()) return j({ error: "No se pudo extraer texto del Word" }, 422);
+      userContent.push({
+        type: "text",
+        text: `Contenido extraído del documento Word "${nombre_archivo}":\n\n${extracted.slice(0, 50000)}`,
+      });
     } else {
-      // Word/Excel: descripción textual placeholder (parser pendiente)
       return j({
         analisis: {
           tipo: "no_soportado",
