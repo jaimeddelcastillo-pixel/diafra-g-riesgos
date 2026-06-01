@@ -339,6 +339,7 @@ function NuevoFolioDialog({ open, onClose }: { open: boolean; onClose: () => voi
   const [saving, setSaving] = useState(false);
 
   const [form, setForm] = useState({
+    tipo: "" as TipoFolioKey | "",
     proceso_equipo: "",
     origen: "Diseño y Desarrollo" as string,
     desviacion_id: "",
@@ -350,20 +351,30 @@ function NuevoFolioDialog({ open, onClose }: { open: boolean; onClose: () => voi
 
   const update = (field: string, value: string) => setForm((f) => ({ ...f, [field]: value }));
 
+  const tiposDisponibles = getTiposDisponibles((org as any)?.norma_aplicable);
+
   const handleGuardar = async () => {
+    if (!form.tipo) {
+      toast({ title: "Tipo requerido", description: "Selecciona el tipo de análisis.", variant: "destructive" });
+      return;
+    }
     if (!form.proceso_equipo.trim()) {
       toast({ title: "Campo requerido", description: "El Proceso / Equipo es obligatorio.", variant: "destructive" });
       return;
     }
     setSaving(true);
     try {
-      const { data: codigoData, error: cErr } = await supabase.rpc("next_folio_code");
+      const { data: codigoData, error: cErr } = await supabase.rpc(
+        "next_folio_code" as any,
+        { p_tipo: form.tipo },
+      );
       if (cErr) throw cErr;
 
       const { data: folio, error: fErr } = await supabase
         .from("folios")
         .insert({
           codigo: codigoData as string,
+          tipo_folio: form.tipo,
           proceso_equipo: form.proceso_equipo.trim(),
           origen: form.origen as any,
           desviacion_id: form.desviacion_id.trim(),
@@ -392,6 +403,7 @@ function NuevoFolioDialog({ open, onClose }: { open: boolean; onClose: () => voi
 
   const handleClose = () => {
     setForm({
+      tipo: "",
       proceso_equipo: "",
       origen: "Diseño y Desarrollo",
       desviacion_id: "",
@@ -410,9 +422,26 @@ function NuevoFolioDialog({ open, onClose }: { open: boolean; onClose: () => voi
           <DialogTitle>Nuevo Folio de Gestión de Riesgos</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 py-2">
-          <p className="text-xs text-muted-foreground">
-            El código se genera automáticamente (GR-{new Date().getFullYear()}-XXX)
-          </p>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Tipo de análisis *</Label>
+            <Select value={form.tipo} onValueChange={(v) => update("tipo", v)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecciona el tipo de análisis" />
+              </SelectTrigger>
+              <SelectContent>
+                {tiposDisponibles.map((t) => (
+                  <SelectItem key={t.key} value={t.key}>
+                    {formatTipoFolio(t.key)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              {form.tipo
+                ? `Tu folio será: GR-${form.tipo}-${new Date().getFullYear()}-XXX (el número se asigna al guardar)`
+                : "El código se genera automáticamente al guardar."}
+            </p>
+          </div>
           <div className="space-y-1.5">
             <Label className="text-xs">Proceso / Producto / Equipo / Sistema Analizado *</Label>
             <Input
