@@ -272,39 +272,21 @@ export function AssistantPanel({ open, onOpenChange, folioId = null, folioCodigo
   }
 
   async function handleFile(file: File) {
-    if (!org || !session) return;
-    // Sanitizar nombre: Supabase Storage rechaza espacios, acentos y caracteres especiales
-    const safeName = file.name
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "") // quitar acentos
-      .replace(/[^a-zA-Z0-9._-]/g, "_") // reemplazar resto
-      .replace(/_+/g, "_");
-    const path = `${org.id}/${Date.now()}-${safeName}`;
-    const mimeType = file.type || inferMimeType(file.name);
-    const { error } = await supabase.storage.from("chat-documentos").upload(path, file);
-    if (error) {
-      toast({ title: "Error subiendo archivo", description: error.message, variant: "destructive" });
+    setAttachment({ file, status: "processing" });
+    const result = await extractFileText(file);
+    if (!result.ok) {
+      setAttachment({ file, status: "error", message: result.message });
       return;
     }
-    setMessages((m) => [...m, { role: "user", content: `📎 Adjunté: ${file.name}` }, { role: "assistant", content: "Analizando documento..." }]);
-    try {
-      const url = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/chat-analizar-documento`;
-      const res = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
-        body: JSON.stringify({ storage_path: path, nombre_archivo: file.name, mime_type: mimeType, folio_id: folioId }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data?.error ?? data?.message ?? `Error ${res.status}`);
-      const a = data.analisis;
-      const md = a.mensaje ?? `**Tipo:** ${a.tipo}\n\n**Resumen:** ${a.resumen}\n\n${a.puntos_clave?.length ? `**Puntos clave:**\n${a.puntos_clave.map((p: string) => `- ${p}`).join("\n")}\n\n` : ""}${a.riesgos_detectados?.length ? `**Riesgos detectados:** ${a.riesgos_detectados.length}\n\n` : ""}${a.accion_sugerida ? `_${a.accion_sugerida}_` : ""}`;
-      setMessages((m) => {
-        const arr = [...m]; arr[arr.length - 1] = { role: "assistant", content: md }; return arr;
-      });
-    } catch (e: any) {
-      setMessages((m) => {
-        const arr = [...m]; arr[arr.length - 1] = { role: "assistant", content: `Error analizando: ${e.message ?? e}` }; return arr;
-      });
+    setAttachment({
+      file,
+      status: "ready",
+      kind: result.kind,
+      text: result.text,
+      truncated: result.truncated,
+    });
+    if (result.truncated) {
+      toast({ title: "Archivo truncado", description: "Se procesaron los primeros 8,000 caracteres." });
     }
   }
 
