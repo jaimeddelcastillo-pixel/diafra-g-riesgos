@@ -432,7 +432,19 @@ export function AssistantPanel({ open, onOpenChange, folioId = null, folioCodigo
           </ScrollArea>
         </div>
 
-        <div className="border-t p-3 flex flex-col gap-2">
+        <div className="border-t p-3 pb-6 flex flex-col gap-2">
+          <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+            <span>Shift + Enter para salto de línea · arrastra la esquina ↘ para agrandar</span>
+            <button
+              type="button"
+              onClick={() => setComposerExpanded((v) => !v)}
+              className="flex items-center gap-1 hover:text-foreground transition"
+              aria-label={composerExpanded ? "Reducir editor" : "Expandir editor"}
+            >
+              {composerExpanded ? <Minimize2 className="h-3 w-3" /> : <Maximize2 className="h-3 w-3" />}
+              {composerExpanded ? "Reducir" : "Expandir"}
+            </button>
+          </div>
           <div className="flex gap-2 items-end">
             <input ref={fileInputRef} type="file" hidden
               accept=".pdf,image/*,.docx,.xlsx"
@@ -443,8 +455,8 @@ export function AssistantPanel({ open, onOpenChange, folioId = null, folioCodigo
             <Textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Escribe tu pregunta..."
-              className="min-h-[44px] max-h-32 resize-none"
+              placeholder="Escribe tu pregunta o pega texto largo..."
+              className={`resize-y ${composerExpanded ? "min-h-[55vh] max-h-[70vh]" : "min-h-[72px] max-h-[40vh]"}`}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); }
               }}
