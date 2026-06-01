@@ -490,7 +490,7 @@ Deno.serve(async (req) => {
     if (lastUser) {
       await adminClient.from("chat_mensajes").insert({
         conversacion_id,
-        org_id: org.id, folio_id, user_id: user.id,
+        org_id: org.id, folio_id: activeFolioId, user_id: user.id,
         role: "user",
         contenido: typeof lastUser.content === "string" ? lastUser.content : JSON.stringify(lastUser.content),
         agente,
@@ -556,6 +556,9 @@ Deno.serve(async (req) => {
                 fullText += b.text;
                 controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: "content_block_delta", delta: { type: "text_delta", text: b.text } })}\n\n`));
               } else if (b.type === "tool_use") {
+                if (b.name === "proponer_riesgo" && activeFolioId) {
+                  b.input = { ...(b.input ?? {}), folio_id: activeFolioId };
+                }
                 toolUseBlocks.push(b);
                 allToolUses.push(b);
                 controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: "content_block_start", content_block: { type: "tool_use", id: b.id, name: b.name } })}\n\n`));
@@ -645,7 +648,7 @@ Deno.serve(async (req) => {
           try {
             await adminClient.from("chat_mensajes").insert({
               conversacion_id,
-              org_id: org.id, folio_id, user_id: user.id,
+              org_id: org.id, folio_id: activeFolioId, user_id: user.id,
               role: "assistant",
               contenido: fullText,
               tokens_usados: tokensIn + tokensOut,
