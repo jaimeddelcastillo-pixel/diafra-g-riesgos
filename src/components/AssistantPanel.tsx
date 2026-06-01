@@ -4,12 +4,18 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Bot, User, Send, Paperclip, Loader2, AlertTriangle, Sparkles, FileText, Plus, History, PanelLeftClose, PanelLeftOpen, Maximize2, Minimize2 } from "lucide-react";
+import { Bot, User, Send, Paperclip, Loader2, AlertTriangle, Sparkles, FileText, FileSpreadsheet, FileType2, X, Plus, History, PanelLeftClose, PanelLeftOpen, Maximize2, Minimize2 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import {
+  extractFileText,
+  buildAttachmentPrefix,
+  ATTACHMENT_DEFAULT_PROMPT,
+  type ExtractKind,
+} from "@/lib/extract-file-text";
 
 type Msg = { role: "user" | "assistant"; content: any; toolUses?: any[] };
 
@@ -51,6 +57,12 @@ export function AssistantPanel({ open, onOpenChange, folioId = null, folioCodigo
   const [loadingConv, setLoadingConv] = useState(false);
   const [composerExpanded, setComposerExpanded] = useState(false);
   const [insertedRiskKeys, setInsertedRiskKeys] = useState<Set<string>>(() => new Set());
+
+  type Attachment =
+    | { file: File; status: "processing" }
+    | { file: File; status: "ready"; kind: ExtractKind; text: string; truncated: boolean }
+    | { file: File; status: "error"; message: string };
+  const [attachment, setAttachment] = useState<Attachment | null>(null);
 
   // Norma multi → selector
   const showAgenteSelector = org?.norma_aplicable === "MULTI";
