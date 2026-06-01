@@ -4,12 +4,18 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Bot, User, Send, Paperclip, Loader2, AlertTriangle, Sparkles, FileText, Plus, History, PanelLeftClose, PanelLeftOpen, Maximize2, Minimize2 } from "lucide-react";
+import { Bot, User, Send, Paperclip, Loader2, AlertTriangle, Sparkles, FileText, FileSpreadsheet, FileType2, X, Plus, History, PanelLeftClose, PanelLeftOpen, Maximize2, Minimize2 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import {
+  extractFileText,
+  buildAttachmentPrefix,
+  ATTACHMENT_DEFAULT_PROMPT,
+  type ExtractKind,
+} from "@/lib/extract-file-text";
 
 type Msg = { role: "user" | "assistant"; content: any; toolUses?: any[] };
 
@@ -51,6 +57,12 @@ export function AssistantPanel({ open, onOpenChange, folioId = null, folioCodigo
   const [loadingConv, setLoadingConv] = useState(false);
   const [composerExpanded, setComposerExpanded] = useState(false);
   const [insertedRiskKeys, setInsertedRiskKeys] = useState<Set<string>>(() => new Set());
+
+  type Attachment =
+    | { file: File; status: "processing" }
+    | { file: File; status: "ready"; kind: ExtractKind; text: string; truncated: boolean }
+    | { file: File; status: "error"; message: string };
+  const [attachment, setAttachment] = useState<Attachment | null>(null);
 
   // Norma multi → selector
   const showAgenteSelector = org?.norma_aplicable === "MULTI";
@@ -152,11 +164,19 @@ export function AssistantPanel({ open, onOpenChange, folioId = null, folioCodigo
   }
 
   async function sendMessage() {
-    const text = input.trim();
-    if (!text || streaming || !session) return;
-    const next = [...messages, { role: "user" as const, content: text }];
+    if (streaming || !session) return;
+    if (attachment?.status === "processing") return;
+    const userText = input.trim();
+    let composed = userText;
+    if (attachment?.status === "ready") {
+      const prefix = buildAttachmentPrefix(attachment.file.name, attachment.text);
+      composed = prefix + (userText || ATTACHMENT_DEFAULT_PROMPT);
+    }
+    if (!composed) return;
+    const next = [...messages, { role: "user" as const, content: composed }];
     setMessages(next);
     setInput("");
+    setAttachment(null);
     setStreaming(true);
 
     try {
@@ -252,39 +272,21 @@ export function AssistantPanel({ open, onOpenChange, folioId = null, folioCodigo
   }
 
   async function handleFile(file: File) {
-    if (!org || !session) return;
-    // Sanitizar nombre: Supabase Storage rechaza espacios, acentos y caracteres especiales
-    const safeName = file.name
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "") // quitar acentos
-      .replace(/[^a-zA-Z0-9._-]/g, "_") // reemplazar resto
-      .replace(/_+/g, "_");
-    const path = `${org.id}/${Date.now()}-${safeName}`;
-    const mimeType = file.type || inferMimeType(file.name);
-    const { error } = await supabase.storage.from("chat-documentos").upload(path, file);
-    if (error) {
-      toast({ title: "Error subiendo archivo", description: error.message, variant: "destructive" });
+    setAttachment({ file, status: "processing" });
+    const result = await extractFileText(file);
+    if (result.ok === false) {
+      setAttachment({ file, status: "error", message: result.message });
       return;
     }
-    setMessages((m) => [...m, { role: "user", content: `📎 Adjunté: ${file.name}` }, { role: "assistant", content: "Analizando documento..." }]);
-    try {
-      const url = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/chat-analizar-documento`;
-      const res = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
-        body: JSON.stringify({ storage_path: path, nombre_archivo: file.name, mime_type: mimeType, folio_id: folioId }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data?.error ?? data?.message ?? `Error ${res.status}`);
-      const a = data.analisis;
-      const md = a.mensaje ?? `**Tipo:** ${a.tipo}\n\n**Resumen:** ${a.resumen}\n\n${a.puntos_clave?.length ? `**Puntos clave:**\n${a.puntos_clave.map((p: string) => `- ${p}`).join("\n")}\n\n` : ""}${a.riesgos_detectados?.length ? `**Riesgos detectados:** ${a.riesgos_detectados.length}\n\n` : ""}${a.accion_sugerida ? `_${a.accion_sugerida}_` : ""}`;
-      setMessages((m) => {
-        const arr = [...m]; arr[arr.length - 1] = { role: "assistant", content: md }; return arr;
-      });
-    } catch (e: any) {
-      setMessages((m) => {
-        const arr = [...m]; arr[arr.length - 1] = { role: "assistant", content: `Error analizando: ${e.message ?? e}` }; return arr;
-      });
+    setAttachment({
+      file,
+      status: "ready",
+      kind: result.kind,
+      text: result.text,
+      truncated: result.truncated,
+    });
+    if (result.truncated) {
+      toast({ title: "Archivo truncado", description: "Se procesaron los primeros 8,000 caracteres." });
     }
   }
 
@@ -453,11 +455,12 @@ export function AssistantPanel({ open, onOpenChange, folioId = null, folioCodigo
               {composerExpanded ? "Reducir" : "Expandir"}
             </button>
           </div>
+          {attachment && <AttachmentChip attachment={attachment} onRemove={() => setAttachment(null)} />}
           <div className="flex gap-2 items-end">
             <input ref={fileInputRef} type="file" hidden
-              accept=".pdf,image/*,.docx,.xlsx"
+              accept=".pdf,.xlsx,.docx"
               onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); e.target.value = ""; }} />
-            <Button variant="outline" size="icon" onClick={() => fileInputRef.current?.click()} disabled={streaming}>
+            <Button variant="outline" size="icon" onClick={() => fileInputRef.current?.click()} disabled={streaming || attachment?.status === "processing"}>
               <Paperclip className="h-4 w-4" />
             </Button>
             <Textarea
@@ -469,7 +472,15 @@ export function AssistantPanel({ open, onOpenChange, folioId = null, folioCodigo
                 if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); }
               }}
             />
-            <Button onClick={sendMessage} disabled={streaming || !input.trim()}>
+            <Button
+              onClick={sendMessage}
+              disabled={
+                streaming ||
+                attachment?.status === "processing" ||
+                attachment?.status === "error" ||
+                (!input.trim() && attachment?.status !== "ready")
+              }
+            >
               {streaming ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
             </Button>
           </div>
@@ -529,15 +540,6 @@ function groupConversaciones(rows: Conversacion[]) {
   return Object.entries(buckets)
     .filter(([, v]) => v.length > 0)
     .map(([label, items]) => ({ label, items }));
-}
-
-function inferMimeType(fileName: string) {
-  const lower = fileName.toLowerCase();
-  if (lower.endsWith(".pdf")) return "application/pdf";
-  if (lower.endsWith(".docx")) return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
-  if (lower.endsWith(".png")) return "image/png";
-  if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) return "image/jpeg";
-  return "application/octet-stream";
 }
 
 function MessageBubble({ msg, onInsertarRiesgo, folioId, insertedRiskKeys }: { msg: Msg; onInsertarRiesgo: (i: any) => void; folioId: string | null; insertedRiskKeys: Set<string> }) {
@@ -633,6 +635,56 @@ function MessageBubble({ msg, onInsertarRiesgo, folioId, insertedRiskKeys }: { m
           return null;
         })}
       </div>
+    </div>
+  );
+}
+
+function AttachmentChip({
+  attachment,
+  onRemove,
+}: {
+  attachment:
+    | { file: File; status: "processing" }
+    | { file: File; status: "ready"; kind: ExtractKind; text: string; truncated: boolean }
+    | { file: File; status: "error"; message: string };
+  onRemove: () => void;
+}) {
+  const Icon =
+    attachment.status === "ready" && attachment.kind === "xlsx"
+      ? FileSpreadsheet
+      : attachment.status === "ready" && attachment.kind === "docx"
+      ? FileType2
+      : FileText;
+  return (
+    <div className="flex flex-col gap-1 rounded-md border bg-muted/30 px-2 py-1.5 text-xs">
+      <div className="flex items-center gap-2">
+        <Icon className="h-4 w-4 text-muted-foreground shrink-0" />
+        <span className="truncate flex-1" title={attachment.file.name}>{attachment.file.name}</span>
+        {attachment.status === "processing" && (
+          <Badge variant="secondary" className="gap-1">
+            <Loader2 className="h-3 w-3 animate-spin" /> Procesando…
+          </Badge>
+        )}
+        {attachment.status === "ready" && (
+          <Badge variant="secondary" className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100">
+            Listo{attachment.truncated ? " (truncado)" : ""}
+          </Badge>
+        )}
+        {attachment.status === "error" && (
+          <Badge variant="destructive">Error</Badge>
+        )}
+        <button
+          type="button"
+          onClick={onRemove}
+          aria-label="Quitar archivo"
+          className="text-muted-foreground hover:text-foreground"
+        >
+          <X className="h-3.5 w-3.5" />
+        </button>
+      </div>
+      {attachment.status === "error" && (
+        <p className="text-[11px] text-destructive leading-snug pl-6">{attachment.message}</p>
+      )}
     </div>
   );
 }
