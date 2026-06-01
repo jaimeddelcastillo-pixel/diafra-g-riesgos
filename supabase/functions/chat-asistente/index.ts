@@ -277,6 +277,7 @@ const TOOL_RULES_ADDENDUM = `
 ## REGLAS DE USO DE HERRAMIENTAS (obligatorias)
 1. Si el usuario dice EXPLÍCITAMENTE "el folio no existe", "crea el folio GR-XXXX" o "crea un nuevo folio", NO llames a buscar_folio. Llama directamente a crear_folio.
 2. Si llamas a buscar_folio y devuelve { found: false }, NO repitas la búsqueda con otra query parecida. Pregunta al usuario si desea crear el folio o, si ya lo confirmó, llama a crear_folio.
+2.1. Si crear_folio devuelve ok=true con folio_id/codigo, ese folio queda activo en la conversación. NO llames crear_folio otra vez para el mismo proceso; usa ese folio_id para listar_riesgos_folio y proponer_riesgo.
 3. Máximo 8 llamadas a herramientas por turno del usuario. Tras alcanzar ese tope, recibirás un aviso y deberás responder con la información disponible sin más búsquedas.
 4. proponer_riesgo es terminal: tras llamarla NO sigas ejecutando otras herramientas en el mismo turno (espera la decisión del usuario).
 5. consultar_config_org y listar_riesgos_folio: máximo UNA llamada por turno cada una; reutiliza el resultado.
@@ -657,8 +658,8 @@ Deno.serve(async (req) => {
             });
 
             if (isNewConversation && conversacion_id) {
-              let titulo = "";
-              if (folio_id) {
+              let titulo = activeFolioTitulo ?? "";
+              if (!titulo && folio_id) {
                 const { data: f } = await adminClient
                   .from("folios").select("codigo, proceso_equipo")
                   .eq("id", folio_id).maybeSingle();
