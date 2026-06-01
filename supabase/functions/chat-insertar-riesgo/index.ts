@@ -64,6 +64,21 @@ Deno.serve(async (req) => {
       det_residual: clamp(body.det_residual ?? body.deteccion ?? 1),
     };
 
+    const { data: duplicate, error: dupErr } = await userClient
+      .from("riesgos")
+      .select("id, numero_id, npr")
+      .eq("folio_id", folio_id)
+      .eq("peligro", payload.peligro)
+      .eq("situacion_peligrosa", payload.situacion_peligrosa)
+      .eq("efecto_dano", payload.efecto_dano)
+      .maybeSingle();
+    if (dupErr) return jsonErr(dupErr.message, 500);
+    if (duplicate) {
+      return new Response(JSON.stringify({ ok: true, duplicate: true, riesgo: duplicate }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const { data: inserted, error: iErr } = await userClient
       .from("riesgos")
       .insert(payload)
