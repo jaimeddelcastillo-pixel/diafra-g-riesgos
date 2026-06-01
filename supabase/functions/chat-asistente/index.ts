@@ -550,6 +550,7 @@ Deno.serve(async (req) => {
 
             const blocks = data.content ?? [];
             const toolUseBlocks: any[] = [];
+            const delayedProposalIds = new Set<string>();
 
             // Emitir bloques al cliente como SSE sintéticos
             for (const b of blocks) {
@@ -559,6 +560,11 @@ Deno.serve(async (req) => {
               } else if (b.type === "tool_use") {
                 if (b.name === "proponer_riesgo" && activeFolioId) {
                   b.input = { ...(b.input ?? {}), folio_id: activeFolioId };
+                }
+                if (b.name === "proponer_riesgo" && !activeFolioId) {
+                  delayedProposalIds.add(b.id);
+                  toolUseBlocks.push(b);
+                  continue;
                 }
                 toolUseBlocks.push(b);
                 allToolUses.push(b);
@@ -577,6 +583,14 @@ Deno.serve(async (req) => {
 
             for (const tb of toolUseBlocks) {
               if (tb.name === "proponer_riesgo") {
+                if (delayedProposalIds.has(tb.id)) {
+                  toolResults.push({
+                    type: "tool_result",
+                    tool_use_id: tb.id,
+                    content: "Aún no había folio activo al emitir esta propuesta. Primero fija el folio creado; después vuelve a llamar proponer_riesgo usando exactamente ese folio_id. No llames crear_folio otra vez.",
+                  });
+                  continue;
+                }
                 proposalEmitted = true;
                 stopAfter = true;
                 toolResults.push({
