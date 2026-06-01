@@ -502,6 +502,55 @@ export default function Dashboard() {
         </Card>
       </div>
 
+      {/* Folios por tipo (codificación GR-[TIPO]-AAAA-NNN) */}
+      {fols.length > 0 && (() => {
+        const tipos = getTiposDisponibles((org as any)?.norma_aplicable);
+        const conteo = new Map<string, number>();
+        let historico = 0;
+        fols.forEach((f) => {
+          const t = (f as any).tipo_folio as TipoFolioKey | null | undefined;
+          if (!t) { historico++; return; }
+          conteo.set(t, (conteo.get(t) ?? 0) + 1);
+        });
+        return (
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">Folios por tipo</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3">
+                {tipos.map((t) => {
+                  const c = conteo.get(t.key) ?? 0;
+                  return (
+                    <button
+                      key={t.key}
+                      onClick={() => navigate("/folios")}
+                      className="flex flex-col items-center justify-center p-3 rounded-lg border bg-card hover:bg-muted/50 transition-colors text-center"
+                      title={t.descripcion}
+                    >
+                      <span className="font-mono text-xs font-bold text-primary">{t.short}</span>
+                      <span className="text-2xl font-bold mt-1">{c}</span>
+                      <span className="text-[10px] text-muted-foreground truncate max-w-[110px]">{t.descripcion}</span>
+                    </button>
+                  );
+                })}
+                {historico > 0 && (
+                  <button
+                    onClick={() => navigate("/folios")}
+                    className="flex flex-col items-center justify-center p-3 rounded-lg border border-dashed bg-muted/30 hover:bg-muted/60 transition-colors text-center"
+                    title="Folios anteriores a la codificación por tipo"
+                  >
+                    <span className="font-mono text-xs font-bold text-muted-foreground">—</span>
+                    <span className="text-2xl font-bold mt-1 text-muted-foreground">{historico}</span>
+                    <span className="text-[10px] text-muted-foreground">Histórico</span>
+                  </button>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        );
+      })()}
+
       {/* Control NPR y matriz regulatoria */}
       <Card>
         <CardHeader>
