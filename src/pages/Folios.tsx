@@ -16,6 +16,13 @@ import { useToast } from "@/hooks/use-toast";
 import { useFolios, useAllRiesgos, getEstadoStyle, getNPRLevel } from "@/hooks/useFolios";
 import { OrigenAnalisisSelect } from "@/components/OrigenAnalisisSelect";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  getTiposDisponibles,
+  getTipoLabel,
+  formatTipoFolio,
+  type TipoFolioKey,
+} from "@/config/tipos-folio";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
@@ -25,6 +32,7 @@ function exportarCSV(folios: any[], riesgosMap: Map<string, any[]>) {
 
   filas.push([
     "Folio",
+    "Tipo",
     "Proceso / Equipo",
     "Origen",
     "Estado",
@@ -59,6 +67,7 @@ function exportarCSV(folios: any[], riesgosMap: Map<string, any[]>) {
 
     filas.push([
       f.codigo,
+      getTipoLabel(f.tipo_folio),
       f.proceso_equipo,
       f.origen,
       f.estado,
@@ -201,6 +210,7 @@ async function exportarPDF(
 
     return [
       f.codigo,
+      getTipoLabel(f.tipo_folio),
       f.proceso_equipo,
       f.origen,
       f.estado,
@@ -240,6 +250,7 @@ async function exportarPDF(
     head: [
       [
         "Folio",
+        "Tipo",
         "Proceso / Equipo",
         "Origen",
         "Estado",
@@ -267,31 +278,32 @@ async function exportarPDF(
     },
     columnStyles: {
       0: { cellWidth: 26, fontStyle: "bold" },
-      1: { cellWidth: 52 },
-      2: { cellWidth: 22 },
-      3: { cellWidth: 18 },
-      4: { cellWidth: 20 },
-      5: { cellWidth: 20 },
-      6: { cellWidth: 20 },
-      7: { cellWidth: 14, halign: "center" },
+      1: { cellWidth: 14, halign: "center", fontStyle: "bold" },
+      2: { cellWidth: 46 },
+      3: { cellWidth: 20 },
+      4: { cellWidth: 16 },
+      5: { cellWidth: 18 },
+      6: { cellWidth: 18 },
+      7: { cellWidth: 18 },
       8: { cellWidth: 14, halign: "center" },
-      9: { cellWidth: 22, halign: "center" },
+      9: { cellWidth: 14, halign: "center" },
       10: { cellWidth: 20, halign: "center" },
-      11: { cellWidth: 20, halign: "center" },
-      12: { cellWidth: 20, halign: "center" },
+      11: { cellWidth: 18, halign: "center" },
+      12: { cellWidth: 18, halign: "center" },
+      13: { cellWidth: 18, halign: "center" },
     },
     didParseCell: (data) => {
-      if (data.column.index === 3 && data.section === "body") {
+      if (data.column.index === 4 && data.section === "body") {
         const e = data.cell.raw as string;
         if (e === "Aprobado") data.cell.styles.textColor = [15, 110, 86];
         if (e === "Borrador") data.cell.styles.textColor = [100, 100, 100];
         if (e === "En Firma") data.cell.styles.textColor = [30, 100, 200];
         if (e === "Rechazado") data.cell.styles.textColor = [180, 0, 0];
       }
-      if (data.column.index === 8 && data.section === "body") {
+      if (data.column.index === 9 && data.section === "body") {
         if (parseInt(data.cell.raw as string) > 0) data.cell.styles.textColor = [180, 0, 0];
       }
-      if ([10, 11, 12].includes(data.column.index) && data.section === "body") {
+      if ([11, 12, 13].includes(data.column.index) && data.section === "body") {
         const val = data.cell.raw as string;
         if (val === "OK") data.cell.styles.textColor = [15, 110, 86];
         else data.cell.styles.textColor = [180, 0, 0];
@@ -327,6 +339,7 @@ function NuevoFolioDialog({ open, onClose }: { open: boolean; onClose: () => voi
   const [saving, setSaving] = useState(false);
 
   const [form, setForm] = useState({
+    tipo: "" as TipoFolioKey | "",
     proceso_equipo: "",
     origen: "Diseño y Desarrollo" as string,
     desviacion_id: "",
@@ -338,20 +351,30 @@ function NuevoFolioDialog({ open, onClose }: { open: boolean; onClose: () => voi
 
   const update = (field: string, value: string) => setForm((f) => ({ ...f, [field]: value }));
 
+  const tiposDisponibles = getTiposDisponibles((org as any)?.norma_aplicable);
+
   const handleGuardar = async () => {
+    if (!form.tipo) {
+      toast({ title: "Tipo requerido", description: "Selecciona el tipo de análisis.", variant: "destructive" });
+      return;
+    }
     if (!form.proceso_equipo.trim()) {
       toast({ title: "Campo requerido", description: "El Proceso / Equipo es obligatorio.", variant: "destructive" });
       return;
     }
     setSaving(true);
     try {
-      const { data: codigoData, error: cErr } = await supabase.rpc("next_folio_code");
+      const { data: codigoData, error: cErr } = await supabase.rpc(
+        "next_folio_code" as any,
+        { p_tipo: form.tipo },
+      );
       if (cErr) throw cErr;
 
       const { data: folio, error: fErr } = await supabase
         .from("folios")
         .insert({
           codigo: codigoData as string,
+          tipo_folio: form.tipo,
           proceso_equipo: form.proceso_equipo.trim(),
           origen: form.origen as any,
           desviacion_id: form.desviacion_id.trim(),
@@ -380,6 +403,7 @@ function NuevoFolioDialog({ open, onClose }: { open: boolean; onClose: () => voi
 
   const handleClose = () => {
     setForm({
+      tipo: "",
       proceso_equipo: "",
       origen: "Diseño y Desarrollo",
       desviacion_id: "",
@@ -398,9 +422,26 @@ function NuevoFolioDialog({ open, onClose }: { open: boolean; onClose: () => voi
           <DialogTitle>Nuevo Folio de Gestión de Riesgos</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 py-2">
-          <p className="text-xs text-muted-foreground">
-            El código se genera automáticamente (GR-{new Date().getFullYear()}-XXX)
-          </p>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Tipo de análisis *</Label>
+            <Select value={form.tipo} onValueChange={(v) => update("tipo", v)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecciona el tipo de análisis" />
+              </SelectTrigger>
+              <SelectContent>
+                {tiposDisponibles.map((t) => (
+                  <SelectItem key={t.key} value={t.key}>
+                    {formatTipoFolio(t.key)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              {form.tipo
+                ? `Tu folio será: GR-${form.tipo}-${new Date().getFullYear()}-XXX (el número se asigna al guardar)`
+                : "El código se genera automáticamente al guardar."}
+            </p>
+          </div>
           <div className="space-y-1.5">
             <Label className="text-xs">Proceso / Producto / Equipo / Sistema Analizado *</Label>
             <Input
@@ -473,6 +514,7 @@ function NuevoFolioDialog({ open, onClose }: { open: boolean; onClose: () => voi
 export default function Folios() {
   const navigate = useNavigate();
   const [nuevoOpen, setNuevoOpen] = useState(false);
+  const [tipoFiltro, setTipoFiltro] = useState<string>("todos");
   const { data: folios, isLoading } = useFolios();
   const { data: allRiesgos, isLoading: loadingRiesgos } = useAllRiesgos();
 
@@ -496,9 +538,20 @@ export default function Folios() {
   });
 
   const cargando = isLoading || loadingRiesgos;
-  const lista = folios || [];
+  const todos = folios || [];
 
   const { org } = useAuth();
+  const tiposDisponibles = getTiposDisponibles((org as any)?.norma_aplicable);
+
+  const lista =
+    tipoFiltro === "todos"
+      ? todos
+      : tipoFiltro === "_historico"
+        ? todos.filter((f) => !f.tipo_folio)
+        : todos.filter((f) => f.tipo_folio === tipoFiltro);
+
+  const hayHistorico = todos.some((f) => !f.tipo_folio);
+
   const handleExportCSV = () => exportarCSV(lista, riesgosMap);
   const handleExportPDF = () => exportarPDF(lista, riesgosMap, org);
 
@@ -542,6 +595,52 @@ export default function Folios() {
       </div>
 
       <NuevoFolioDialog open={nuevoOpen} onClose={() => setNuevoOpen(false)} />
+
+      {/* Filtros por tipo */}
+      {!cargando && todos.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={() => setTipoFiltro("todos")}
+            className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
+              tipoFiltro === "todos"
+                ? "bg-primary text-primary-foreground border-primary"
+                : "bg-background text-muted-foreground border-border hover:bg-muted"
+            }`}
+          >
+            Todos ({todos.length})
+          </button>
+          {tiposDisponibles.map((t) => {
+            const count = todos.filter((f) => f.tipo_folio === t.key).length;
+            return (
+              <button
+                key={t.key}
+                onClick={() => setTipoFiltro(t.key)}
+                className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
+                  tipoFiltro === t.key
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "bg-background text-muted-foreground border-border hover:bg-muted"
+                }`}
+                title={t.descripcion}
+              >
+                {t.short} ({count})
+              </button>
+            );
+          })}
+          {hayHistorico && (
+            <button
+              onClick={() => setTipoFiltro("_historico")}
+              className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
+                tipoFiltro === "_historico"
+                  ? "bg-primary text-primary-foreground border-primary"
+                  : "bg-background text-muted-foreground border-border hover:bg-muted"
+              }`}
+              title="Folios creados antes de la codificación por tipo"
+            >
+              Sin tipo ({todos.filter((f) => !f.tipo_folio).length})
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Resumen rápido */}
       {!cargando && lista.length > 0 && (
@@ -588,6 +687,13 @@ export default function Folios() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4 min-w-0">
                     <div className="font-mono text-sm font-bold text-primary whitespace-nowrap">{folio.codigo}</div>
+                    <Badge
+                      variant="outline"
+                      className="text-[10px] font-mono"
+                      title={folio.tipo_folio ? undefined : "Folio histórico (anterior a la codificación por tipo)"}
+                    >
+                      {getTipoLabel(folio.tipo_folio)}
+                    </Badge>
                     <div className="min-w-0">
                       <p className="font-medium truncate">{folio.proceso_equipo}</p>
                       <p className="text-xs text-muted-foreground">

@@ -158,27 +158,47 @@ async function execCrearFolio(
   const origen = input?.origen ?? "Diseño y Desarrollo";
   const alcance = String(input?.alcance ?? "").trim();
 
+  // Validar/normalizar tipo (default SGC silencioso para no interrumpir el flujo del agente)
+  const TIPOS_VALIDOS = ["SGC", "FAB", "SIS", "CAL", "PRD", "PMS", "FV"];
+  const tipoInput = String(input?.tipo ?? "").trim().toUpperCase();
+  const tipo = TIPOS_VALIDOS.includes(tipoInput) ? tipoInput : "SGC";
+  const tipoAdvertencia =
+    tipoInput && !TIPOS_VALIDOS.includes(tipoInput)
+      ? `Tipo "${tipoInput}" no válido — se usó SGC por defecto.`
+      : null;
+
+  // Reservar siguiente número con la nueva función (secuencia por org/año/tipo)
   const year = new Date().getUTCFullYear();
-  // Reservar siguiente número de la secuencia (admin client bypass RLS)
-  const { data: seq } = await adminClient
-    .from("folio_sequence")
-    .select("last_number")
-    .eq("org_id", orgId).eq("year", year).maybeSingle();
-  const nextNumber = (seq?.last_number ?? 0) + 1;
-  if (seq) {
-    await adminClient.from("folio_sequence")
-      .update({ last_number: nextNumber })
-      .eq("org_id", orgId).eq("year", year);
+  let codigo: string;
+  const { data: codigoData, error: codigoErr } = await adminClient.rpc(
+    "next_folio_code",
+    { p_tipo: tipo },
+  );
+  if (codigoErr || !codigoData) {
+    // Fallback manual ante fallo de RPC (mantiene resiliencia del agente)
+    const { data: seq } = await adminClient
+      .from("folio_sequence")
+      .select("last_number")
+      .eq("org_id", orgId).eq("year", year).eq("tipo", tipo).maybeSingle();
+    const nextNumber = (seq?.last_number ?? 0) + 1;
+    if (seq) {
+      await adminClient.from("folio_sequence")
+        .update({ last_number: nextNumber })
+        .eq("org_id", orgId).eq("year", year).eq("tipo", tipo);
+    } else {
+      await adminClient.from("folio_sequence")
+        .insert({ org_id: orgId, year, tipo, last_number: nextNumber });
+    }
+    codigo = `GR-${tipo}-${year}-${String(nextNumber).padStart(3, "0")}`;
   } else {
-    await adminClient.from("folio_sequence")
-      .insert({ org_id: orgId, year, last_number: nextNumber });
+    codigo = codigoData as string;
   }
-  const codigo = `GR-${year}-${String(nextNumber).padStart(3, "0")}`;
 
   const { data: folio, error } = await adminClient
     .from("folios")
     .insert({
       codigo,
+      tipo_folio: tipo,
       proceso_equipo,
       origen,
       alcance,
@@ -186,10 +206,18 @@ async function execCrearFolio(
       created_by: userId,
       estado: "Borrador",
     })
-    .select("id, codigo, proceso_equipo, estado")
+    .select("id, codigo, tipo_folio, proceso_equipo, estado")
     .single();
   if (error) return { ok: false, error: error.message };
-  return { ok: true, folio_id: folio.id, codigo: folio.codigo, proceso_equipo: folio.proceso_equipo, estado: folio.estado };
+  return {
+    ok: true,
+    folio_id: folio.id,
+    codigo: folio.codigo,
+    tipo: folio.tipo_folio,
+    proceso_equipo: folio.proceso_equipo,
+    estado: folio.estado,
+    ...(tipoAdvertencia ? { advertencia: tipoAdvertencia } : {}),
+  };
 }
 
 async function execConsultarConfigOrg(org: any) {

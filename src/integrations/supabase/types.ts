@@ -723,16 +723,19 @@ export type Database = {
         Row: {
           last_number: number
           org_id: string
+          tipo: string
           year: number
         }
         Insert: {
           last_number?: number
           org_id: string
+          tipo?: string
           year: number
         }
         Update: {
           last_number?: number
           org_id?: string
+          tipo?: string
           year?: number
         }
         Relationships: [
@@ -816,6 +819,7 @@ export type Database = {
           origen: string
           proceso_equipo: string
           riesgo_residual_global: string
+          tipo_folio: string | null
           updated_at: string
         }
         Insert: {
@@ -847,6 +851,7 @@ export type Database = {
           origen?: string
           proceso_equipo: string
           riesgo_residual_global?: string
+          tipo_folio?: string | null
           updated_at?: string
         }
         Update: {
@@ -878,6 +883,7 @@ export type Database = {
           origen?: string
           proceso_equipo?: string
           riesgo_residual_global?: string
+          tipo_folio?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -1622,7 +1628,9 @@ export type Database = {
         }
         Returns: number
       }
-      next_folio_code: { Args: never; Returns: string }
+      next_folio_code:
+        | { Args: never; Returns: string }
+        | { Args: { p_tipo: string }; Returns: string }
       next_ticket_code: { Args: { p_org_id: string }; Returns: string }
       purgar_documentos_eliminados: { Args: never; Returns: number }
       purgar_documentos_expirados: {
