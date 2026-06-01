@@ -48,6 +48,7 @@ const TOOLS = [
           description: "Origen del análisis (texto libre del catálogo agrupado, ej: 'Diseño y Desarrollo', 'Desviación', 'Tecnovigilancia', 'Farmacovigilancia', 'OOS / OOT', 'Control de Cambios'). Default: 'Diseño y Desarrollo'.",
         },
         alcance: { type: "string", description: "Alcance del análisis (opcional)." },
+        tipo: { type: "string", enum: ["SGC", "FAB", "SIS", "CAL", "PRD", "PMS", "FV"], description: "Tipo de folio. Si no viene, el sistema usa SGC." },
       },
       required: ["proceso_equipo"],
     },
@@ -375,7 +376,7 @@ Deno.serve(async (req) => {
 
     const body = await req.json();
     const messages: Array<{ role: "user" | "assistant"; content: any }> = body.messages ?? [];
-    const folio_id: string | null = body.folio_id ?? null;
+    let folio_id: string | null = body.folio_id ?? null;
     const agente_override: "dm" | "farma" | null = body.agente ?? null;
     let conversacion_id: string | null = body.conversacion_id ?? null;
 
@@ -415,34 +416,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Folio context
-    let folioCtx = "";
-    if (folio_id) {
-      const { data: folio } = await adminClient
-        .from("folios")
-        .select("codigo, proceso_equipo, estado, norma_folio, origen, alcance, beneficio_clinico, clase_dispositivo, clasificacion_categoria, clasificacion_tipo, clasificacion_condicion_venta, clasificacion_riesgo_sanitario")
-        .eq("id", folio_id)
-        .maybeSingle();
-      const { data: riesgos } = await adminClient
-        .from("riesgos")
-        .select("numero_id, peligro, situacion_peligrosa, severidad, ocurrencia, deteccion, npr, dictamen")
-        .eq("folio_id", folio_id)
-        .order("numero_id");
-      if (folio) {
-        const f: any = folio;
-        const isMed =
-          f.norma_folio === "NOM-059" ||
-          (f.norma_folio === "MULTI" && f.clasificacion_categoria === "medicamento");
-        const clasifLine = isMed
-          ? `Clasificación (medicamento): tipo=${f.clasificacion_tipo || "—"} | venta=${f.clasificacion_condicion_venta || "—"} | riesgo_sanitario=${f.clasificacion_riesgo_sanitario || "—"}`
-          : `Clasificación (dispositivo médico): ${f.clase_dispositivo || "—"}`;
-        folioCtx = `\n\n## CONTEXTO DEL FOLIO ACTIVO\nCódigo: ${f.codigo}\nProceso/Producto/Equipo/Sistema: ${f.proceso_equipo}\nOrigen del análisis: ${f.origen ?? "—"}\nEstado: ${f.estado}\nNorma: ${f.norma_folio}\nAlcance: ${f.alcance ?? "—"}\n${clasifLine}\nFolio_id: ${folio_id}\n\nRiesgos actuales (${(riesgos ?? []).length}):\n${(riesgos ?? []).map((r: any) => `#${r.numero_id} S:${r.severidad} O:${r.ocurrencia} D:${r.deteccion} NPR:${r.npr} ${r.dictamen} — ${r.peligro}`).join("\n")}`;
-      }
-    }
-
-    const orgCtx = `\n\n## CONTEXTO DE LA ORGANIZACIÓN\nNombre: ${org.nombre}\nNorma aplicable: ${org.norma_aplicable}\nMetodología: ${org.metodologia}\nUsa detectabilidad: ${org.usar_detectabilidad}\nUmbral NPR Alto: ${org.umbral_npr_alto}\nUmbral NPR Medio: ${org.umbral_npr_medio}`;
-
-    // --- Conversación: crear o reanudar ---
+    // --- Conversación: crear o reanudar antes de construir contexto de folio ---
     let resumeNote = "";
     let isNewConversation = false;
     if (conversacion_id) {
@@ -456,6 +430,15 @@ Deno.serve(async (req) => {
       else {
         const fecha = new Date(conv.ultimo_mensaje_en).toLocaleDateString("es-MX", { day: "numeric", month: "long" });
         resumeNote = `\n\n## CONTINUACIÓN DE CONVERSACIÓN\nRetomando nuestra conversación del ${fecha} sobre "${conv.titulo}". Mantén la coherencia con el historial previo.`;
+        if (!folio_id && conv.folio_id) {
+          const { data: convFolio } = await adminClient
+            .from("folios")
+            .select("id")
+            .eq("id", conv.folio_id)
+            .eq("org_id", org.id)
+            .maybeSingle();
+          if (convFolio) folio_id = conv.folio_id;
+        }
       }
     }
     if (!conversacion_id) {
@@ -467,6 +450,38 @@ Deno.serve(async (req) => {
       conversacion_id = created?.id ?? null;
       isNewConversation = true;
     }
+
+    // Folio context
+    let folioCtx = "";
+    let activeFolioId: string | null = folio_id;
+    let activeFolioCodigo: string | null = null;
+    let activeFolioTitulo: string | null = null;
+    if (folio_id) {
+      const { data: folio } = await adminClient
+        .from("folios")
+        .select("codigo, proceso_equipo, estado, norma_folio, origen, alcance, beneficio_clinico, clase_dispositivo, clasificacion_categoria, clasificacion_tipo, clasificacion_condicion_venta, clasificacion_riesgo_sanitario")
+        .eq("id", folio_id)
+        .maybeSingle();
+      const { data: riesgos } = await adminClient
+        .from("riesgos")
+        .select("numero_id, peligro, situacion_peligrosa, severidad, ocurrencia, deteccion, npr, dictamen")
+        .eq("folio_id", folio_id)
+        .order("numero_id");
+      if (folio) {
+        const f: any = folio;
+        activeFolioCodigo = f.codigo;
+        activeFolioTitulo = `[${f.codigo}] ${f.proceso_equipo ?? ""}`.trim();
+        const isMed =
+          f.norma_folio === "NOM-059" ||
+          (f.norma_folio === "MULTI" && f.clasificacion_categoria === "medicamento");
+        const clasifLine = isMed
+          ? `Clasificación (medicamento): tipo=${f.clasificacion_tipo || "—"} | venta=${f.clasificacion_condicion_venta || "—"} | riesgo_sanitario=${f.clasificacion_riesgo_sanitario || "—"}`
+          : `Clasificación (dispositivo médico): ${f.clase_dispositivo || "—"}`;
+        folioCtx = `\n\n## CONTEXTO DEL FOLIO ACTIVO\nCódigo: ${f.codigo}\nProceso/Producto/Equipo/Sistema: ${f.proceso_equipo}\nOrigen del análisis: ${f.origen ?? "—"}\nEstado: ${f.estado}\nNorma: ${f.norma_folio}\nAlcance: ${f.alcance ?? "—"}\n${clasifLine}\nFolio_id: ${folio_id}\n\nRiesgos actuales (${(riesgos ?? []).length}):\n${(riesgos ?? []).map((r: any) => `#${r.numero_id} S:${r.severidad} O:${r.ocurrencia} D:${r.deteccion} NPR:${r.npr} ${r.dictamen} — ${r.peligro}`).join("\n")}`;
+      }
+    }
+
+    const orgCtx = `\n\n## CONTEXTO DE LA ORGANIZACIÓN\nNombre: ${org.nombre}\nNorma aplicable: ${org.norma_aplicable}\nMetodología: ${org.metodologia}\nUsa detectabilidad: ${org.usar_detectabilidad}\nUmbral NPR Alto: ${org.umbral_npr_alto}\nUmbral NPR Medio: ${org.umbral_npr_medio}`;
 
     const systemPrompt = (promptRow as any).system_prompt + orgCtx + folioCtx + resumeNote + TOOL_RULES_ADDENDUM;
 
