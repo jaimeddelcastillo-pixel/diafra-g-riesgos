@@ -210,6 +210,7 @@ async function exportarPDF(
 
     return [
       f.codigo,
+      getTipoLabel(f.tipo_folio),
       f.proceso_equipo,
       f.origen,
       f.estado,
@@ -249,6 +250,7 @@ async function exportarPDF(
     head: [
       [
         "Folio",
+        "Tipo",
         "Proceso / Equipo",
         "Origen",
         "Estado",
@@ -276,31 +278,32 @@ async function exportarPDF(
     },
     columnStyles: {
       0: { cellWidth: 26, fontStyle: "bold" },
-      1: { cellWidth: 52 },
-      2: { cellWidth: 22 },
-      3: { cellWidth: 18 },
-      4: { cellWidth: 20 },
-      5: { cellWidth: 20 },
-      6: { cellWidth: 20 },
-      7: { cellWidth: 14, halign: "center" },
+      1: { cellWidth: 14, halign: "center", fontStyle: "bold" },
+      2: { cellWidth: 46 },
+      3: { cellWidth: 20 },
+      4: { cellWidth: 16 },
+      5: { cellWidth: 18 },
+      6: { cellWidth: 18 },
+      7: { cellWidth: 18 },
       8: { cellWidth: 14, halign: "center" },
-      9: { cellWidth: 22, halign: "center" },
+      9: { cellWidth: 14, halign: "center" },
       10: { cellWidth: 20, halign: "center" },
-      11: { cellWidth: 20, halign: "center" },
-      12: { cellWidth: 20, halign: "center" },
+      11: { cellWidth: 18, halign: "center" },
+      12: { cellWidth: 18, halign: "center" },
+      13: { cellWidth: 18, halign: "center" },
     },
     didParseCell: (data) => {
-      if (data.column.index === 3 && data.section === "body") {
+      if (data.column.index === 4 && data.section === "body") {
         const e = data.cell.raw as string;
         if (e === "Aprobado") data.cell.styles.textColor = [15, 110, 86];
         if (e === "Borrador") data.cell.styles.textColor = [100, 100, 100];
         if (e === "En Firma") data.cell.styles.textColor = [30, 100, 200];
         if (e === "Rechazado") data.cell.styles.textColor = [180, 0, 0];
       }
-      if (data.column.index === 8 && data.section === "body") {
+      if (data.column.index === 9 && data.section === "body") {
         if (parseInt(data.cell.raw as string) > 0) data.cell.styles.textColor = [180, 0, 0];
       }
-      if ([10, 11, 12].includes(data.column.index) && data.section === "body") {
+      if ([11, 12, 13].includes(data.column.index) && data.section === "body") {
         const val = data.cell.raw as string;
         if (val === "OK") data.cell.styles.textColor = [15, 110, 86];
         else data.cell.styles.textColor = [180, 0, 0];
