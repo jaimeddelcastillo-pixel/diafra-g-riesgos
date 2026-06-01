@@ -257,6 +257,7 @@ export function AssistantPanel({ open, onOpenChange, folioId = null, folioCodigo
       .replace(/[^a-zA-Z0-9._-]/g, "_") // reemplazar resto
       .replace(/_+/g, "_");
     const path = `${org.id}/${Date.now()}-${safeName}`;
+    const mimeType = file.type || inferMimeType(file.name);
     const { error } = await supabase.storage.from("chat-documentos").upload(path, file);
     if (error) {
       toast({ title: "Error subiendo archivo", description: error.message, variant: "destructive" });
@@ -264,12 +265,16 @@ export function AssistantPanel({ open, onOpenChange, folioId = null, folioCodigo
     }
     setMessages((m) => [...m, { role: "user", content: `📎 Adjunté: ${file.name}` }, { role: "assistant", content: "Analizando documento..." }]);
     try {
-      const { data, error: fnErr } = await supabase.functions.invoke("chat-analizar-documento", {
-        body: { storage_path: path, nombre_archivo: file.name, mime_type: file.type, folio_id: folioId },
+      const url = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/chat-analizar-documento`;
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ storage_path: path, nombre_archivo: file.name, mime_type: mimeType, folio_id: folioId }),
       });
-      if (fnErr) throw fnErr;
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error ?? data?.message ?? `Error ${res.status}`);
       const a = data.analisis;
-      const md = `**Tipo:** ${a.tipo}\n\n**Resumen:** ${a.resumen}\n\n${a.puntos_clave?.length ? `**Puntos clave:**\n${a.puntos_clave.map((p: string) => `- ${p}`).join("\n")}\n\n` : ""}${a.riesgos_detectados?.length ? `**Riesgos detectados:** ${a.riesgos_detectados.length}\n\n` : ""}${a.accion_sugerida ? `_${a.accion_sugerida}_` : ""}`;
+      const md = a.mensaje ?? `**Tipo:** ${a.tipo}\n\n**Resumen:** ${a.resumen}\n\n${a.puntos_clave?.length ? `**Puntos clave:**\n${a.puntos_clave.map((p: string) => `- ${p}`).join("\n")}\n\n` : ""}${a.riesgos_detectados?.length ? `**Riesgos detectados:** ${a.riesgos_detectados.length}\n\n` : ""}${a.accion_sugerida ? `_${a.accion_sugerida}_` : ""}`;
       setMessages((m) => {
         const arr = [...m]; arr[arr.length - 1] = { role: "assistant", content: md }; return arr;
       });
@@ -503,6 +508,15 @@ function groupConversaciones(rows: Conversacion[]) {
   return Object.entries(buckets)
     .filter(([, v]) => v.length > 0)
     .map(([label, items]) => ({ label, items }));
+}
+
+function inferMimeType(fileName: string) {
+  const lower = fileName.toLowerCase();
+  if (lower.endsWith(".pdf")) return "application/pdf";
+  if (lower.endsWith(".docx")) return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+  if (lower.endsWith(".png")) return "image/png";
+  if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) return "image/jpeg";
+  return "application/octet-stream";
 }
 
 function MessageBubble({ msg, onInsertarRiesgo, folioId }: { msg: Msg; onInsertarRiesgo: (i: any) => void; folioId: string | null }) {
