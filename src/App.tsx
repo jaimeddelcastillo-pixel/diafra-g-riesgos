@@ -21,6 +21,7 @@ import AdminProtocolos from "./pages/AdminProtocolos";
 import AdminCursos from "./pages/AdminCursos";
 import AdminCursoEditor from "./pages/AdminCursoEditor";
 import AdminCursoEvaluacion from "./pages/AdminCursoEvaluacion";
+import AdminFolios from "./pages/AdminFolios";
 import MisProtocolos from "./pages/MisProtocolos";
 import Soporte from "./pages/Soporte";
 import Login from "./pages/Login";
@@ -68,6 +69,7 @@ const App = () => (
               <Route path="/admin/cursos" element={<AdminCursos />} />
               <Route path="/admin/cursos/:id" element={<AdminCursoEditor />} />
               <Route path="/admin/cursos/:id/evaluacion" element={<AdminCursoEvaluacion />} />
+              <Route path="/admin/folios" element={<AdminFolios />} />
               <Route path="/mis-protocolos" element={<MisProtocolos />} />
               <Route path="/soporte" element={<Soporte />} />
               <Route path="/soporte/:id" element={<Soporte />} />
