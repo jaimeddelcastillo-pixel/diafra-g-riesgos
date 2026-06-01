@@ -274,7 +274,7 @@ export function AssistantPanel({ open, onOpenChange, folioId = null, folioCodigo
   async function handleFile(file: File) {
     setAttachment({ file, status: "processing" });
     const result = await extractFileText(file);
-    if (!result.ok) {
+    if (result.ok === false) {
       setAttachment({ file, status: "error", message: result.message });
       return;
     }
