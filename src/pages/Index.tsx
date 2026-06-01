@@ -18,7 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useNavigate, Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { getTiposDisponibles, TIPOS_FOLIO, type TipoFolioKey } from "@/config/tipos-folio";
+import { getTiposDisponibles, type TipoFolioKey } from "@/config/tipos-folio";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
