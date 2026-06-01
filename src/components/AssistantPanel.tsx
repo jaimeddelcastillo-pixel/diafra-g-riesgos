@@ -540,7 +540,7 @@ function inferMimeType(fileName: string) {
   return "application/octet-stream";
 }
 
-function MessageBubble({ msg, onInsertarRiesgo, folioId }: { msg: Msg; onInsertarRiesgo: (i: any) => void; folioId: string | null }) {
+function MessageBubble({ msg, onInsertarRiesgo, folioId, insertedRiskKeys }: { msg: Msg; onInsertarRiesgo: (i: any) => void; folioId: string | null; insertedRiskKeys: Set<string> }) {
   const isUser = msg.role === "user";
   return (
     <div className={`flex gap-2 ${isUser ? "flex-row-reverse" : ""}`}>
@@ -558,6 +558,8 @@ function MessageBubble({ msg, onInsertarRiesgo, folioId }: { msg: Msg; onInserta
             const r = t.input;
             const npr = (r.severidad ?? 0) * (r.ocurrencia ?? 0) * (r.deteccion ?? 0);
             const nprRes = (r.sev_residual ?? 0) * (r.ocu_residual ?? 0) * (r.det_residual ?? 0);
+            const riskKey = JSON.stringify({ folio_id: r.folio_id ?? folioId, peligro: r.peligro, situacion_peligrosa: r.situacion_peligrosa, efecto_dano: r.efecto_dano });
+            const alreadyInserted = insertedRiskKeys.has(riskKey);
             return (
               <div key={i} className="mt-2 border border-accent/30 rounded-md p-3 bg-card">
                 <div className="flex items-center gap-2 mb-2">
@@ -588,9 +590,9 @@ function MessageBubble({ msg, onInsertarRiesgo, folioId }: { msg: Msg; onInserta
                 </div>
                 <div className="flex gap-2 mt-2">
                   <Button size="sm" className="h-7 text-xs"
-                    disabled={!r.folio_id && !folioId}
-                    onClick={() => onInsertarRiesgo({ ...r, folio_id: r.folio_id ?? folioId })}>
-                    Insertar
+                    disabled={alreadyInserted || (!r.folio_id && !folioId)}
+                    onClick={() => onInsertarRiesgo({ ...r, folio_id: r.folio_id ?? folioId, __risk_key: riskKey })}>
+                    {alreadyInserted ? "Insertado" : "Insertar"}
                   </Button>
                 </div>
                 {!r.folio_id && !folioId && (
