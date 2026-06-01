@@ -687,6 +687,13 @@ export default function Folios() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4 min-w-0">
                     <div className="font-mono text-sm font-bold text-primary whitespace-nowrap">{folio.codigo}</div>
+                    <Badge
+                      variant="outline"
+                      className="text-[10px] font-mono"
+                      title={folio.tipo_folio ? undefined : "Folio histórico (anterior a la codificación por tipo)"}
+                    >
+                      {getTipoLabel(folio.tipo_folio)}
+                    </Badge>
                     <div className="min-w-0">
                       <p className="font-medium truncate">{folio.proceso_equipo}</p>
                       <p className="text-xs text-muted-foreground">
