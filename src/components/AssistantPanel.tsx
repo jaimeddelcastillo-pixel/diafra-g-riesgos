@@ -455,11 +455,12 @@ export function AssistantPanel({ open, onOpenChange, folioId = null, folioCodigo
               {composerExpanded ? "Reducir" : "Expandir"}
             </button>
           </div>
+          {attachment && <AttachmentChip attachment={attachment} onRemove={() => setAttachment(null)} />}
           <div className="flex gap-2 items-end">
             <input ref={fileInputRef} type="file" hidden
-              accept=".pdf,image/*,.docx,.xlsx"
+              accept=".pdf,.xlsx,.docx"
               onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); e.target.value = ""; }} />
-            <Button variant="outline" size="icon" onClick={() => fileInputRef.current?.click()} disabled={streaming}>
+            <Button variant="outline" size="icon" onClick={() => fileInputRef.current?.click()} disabled={streaming || attachment?.status === "processing"}>
               <Paperclip className="h-4 w-4" />
             </Button>
             <Textarea
@@ -471,7 +472,15 @@ export function AssistantPanel({ open, onOpenChange, folioId = null, folioCodigo
                 if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); }
               }}
             />
-            <Button onClick={sendMessage} disabled={streaming || !input.trim()}>
+            <Button
+              onClick={sendMessage}
+              disabled={
+                streaming ||
+                attachment?.status === "processing" ||
+                attachment?.status === "error" ||
+                (!input.trim() && attachment?.status !== "ready")
+              }
+            >
               {streaming ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
             </Button>
           </div>
