@@ -250,7 +250,13 @@ export function AssistantPanel({ open, onOpenChange, folioId = null, folioCodigo
 
   async function handleFile(file: File) {
     if (!org || !session) return;
-    const path = `${org.id}/${Date.now()}-${file.name}`;
+    // Sanitizar nombre: Supabase Storage rechaza espacios, acentos y caracteres especiales
+    const safeName = file.name
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "") // quitar acentos
+      .replace(/[^a-zA-Z0-9._-]/g, "_") // reemplazar resto
+      .replace(/_+/g, "_");
+    const path = `${org.id}/${Date.now()}-${safeName}`;
     const { error } = await supabase.storage.from("chat-documentos").upload(path, file);
     if (error) {
       toast({ title: "Error subiendo archivo", description: error.message, variant: "destructive" });
