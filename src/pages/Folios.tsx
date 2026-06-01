@@ -32,6 +32,7 @@ function exportarCSV(folios: any[], riesgosMap: Map<string, any[]>) {
 
   filas.push([
     "Folio",
+    "Tipo",
     "Proceso / Equipo",
     "Origen",
     "Estado",
@@ -66,6 +67,7 @@ function exportarCSV(folios: any[], riesgosMap: Map<string, any[]>) {
 
     filas.push([
       f.codigo,
+      getTipoLabel(f.tipo_folio),
       f.proceso_equipo,
       f.origen,
       f.estado,
