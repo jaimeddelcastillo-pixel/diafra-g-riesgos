@@ -638,3 +638,53 @@ function MessageBubble({ msg, onInsertarRiesgo, folioId, insertedRiskKeys }: { m
     </div>
   );
 }
+
+function AttachmentChip({
+  attachment,
+  onRemove,
+}: {
+  attachment:
+    | { file: File; status: "processing" }
+    | { file: File; status: "ready"; kind: ExtractKind; text: string; truncated: boolean }
+    | { file: File; status: "error"; message: string };
+  onRemove: () => void;
+}) {
+  const Icon =
+    attachment.status === "ready" && attachment.kind === "xlsx"
+      ? FileSpreadsheet
+      : attachment.status === "ready" && attachment.kind === "docx"
+      ? FileType2
+      : FileText;
+  return (
+    <div className="flex flex-col gap-1 rounded-md border bg-muted/30 px-2 py-1.5 text-xs">
+      <div className="flex items-center gap-2">
+        <Icon className="h-4 w-4 text-muted-foreground shrink-0" />
+        <span className="truncate flex-1" title={attachment.file.name}>{attachment.file.name}</span>
+        {attachment.status === "processing" && (
+          <Badge variant="secondary" className="gap-1">
+            <Loader2 className="h-3 w-3 animate-spin" /> Procesando…
+          </Badge>
+        )}
+        {attachment.status === "ready" && (
+          <Badge variant="secondary" className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100">
+            Listo{attachment.truncated ? " (truncado)" : ""}
+          </Badge>
+        )}
+        {attachment.status === "error" && (
+          <Badge variant="destructive">Error</Badge>
+        )}
+        <button
+          type="button"
+          onClick={onRemove}
+          aria-label="Quitar archivo"
+          className="text-muted-foreground hover:text-foreground"
+        >
+          <X className="h-3.5 w-3.5" />
+        </button>
+      </div>
+      {attachment.status === "error" && (
+        <p className="text-[11px] text-destructive leading-snug pl-6">{attachment.message}</p>
+      )}
+    </div>
+  );
+}
