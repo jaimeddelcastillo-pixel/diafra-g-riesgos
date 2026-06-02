@@ -686,7 +686,11 @@ export async function generateFolioPDF(
         6: { cellWidth: 30 },
       },
       margin: tableMargin,
-      rowPageBreak: "avoid",
+      // rowPageBreak:"auto" — con rowSpan:8 en ID, "avoid" hacía que autoTable
+      // estimara el bloque entero y saltara a página nueva dejando una página
+      // con solo head. El hook didDrawPage redibuja la columna ID en cada
+      // continuación cuando el bloque sí necesita partirse.
+      rowPageBreak: "auto",
       didDrawPage: (data: any) => {
         const currentPage = (doc as any).internal.getCurrentPageInfo().pageNumber;
         if (currentPage > firstPageOfRiesgo) {
@@ -722,6 +726,7 @@ export async function generateFolioPDF(
     // página actual, fluya naturalmente a la siguiente sin romper el bloque
     // principal del riesgo.
     const afterMainY = (doc as any).lastAutoTable.finalY;
+    const pageBeforeFilaB = (doc as any).internal.getCurrentPageInfo().pageNumber;
     drawTable({
       startY: afterMainY,
       body: [
@@ -752,9 +757,9 @@ export async function generateFolioPDF(
       rowPageBreak: "avoid",
       didDrawPage: (data: any) => {
         const currentPage = (doc as any).internal.getCurrentPageInfo().pageNumber;
-        // Si esta tabla se empujó a una página nueva (sin cabecera principal),
-        // dibujar una mini-banda de contexto arriba indicando continuación.
-        if (currentPage > firstPageOfRiesgo && data.pageNumber === 1) {
+        // Solo etiquetar "continuación" si la fila B saltó a una página NUEVA
+        // respecto a donde acabó la tabla principal del riesgo.
+        if (currentPage > pageBeforeFilaB) {
           // Etiqueta sutil arriba: "Riesgo NN — Aceptabilidad (cont.)"
           const labelY = tableMargin.top - 2;
           doc.setFont("helvetica", "italic");
