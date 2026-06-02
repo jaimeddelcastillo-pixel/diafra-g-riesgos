@@ -672,11 +672,17 @@ export function RiesgoWizardDialog({
         <div className="flex-1 overflow-y-auto p-4 sm:p-6">
           {step === 1 && (
             <div className="space-y-5 max-w-2xl mx-auto">
-              <div>
-                <h3 className="text-xl font-bold">Identifica el peligro</h3>
-                <p className="text-sm text-muted-foreground">
-                  Describe qué elemento, agente o condición puede causar daño.
-                </p>
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <div className="text-[11px] uppercase tracking-wide text-muted-foreground font-semibold">
+                    Elemento 1 de 6
+                  </div>
+                  <h3 className="text-xl font-bold">PELIGRO</h3>
+                  <p className="text-sm text-muted-foreground">
+                    La fuente del daño. Siempre un sustantivo — nunca una acción.
+                  </p>
+                </div>
+                <ElemBadge num="E1" label="Peligro" norma={normaKey} />
               </div>
 
               <div className="space-y-2">
@@ -687,7 +693,7 @@ export function RiesgoWizardDialog({
                   placeholder="Ej: Residuo químico, Bacteria, Falla eléctrica, Error humano..."
                 />
                 <p className="text-xs text-muted-foreground">
-                  Usa un sustantivo — nunca una acción. ✅ "Residuo de API" ❌ "No limpiar el equipo"
+                  ✅ Residuo de API &nbsp;&nbsp; ❌ No limpiar el equipo
                 </p>
                 <div className="flex flex-wrap gap-1.5 pt-1">
                   {getEjemplosPeligros(normaKey).map((ej) => (
@@ -729,19 +735,53 @@ export function RiesgoWizardDialog({
                   />
                 )}
               </div>
+            </div>
+          )}
 
-              <div className="space-y-2">
-                <Label>¿Cómo falla exactamente? *</Label>
-                <Textarea
-                  rows={2}
+          {step === 2 && (
+            <div className="space-y-5 max-w-2xl mx-auto">
+              {/* Bloque 1 — Modo de falla */}
+              <div className="rounded-lg border bg-card p-4 space-y-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <ElemBadge num="E2" label="Modo de falla" tone="blue" />
+                    <h3 className="text-base font-bold mt-2">
+                      ¿Cómo falla específicamente el proceso o componente?
+                    </h3>
+                    <p className="text-xs text-muted-foreground">
+                      El mecanismo exacto — no el peligro ni la causa.
+                    </p>
+                  </div>
+                </div>
+                <Input
                   value={s.peligro_modo_falla}
                   onChange={(e) => setS({ ...s, peligro_modo_falla: e.target.value })}
-                  placeholder="Ej: Filtro saturado sin alarma, Temporizador descalibrado, Operador omite paso del PNO"
+                  placeholder="Ej: Ciclo de enjuague incompleto por falla del temporizador"
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label>¿Por qué ocurre? (puedes agregar varias causas) *</Label>
+              <div className="flex items-center gap-2">
+                <div className="h-px flex-1 bg-border" />
+                <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+                  Origen raíz
+                </span>
+                <div className="h-px flex-1 bg-border" />
+              </div>
+
+              {/* Bloque 2 — Causa potencial */}
+              <div className="rounded-lg border bg-card p-4 space-y-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <ElemBadge num="E5" label="Causa potencial" tone="orange" />
+                    <h3 className="text-base font-bold mt-2">
+                      ¿Por qué ocurre ese fallo? (origen raíz)
+                    </h3>
+                    <p className="text-xs text-muted-foreground">
+                      Una causa por línea. Si la respuesta es "error humano" — pregunta por qué
+                      ocurre ese error.
+                    </p>
+                  </div>
+                </div>
                 <ListaMulti
                   items={s.causas}
                   setItems={(i) => setS({ ...s, causas: i })}
@@ -769,22 +809,35 @@ export function RiesgoWizardDialog({
             </div>
           )}
 
-          {step === 2 && (
+          {step === 3 && (
             <div className="space-y-5 max-w-2xl mx-auto">
-              <div>
-                <h3 className="text-xl font-bold">Describe la secuencia</h3>
-                <p className="text-sm text-muted-foreground">
-                  Explica paso a paso cómo el peligro llega a causar daño.
-                </p>
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <div className="text-[11px] uppercase tracking-wide text-muted-foreground font-semibold">
+                    Elemento 3 de 6
+                  </div>
+                  <h3 className="text-xl font-bold">SECUENCIA DE EVENTOS</h3>
+                  <p className="text-sm text-muted-foreground">
+                    La cadena causal paso a paso — cómo evoluciona el peligro hasta llegar al
+                    paciente.
+                  </p>
+                </div>
+                <ElemBadge num="E3" label="Secuencia" norma={normaKey} />
               </div>
 
               <div className="space-y-2">
-                <Label>¿Qué tiene que pasar para que el peligro cause daño? *</Label>
-                <p className="text-xs text-muted-foreground">{ayudas2.secuencia}</p>
+                <Label>Pasos de la secuencia (mínimo 3) *</Label>
+                <p className="text-xs text-muted-foreground">
+                  {ayudas2.secuencia} Incluye en qué momento fallan los controles existentes.
+                </p>
                 <ListaMulti
                   items={s.pasos}
                   setItems={(i) => setS({ ...s, pasos: i })}
-                  placeholder="Describe un paso"
+                  placeholder={
+                    s.peligro
+                      ? `Ej: El peligro "${s.peligro}" se activa cuando...`
+                      : "Ej: El peligro [PELIGRO] se activa cuando..."
+                  }
                   min={2}
                   max={8}
                 />
@@ -807,37 +860,103 @@ export function RiesgoWizardDialog({
                   ))}
                 </div>
               </div>
+            </div>
+          )}
 
-              <div className="space-y-2">
-                <Label>{ayudas2.situacionAyuda} *</Label>
-                <Textarea
-                  rows={2}
-                  value={s.situacion_peligrosa}
-                  onChange={(e) => setS({ ...s, situacion_peligrosa: e.target.value })}
-                  placeholder={ayudas2.situacionPlaceholder}
-                />
+          {step === 4 && (
+            <div className="space-y-5 max-w-2xl mx-auto">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <div className="text-[11px] uppercase tracking-wide text-muted-foreground font-semibold">
+                    Elemento 4 de 6
+                  </div>
+                  <h3 className="text-xl font-bold">SITUACIÓN PELIGROSA</h3>
+                  <p className="text-sm text-muted-foreground">
+                    El momento EXACTO en que el peligro toca el producto o el paciente.
+                  </p>
+                </div>
+                <ElemBadge num="E4" label="Situación" norma={normaKey} />
               </div>
 
               <div className="space-y-2">
-                <Label>¿Qué le pasaría al paciente o usuario final? *</Label>
-                <p className="text-xs text-muted-foreground">{ayudas2.efectoAyuda}</p>
+                <Label>{ayudas2.situacionAyuda} *</Label>
+                <p className="text-xs text-muted-foreground">
+                  No es el daño — es el instante de contacto. ¿Cuándo? ¿Dónde? ¿Bajo qué
+                  circunstancia?
+                </p>
                 <Textarea
                   rows={3}
-                  value={s.efecto_dano}
-                  onChange={(e) => setS({ ...s, efecto_dano: e.target.value })}
-                  placeholder="Ej: Reacción alérgica grave, Infección nosocomial, Sobredosis"
+                  value={s.situacion_peligrosa}
+                  onChange={(e) => setS({ ...s, situacion_peligrosa: e.target.value })}
+                  placeholder="Ej: Durante la implantación del dispositivo, el paciente es expuesto a..."
                 />
               </div>
             </div>
           )}
 
-          {step === 3 && (
-            <div className="space-y-6 max-w-3xl mx-auto">
-              <div>
-                <h3 className="text-xl font-bold">Evalúa el riesgo</h3>
-                <p className="text-sm text-muted-foreground">
-                  Mueve los controles para evaluar cada dimensión — el NPR se calcula automáticamente.
+          {step === 5 && (
+            <div className="space-y-5 max-w-2xl mx-auto">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <div className="text-[11px] uppercase tracking-wide text-muted-foreground font-semibold">
+                    Elemento 6 de 6
+                  </div>
+                  <h3 className="text-xl font-bold">EFECTO Y DAÑO POTENCIAL</h3>
+                  <p className="text-sm text-muted-foreground">
+                    La consecuencia en el PACIENTE o usuario final — no en el proceso.
+                  </p>
+                </div>
+                <ElemBadge num="E6" label="Efecto" norma={normaKey} />
+              </div>
+
+              <div className="space-y-2">
+                <Label>¿Qué le pasaría al paciente o usuario final? *</Label>
+                <p className="text-xs text-muted-foreground">
+                  Describe: tipo de lesión, reversibilidad, necesidad de intervención médica.
                 </p>
+                <Textarea
+                  rows={4}
+                  value={s.efecto_dano}
+                  onChange={(e) => setS({ ...s, efecto_dano: e.target.value })}
+                  placeholder="Ej: Reacción alérgica grave, Infección nosocomial, Sobredosis"
+                />
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  {[
+                    "Lesión permanente",
+                    "Requiere cirugía",
+                    "Hospitalización",
+                    "Lesión reversible",
+                    "Molestia menor",
+                    "Sin efecto clínico",
+                  ].map((ej) => (
+                    <button
+                      key={ej}
+                      type="button"
+                      onClick={() => {
+                        const sep = s.efecto_dano.trim() ? ". " : "";
+                        setS({ ...s, efecto_dano: s.efecto_dano + sep + ej });
+                      }}
+                      className="text-[11px] rounded-full border border-input bg-muted/40 hover:bg-accent hover:text-accent-foreground px-2.5 py-1 transition-colors"
+                    >
+                      + {ej}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {step === 6 && (
+            <div className="space-y-6 max-w-3xl mx-auto">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h3 className="text-xl font-bold">Evalúa el riesgo</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Mueve los controles para evaluar cada dimensión — el NPR se calcula
+                    automáticamente.
+                  </p>
+                </div>
+                <ElemBadge num="NPR" label="Evaluación" tone="neutral" />
               </div>
 
               <div className="grid md:grid-cols-3 gap-6">
@@ -929,13 +1048,16 @@ export function RiesgoWizardDialog({
             </div>
           )}
 
-          {step === 4 && (
+          {step === 7 && (
             <div className="space-y-6 max-w-3xl mx-auto">
-              <div>
-                <h3 className="text-xl font-bold">Documenta los controles</h3>
-                <p className="text-sm text-muted-foreground">
-                  Los controles reducen la probabilidad de que el riesgo ocurra o sea detectado.
-                </p>
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h3 className="text-xl font-bold">Documenta los controles</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Los controles reducen la probabilidad de que el riesgo ocurra o sea detectado.
+                  </p>
+                </div>
+                <ElemBadge num="Ctrl" label="Controles" tone="neutral" />
               </div>
 
               <div className="space-y-2">
@@ -1025,13 +1147,16 @@ export function RiesgoWizardDialog({
             </div>
           )}
 
-          {step === 5 && (
+          {step === 8 && (
             <div className="space-y-5 max-w-3xl mx-auto">
-              <div>
-                <h3 className="text-xl font-bold">Revisa el ID de riesgo</h3>
-                <p className="text-sm text-muted-foreground">
-                  Verifica que todo esté correcto antes de guardar.
-                </p>
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h3 className="text-xl font-bold">Revisa el ID de riesgo</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Verifica que todo esté correcto antes de guardar.
+                  </p>
+                </div>
+                <ElemBadge num="Rev" label="Revisión" tone="neutral" />
               </div>
 
               <div className="grid sm:grid-cols-3 gap-3">
