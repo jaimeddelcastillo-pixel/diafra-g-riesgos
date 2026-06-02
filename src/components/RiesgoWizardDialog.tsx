@@ -1084,6 +1084,146 @@ export function RiesgoWizardDialog({
                   </p>
                 </div>
               </div>
+
+              {/* Decisión: ¿requiere acción correctiva? */}
+              {!requiereAccion ? (
+                <div className="rounded-lg border border-npr-low bg-npr-low/10 p-4 space-y-1">
+                  <div className="flex items-center gap-2 text-sm font-semibold text-npr-low">
+                    <Check className="h-4 w-4" />
+                    ✅ NPR BAJO — No requiere acción inmediata
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    El riesgo es aceptable con los controles actuales (umbral medio:{" "}
+                    {normaConfig.umbralNPRMedio}).
+                  </p>
+                </div>
+              ) : (
+                <div className="rounded-lg border border-npr-high bg-npr-high/10 p-4 space-y-4">
+                  <div className="flex items-center gap-2 text-sm font-semibold text-npr-high">
+                    <AlertTriangle className="h-4 w-4" />
+                    ⚠️ Este riesgo REQUIERE acción correctiva
+                  </div>
+                  <div className="space-y-2">
+                    <Label>¿Qué acción correctiva o preventiva se implementará? *</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Indica el nivel: Nivel A (ingeniería), Nivel B (validación/barrera),
+                      Nivel C (documental/capacitación).
+                    </p>
+                    <Textarea
+                      rows={2}
+                      value={s.accion_propuesta}
+                      onChange={(e) => setS({ ...s, accion_propuesta: e.target.value })}
+                      placeholder="Ej: Nivel B — Instalar alarma automática con umbral al 90% del límite validado"
+                    />
+                  </div>
+                  <div className="grid sm:grid-cols-2 gap-3">
+                    <div className="space-y-2">
+                      <Label>¿Quién es responsable de implementarla? *</Label>
+                      <p className="text-xs text-muted-foreground">
+                        Rol o cargo — no nombre propio. Ej: Responsable Sanitario, Jefe de
+                        Producción.
+                      </p>
+                      <Input
+                        value={s.responsable}
+                        onChange={(e) => setS({ ...s, responsable: e.target.value })}
+                        placeholder="Ej: Responsable Sanitario"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Fecha compromiso *</Label>
+                      <p className="text-xs text-muted-foreground">
+                        Fecha realista de implementación.
+                      </p>
+                      <Input
+                        type="date"
+                        value={s.fecha_compromiso}
+                        onChange={(e) => setS({ ...s, fecha_compromiso: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* NPR residual — siempre visible, queda documentado en expediente */}
+              <div className="rounded-lg border bg-muted/20 p-4 space-y-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <h4 className="font-semibold text-sm">
+                      {requiereAccion
+                        ? "¿Cuál será el NPR después de implementar la acción?"
+                        : "NPR residual (sin acción correctiva)"}
+                    </h4>
+                    <p className="text-[11px] text-muted-foreground">
+                      {requiereAccion
+                        ? "Estima cómo cambian S/O/D una vez aplicada la acción propuesta."
+                        : "Documentado para el expediente — ajusta si los controles actuales ya reducen el NPR."}
+                    </p>
+                  </div>
+                  <NPRPanel npr={nprRes} s={s.sev_residual} norma={normaKey} compact />
+                </div>
+                <div className="grid sm:grid-cols-3 gap-4">
+                  <SliderField
+                    label="S residual"
+                    value={s.sev_residual}
+                    onChange={(v) => {
+                      setResidualesEditados(true);
+                      setS({ ...s, sev_residual: v });
+                    }}
+                    description={getSeveridadTxt(normaKey, s.sev_residual)}
+                  />
+                  <SliderField
+                    label="O residual"
+                    value={s.ocu_residual}
+                    onChange={(v) => {
+                      setResidualesEditados(true);
+                      setS({ ...s, ocu_residual: v });
+                    }}
+                    description={getOcurrenciaTxt(s.ocu_residual)}
+                  />
+                  {usaDet && (
+                    <SliderField
+                      label="D residual"
+                      value={s.det_residual}
+                      onChange={(v) => {
+                        setResidualesEditados(true);
+                        setS({ ...s, det_residual: v });
+                      }}
+                      description={getDetectabilidadTxt(s.det_residual)}
+                    />
+                  )}
+                </div>
+
+                {nprRes >= normaConfig.umbralNPRMedio && (
+                  <div className="rounded-md border border-amber-400 bg-amber-50 dark:bg-amber-950/30 p-3 space-y-2">
+                    <div className="flex items-center gap-2 text-xs font-semibold text-amber-700 dark:text-amber-300">
+                      <AlertTriangle className="h-4 w-4" />
+                      El NPR residual sigue siendo MEDIO o ALTO — agrega una justificación AFAP
+                    </div>
+                    <Label className="text-xs">
+                      Justificación AFAP — ¿por qué este NPR residual es aceptable?
+                    </Label>
+                    <Textarea
+                      rows={2}
+                      value={s.justificacion_aceptabilidad}
+                      onChange={(e) =>
+                        setS({ ...s, justificacion_aceptabilidad: e.target.value })
+                      }
+                      placeholder="Ej: Beneficio terapéutico supera el riesgo residual; controles adicionales no son técnicamente factibles."
+                    />
+                  </div>
+                )}
+              </div>
+
+              {sevCritica && (
+                <div className="flex items-start gap-2 rounded-md border border-destructive bg-destructive/10 p-3 text-sm">
+                  <AlertTriangle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
+                  <span>
+                    ⚠️ Severidad S≥{normaConfig.umbralSeveridadCritica} — Este riesgo requiere{" "}
+                    <strong>Dictamen de Beneficio-Riesgo</strong> firmado por el{" "}
+                    {normaConfig.terminologia.aprobadorFinal}.
+                  </span>
+                </div>
+              )}
             </div>
           )}
 
