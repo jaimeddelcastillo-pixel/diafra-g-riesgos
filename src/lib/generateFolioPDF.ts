@@ -580,6 +580,12 @@ export async function generateFolioPDF(
     const idColW = 14;
     const tableStartY = y;
 
+    // Celda vacía reutilizable para la columna 0 (ID). El ID se dibuja como
+    // overlay en didDrawPage para evitar el problema de rowSpan grande que
+    // forzaba a autoTable a saltar páginas dejando hojas en blanco con solo
+    // el encabezado de tabla.
+    const idEmpty = { content: "", styles: { fillColor: [248, 248, 248] as any } };
+
     drawTable({
       startY: y,
       head: [
@@ -593,11 +599,7 @@ export async function generateFolioPDF(
       ],
       body: [
         [
-          {
-            content: String(r.numero_id).padStart(2, "0"),
-            rowSpan: 8,
-            styles: { halign: "center", valign: "middle", fontSize: 18, fontStyle: "bold", fillColor: [248, 248, 248] },
-          },
+          idEmpty,
           `${t.procesoEquipo}:\n${r.etapa_proceso || "—"}`,
           { content: "S:", styles: { fontStyle: "bold", halign: "right", valign: "middle" } },
           { content: String(r.severidad), styles: { fontStyle: "bold", halign: "center", valign: "middle", fontSize: 11 } },
@@ -605,6 +607,7 @@ export async function generateFolioPDF(
           { content: `Acción Implementada:\n${r.accion_implementada || "—"}`, colSpan: 2 },
         ],
         [
+          idEmpty,
           `Peligro (fuente):\n${r.peligro || "—"}`,
           { content: "O:", styles: { fontStyle: "bold", halign: "right", valign: "middle" } },
           { content: String(r.ocurrencia), styles: { halign: "center", valign: "middle", fontSize: 11 } },
@@ -612,6 +615,7 @@ export async function generateFolioPDF(
           { content: `Fecha y Evidencia:\n${r.fecha_evidencia || "—"}`, colSpan: 2 },
         ],
         [
+          idEmpty,
           `Situación Peligrosa:\n${r.situacion_peligrosa || "—"}`,
           usaDeteccion
             ? { content: "D:", styles: { fontStyle: "bold", halign: "right", valign: "middle" } as any }
@@ -629,6 +633,7 @@ export async function generateFolioPDF(
           },
         ],
         [
+          idEmpty,
           {
             content: `Secuencia de Eventos:\n${normalizarTexto(r.secuencia_eventos)}`,
             styles: { halign: "left", valign: "top", overflow: "linebreak" },
@@ -652,18 +657,21 @@ export async function generateFolioPDF(
           },
         ],
         [
+          idEmpty,
           {
             content: `Modo de Falla:\n${normalizarTexto(r.peligro_modo_falla)}`,
             styles: { halign: "left", valign: "top", overflow: "linebreak" },
           },
         ],
         [
+          idEmpty,
           {
             content: `Causa:\n${normalizarTexto(r.causa_potencial)}`,
             styles: { halign: "left", valign: "top", overflow: "linebreak" },
           },
         ],
         [
+          idEmpty,
           `${t.efectoDano}:\n${r.efecto_dano || "—"}`,
           { content: umbralLeyenda, colSpan: 2, styles: { fontSize: 7, valign: "middle" } },
           `Verificado por: ${r.verificado_por || "—"}\nFecha: ${fmtDate(r.fecha_verificacion)}\nResultado: ${r.resultado_verificacion || "—"}`,
@@ -677,7 +685,7 @@ export async function generateFolioPDF(
       styles: { fontSize: 7.5, cellPadding: 2.5, lineColor: [0, 0, 0], lineWidth: 0.2, overflow: "linebreak" },
       headStyles: { fillColor: BAND_FILL, textColor: [0, 0, 0], fontStyle: "bold", fontSize: 8, lineColor: [0, 0, 0], lineWidth: 0.2 },
       columnStyles: {
-        0: { cellWidth: 14 },
+        0: { cellWidth: 14, fillColor: [248, 248, 248] as any },
         1: { cellWidth: 70 },
         2: { cellWidth: 10 },
         3: { cellWidth: 14 },
@@ -686,37 +694,39 @@ export async function generateFolioPDF(
         6: { cellWidth: 30 },
       },
       margin: tableMargin,
-      // rowPageBreak:"auto" — con rowSpan:8 en ID, "avoid" hacía que autoTable
-      // estimara el bloque entero y saltara a página nueva dejando una página
-      // con solo head. El hook didDrawPage redibuja la columna ID en cada
-      // continuación cuando el bloque sí necesita partirse.
       rowPageBreak: "auto",
+      // Dibuja el "ID" como overlay vertical centrado sobre todas las celdas
+      // de la columna 0 que se hayan pintado en la página actual. Evita el
+      // problema del rowSpan grande que generaba páginas en blanco.
       didDrawPage: (data: any) => {
         const currentPage = (doc as any).internal.getCurrentPageInfo().pageNumber;
-        if (currentPage > firstPageOfRiesgo) {
-          // Redibujar la columna ID (que se perdió por el rowSpan) en cada continuación.
-          // El head se repite, así que tomamos su altura para alinear el bloque ID.
-          const headRow = data.table.head?.[0];
-          const headCell = headRow?.cells?.[0];
-          const tableTop = headCell ? headCell.y + headCell.height : tableMargin.top;
-          const tableBottom = data.cursor?.y ?? (pageH - footerGap);
-          const idH = tableBottom - tableTop;
-          if (idH > 0) {
-            doc.setFillColor(248, 248, 248);
-            doc.setDrawColor(0);
-            doc.setLineWidth(0.2);
-            doc.rect(margin, tableTop, idColW, idH, "FD");
-            doc.setFont("helvetica", "bold");
-            doc.setFontSize(18);
-            doc.setTextColor(0);
-            doc.text(idLabel, margin + idColW / 2, tableTop + idH / 2 + 2, { align: "center" });
-            // Etiqueta pequeña de continuación arriba del ID
-            doc.setFontSize(6);
-            doc.setFont("helvetica", "italic");
-            doc.setTextColor(100);
-            doc.text("(cont.)", margin + idColW / 2, tableTop + idH / 2 + 7, { align: "center" });
-            doc.setTextColor(0);
+        const bodyRows = data.table.body || [];
+        // Filtra las celdas de la columna 0 que se pintaron en esta página.
+        const cellsOnPage: any[] = [];
+        for (const row of bodyRows) {
+          const c = row.cells?.[0];
+          if (!c) continue;
+          // c.y se establece después de dibujar; >= margen superior y <= pie
+          if (typeof c.y === "number" && c.y >= tableMargin.top - 1 && c.y < pageH - 5) {
+            cellsOnPage.push(c);
           }
+        }
+        if (cellsOnPage.length === 0) return;
+        const top = cellsOnPage[0].y;
+        const last = cellsOnPage[cellsOnPage.length - 1];
+        const bottom = last.y + last.height;
+        const idH = bottom - top;
+        if (idH <= 0) return;
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(18);
+        doc.setTextColor(0);
+        doc.text(idLabel, margin + idColW / 2, top + idH / 2 + 2, { align: "center" });
+        if (currentPage > firstPageOfRiesgo) {
+          doc.setFontSize(6);
+          doc.setFont("helvetica", "italic");
+          doc.setTextColor(100);
+          doc.text("(cont.)", margin + idColW / 2, top + idH / 2 + 7, { align: "center" });
+          doc.setTextColor(0);
         }
       },
     });
@@ -755,24 +765,6 @@ export async function generateFolioPDF(
       },
       margin: tableMargin,
       rowPageBreak: "avoid",
-      didDrawPage: (data: any) => {
-        const currentPage = (doc as any).internal.getCurrentPageInfo().pageNumber;
-        // Solo etiquetar "continuación" si la fila B saltó a una página NUEVA
-        // respecto a donde acabó la tabla principal del riesgo.
-        if (currentPage > pageBeforeFilaB) {
-          // Etiqueta sutil arriba: "Riesgo NN — Aceptabilidad (cont.)"
-          const labelY = tableMargin.top - 2;
-          doc.setFont("helvetica", "italic");
-          doc.setFontSize(7);
-          doc.setTextColor(100);
-          doc.text(
-            `Riesgo ${idLabel} — Aceptabilidad (continuación)`,
-            margin,
-            labelY,
-          );
-          doc.setTextColor(0);
-        }
-      },
     });
   });
 
