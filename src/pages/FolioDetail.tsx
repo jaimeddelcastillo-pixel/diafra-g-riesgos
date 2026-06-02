@@ -1179,10 +1179,10 @@ function SeccionRiesgos({ riesgos, locked, folioId, folioCodigo, procesoEquipo, 
                 return (
                   <tr
                     key={r.id}
-                    className={`border-b last:border-0 ${rowAlert ? "bg-destructive/5" : ""} ${!locked ? "hover:bg-muted/30 cursor-pointer" : ""}`}
-                    onClick={() => !locked && setRiesgoForm({ open: true, riesgo: r })}
+                    className={`border-b last:border-0 hover:bg-muted/30 cursor-pointer ${rowAlert ? "bg-destructive/5" : ""}`}
+                    onClick={() => abrirDetalle(r)}
                   >
-                    <td className="border-r p-1.5 text-center font-mono font-bold">
+                    <td className="sticky left-0 z-[5] bg-background border-r p-1.5 text-center font-mono font-bold">
                       {String(r.numero_id).padStart(2, "0")}
                     </td>
                     {/* Grupo 1: Identificación FEUM / ISO 14971 */}
