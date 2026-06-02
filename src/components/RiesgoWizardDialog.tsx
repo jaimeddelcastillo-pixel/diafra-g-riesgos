@@ -38,6 +38,7 @@ import {
   getDetectabilidadTxt,
   getFundamentoNormativo,
   POBLACIONES_VULNERABLES,
+  getChipsControles,
 } from "@/config/wizard-content";
 import { WizardAsistente, type WizardApplyField } from "@/components/wizard/WizardAsistente";
 import {
@@ -74,7 +75,9 @@ type WizardState = {
   deteccion: number;
   poblacion: string;
   // Paso 4
-  controles_prevencion: string[];
+  controles_prev_a: string[];
+  controles_prev_b: string[];
+  controles_prev_c: string[];
   controles_deteccion: string[];
   sev_residual: number;
   ocu_residual: number;
@@ -99,7 +102,9 @@ function initialState(): WizardState {
     ocurrencia: 1,
     deteccion: 1,
     poblacion: "",
-    controles_prevencion: [""],
+    controles_prev_a: [""],
+    controles_prev_b: [""],
+    controles_prev_c: [""],
     controles_deteccion: [""],
     sev_residual: 1,
     ocu_residual: 1,
