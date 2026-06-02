@@ -574,6 +574,12 @@ export async function generateFolioPDF(
         : "GESTIÓN DE RIESGOS";
     y = sectionHeader(y, "III.", label);
 
+    // Capturamos el primer número de página de este riesgo para detectar continuaciones
+    const firstPageOfRiesgo = (doc as any).internal.getCurrentPageInfo().pageNumber;
+    const idLabel = String(r.numero_id).padStart(2, "0");
+    const idColW = 14;
+    const tableStartY = y;
+
     drawTable({
       startY: y,
       head: [
@@ -687,6 +693,41 @@ export async function generateFolioPDF(
         6: { cellWidth: 30 },
       },
       margin: tableMargin,
+      rowPageBreak: "avoid",
+      didDrawPage: (data: any) => {
+        const currentPage = (doc as any).internal.getCurrentPageInfo().pageNumber;
+        // En páginas de continuación del mismo riesgo: redibujar banda de sección y celda ID
+        if (currentPage > firstPageOfRiesgo) {
+          const yBand = tableMargin.top;
+          // Banda de sección repetida
+          doc.setFillColor(...BAND_FILL);
+          doc.setDrawColor(...BAND_BORDER);
+          doc.setLineWidth(0.3);
+          doc.rect(margin, yBand, pageW - 2 * margin, 7, "FD");
+          doc.setFont("helvetica", "bold");
+          doc.setFontSize(9);
+          doc.setTextColor(0);
+          doc.text(pdfSafeText("III."), margin + 4, yBand + 4.8);
+          doc.text(pdfSafeText(`${label} (continuación)`), margin + 18, yBand + 4.8);
+          // Mover la tabla hacia abajo para no superponer la banda
+          data.settings.margin.top = yBand + 7 + 0.5;
+
+          // Redibujar la columna ID en la continuación
+          const tableTop = data.table.body[0]?.cells?.[0]?.y ?? (yBand + 7.5);
+          const tableBottom = data.cursor?.y ?? (pageH - footerGap);
+          const idH = tableBottom - tableTop;
+          if (idH > 0) {
+            doc.setFillColor(248, 248, 248);
+            doc.setDrawColor(0);
+            doc.setLineWidth(0.2);
+            doc.rect(margin, tableTop, idColW, idH, "FD");
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(18);
+            doc.setTextColor(0);
+            doc.text(idLabel, margin + idColW / 2, tableTop + idH / 2 + 2, { align: "center" });
+          }
+        }
+      },
     });
   });
 
