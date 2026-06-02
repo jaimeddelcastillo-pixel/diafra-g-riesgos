@@ -331,22 +331,19 @@ export function RiesgoWizardDialog({
   const canAdvance = (st: number): boolean => {
     if (st === 1) {
       const etapa = s.etapa_proceso === "__otra__" ? s.etapa_otra.trim() : s.etapa_proceso.trim();
+      return s.peligro.trim().length > 0 && etapa.length > 0;
+    }
+    if (st === 2) {
       return (
-        s.peligro.trim().length > 0 &&
-        etapa.length > 0 &&
         s.peligro_modo_falla.trim().length > 0 &&
         s.causas.filter((c) => c.trim()).length >= 1
       );
     }
-    if (st === 2) {
-      return (
-        s.pasos.filter((p) => p.trim()).length >= 2 &&
-        s.situacion_peligrosa.trim().length > 0 &&
-        s.efecto_dano.trim().length > 0
-      );
-    }
-    if (st === 3) return true;
-    if (st === 4) {
+    if (st === 3) return s.pasos.filter((p) => p.trim()).length >= 2;
+    if (st === 4) return s.situacion_peligrosa.trim().length > 0;
+    if (st === 5) return s.efecto_dano.trim().length > 0;
+    if (st === 6) return true;
+    if (st === 7) {
       if (requiereAccion) {
         return (
           s.accion_propuesta.trim().length > 0 &&
