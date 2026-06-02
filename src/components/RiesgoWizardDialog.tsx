@@ -1451,3 +1451,184 @@ export function RiesgoWizardDialog({
     </Dialog>
   );
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Paso 7 — Controles con jerarquía A/B/C + Detección
+// ─────────────────────────────────────────────────────────────────────────────
+function ControlesPaso7({
+  s,
+  setS,
+  normaKey,
+}: {
+  s: WizardState;
+  setS: React.Dispatch<React.SetStateAction<WizardState>>;
+  normaKey: NormaKey;
+}) {
+  const chips = getChipsControles(normaKey);
+  const chipBtn =
+    "text-[11px] rounded-full border border-input bg-muted/40 hover:bg-accent hover:text-accent-foreground px-2.5 py-1 transition-colors";
+
+  const addChip = (field: "controles_prev_a" | "controles_prev_b" | "controles_prev_c" | "controles_deteccion", v: string) => {
+    setS((prev) => {
+      const arr = prev[field];
+      const idx = arr.findIndex((x) => !x.trim());
+      const next = [...arr];
+      if (idx >= 0) next[idx] = v;
+      else if (next.length < 20) next.push(v);
+      return { ...prev, [field]: next };
+    });
+  };
+
+  return (
+    <div className="space-y-6 max-w-3xl mx-auto">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <div className="text-[11px] uppercase tracking-wide text-muted-foreground font-semibold">
+            Paso 7 de 8
+          </div>
+          <h3 className="text-xl font-bold">CONTROLES</h3>
+          <p className="text-sm text-muted-foreground">
+            Los controles reducen el NPR atacando la Ocurrencia (prevención) o la
+            Detectabilidad (detección).
+          </p>
+        </div>
+        <ElemBadge num="Ctrl" label="Controles" tone="neutral" />
+      </div>
+
+      {/* SECCIÓN A — Prevención */}
+      <div className="rounded-lg border bg-card p-4 space-y-4">
+        <div className="flex items-center gap-2">
+          <ElemBadge num="O↓" label="Reducen la Ocurrencia (O)" tone="blue" />
+        </div>
+        <div>
+          <Label>¿Qué controles reducen la probabilidad de que el riesgo ocurra?</Label>
+          <p className="text-xs text-muted-foreground mt-1">
+            Prioridad: primero eliminar el peligro por diseño, luego barreras físicas,
+            luego controles administrativos.
+          </p>
+        </div>
+
+        {/* Nivel A */}
+        <div className="space-y-2 rounded-md border-l-2 border-primary pl-3">
+          <div>
+            <div className="text-[11px] uppercase tracking-wide font-bold text-primary">
+              Nivel A — Diseño / Ingeniería
+            </div>
+            <Label className="text-sm">
+              ¿Puedes eliminar o reducir el peligro desde el diseño?
+            </Label>
+          </div>
+          <ListaMulti
+            items={s.controles_prev_a}
+            setItems={(i) => setS({ ...s, controles_prev_a: i })}
+            placeholder="Ej: Rediseño del componente para eliminar la fuente del peligro"
+          />
+          <div className="flex flex-wrap gap-1.5">
+            {chips.prevA.map((c) => (
+              <button
+                key={c}
+                type="button"
+                onClick={() => addChip("controles_prev_a", c)}
+                className={chipBtn}
+              >
+                + {c}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Nivel B */}
+        <div className="space-y-2 rounded-md border-l-2 border-blue-500 pl-3">
+          <div>
+            <div className="text-[11px] uppercase tracking-wide font-bold text-blue-600 dark:text-blue-400">
+              Nivel B — Barreras y validación
+            </div>
+            <Label className="text-sm">¿Qué barreras o validaciones controlan el riesgo?</Label>
+          </div>
+          <ListaMulti
+            items={s.controles_prev_b}
+            setItems={(i) => setS({ ...s, controles_prev_b: i })}
+            placeholder="Ej: Validación de proceso con tres lotes consecutivos"
+          />
+          <div className="flex flex-wrap gap-1.5">
+            {chips.prevB.map((c) => (
+              <button
+                key={c}
+                type="button"
+                onClick={() => addChip("controles_prev_b", c)}
+                className={chipBtn}
+              >
+                + {c}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Nivel C */}
+        <div className="space-y-2 rounded-md border-l-2 border-muted-foreground/40 pl-3">
+          <div>
+            <div className="text-[11px] uppercase tracking-wide font-bold text-muted-foreground">
+              Nivel C — Administrativos
+            </div>
+            <Label className="text-sm">
+              ¿Qué controles documentales o de capacitación aplican?
+            </Label>
+          </div>
+          <ListaMulti
+            items={s.controles_prev_c}
+            setItems={(i) => setS({ ...s, controles_prev_c: i })}
+            placeholder="Ej: PNO actualizado con evidencia de capacitación al personal"
+          />
+          <div className="flex flex-wrap gap-1.5">
+            {chips.prevC.map((c) => (
+              <button
+                key={c}
+                type="button"
+                onClick={() => addChip("controles_prev_c", c)}
+                className={chipBtn}
+              >
+                + {c}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* SECCIÓN B — Detección */}
+      <div className="rounded-lg border bg-card p-4 space-y-3">
+        <div className="flex items-center gap-2">
+          <ElemBadge num="D↑" label="Mejoran la Detectabilidad (D)" tone="orange" />
+        </div>
+        <div>
+          <Label>¿Cómo detectas que el riesgo ocurrió antes de llegar al paciente?</Label>
+          <p className="text-xs text-muted-foreground mt-1">
+            Los controles de detección no evitan el riesgo — lo identifican a tiempo para
+            actuar.
+          </p>
+        </div>
+        <ListaMulti
+          items={s.controles_deteccion}
+          setItems={(i) => setS({ ...s, controles_deteccion: i })}
+          placeholder="Describe un control de detección"
+        />
+        <div className="flex flex-wrap gap-1.5">
+          {chips.deteccion.map((c) => (
+            <button
+              key={c}
+              type="button"
+              onClick={() => addChip("controles_deteccion", c)}
+              className={chipBtn}
+            >
+              + {c}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <p className="text-xs text-muted-foreground italic">
+        Los controles de Nivel A son siempre preferibles. Un control que elimina el peligro
+        es mejor que uno que lo detecta después de ocurrir.
+      </p>
+    </div>
+  );
+}
