@@ -1228,102 +1228,11 @@ export function RiesgoWizardDialog({
           )}
 
           {step === 7 && (
-            <div className="space-y-6 max-w-3xl mx-auto">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <h3 className="text-xl font-bold">Documenta los controles</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Los controles reducen la probabilidad de que el riesgo ocurra o sea detectado.
-                  </p>
-                </div>
-                <ElemBadge num="Ctrl" label="Controles" tone="neutral" />
-              </div>
-
-              <div className="space-y-2">
-                <Label>¿Qué haces para PREVENIR que ocurra? (Nivel A)</Label>
-                <p className="text-xs text-muted-foreground">{ayudasC.prevencion}</p>
-                <ListaMulti
-                  items={s.controles_prevencion}
-                  setItems={(i) => setS({ ...s, controles_prevencion: i })}
-                  placeholder="Describe un control de prevención"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>¿Cómo DETECTAS si ocurre antes de llegar al paciente? (Nivel B)</Label>
-                <p className="text-xs text-muted-foreground">{ayudasC.deteccion}</p>
-                <ListaMulti
-                  items={s.controles_deteccion}
-                  setItems={(i) => setS({ ...s, controles_deteccion: i })}
-                  placeholder="Describe un control de detección"
-                />
-              </div>
-
-              <div className="rounded-lg border bg-muted/20 p-4 space-y-4">
-                <div className="flex items-center justify-between">
-                  <h4 className="font-semibold text-sm">
-                    Ahora con tus controles, ¿cómo queda el riesgo?
-                  </h4>
-                  <NPRPanel npr={nprRes} s={s.sev_residual} norma={normaKey} compact />
-                </div>
-                <div className="grid sm:grid-cols-3 gap-4">
-                  <SliderField
-                    label="S residual"
-                    value={s.sev_residual}
-                    onChange={(v) => setS({ ...s, sev_residual: v })}
-                    description={getSeveridadTxt(normaKey, s.sev_residual)}
-                  />
-                  <SliderField
-                    label="O residual"
-                    value={s.ocu_residual}
-                    onChange={(v) => setS({ ...s, ocu_residual: v })}
-                    description={getOcurrenciaTxt(s.ocu_residual)}
-                  />
-                  {usaDet && (
-                    <SliderField
-                      label="D residual"
-                      value={s.det_residual}
-                      onChange={(v) => setS({ ...s, det_residual: v })}
-                      description={getDetectabilidadTxt(s.det_residual)}
-                    />
-                  )}
-                </div>
-              </div>
-
-              {requiereAccion && (
-                <div className="rounded-lg border border-npr-high bg-npr-high/5 p-4 space-y-3">
-                  <div className="flex items-center gap-2 text-sm font-semibold text-npr-high">
-                    <AlertTriangle className="h-4 w-4" />
-                    NPR residual {nprRes} — requiere acción correctiva
-                  </div>
-                  <div className="space-y-2">
-                    <Label>¿Qué acción propones para reducir este riesgo? *</Label>
-                    <Textarea
-                      rows={2}
-                      value={s.accion_propuesta}
-                      onChange={(e) => setS({ ...s, accion_propuesta: e.target.value })}
-                    />
-                  </div>
-                  <div className="grid sm:grid-cols-2 gap-3">
-                    <div className="space-y-2">
-                      <Label>Responsable (rol o nombre) *</Label>
-                      <Input
-                        value={s.responsable}
-                        onChange={(e) => setS({ ...s, responsable: e.target.value })}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Fecha compromiso *</Label>
-                      <Input
-                        type="date"
-                        value={s.fecha_compromiso}
-                        onChange={(e) => setS({ ...s, fecha_compromiso: e.target.value })}
-                      />
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
+            <ControlesPaso7
+              s={s}
+              setS={setS}
+              normaKey={normaKey}
+            />
           )}
 
           {step === 8 && (
