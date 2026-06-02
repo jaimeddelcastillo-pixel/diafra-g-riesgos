@@ -431,8 +431,11 @@ export function AssistantPanel({ open, onOpenChange, folioId = null, folioCodigo
             </aside>
           )}
 
-          <ScrollArea className="flex-1 px-4 py-3" ref={scrollRef as any}>
-          <div className="space-y-4">
+          <ScrollArea
+            className="flex-1 px-4 py-3 min-w-0 [&>[data-radix-scroll-area-viewport]>div]:!block [&>[data-radix-scroll-area-viewport]>div]:!min-w-0"
+            ref={scrollRef as any}
+          >
+          <div className="space-y-4 min-w-0">
             {messages.length === 0 && (
               <div className="text-center text-muted-foreground text-sm py-12">
                 <Bot className="h-10 w-10 mx-auto mb-2 opacity-40" />
