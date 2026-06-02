@@ -431,8 +431,11 @@ export function AssistantPanel({ open, onOpenChange, folioId = null, folioCodigo
             </aside>
           )}
 
-          <ScrollArea className="flex-1 px-4 py-3" ref={scrollRef as any}>
-          <div className="space-y-4">
+          <ScrollArea
+            className="flex-1 px-4 py-3 min-w-0 [&>[data-radix-scroll-area-viewport]>div]:!block [&>[data-radix-scroll-area-viewport]>div]:!min-w-0"
+            ref={scrollRef as any}
+          >
+          <div className="space-y-4 min-w-0">
             {messages.length === 0 && (
               <div className="text-center text-muted-foreground text-sm py-12">
                 <Bot className="h-10 w-10 mx-auto mb-2 opacity-40" />
@@ -566,13 +569,13 @@ function groupConversaciones(rows: Conversacion[]) {
 function MessageBubble({ msg, onInsertarRiesgo, folioId, insertedRiskKeys }: { msg: Msg; onInsertarRiesgo: (i: any) => void; folioId: string | null; insertedRiskKeys: Set<string> }) {
   const isUser = msg.role === "user";
   return (
-    <div className={`flex gap-2 ${isUser ? "flex-row-reverse" : ""}`}>
+    <div className={`flex gap-2 min-w-0 ${isUser ? "flex-row-reverse" : ""}`}>
       <div className={`h-7 w-7 rounded-full flex items-center justify-center shrink-0 ${isUser ? "bg-accent" : "bg-primary"}`}>
         {isUser ? <User className="h-3.5 w-3.5 text-accent-foreground" /> : <Bot className="h-3.5 w-3.5 text-primary-foreground" />}
       </div>
-      <div className={`rounded-md px-3 py-2 text-sm max-w-[85%] ${isUser ? "bg-accent/10" : "bg-muted/50"}`}>
+      <div className={`rounded-md px-3 py-2 text-sm max-w-[85%] min-w-0 overflow-hidden ${isUser ? "bg-accent/10" : "bg-muted/50"}`}>
         {typeof msg.content === "string" ? (
-          <div className="prose prose-sm max-w-none [&_p]:my-1 [&_ul]:my-1 [&_ol]:my-1">
+          <div className="prose prose-sm max-w-none break-words [overflow-wrap:anywhere] [&_p]:my-1 [&_ul]:my-1 [&_ol]:my-1 [&_pre]:whitespace-pre-wrap [&_pre]:break-words [&_code]:break-words [&_table]:block [&_table]:max-w-full [&_table]:overflow-x-auto">
             <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
           </div>
         ) : null}
