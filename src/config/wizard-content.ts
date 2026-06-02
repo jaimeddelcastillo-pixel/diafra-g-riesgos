@@ -176,6 +176,73 @@ export function getAyudasControles(norma: string | null | undefined): {
   };
 }
 
+// ── Chips de controles jerarquizados por norma (Paso 7) ──────────────────────
+export interface ChipsControles {
+  prevA: string[]; // Nivel A — Diseño / Ingeniería
+  prevB: string[]; // Nivel B — Barreras y validación
+  prevC: string[]; // Nivel C — Administrativos (compartidos)
+  deteccion: string[];
+}
+
+const NIVEL_C_COMPARTIDO = [
+  "PNO actualizado",
+  "Capacitación con evidencia",
+  "Lista de verificación",
+  "Doble verificación",
+];
+
+const CHIPS_CONTROLES: Record<NormaWizardKey, ChipsControles> = {
+  "NOM-241": {
+    prevA: [
+      "Rediseño del componente",
+      "Cambio de material",
+      "Automatización",
+      "Interlock físico",
+      "Eliminación del paso",
+    ],
+    prevB: [
+      "Calificación IQ/OQ/PQ",
+      "Validación de proceso",
+      "Alarma automática",
+      "Control en línea",
+    ],
+    prevC: NIVEL_C_COMPARTIDO,
+    deteccion: [
+      "Inspección visual 100%",
+      "Muestreo AQL",
+      "Prueba de hermeticidad",
+      "Auditoría de PNO",
+    ],
+  },
+  "NOM-059": {
+    prevA: [
+      "Aislador / RABS",
+      "Sistema CIP/SIP",
+      "Control CPP en línea",
+      "QbD",
+      "Calificación cuarto limpio",
+    ],
+    prevB: [
+      "Media fills semestrales",
+      "Prueba de integridad de filtro",
+      "IPC automatizado",
+      "Validación PV",
+    ],
+    prevC: NIVEL_C_COMPARTIDO,
+    deteccion: [
+      "Análisis QC",
+      "Muestreo IPC",
+      "HPLC validado",
+      "Inspección AVI",
+      "Prueba microbiológica",
+    ],
+  },
+};
+
+export function getChipsControles(norma: string | null | undefined): ChipsControles {
+  return CHIPS_CONTROLES[normalizaNorma(norma)];
+}
+
 // ── Fundamento normativo (Paso 5) ────────────────────────────────────────────
 export function getFundamentoNormativo(norma: string | null | undefined): string {
   const n = normalizaNorma(norma);
