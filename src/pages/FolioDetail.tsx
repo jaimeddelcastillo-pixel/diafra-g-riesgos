@@ -1119,27 +1119,27 @@ function SeccionRiesgos({ riesgos, locked, folioId, folioCodigo, procesoEquipo, 
         >
           <div style={{ width: tableWidth, height: 1 }} />
         </div>
-        <div ref={bottomScrollRef} onScroll={handleBottomScroll} className="overflow-x-auto max-h-[70vh] overflow-y-auto">
-          <table ref={tableWrapRef as React.RefObject<HTMLTableElement>} className="w-full text-[11px] min-w-[1800px]">
+        <div ref={bottomScrollRef} onScroll={handleBottomScroll} className="overflow-auto max-h-[70vh]">
+          <table ref={tableWrapRef as unknown as React.RefObject<HTMLTableElement>} className="w-full text-[11px] min-w-[1800px]">
             <thead>
               <tr className="bg-muted/50">
-                <th rowSpan={2} className="sticky left-0 top-0 z-20 bg-muted/95 backdrop-blur border-r border-b p-2 text-center font-bold w-10">
+                <th rowSpan={2} className="sticky left-0 top-0 z-30 bg-muted border-r border-b p-2 text-center font-bold w-10">
                   ID
                 </th>
-                <th colSpan={7} className="border-r border-b p-2 text-center font-bold">
+                <th colSpan={7} className="sticky top-0 z-20 bg-muted border-r border-b p-2 text-center font-bold">
                   1. IDENTIFICACIÓN — {refs}
                 </th>
-                <th colSpan={4} className="border-r border-b p-2 text-center font-bold">
+                <th colSpan={4} className="sticky top-0 z-20 bg-muted border-r border-b p-2 text-center font-bold">
                   2. EVALUACIÓN INICIAL
                 </th>
-                <th colSpan={5} className="border-r border-b p-2 text-center font-bold">
+                <th colSpan={5} className="sticky top-0 z-20 bg-muted border-r border-b p-2 text-center font-bold">
                   3. CONTROLES Y GESTIÓN — {refs}
                 </th>
-                <th colSpan={6} className={`border-b p-2 text-center font-bold ${!locked ? "border-r" : ""}`}>
+                <th colSpan={6} className={`sticky top-0 z-20 bg-muted border-b p-2 text-center font-bold ${!locked ? "border-r" : ""}`}>
                   4. EVALUACIÓN FINAL (RESIDUAL) + VERIFICACIÓN
                 </th>
                 {!locked && (
-                  <th rowSpan={2} className="border-b p-2 text-center font-bold w-16">
+                  <th rowSpan={2} className="sticky top-0 z-20 bg-muted border-b p-2 text-center font-bold w-16">
                     Acc.
                   </th>
                 )}
