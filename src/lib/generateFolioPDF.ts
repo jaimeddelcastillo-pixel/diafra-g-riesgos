@@ -589,7 +589,8 @@ export async function generateFolioPDF(
         [
           {
             content: String(r.numero_id).padStart(2, "0"),
-            styles: { halign: "center", valign: "middle", fontSize: 16, fontStyle: "bold", fillColor: [248, 248, 248] },
+            rowSpan: 9,
+            styles: { halign: "center", valign: "middle", fontSize: 18, fontStyle: "bold", fillColor: [248, 248, 248] },
           },
           `${t.procesoEquipo}:\n${r.etapa_proceso || "—"}`,
           { content: "S:", styles: { fontStyle: "bold", halign: "right", valign: "middle" } },
@@ -598,7 +599,6 @@ export async function generateFolioPDF(
           { content: `Acción Implementada:\n${r.accion_implementada || "—"}`, colSpan: 2 },
         ],
         [
-          { content: "", styles: { fillColor: [248, 248, 248] } },
           `Peligro (fuente):\n${r.peligro || "—"}`,
           { content: "O:", styles: { fontStyle: "bold", halign: "right", valign: "middle" } },
           { content: String(r.ocurrencia), styles: { halign: "center", valign: "middle", fontSize: 11 } },
@@ -606,7 +606,6 @@ export async function generateFolioPDF(
           { content: `Fecha y Evidencia:\n${r.fecha_evidencia || "—"}`, colSpan: 2 },
         ],
         [
-          { content: "", styles: { fillColor: [248, 248, 248] } },
           `Situación Peligrosa:\n${r.situacion_peligrosa || "—"}`,
           usaDeteccion
             ? { content: "D:", styles: { fontStyle: "bold", halign: "right", valign: "middle" } as any }
@@ -624,25 +623,41 @@ export async function generateFolioPDF(
           },
         ],
         [
-          { content: "", styles: { fillColor: [248, 248, 248] } },
           {
-            content: `Secuencia de Eventos:\n${normalizarTexto(r.secuencia_eventos)}\n\nModo de Falla:\n${normalizarTexto(r.peligro_modo_falla)}\n\nCausa:\n${normalizarTexto(r.causa_potencial)}`,
-            styles: { halign: "left", valign: "top", fontSize: 7, overflow: "linebreak", cellPadding: 2 },
+            content: `Secuencia de Eventos:\n${normalizarTexto(r.secuencia_eventos)}`,
+            styles: { halign: "left", valign: "top", overflow: "linebreak" },
           },
           {
             content: `NPR: (${nprFormula})\n${getNPRText(npr, r.severidad, folio.norma_folio)}`,
             colSpan: 2,
+            rowSpan: 3,
             styles: { halign: "center", valign: "middle", fontStyle: "bold", textColor: getNPRColor(npr, r.severidad, folio.norma_folio) },
           },
-          `Acción Propuesta:\n${r.accion_propuesta || "—"}\n\nResponsable: ${r.responsable || "—"}\nFecha: ${fmtDate(r.fecha_compromiso)}`,
+          {
+            content: `Acción Propuesta:\n${r.accion_propuesta || "—"}\n\nResponsable: ${r.responsable || "—"}\nFecha: ${fmtDate(r.fecha_compromiso)}`,
+            rowSpan: 3,
+            styles: { valign: "top" },
+          },
           {
             content: `NPR RESIDUAL: (${nprResFormula})\n${getNPRText(nprRes, r.sev_residual, folio.norma_folio)}`,
             colSpan: 2,
+            rowSpan: 3,
             styles: { halign: "center", valign: "middle", fontStyle: "bold", textColor: getNPRColor(nprRes, r.sev_residual, folio.norma_folio) },
           },
         ],
         [
-          { content: "", styles: { fillColor: [248, 248, 248] } },
+          {
+            content: `Modo de Falla:\n${normalizarTexto(r.peligro_modo_falla)}`,
+            styles: { halign: "left", valign: "top", overflow: "linebreak" },
+          },
+        ],
+        [
+          {
+            content: `Causa:\n${normalizarTexto(r.causa_potencial)}`,
+            styles: { halign: "left", valign: "top", overflow: "linebreak" },
+          },
+        ],
+        [
           `${t.efectoDano}:\n${r.efecto_dano || "—"}`,
           { content: umbralLeyenda, colSpan: 2, styles: { fontSize: 7, valign: "middle" } },
           `Verificado por: ${r.verificado_por || "—"}\nFecha: ${fmtDate(r.fecha_verificacion)}\nResultado: ${r.resultado_verificacion || "—"}`,
@@ -652,7 +667,6 @@ export async function generateFolioPDF(
           },
         ],
         [
-          { content: "", styles: { fillColor: [248, 248, 248] } },
           `¿Requiere Acción?  ${chk(r.requiere_accion)} Sí   ${chk(!r.requiere_accion)} No`,
           {
             content: `Justificación de Aceptabilidad:\n${r.justificacion_aceptabilidad || "—"}`,
