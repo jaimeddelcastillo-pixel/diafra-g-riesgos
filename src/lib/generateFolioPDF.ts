@@ -686,7 +686,11 @@ export async function generateFolioPDF(
         6: { cellWidth: 30 },
       },
       margin: tableMargin,
-      rowPageBreak: "avoid",
+      // rowPageBreak:"auto" — con rowSpan:8 en ID, "avoid" hacía que autoTable
+      // estimara el bloque entero y saltara a página nueva dejando una página
+      // con solo head. El hook didDrawPage redibuja la columna ID en cada
+      // continuación cuando el bloque sí necesita partirse.
+      rowPageBreak: "auto",
       didDrawPage: (data: any) => {
         const currentPage = (doc as any).internal.getCurrentPageInfo().pageNumber;
         if (currentPage > firstPageOfRiesgo) {
