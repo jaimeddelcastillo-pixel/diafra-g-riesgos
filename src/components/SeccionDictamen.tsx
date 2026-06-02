@@ -110,7 +110,7 @@ export function SeccionDictamen({ folio, riesgos, locked, onSaved }: Props) {
 
   return (
     <div className="border rounded-md overflow-hidden">
-      <SectionHeader number="V" title={`DICTAMEN DE ${t.beneficio.toUpperCase()} vs RIESGO`} />
+      <SectionHeader number="VI" title={`DICTAMEN DE ${t.beneficio.toUpperCase()} vs RIESGO`} />
 
       <div className="p-4 space-y-4">
         {/* Pregunta riesgos no aceptables — calculada automáticamente */}
