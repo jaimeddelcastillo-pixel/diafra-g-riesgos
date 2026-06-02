@@ -1274,7 +1274,7 @@ export function RiesgoWizardDialog({
             {step === 1 ? "Cancelar" : "Anterior"}
           </Button>
 
-          {step < 5 ? (
+          {step < TOTAL_STEPS ? (
             <Button
               type="button"
               onClick={() => setStep(step + 1)}
