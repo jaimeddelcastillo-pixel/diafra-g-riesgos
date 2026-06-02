@@ -983,6 +983,7 @@ function SeccionRiesgoResidualGlobal({
 function SeccionRiesgos({ riesgos, locked, folioId, folioCodigo, procesoEquipo, normaFolio, folioEstado }: { riesgos: Riesgo[]; locked: boolean; folioId: string; folioCodigo: string; procesoEquipo: string; normaFolio?: string | null; folioEstado?: string }) {
   const [riesgoForm, setRiesgoForm] = useState<{ open: boolean; riesgo: Riesgo | null }>({ open: false, riesgo: null });
   const [wizardOpen, setWizardOpen] = useState(false);
+  const [detalle, setDetalle] = useState<{ open: boolean; riesgo: Riesgo | null }>({ open: false, riesgo: null });
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const nc = getNormaConfig(normaFolio);
@@ -990,6 +991,39 @@ function SeccionRiesgos({ riesgos, locked, folioId, folioCodigo, procesoEquipo, 
   const umbralCrit = nc.umbralNPRAlto;
   const umbralSev = nc.umbralSeveridadCritica;
   const umbralMed = nc.umbralNPRMedio;
+
+  // Doble scrollbar (espejo arriba + real abajo): sincronización bidireccional
+  const topScrollRef = useRef<HTMLDivElement>(null);
+  const bottomScrollRef = useRef<HTMLDivElement>(null);
+  const tableWrapRef = useRef<HTMLDivElement>(null);
+  const [tableWidth, setTableWidth] = useState(1800);
+
+  useEffect(() => {
+    const update = () => {
+      const w = tableWrapRef.current?.scrollWidth;
+      if (w) setTableWidth(w);
+    };
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, [riesgos.length]);
+
+  const handleTopScroll = () => {
+    if (bottomScrollRef.current && topScrollRef.current) {
+      bottomScrollRef.current.scrollLeft = topScrollRef.current.scrollLeft;
+    }
+  };
+  const handleBottomScroll = () => {
+    if (topScrollRef.current && bottomScrollRef.current) {
+      topScrollRef.current.scrollLeft = bottomScrollRef.current.scrollLeft;
+    }
+  };
+
+  const abrirDetalle = (r: Riesgo) => setDetalle({ open: true, riesgo: r });
+  const handleEditFromDetail = (r: Riesgo) => {
+    setDetalle({ open: false, riesgo: null });
+    setRiesgoForm({ open: true, riesgo: r });
+  };
 
   const handleDelete = async (r: Riesgo) => {
     if (!confirm(`¿Eliminar riesgo ${String(r.numero_id).padStart(2, "0")} — "${r.peligro_modo_falla}"?`)) return;
