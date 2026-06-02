@@ -28,6 +28,7 @@ import {
   calcularNPR,
   getNPRLevelByNorma,
 } from "@/config/normas";
+import type { NormaKey } from "@/config/normas";
 import {
   getEjemplosPeligros,
   getPasosSugeridos,
