@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -308,6 +308,7 @@ export function RiesgoWizardDialog({
   const [causaRaizOpen, setCausaRaizOpen] = useState(false);
   const [causaRaizAplicado, setCausaRaizAplicado] = useState(false);
   const [extraJustificacion, setExtraJustificacion] = useState("");
+  const [residualesEditados, setResidualesEditados] = useState(false);
 
   const normaConfig = getNormaConfig(normaFolio);
   const usaDet = normaConfig.usarDetectabilidad;
@@ -329,8 +330,31 @@ export function RiesgoWizardDialog({
     usaDet ? s.det_residual : 1,
     normaKey,
   );
+  // La obligación de acción correctiva se evalúa contra el NPR/severidad INICIAL
+  // (antes de aplicar acciones). El residual sólo dispara una advertencia AFAP.
   const requiereAccion =
-    nprRes >= normaConfig.umbralNPRMedio || s.sev_residual >= normaConfig.umbralSeveridadCritica;
+    npr >= normaConfig.umbralNPRMedio || s.severidad >= normaConfig.umbralSeveridadCritica;
+
+  // Mientras el usuario no toque los sliders residuales, se sincronizan con los
+  // iniciales para que el NPR residual quede documentado aunque sea igual.
+  useEffect(() => {
+    if (residualesEditados) return;
+    setS((prev) => {
+      if (
+        prev.sev_residual === prev.severidad &&
+        prev.ocu_residual === prev.ocurrencia &&
+        prev.det_residual === prev.deteccion
+      ) {
+        return prev;
+      }
+      return {
+        ...prev,
+        sev_residual: prev.severidad,
+        ocu_residual: prev.ocurrencia,
+        det_residual: prev.deteccion,
+      };
+    });
+  }, [s.severidad, s.ocurrencia, s.deteccion, residualesEditados]);
 
   // Validaciones por paso
   const canAdvance = (st: number): boolean => {
