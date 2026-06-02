@@ -1054,11 +1054,76 @@ function SeccionRiesgos({ riesgos, locked, folioId, folioCodigo, procesoEquipo, 
             🟢 <strong>Menor</strong> (&lt; {umbralMed})
           </span>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-[11px] min-w-[1800px]">
+        {/* Barra de navegación rápida por ID — sticky */}
+        {riesgos.length > 0 && (
+          <div className="sticky top-0 z-30 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/75 border-b px-3 py-2">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-[10px] uppercase font-semibold text-muted-foreground mr-1">
+                Ir a ID:
+              </span>
+              {riesgos.map((r) => {
+                const rNpr = r.npr ?? r.severidad * r.ocurrencia * r.deteccion;
+                const lvl = getNPRLevel(rNpr, r.severidad);
+                const verifIcon = !r.requiere_accion
+                  ? null
+                  : r.fecha_verificacion
+                  ? <CheckCircle2 className="h-3 w-3" />
+                  : r.accion_propuesta
+                  ? <Clock className="h-3 w-3" />
+                  : <AlertTriangle className="h-3 w-3" />;
+                const verifTip = !r.requiere_accion
+                  ? "No requiere acción"
+                  : r.fecha_verificacion
+                  ? "Acción verificada"
+                  : r.accion_propuesta
+                  ? "Acción capturada — verificación pendiente"
+                  : "Requiere acción — sin capturar";
+                const colorCls =
+                  lvl.label === "Crítico"
+                    ? "border-destructive/40 bg-destructive/10 text-destructive hover:bg-destructive/20"
+                    : lvl.label === "Mayor"
+                    ? "border-warning/40 bg-warning/10 text-warning hover:bg-warning/20"
+                    : "border-success/40 bg-success/10 text-success hover:bg-success/20";
+                return (
+                  <Tooltip key={r.id}>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        onClick={() => abrirDetalle(r)}
+                        className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-mono font-semibold transition-colors ${colorCls}`}
+                      >
+                        {String(r.numero_id).padStart(2, "0")}
+                        {verifIcon}
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom" className="text-xs max-w-xs">
+                      <div className="font-semibold">
+                        ID {String(r.numero_id).padStart(2, "0")} · NPR {rNpr} ({lvl.label})
+                      </div>
+                      <div className="text-muted-foreground">{r.etapa_proceso || "—"}</div>
+                      <div className="mt-0.5">{r.peligro_modo_falla || "Sin modo de falla"}</div>
+                      <div className="mt-1 text-[10px] opacity-80">{verifTip}</div>
+                    </TooltipContent>
+                  </Tooltip>
+                );
+              })}
+            </div>
+          </div>
+        )}
+        {/* Doble scrollbar — espejo arriba */}
+        <div
+          ref={topScrollRef}
+          onScroll={handleTopScroll}
+          className="overflow-x-auto border-b"
+          style={{ height: 14 }}
+        >
+          <div style={{ width: tableWidth, height: 1 }} />
+        </div>
+        <div ref={bottomScrollRef} onScroll={handleBottomScroll} className="overflow-x-auto max-h-[70vh] overflow-y-auto">
+          <table ref={tableWrapRef as React.RefObject<HTMLTableElement>} className="w-full text-[11px] min-w-[1800px]">
             <thead>
               <tr className="bg-muted/50">
-                <th rowSpan={2} className="border-r border-b p-2 text-center font-bold w-10">
+                <th rowSpan={2} className="sticky left-0 top-0 z-20 bg-muted/95 backdrop-blur border-r border-b p-2 text-center font-bold w-10">
                   ID
                 </th>
                 <th colSpan={7} className="border-r border-b p-2 text-center font-bold">
