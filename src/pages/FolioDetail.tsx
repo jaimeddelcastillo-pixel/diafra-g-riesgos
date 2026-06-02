@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Badge } from "@/components/ui/badge";
@@ -7,15 +7,17 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { OrigenAnalisisSelect } from "@/components/OrigenAnalisisSelect";
-import { ArrowLeft, FileSignature, Lock, Printer, Plus, Pencil, Trash2, Save, X, History } from "lucide-react";
+import { ArrowLeft, FileSignature, Lock, Printer, Plus, Pencil, Trash2, Save, X, History, AlertTriangle, Clock, CheckCircle2 } from "lucide-react";
 import { useFolioDetail, getNPRLevel, getEstadoStyle } from "@/hooks/useFolios";
 import type { Folio, Riesgo, FolioComite } from "@/hooks/useFolios";
 import { Skeleton } from "@/components/ui/skeleton";
 import { RiesgoFormDialog } from "@/components/RiesgoFormDialog";
 import { RiesgoWizardDialog } from "@/components/RiesgoWizardDialog";
+import { RiesgoDetailSheet } from "@/components/RiesgoDetailSheet";
 import { SeccionDictamen } from "@/components/SeccionDictamen";
 import { SeccionEvidencias } from "@/components/SeccionEvidencias";
 import { ComiteTab } from "@/components/comite/ComiteTab";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
@@ -981,6 +983,7 @@ function SeccionRiesgoResidualGlobal({
 function SeccionRiesgos({ riesgos, locked, folioId, folioCodigo, procesoEquipo, normaFolio, folioEstado }: { riesgos: Riesgo[]; locked: boolean; folioId: string; folioCodigo: string; procesoEquipo: string; normaFolio?: string | null; folioEstado?: string }) {
   const [riesgoForm, setRiesgoForm] = useState<{ open: boolean; riesgo: Riesgo | null }>({ open: false, riesgo: null });
   const [wizardOpen, setWizardOpen] = useState(false);
+  const [detalle, setDetalle] = useState<{ open: boolean; riesgo: Riesgo | null }>({ open: false, riesgo: null });
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const nc = getNormaConfig(normaFolio);
@@ -988,6 +991,39 @@ function SeccionRiesgos({ riesgos, locked, folioId, folioCodigo, procesoEquipo, 
   const umbralCrit = nc.umbralNPRAlto;
   const umbralSev = nc.umbralSeveridadCritica;
   const umbralMed = nc.umbralNPRMedio;
+
+  // Doble scrollbar (espejo arriba + real abajo): sincronización bidireccional
+  const topScrollRef = useRef<HTMLDivElement>(null);
+  const bottomScrollRef = useRef<HTMLDivElement>(null);
+  const tableWrapRef = useRef<HTMLDivElement>(null);
+  const [tableWidth, setTableWidth] = useState(1800);
+
+  useEffect(() => {
+    const update = () => {
+      const w = tableWrapRef.current?.scrollWidth;
+      if (w) setTableWidth(w);
+    };
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, [riesgos.length]);
+
+  const handleTopScroll = () => {
+    if (bottomScrollRef.current && topScrollRef.current) {
+      bottomScrollRef.current.scrollLeft = topScrollRef.current.scrollLeft;
+    }
+  };
+  const handleBottomScroll = () => {
+    if (topScrollRef.current && bottomScrollRef.current) {
+      topScrollRef.current.scrollLeft = bottomScrollRef.current.scrollLeft;
+    }
+  };
+
+  const abrirDetalle = (r: Riesgo) => setDetalle({ open: true, riesgo: r });
+  const handleEditFromDetail = (r: Riesgo) => {
+    setDetalle({ open: false, riesgo: null });
+    setRiesgoForm({ open: true, riesgo: r });
+  };
 
   const handleDelete = async (r: Riesgo) => {
     if (!confirm(`¿Eliminar riesgo ${String(r.numero_id).padStart(2, "0")} — "${r.peligro_modo_falla}"?`)) return;
@@ -1018,32 +1054,97 @@ function SeccionRiesgos({ riesgos, locked, folioId, folioCodigo, procesoEquipo, 
             🟢 <strong>Menor</strong> (&lt; {umbralMed})
           </span>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-[11px] min-w-[1800px]">
+        {/* Barra de navegación rápida por ID — sticky */}
+        {riesgos.length > 0 && (
+          <div className="sticky top-0 z-30 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/75 border-b px-3 py-2">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-[10px] uppercase font-semibold text-muted-foreground mr-1">
+                Ir a ID:
+              </span>
+              {riesgos.map((r) => {
+                const rNpr = r.npr ?? r.severidad * r.ocurrencia * r.deteccion;
+                const lvl = getNPRLevel(rNpr, r.severidad);
+                const verifIcon = !r.requiere_accion
+                  ? null
+                  : r.fecha_verificacion
+                  ? <CheckCircle2 className="h-3 w-3" />
+                  : r.accion_propuesta
+                  ? <Clock className="h-3 w-3" />
+                  : <AlertTriangle className="h-3 w-3" />;
+                const verifTip = !r.requiere_accion
+                  ? "No requiere acción"
+                  : r.fecha_verificacion
+                  ? "Acción verificada"
+                  : r.accion_propuesta
+                  ? "Acción capturada — verificación pendiente"
+                  : "Requiere acción — sin capturar";
+                const colorCls =
+                  lvl.label === "Crítico"
+                    ? "border-destructive/40 bg-destructive/10 text-destructive hover:bg-destructive/20"
+                    : lvl.label === "Mayor"
+                    ? "border-warning/40 bg-warning/10 text-warning hover:bg-warning/20"
+                    : "border-success/40 bg-success/10 text-success hover:bg-success/20";
+                return (
+                  <Tooltip key={r.id}>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        onClick={() => abrirDetalle(r)}
+                        className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-mono font-semibold transition-colors ${colorCls}`}
+                      >
+                        {String(r.numero_id).padStart(2, "0")}
+                        {verifIcon}
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom" className="text-xs max-w-xs">
+                      <div className="font-semibold">
+                        ID {String(r.numero_id).padStart(2, "0")} · NPR {rNpr} ({lvl.label})
+                      </div>
+                      <div className="text-muted-foreground">{r.etapa_proceso || "—"}</div>
+                      <div className="mt-0.5">{r.peligro_modo_falla || "Sin modo de falla"}</div>
+                      <div className="mt-1 text-[10px] opacity-80">{verifTip}</div>
+                    </TooltipContent>
+                  </Tooltip>
+                );
+              })}
+            </div>
+          </div>
+        )}
+        {/* Doble scrollbar — espejo arriba */}
+        <div
+          ref={topScrollRef}
+          onScroll={handleTopScroll}
+          className="overflow-x-auto border-b"
+          style={{ height: 14 }}
+        >
+          <div style={{ width: tableWidth, height: 1 }} />
+        </div>
+        <div ref={bottomScrollRef} onScroll={handleBottomScroll} className="overflow-auto max-h-[70vh]">
+          <table ref={tableWrapRef as unknown as React.RefObject<HTMLTableElement>} className="w-full text-[11px] min-w-[1800px]">
             <thead>
               <tr className="bg-muted/50">
-                <th rowSpan={2} className="border-r border-b p-2 text-center font-bold w-10">
+                <th rowSpan={2} className="sticky left-0 top-0 z-30 bg-muted border-r border-b p-2 text-center font-bold w-10">
                   ID
                 </th>
-                <th colSpan={7} className="border-r border-b p-2 text-center font-bold">
+                <th colSpan={7} className="sticky top-0 z-20 bg-muted border-r border-b p-2 text-center font-bold">
                   1. IDENTIFICACIÓN — {refs}
                 </th>
-                <th colSpan={4} className="border-r border-b p-2 text-center font-bold">
+                <th colSpan={4} className="sticky top-0 z-20 bg-muted border-r border-b p-2 text-center font-bold">
                   2. EVALUACIÓN INICIAL
                 </th>
-                <th colSpan={5} className="border-r border-b p-2 text-center font-bold">
+                <th colSpan={5} className="sticky top-0 z-20 bg-muted border-r border-b p-2 text-center font-bold">
                   3. CONTROLES Y GESTIÓN — {refs}
                 </th>
-                <th colSpan={6} className={`border-b p-2 text-center font-bold ${!locked ? "border-r" : ""}`}>
+                <th colSpan={6} className={`sticky top-0 z-20 bg-muted border-b p-2 text-center font-bold ${!locked ? "border-r" : ""}`}>
                   4. EVALUACIÓN FINAL (RESIDUAL) + VERIFICACIÓN
                 </th>
                 {!locked && (
-                  <th rowSpan={2} className="border-b p-2 text-center font-bold w-16">
+                  <th rowSpan={2} className="sticky top-0 z-20 bg-muted border-b p-2 text-center font-bold w-16">
                     Acc.
                   </th>
                 )}
               </tr>
-              <tr className="bg-muted/30 text-[10px] text-muted-foreground">
+              <tr className="bg-muted/30 text-[10px] text-muted-foreground [&_th]:sticky [&_th]:top-9 [&_th]:bg-muted/95 [&_th]:backdrop-blur [&_th]:z-10">
                 <th className="border-r border-b p-1.5 min-w-[90px]">Etapa</th>
                 <th className="border-r border-b p-1.5 min-w-[110px]">Peligro (fuente)</th>
                 <th className="border-r border-b p-1.5 min-w-[110px]">Situación Peligrosa</th>
@@ -1078,10 +1179,10 @@ function SeccionRiesgos({ riesgos, locked, folioId, folioCodigo, procesoEquipo, 
                 return (
                   <tr
                     key={r.id}
-                    className={`border-b last:border-0 ${rowAlert ? "bg-destructive/5" : ""} ${!locked ? "hover:bg-muted/30 cursor-pointer" : ""}`}
-                    onClick={() => !locked && setRiesgoForm({ open: true, riesgo: r })}
+                    className={`border-b last:border-0 hover:bg-muted/30 cursor-pointer ${rowAlert ? "bg-destructive/5" : ""}`}
+                    onClick={() => abrirDetalle(r)}
                   >
-                    <td className="border-r p-1.5 text-center font-mono font-bold">
+                    <td className="sticky left-0 z-[5] bg-background border-r p-1.5 text-center font-mono font-bold">
                       {String(r.numero_id).padStart(2, "0")}
                     </td>
                     {/* Grupo 1: Identificación FEUM / ISO 14971 */}
@@ -1205,6 +1306,13 @@ function SeccionRiesgos({ riesgos, locked, folioId, folioCodigo, procesoEquipo, 
           normaFolio={normaFolio}
         />
       )}
+      <RiesgoDetailSheet
+        riesgo={detalle.riesgo}
+        open={detalle.open}
+        onClose={() => setDetalle({ open: false, riesgo: null })}
+        onEdit={handleEditFromDetail}
+        canEdit={!locked}
+      />
     </>
   );
 }
