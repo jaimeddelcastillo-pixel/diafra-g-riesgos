@@ -1311,7 +1311,11 @@ export function RiesgoWizardDialog({
                     <tr>
                       <th>Controles de prevención</th>
                       <td className="whitespace-pre-line">
-                        {s.controles_prevencion.filter((c) => c.trim()).join("\n") || "—"}
+                        {[
+                          ...s.controles_prev_a.filter((c) => c.trim()).map((c) => `[A] ${c}`),
+                          ...s.controles_prev_b.filter((c) => c.trim()).map((c) => `[B] ${c}`),
+                          ...s.controles_prev_c.filter((c) => c.trim()).map((c) => `[C] ${c}`),
+                        ].join("\n") || "—"}
                       </td>
                     </tr>
                     <tr>
