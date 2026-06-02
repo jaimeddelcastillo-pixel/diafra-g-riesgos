@@ -476,7 +476,7 @@ export function RiesgoWizardDialog({
     return [
       `Folio: ${folioCodigo} — Proceso: ${procesoEquipo || "N/D"}`,
       `Norma: ${normaConfig.nombre} (${normaKey}) — Detectabilidad: ${usaDet ? "sí" : "no"}`,
-      `ID en creación: #${nextNumeroId} — Paso actual del wizard: ${step} de 5`,
+      `ID en creación: #${nextNumeroId} — Paso actual del wizard: ${step} de ${TOTAL_STEPS}`,
       `Datos capturados hasta ahora:`,
       `• Peligro: ${s.peligro || "—"}`,
       `• Etapa: ${etapa || "—"}`,
@@ -552,7 +552,7 @@ export function RiesgoWizardDialog({
         <div className="border-b bg-primary text-primary-foreground p-4">
           <div className="flex items-baseline justify-between mb-3">
             <h2 className="text-lg font-bold">
-              Nuevo ID #{String(nextNumeroId).padStart(2, "0")} — Paso {step} de 5
+              Nuevo ID #{String(nextNumeroId).padStart(2, "0")} — Paso {step} de {TOTAL_STEPS}
             </h2>
             <div className="flex items-center gap-2">
               <Button
@@ -576,21 +576,56 @@ export function RiesgoWizardDialog({
               </Badge>
             </div>
           </div>
-          <div className="flex gap-1.5">
-            {STEPS.map((st) => (
-              <button
-                key={st.n}
-                type="button"
-                onClick={() => st.n < step && setStep(st.n)}
-                disabled={st.n > step}
-                className={cn(
-                  "flex-1 h-2 rounded-full transition-colors",
-                  st.n <= step ? "bg-accent" : "bg-primary-foreground/20",
-                  st.n < step && "cursor-pointer hover:bg-accent/80",
-                )}
-                aria-label={`Paso ${st.n}: ${st.t}`}
-              />
-            ))}
+          <div className="space-y-1.5">
+            <div className="flex gap-1">
+              {STEPS.map((st) => (
+                <button
+                  key={st.n}
+                  type="button"
+                  onClick={() => st.n < step && setStep(st.n)}
+                  disabled={st.n > step}
+                  className={cn(
+                    "flex-1 h-2 rounded-full transition-colors",
+                    st.n === step
+                      ? "bg-accent"
+                      : st.n < step
+                        ? "bg-accent/70 cursor-pointer hover:bg-accent"
+                        : "bg-primary-foreground/20",
+                  )}
+                  aria-label={`Paso ${st.n}: ${st.full}`}
+                />
+              ))}
+            </div>
+            <div className="hidden sm:flex gap-1 text-[10px] font-medium">
+              {STEPS.map((st) => (
+                <div
+                  key={st.n}
+                  className={cn(
+                    "flex-1 text-center truncate",
+                    st.n === step
+                      ? "text-accent font-bold"
+                      : "text-primary-foreground/60",
+                  )}
+                >
+                  {st.full}
+                </div>
+              ))}
+            </div>
+            <div className="flex sm:hidden gap-1 text-[9px] font-medium">
+              {STEPS.map((st) => (
+                <div
+                  key={st.n}
+                  className={cn(
+                    "flex-1 text-center truncate",
+                    st.n === step
+                      ? "text-accent font-bold"
+                      : "text-primary-foreground/60",
+                  )}
+                >
+                  {st.short}
+                </div>
+              ))}
+            </div>
           </div>
           {/* Tabs móviles cuando el asistente está abierto */}
           {asistenteAbierto && (
