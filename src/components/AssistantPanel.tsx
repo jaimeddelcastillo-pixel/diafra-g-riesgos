@@ -458,6 +458,7 @@ export function AssistantPanel({ open, onOpenChange, folioId = null, folioCodigo
                 Pensando...
               </div>
             )}
+            <div ref={bottomRef} />
           </div>
           </ScrollArea>
         </div>
