@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,6 +28,7 @@ import {
   calcularNPR,
   getNPRLevelByNorma,
 } from "@/config/normas";
+import type { NormaKey } from "@/config/normas";
 import {
   getEjemplosPeligros,
   getPasosSugeridos,
@@ -38,6 +39,7 @@ import {
   getDetectabilidadTxt,
   getFundamentoNormativo,
   POBLACIONES_VULNERABLES,
+  getChipsControles,
 } from "@/config/wizard-content";
 import { WizardAsistente, type WizardApplyField } from "@/components/wizard/WizardAsistente";
 import {
@@ -74,7 +76,9 @@ type WizardState = {
   deteccion: number;
   poblacion: string;
   // Paso 4
-  controles_prevencion: string[];
+  controles_prev_a: string[];
+  controles_prev_b: string[];
+  controles_prev_c: string[];
   controles_deteccion: string[];
   sev_residual: number;
   ocu_residual: number;
@@ -99,7 +103,9 @@ function initialState(): WizardState {
     ocurrencia: 1,
     deteccion: 1,
     poblacion: "",
-    controles_prevencion: [""],
+    controles_prev_a: [""],
+    controles_prev_b: [""],
+    controles_prev_c: [""],
     controles_deteccion: [""],
     sev_residual: 1,
     ocu_residual: 1,
@@ -303,6 +309,7 @@ export function RiesgoWizardDialog({
   const [causaRaizOpen, setCausaRaizOpen] = useState(false);
   const [causaRaizAplicado, setCausaRaizAplicado] = useState(false);
   const [extraJustificacion, setExtraJustificacion] = useState("");
+  const [residualesEditados, setResidualesEditados] = useState(false);
 
   const normaConfig = getNormaConfig(normaFolio);
   const usaDet = normaConfig.usarDetectabilidad;
@@ -324,8 +331,31 @@ export function RiesgoWizardDialog({
     usaDet ? s.det_residual : 1,
     normaKey,
   );
+  // La obligación de acción correctiva se evalúa contra el NPR/severidad INICIAL
+  // (antes de aplicar acciones). El residual sólo dispara una advertencia AFAP.
   const requiereAccion =
-    nprRes >= normaConfig.umbralNPRMedio || s.sev_residual >= normaConfig.umbralSeveridadCritica;
+    npr >= normaConfig.umbralNPRMedio || s.severidad >= normaConfig.umbralSeveridadCritica;
+
+  // Mientras el usuario no toque los sliders residuales, se sincronizan con los
+  // iniciales para que el NPR residual quede documentado aunque sea igual.
+  useEffect(() => {
+    if (residualesEditados) return;
+    setS((prev) => {
+      if (
+        prev.sev_residual === prev.severidad &&
+        prev.ocu_residual === prev.ocurrencia &&
+        prev.det_residual === prev.deteccion
+      ) {
+        return prev;
+      }
+      return {
+        ...prev,
+        sev_residual: prev.severidad,
+        ocu_residual: prev.ocurrencia,
+        det_residual: prev.deteccion,
+      };
+    });
+  }, [s.severidad, s.ocurrencia, s.deteccion, residualesEditados]);
 
   // Validaciones por paso
   const canAdvance = (st: number): boolean => {
@@ -342,8 +372,7 @@ export function RiesgoWizardDialog({
     if (st === 3) return s.pasos.filter((p) => p.trim()).length >= 2;
     if (st === 4) return s.situacion_peligrosa.trim().length > 0;
     if (st === 5) return s.efecto_dano.trim().length > 0;
-    if (st === 6) return true;
-    if (st === 7) {
+    if (st === 6) {
       if (requiereAccion) {
         return (
           s.accion_propuesta.trim().length > 0 &&
@@ -353,6 +382,7 @@ export function RiesgoWizardDialog({
       }
       return true;
     }
+    if (st === 7) return true;
     return true;
   };
 
@@ -375,11 +405,17 @@ export function RiesgoWizardDialog({
       .filter(Boolean)
       .map((p, i) => `${i + 1}. ${p}`)
       .join("\n");
-    const prevTxt = s.controles_prevencion
-      .map((c) => c.trim())
-      .filter(Boolean)
-      .map((c, i) => `${i + 1}. ${c}`)
-      .join("\n");
+    const prefijar = (arr: string[], nivel: "A" | "B" | "C") =>
+      arr
+        .map((c) => c.trim())
+        .filter(Boolean)
+        .map((c) => `[${nivel}] ${c}`);
+    const prevLineas = [
+      ...prefijar(s.controles_prev_a, "A"),
+      ...prefijar(s.controles_prev_b, "B"),
+      ...prefijar(s.controles_prev_c, "C"),
+    ];
+    const prevTxt = prevLineas.map((c, i) => `${i + 1}. ${c}`).join("\n");
     const detTxt = s.controles_deteccion
       .map((c) => c.trim())
       .filter(Boolean)
@@ -486,7 +522,11 @@ export function RiesgoWizardDialog({
       `• Situación peligrosa: ${s.situacion_peligrosa || "—"}`,
       `• Efecto/daño: ${s.efecto_dano || "—"}`,
       `• S=${s.severidad}, O=${s.ocurrencia}${usaDet ? `, D=${s.deteccion}` : ""} → NPR=${npr}`,
-      `• Controles prevención: ${s.controles_prevencion.filter((x) => x.trim()).join("; ") || "—"}`,
+      `• Controles prevención: ${[
+        ...s.controles_prev_a.filter((x) => x.trim()).map((x) => `[A] ${x}`),
+        ...s.controles_prev_b.filter((x) => x.trim()).map((x) => `[B] ${x}`),
+        ...s.controles_prev_c.filter((x) => x.trim()).map((x) => `[C] ${x}`),
+      ].join("; ") || "—"}`,
       `• Controles detección: ${s.controles_deteccion.filter((x) => x.trim()).join("; ") || "—"}`,
       `• NPR residual: ${nprRes}`,
     ].join("\n");
@@ -523,8 +563,8 @@ export function RiesgoWizardDialog({
           break;
         }
         case "control_prevencion": {
-          const arr = prev.controles_prevencion.filter((c) => c.trim());
-          next.controles_prevencion = [...arr, String(value)];
+          const arr = prev.controles_prev_b.filter((c) => c.trim());
+          next.controles_prev_b = [...arr, String(value)];
           break;
         }
         case "control_deteccion": {
@@ -1045,96 +1085,56 @@ export function RiesgoWizardDialog({
                   </p>
                 </div>
               </div>
-            </div>
-          )}
 
-          {step === 7 && (
-            <div className="space-y-6 max-w-3xl mx-auto">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <h3 className="text-xl font-bold">Documenta los controles</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Los controles reducen la probabilidad de que el riesgo ocurra o sea detectado.
+              {/* Decisión: ¿requiere acción correctiva? */}
+              {!requiereAccion ? (
+                <div className="rounded-lg border border-npr-low bg-npr-low/10 p-4 space-y-1">
+                  <div className="flex items-center gap-2 text-sm font-semibold text-npr-low">
+                    <Check className="h-4 w-4" />
+                    ✅ NPR BAJO — No requiere acción inmediata
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    El riesgo es aceptable con los controles actuales (umbral medio:{" "}
+                    {normaConfig.umbralNPRMedio}).
                   </p>
                 </div>
-                <ElemBadge num="Ctrl" label="Controles" tone="neutral" />
-              </div>
-
-              <div className="space-y-2">
-                <Label>¿Qué haces para PREVENIR que ocurra? (Nivel A)</Label>
-                <p className="text-xs text-muted-foreground">{ayudasC.prevencion}</p>
-                <ListaMulti
-                  items={s.controles_prevencion}
-                  setItems={(i) => setS({ ...s, controles_prevencion: i })}
-                  placeholder="Describe un control de prevención"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>¿Cómo DETECTAS si ocurre antes de llegar al paciente? (Nivel B)</Label>
-                <p className="text-xs text-muted-foreground">{ayudasC.deteccion}</p>
-                <ListaMulti
-                  items={s.controles_deteccion}
-                  setItems={(i) => setS({ ...s, controles_deteccion: i })}
-                  placeholder="Describe un control de detección"
-                />
-              </div>
-
-              <div className="rounded-lg border bg-muted/20 p-4 space-y-4">
-                <div className="flex items-center justify-between">
-                  <h4 className="font-semibold text-sm">
-                    Ahora con tus controles, ¿cómo queda el riesgo?
-                  </h4>
-                  <NPRPanel npr={nprRes} s={s.sev_residual} norma={normaKey} compact />
-                </div>
-                <div className="grid sm:grid-cols-3 gap-4">
-                  <SliderField
-                    label="S residual"
-                    value={s.sev_residual}
-                    onChange={(v) => setS({ ...s, sev_residual: v })}
-                    description={getSeveridadTxt(normaKey, s.sev_residual)}
-                  />
-                  <SliderField
-                    label="O residual"
-                    value={s.ocu_residual}
-                    onChange={(v) => setS({ ...s, ocu_residual: v })}
-                    description={getOcurrenciaTxt(s.ocu_residual)}
-                  />
-                  {usaDet && (
-                    <SliderField
-                      label="D residual"
-                      value={s.det_residual}
-                      onChange={(v) => setS({ ...s, det_residual: v })}
-                      description={getDetectabilidadTxt(s.det_residual)}
-                    />
-                  )}
-                </div>
-              </div>
-
-              {requiereAccion && (
-                <div className="rounded-lg border border-npr-high bg-npr-high/5 p-4 space-y-3">
+              ) : (
+                <div className="rounded-lg border border-npr-high bg-npr-high/10 p-4 space-y-4">
                   <div className="flex items-center gap-2 text-sm font-semibold text-npr-high">
                     <AlertTriangle className="h-4 w-4" />
-                    NPR residual {nprRes} — requiere acción correctiva
+                    ⚠️ Este riesgo REQUIERE acción correctiva
                   </div>
                   <div className="space-y-2">
-                    <Label>¿Qué acción propones para reducir este riesgo? *</Label>
+                    <Label>¿Qué acción correctiva o preventiva se implementará? *</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Indica el nivel: Nivel A (ingeniería), Nivel B (validación/barrera),
+                      Nivel C (documental/capacitación).
+                    </p>
                     <Textarea
                       rows={2}
                       value={s.accion_propuesta}
                       onChange={(e) => setS({ ...s, accion_propuesta: e.target.value })}
+                      placeholder="Ej: Nivel B — Instalar alarma automática con umbral al 90% del límite validado"
                     />
                   </div>
                   <div className="grid sm:grid-cols-2 gap-3">
                     <div className="space-y-2">
-                      <Label>Responsable (rol o nombre) *</Label>
+                      <Label>¿Quién es responsable de implementarla? *</Label>
+                      <p className="text-xs text-muted-foreground">
+                        Rol o cargo — no nombre propio. Ej: Responsable Sanitario, Jefe de
+                        Producción.
+                      </p>
                       <Input
                         value={s.responsable}
                         onChange={(e) => setS({ ...s, responsable: e.target.value })}
+                        placeholder="Ej: Responsable Sanitario"
                       />
                     </div>
                     <div className="space-y-2">
                       <Label>Fecha compromiso *</Label>
+                      <p className="text-xs text-muted-foreground">
+                        Fecha realista de implementación.
+                      </p>
                       <Input
                         type="date"
                         value={s.fecha_compromiso}
@@ -1144,7 +1144,96 @@ export function RiesgoWizardDialog({
                   </div>
                 </div>
               )}
+
+              {/* NPR residual — siempre visible, queda documentado en expediente */}
+              <div className="rounded-lg border bg-muted/20 p-4 space-y-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <h4 className="font-semibold text-sm">
+                      {requiereAccion
+                        ? "¿Cuál será el NPR después de implementar la acción?"
+                        : "NPR residual (sin acción correctiva)"}
+                    </h4>
+                    <p className="text-[11px] text-muted-foreground">
+                      {requiereAccion
+                        ? "Estima cómo cambian S/O/D una vez aplicada la acción propuesta."
+                        : "Documentado para el expediente — ajusta si los controles actuales ya reducen el NPR."}
+                    </p>
+                  </div>
+                  <NPRPanel npr={nprRes} s={s.sev_residual} norma={normaKey} compact />
+                </div>
+                <div className="grid sm:grid-cols-3 gap-4">
+                  <SliderField
+                    label="S residual"
+                    value={s.sev_residual}
+                    onChange={(v) => {
+                      setResidualesEditados(true);
+                      setS({ ...s, sev_residual: v });
+                    }}
+                    description={getSeveridadTxt(normaKey, s.sev_residual)}
+                  />
+                  <SliderField
+                    label="O residual"
+                    value={s.ocu_residual}
+                    onChange={(v) => {
+                      setResidualesEditados(true);
+                      setS({ ...s, ocu_residual: v });
+                    }}
+                    description={getOcurrenciaTxt(s.ocu_residual)}
+                  />
+                  {usaDet && (
+                    <SliderField
+                      label="D residual"
+                      value={s.det_residual}
+                      onChange={(v) => {
+                        setResidualesEditados(true);
+                        setS({ ...s, det_residual: v });
+                      }}
+                      description={getDetectabilidadTxt(s.det_residual)}
+                    />
+                  )}
+                </div>
+
+                {nprRes >= normaConfig.umbralNPRMedio && (
+                  <div className="rounded-md border border-amber-400 bg-amber-50 dark:bg-amber-950/30 p-3 space-y-2">
+                    <div className="flex items-center gap-2 text-xs font-semibold text-amber-700 dark:text-amber-300">
+                      <AlertTriangle className="h-4 w-4" />
+                      El NPR residual sigue siendo MEDIO o ALTO — agrega una justificación AFAP
+                    </div>
+                    <Label className="text-xs">
+                      Justificación AFAP — ¿por qué este NPR residual es aceptable?
+                    </Label>
+                    <Textarea
+                      rows={2}
+                      value={s.justificacion_aceptabilidad}
+                      onChange={(e) =>
+                        setS({ ...s, justificacion_aceptabilidad: e.target.value })
+                      }
+                      placeholder="Ej: Beneficio terapéutico supera el riesgo residual; controles adicionales no son técnicamente factibles."
+                    />
+                  </div>
+                )}
+              </div>
+
+              {sevCritica && (
+                <div className="flex items-start gap-2 rounded-md border border-destructive bg-destructive/10 p-3 text-sm">
+                  <AlertTriangle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
+                  <span>
+                    ⚠️ Severidad S≥{normaConfig.umbralSeveridadCritica} — Este riesgo requiere{" "}
+                    <strong>Dictamen de Beneficio-Riesgo</strong> firmado por el{" "}
+                    {normaConfig.terminologia.aprobadorFinal}.
+                  </span>
+                </div>
+              )}
             </div>
+          )}
+
+          {step === 7 && (
+            <ControlesPaso7
+              s={s}
+              setS={setS}
+              normaKey={normaKey}
+            />
           )}
 
           {step === 8 && (
@@ -1223,7 +1312,11 @@ export function RiesgoWizardDialog({
                     <tr>
                       <th>Controles de prevención</th>
                       <td className="whitespace-pre-line">
-                        {s.controles_prevencion.filter((c) => c.trim()).join("\n") || "—"}
+                        {[
+                          ...s.controles_prev_a.filter((c) => c.trim()).map((c) => `[A] ${c}`),
+                          ...s.controles_prev_b.filter((c) => c.trim()).map((c) => `[B] ${c}`),
+                          ...s.controles_prev_c.filter((c) => c.trim()).map((c) => `[C] ${c}`),
+                        ].join("\n") || "—"}
                       </td>
                     </tr>
                     <tr>
@@ -1357,5 +1450,186 @@ export function RiesgoWizardDialog({
         }}
       />
     </Dialog>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Paso 7 — Controles con jerarquía A/B/C + Detección
+// ─────────────────────────────────────────────────────────────────────────────
+function ControlesPaso7({
+  s,
+  setS,
+  normaKey,
+}: {
+  s: WizardState;
+  setS: React.Dispatch<React.SetStateAction<WizardState>>;
+  normaKey: NormaKey;
+}) {
+  const chips = getChipsControles(normaKey);
+  const chipBtn =
+    "text-[11px] rounded-full border border-input bg-muted/40 hover:bg-accent hover:text-accent-foreground px-2.5 py-1 transition-colors";
+
+  const addChip = (field: "controles_prev_a" | "controles_prev_b" | "controles_prev_c" | "controles_deteccion", v: string) => {
+    setS((prev) => {
+      const arr = prev[field];
+      const idx = arr.findIndex((x) => !x.trim());
+      const next = [...arr];
+      if (idx >= 0) next[idx] = v;
+      else if (next.length < 20) next.push(v);
+      return { ...prev, [field]: next };
+    });
+  };
+
+  return (
+    <div className="space-y-6 max-w-3xl mx-auto">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <div className="text-[11px] uppercase tracking-wide text-muted-foreground font-semibold">
+            Paso 7 de 8
+          </div>
+          <h3 className="text-xl font-bold">CONTROLES</h3>
+          <p className="text-sm text-muted-foreground">
+            Los controles reducen el NPR atacando la Ocurrencia (prevención) o la
+            Detectabilidad (detección).
+          </p>
+        </div>
+        <ElemBadge num="Ctrl" label="Controles" tone="neutral" />
+      </div>
+
+      {/* SECCIÓN A — Prevención */}
+      <div className="rounded-lg border bg-card p-4 space-y-4">
+        <div className="flex items-center gap-2">
+          <ElemBadge num="O↓" label="Reducen la Ocurrencia (O)" tone="blue" />
+        </div>
+        <div>
+          <Label>¿Qué controles reducen la probabilidad de que el riesgo ocurra?</Label>
+          <p className="text-xs text-muted-foreground mt-1">
+            Prioridad: primero eliminar el peligro por diseño, luego barreras físicas,
+            luego controles administrativos.
+          </p>
+        </div>
+
+        {/* Nivel A */}
+        <div className="space-y-2 rounded-md border-l-2 border-primary pl-3">
+          <div>
+            <div className="text-[11px] uppercase tracking-wide font-bold text-primary">
+              Nivel A — Diseño / Ingeniería
+            </div>
+            <Label className="text-sm">
+              ¿Puedes eliminar o reducir el peligro desde el diseño?
+            </Label>
+          </div>
+          <ListaMulti
+            items={s.controles_prev_a}
+            setItems={(i) => setS({ ...s, controles_prev_a: i })}
+            placeholder="Ej: Rediseño del componente para eliminar la fuente del peligro"
+          />
+          <div className="flex flex-wrap gap-1.5">
+            {chips.prevA.map((c) => (
+              <button
+                key={c}
+                type="button"
+                onClick={() => addChip("controles_prev_a", c)}
+                className={chipBtn}
+              >
+                + {c}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Nivel B */}
+        <div className="space-y-2 rounded-md border-l-2 border-blue-500 pl-3">
+          <div>
+            <div className="text-[11px] uppercase tracking-wide font-bold text-blue-600 dark:text-blue-400">
+              Nivel B — Barreras y validación
+            </div>
+            <Label className="text-sm">¿Qué barreras o validaciones controlan el riesgo?</Label>
+          </div>
+          <ListaMulti
+            items={s.controles_prev_b}
+            setItems={(i) => setS({ ...s, controles_prev_b: i })}
+            placeholder="Ej: Validación de proceso con tres lotes consecutivos"
+          />
+          <div className="flex flex-wrap gap-1.5">
+            {chips.prevB.map((c) => (
+              <button
+                key={c}
+                type="button"
+                onClick={() => addChip("controles_prev_b", c)}
+                className={chipBtn}
+              >
+                + {c}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Nivel C */}
+        <div className="space-y-2 rounded-md border-l-2 border-muted-foreground/40 pl-3">
+          <div>
+            <div className="text-[11px] uppercase tracking-wide font-bold text-muted-foreground">
+              Nivel C — Administrativos
+            </div>
+            <Label className="text-sm">
+              ¿Qué controles documentales o de capacitación aplican?
+            </Label>
+          </div>
+          <ListaMulti
+            items={s.controles_prev_c}
+            setItems={(i) => setS({ ...s, controles_prev_c: i })}
+            placeholder="Ej: PNO actualizado con evidencia de capacitación al personal"
+          />
+          <div className="flex flex-wrap gap-1.5">
+            {chips.prevC.map((c) => (
+              <button
+                key={c}
+                type="button"
+                onClick={() => addChip("controles_prev_c", c)}
+                className={chipBtn}
+              >
+                + {c}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* SECCIÓN B — Detección */}
+      <div className="rounded-lg border bg-card p-4 space-y-3">
+        <div className="flex items-center gap-2">
+          <ElemBadge num="D↑" label="Mejoran la Detectabilidad (D)" tone="orange" />
+        </div>
+        <div>
+          <Label>¿Cómo detectas que el riesgo ocurrió antes de llegar al paciente?</Label>
+          <p className="text-xs text-muted-foreground mt-1">
+            Los controles de detección no evitan el riesgo — lo identifican a tiempo para
+            actuar.
+          </p>
+        </div>
+        <ListaMulti
+          items={s.controles_deteccion}
+          setItems={(i) => setS({ ...s, controles_deteccion: i })}
+          placeholder="Describe un control de detección"
+        />
+        <div className="flex flex-wrap gap-1.5">
+          {chips.deteccion.map((c) => (
+            <button
+              key={c}
+              type="button"
+              onClick={() => addChip("controles_deteccion", c)}
+              className={chipBtn}
+            >
+              + {c}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <p className="text-xs text-muted-foreground italic">
+        Los controles de Nivel A son siempre preferibles. Un control que elimina el peligro
+        es mejor que uno que lo detecta después de ocurrir.
+      </p>
+    </div>
   );
 }
