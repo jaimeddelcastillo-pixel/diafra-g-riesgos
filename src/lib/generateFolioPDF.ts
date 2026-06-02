@@ -595,7 +595,7 @@ export async function generateFolioPDF(
         [
           {
             content: String(r.numero_id).padStart(2, "0"),
-            rowSpan: 9,
+            rowSpan: 8,
             styles: { halign: "center", valign: "middle", fontSize: 18, fontStyle: "bold", fillColor: [248, 248, 248] },
           },
           `${t.procesoEquipo}:\n${r.etapa_proceso || "—"}`,
@@ -672,13 +672,6 @@ export async function generateFolioPDF(
             colSpan: 2,
           },
         ],
-        [
-          `¿Requiere Acción?  ${chk(r.requiere_accion)} Sí   ${chk(!r.requiere_accion)} No`,
-          {
-            content: `Justificación de Aceptabilidad:\n${r.justificacion_aceptabilidad || "—"}`,
-            colSpan: 5,
-          },
-        ],
       ],
       theme: "grid",
       styles: { fontSize: 7.5, cellPadding: 2.5, lineColor: [0, 0, 0], lineWidth: 0.2, overflow: "linebreak" },
@@ -720,6 +713,59 @@ export async function generateFolioPDF(
             doc.text("(cont.)", margin + idColW / 2, tableTop + idH / 2 + 7, { align: "center" });
             doc.setTextColor(0);
           }
+        }
+      },
+    });
+
+    // ── Fila final: ¿Requiere Acción? + Justificación ──
+    // Se renderiza como tabla independiente para que, si no cabe en la
+    // página actual, fluya naturalmente a la siguiente sin romper el bloque
+    // principal del riesgo.
+    const afterMainY = (doc as any).lastAutoTable.finalY;
+    drawTable({
+      startY: afterMainY,
+      body: [
+        [
+          {
+            content: idLabel,
+            styles: { halign: "center", valign: "middle", fontSize: 14, fontStyle: "bold", fillColor: [248, 248, 248] },
+          },
+          `¿Requiere Acción?  ${chk(r.requiere_accion)} Sí   ${chk(!r.requiere_accion)} No`,
+          {
+            content: `Justificación de Aceptabilidad:\n${normalizarTexto(r.justificacion_aceptabilidad)}`,
+            colSpan: 5,
+          },
+        ],
+      ],
+      theme: "grid",
+      styles: { fontSize: 7.5, cellPadding: 2.5, lineColor: [0, 0, 0], lineWidth: 0.2, overflow: "linebreak", valign: "top" },
+      columnStyles: {
+        0: { cellWidth: 14 },
+        1: { cellWidth: 70 },
+        2: { cellWidth: 10 },
+        3: { cellWidth: 14 },
+        4: { cellWidth: 72 },
+        5: { cellWidth: 30 },
+        6: { cellWidth: 30 },
+      },
+      margin: tableMargin,
+      rowPageBreak: "avoid",
+      didDrawPage: (data: any) => {
+        const currentPage = (doc as any).internal.getCurrentPageInfo().pageNumber;
+        // Si esta tabla se empujó a una página nueva (sin cabecera principal),
+        // dibujar una mini-banda de contexto arriba indicando continuación.
+        if (currentPage > firstPageOfRiesgo && data.pageNumber === 1) {
+          // Etiqueta sutil arriba: "Riesgo NN — Aceptabilidad (cont.)"
+          const labelY = tableMargin.top - 2;
+          doc.setFont("helvetica", "italic");
+          doc.setFontSize(7);
+          doc.setTextColor(100);
+          doc.text(
+            `Riesgo ${idLabel} — Aceptabilidad (continuación)`,
+            margin,
+            labelY,
+          );
+          doc.setTextColor(0);
         }
       },
     });
