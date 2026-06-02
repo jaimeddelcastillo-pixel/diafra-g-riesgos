@@ -1306,6 +1306,13 @@ function SeccionRiesgos({ riesgos, locked, folioId, folioCodigo, procesoEquipo, 
           normaFolio={normaFolio}
         />
       )}
+      <RiesgoDetailSheet
+        riesgo={detalle.riesgo}
+        open={detalle.open}
+        onClose={() => setDetalle({ open: false, riesgo: null })}
+        onEdit={handleEditFromDetail}
+        canEdit={!locked}
+      />
     </>
   );
 }
