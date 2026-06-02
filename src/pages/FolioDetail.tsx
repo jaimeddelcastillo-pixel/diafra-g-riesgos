@@ -1144,7 +1144,7 @@ function SeccionRiesgos({ riesgos, locked, folioId, folioCodigo, procesoEquipo, 
                   </th>
                 )}
               </tr>
-              <tr className="bg-muted/30 text-[10px] text-muted-foreground">
+              <tr className="bg-muted/30 text-[10px] text-muted-foreground [&_th]:sticky [&_th]:top-9 [&_th]:bg-muted/95 [&_th]:backdrop-blur [&_th]:z-10">
                 <th className="border-r border-b p-1.5 min-w-[90px]">Etapa</th>
                 <th className="border-r border-b p-1.5 min-w-[110px]">Peligro (fuente)</th>
                 <th className="border-r border-b p-1.5 min-w-[110px]">Situación Peligrosa</th>
