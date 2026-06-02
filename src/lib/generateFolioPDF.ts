@@ -696,24 +696,12 @@ export async function generateFolioPDF(
       rowPageBreak: "avoid",
       didDrawPage: (data: any) => {
         const currentPage = (doc as any).internal.getCurrentPageInfo().pageNumber;
-        // En páginas de continuación del mismo riesgo: redibujar banda de sección y celda ID
         if (currentPage > firstPageOfRiesgo) {
-          const yBand = tableMargin.top;
-          // Banda de sección repetida
-          doc.setFillColor(...BAND_FILL);
-          doc.setDrawColor(...BAND_BORDER);
-          doc.setLineWidth(0.3);
-          doc.rect(margin, yBand, pageW - 2 * margin, 7, "FD");
-          doc.setFont("helvetica", "bold");
-          doc.setFontSize(9);
-          doc.setTextColor(0);
-          doc.text(pdfSafeText("III."), margin + 4, yBand + 4.8);
-          doc.text(pdfSafeText(`${label} (continuación)`), margin + 18, yBand + 4.8);
-          // Mover la tabla hacia abajo para no superponer la banda
-          data.settings.margin.top = yBand + 7 + 0.5;
-
-          // Redibujar la columna ID en la continuación
-          const tableTop = data.table.body[0]?.cells?.[0]?.y ?? (yBand + 7.5);
+          // Redibujar la columna ID (que se perdió por el rowSpan) en cada continuación.
+          // El head se repite, así que tomamos su altura para alinear el bloque ID.
+          const headRow = data.table.head?.[0];
+          const headCell = headRow?.cells?.[0];
+          const tableTop = headCell ? headCell.y + headCell.height : tableMargin.top;
           const tableBottom = data.cursor?.y ?? (pageH - footerGap);
           const idH = tableBottom - tableTop;
           if (idH > 0) {
@@ -725,6 +713,12 @@ export async function generateFolioPDF(
             doc.setFontSize(18);
             doc.setTextColor(0);
             doc.text(idLabel, margin + idColW / 2, tableTop + idH / 2 + 2, { align: "center" });
+            // Etiqueta pequeña de continuación arriba del ID
+            doc.setFontSize(6);
+            doc.setFont("helvetica", "italic");
+            doc.setTextColor(100);
+            doc.text("(cont.)", margin + idColW / 2, tableTop + idH / 2 + 7, { align: "center" });
+            doc.setTextColor(0);
           }
         }
       },
