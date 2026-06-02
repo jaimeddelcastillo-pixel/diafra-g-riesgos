@@ -380,11 +380,17 @@ export function RiesgoWizardDialog({
       .filter(Boolean)
       .map((p, i) => `${i + 1}. ${p}`)
       .join("\n");
-    const prevTxt = s.controles_prevencion
-      .map((c) => c.trim())
-      .filter(Boolean)
-      .map((c, i) => `${i + 1}. ${c}`)
-      .join("\n");
+    const prefijar = (arr: string[], nivel: "A" | "B" | "C") =>
+      arr
+        .map((c) => c.trim())
+        .filter(Boolean)
+        .map((c) => `[${nivel}] ${c}`);
+    const prevLineas = [
+      ...prefijar(s.controles_prev_a, "A"),
+      ...prefijar(s.controles_prev_b, "B"),
+      ...prefijar(s.controles_prev_c, "C"),
+    ];
+    const prevTxt = prevLineas.map((c, i) => `${i + 1}. ${c}`).join("\n");
     const detTxt = s.controles_deteccion
       .map((c) => c.trim())
       .filter(Boolean)
@@ -491,7 +497,11 @@ export function RiesgoWizardDialog({
       `• Situación peligrosa: ${s.situacion_peligrosa || "—"}`,
       `• Efecto/daño: ${s.efecto_dano || "—"}`,
       `• S=${s.severidad}, O=${s.ocurrencia}${usaDet ? `, D=${s.deteccion}` : ""} → NPR=${npr}`,
-      `• Controles prevención: ${s.controles_prevencion.filter((x) => x.trim()).join("; ") || "—"}`,
+      `• Controles prevención: ${[
+        ...s.controles_prev_a.filter((x) => x.trim()).map((x) => `[A] ${x}`),
+        ...s.controles_prev_b.filter((x) => x.trim()).map((x) => `[B] ${x}`),
+        ...s.controles_prev_c.filter((x) => x.trim()).map((x) => `[C] ${x}`),
+      ].join("; ") || "—"}`,
       `• Controles detección: ${s.controles_deteccion.filter((x) => x.trim()).join("; ") || "—"}`,
       `• NPR residual: ${nprRes}`,
     ].join("\n");
@@ -528,8 +538,8 @@ export function RiesgoWizardDialog({
           break;
         }
         case "control_prevencion": {
-          const arr = prev.controles_prevencion.filter((c) => c.trim());
-          next.controles_prevencion = [...arr, String(value)];
+          const arr = prev.controles_prev_b.filter((c) => c.trim());
+          next.controles_prev_b = [...arr, String(value)];
           break;
         }
         case "control_deteccion": {
