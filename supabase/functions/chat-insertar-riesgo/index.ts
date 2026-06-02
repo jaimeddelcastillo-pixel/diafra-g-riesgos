@@ -27,6 +27,7 @@ Deno.serve(async (req) => {
     const folio_id: string = body.folio_id;
     if (!folio_id) return jsonErr("folio_id requerido", 400);
     const conversacion_id: string | null = body.conversacion_id ?? null;
+    const force: boolean = body.force === true;
 
     // Validar estado del folio (Borrador)
     const { data: folio, error: fErr } = await userClient
@@ -80,6 +81,32 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Validación anti-duplicados por similitud (peligro >80% + misma etapa_proceso)
+    if (!force) {
+      const { data: candidatos, error: cErr } = await userClient
+        .from("riesgos")
+        .select("id, numero_id, peligro, etapa_proceso")
+        .eq("folio_id", folio_id)
+        .eq("etapa_proceso", payload.etapa_proceso);
+      if (cErr) return jsonErr(cErr.message, 500);
+      const similar = (candidatos ?? []).find((r: any) =>
+        stringSimilarity(normalize(r.peligro), normalize(payload.peligro)) > 0.8
+      );
+      if (similar) {
+        return new Response(JSON.stringify({
+          ok: false,
+          inserted: false,
+          reason: "duplicate",
+          existing_id: similar.numero_id ?? similar.id,
+          existing_peligro: similar.peligro,
+          message: `Ya existe un ID similar: ${similar.peligro}. ¿Es un riesgo diferente o es el mismo?`,
+        }), {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
     const { data: inserted, error: iErr } = await userClient
       .from("riesgos")
       .insert(payload)
@@ -106,6 +133,45 @@ Deno.serve(async (req) => {
 });
 
 function clamp(n: number) { return Math.max(1, Math.min(10, Number(n) || 1)); }
+
+function normalize(s: string): string {
+  return (s ?? "")
+    .toString()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+// Similaridad por bigramas (Dice coefficient) — 0..1
+function stringSimilarity(a: string, b: string): number {
+  if (!a || !b) return 0;
+  if (a === b) return 1;
+  if (a.length < 2 || b.length < 2) return 0;
+  const bigrams = (s: string) => {
+    const m = new Map<string, number>();
+    for (let i = 0; i < s.length - 1; i++) {
+      const bg = s.substring(i, i + 2);
+      m.set(bg, (m.get(bg) ?? 0) + 1);
+    }
+    return m;
+  };
+  const A = bigrams(a);
+  const B = bigrams(b);
+  let inter = 0;
+  let totalA = 0;
+  for (const v of A.values()) totalA += v;
+  let totalB = 0;
+  for (const [bg, vb] of B.entries()) {
+    totalB += vb;
+    const va = A.get(bg);
+    if (va) inter += Math.min(va, vb);
+  }
+  return (2 * inter) / (totalA + totalB);
+}
+
 function jsonErr(msg: string, status: number) {
   return new Response(JSON.stringify({ error: msg }), {
     status, headers: { ...corsHeaders, "Content-Type": "application/json" },
