@@ -104,11 +104,19 @@ const TOOLS = [
       properties: {
         folio_id: { type: "string" },
         peligro: { type: "string" },
+        modo_falla: {
+          type: "string",
+          description: "Modo de falla asociado al peligro (cómo falla el proceso/producto). Mapea a la columna peligro_modo_falla.",
+        },
         situacion_peligrosa: { type: "string" },
         secuencia_eventos: { type: "string" },
         efecto_dano: { type: "string" },
         causa_potencial: { type: "string" },
         etapa_proceso: { type: "string" },
+        controles_existentes: {
+          type: "string",
+          description: "Controles ya implementados por la organización (preguntar al usuario antes de proponer controles nuevos). Mapea a controles_actuales.",
+        },
         controles_actuales: { type: "string" },
         controles_prevencion: { type: "string" },
         controles_deteccion: { type: "string" },
@@ -124,7 +132,7 @@ const TOOLS = [
         ocu_residual: { type: "integer", minimum: 1, maximum: 10 },
         det_residual: { type: "integer", minimum: 1, maximum: 10 },
       },
-      required: ["folio_id", "peligro", "situacion_peligrosa", "efecto_dano", "severidad", "ocurrencia", "deteccion"],
+      required: ["folio_id", "peligro", "modo_falla", "situacion_peligrosa", "efecto_dano", "severidad", "ocurrencia", "deteccion"],
     },
   },
 ];
@@ -286,6 +294,8 @@ const TOOL_RULES_ADDENDUM = `
 8. Distingue claramente: alcance = qué cubre el análisis (producto, área, proceso). etapa_proceso = fase del proceso productivo donde aparece el peligro (recepción, mezclado, envasado, etc.). NUNCA los confundas.
 9. Clasificación regulatoria: revisa el contexto del folio. Si "clasificacion_riesgo_sanitario" = "Alto" o "clasificacion_tipo" = "Biológico/biotecnológico" (medicamentos), o "clase_dispositivo" = "Clase III" (DM), considera población vulnerable: cuando propongas un riesgo con S ≥ 9, aumenta severidad en +1 (tope 10) y deja explícito en justificación_aceptabilidad la mención de población vulnerable, exposición sistémica o consecuencia regulatoria (recall, farmacovigilancia, etc.).
 10. Si la norma del folio es NOM-241, el campo de clasificación es "clase_dispositivo" (Clase I/II/III). Si es NOM-059, son tres campos: clasificacion_tipo, clasificacion_condicion_venta, clasificacion_riesgo_sanitario. NUNCA mezcles ambos esquemas; usa el correcto según norma_folio.
+11. proponer_riesgo REQUIERE 'modo_falla' (cómo falla el proceso/producto, p.ej. "contaminación cruzada", "dosis incorrecta"). Si el usuario no lo dio, pregúntalo antes de llamar la herramienta.
+12. Antes de proponer controles_prevencion o controles_deteccion nuevos, PREGUNTA al usuario qué controles_existentes ya tiene implementados y envíalos en ese campo. No dupliques en controles_prevencion lo que ya está en controles_existentes.
 `;
 
 async function getOrgContext(supabase: any, userId: string) {
