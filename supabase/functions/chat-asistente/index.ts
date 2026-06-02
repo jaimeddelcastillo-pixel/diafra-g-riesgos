@@ -104,11 +104,19 @@ const TOOLS = [
       properties: {
         folio_id: { type: "string" },
         peligro: { type: "string" },
+        modo_falla: {
+          type: "string",
+          description: "Modo de falla asociado al peligro (cómo falla el proceso/producto). Mapea a la columna peligro_modo_falla.",
+        },
         situacion_peligrosa: { type: "string" },
         secuencia_eventos: { type: "string" },
         efecto_dano: { type: "string" },
         causa_potencial: { type: "string" },
         etapa_proceso: { type: "string" },
+        controles_existentes: {
+          type: "string",
+          description: "Controles ya implementados por la organización (preguntar al usuario antes de proponer controles nuevos). Mapea a controles_actuales.",
+        },
         controles_actuales: { type: "string" },
         controles_prevencion: { type: "string" },
         controles_deteccion: { type: "string" },
@@ -124,7 +132,7 @@ const TOOLS = [
         ocu_residual: { type: "integer", minimum: 1, maximum: 10 },
         det_residual: { type: "integer", minimum: 1, maximum: 10 },
       },
-      required: ["folio_id", "peligro", "situacion_peligrosa", "efecto_dano", "severidad", "ocurrencia", "deteccion"],
+      required: ["folio_id", "peligro", "modo_falla", "situacion_peligrosa", "efecto_dano", "severidad", "ocurrencia", "deteccion"],
     },
   },
 ];
