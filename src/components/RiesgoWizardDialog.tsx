@@ -371,8 +371,7 @@ export function RiesgoWizardDialog({
     if (st === 3) return s.pasos.filter((p) => p.trim()).length >= 2;
     if (st === 4) return s.situacion_peligrosa.trim().length > 0;
     if (st === 5) return s.efecto_dano.trim().length > 0;
-    if (st === 6) return true;
-    if (st === 7) {
+    if (st === 6) {
       if (requiereAccion) {
         return (
           s.accion_propuesta.trim().length > 0 &&
@@ -382,6 +381,7 @@ export function RiesgoWizardDialog({
       }
       return true;
     }
+    if (st === 7) return true;
     return true;
   };
 
