@@ -112,12 +112,53 @@ function initialState(): WizardState {
 }
 
 const STEPS = [
-  { n: 1, t: "Peligro" },
-  { n: 2, t: "Secuencia" },
-  { n: 3, t: "Evaluación" },
-  { n: 4, t: "Controles" },
-  { n: 5, t: "Revisión" },
+  { n: 1, t: "Peligro", short: "E1", full: "E1 Peligro" },
+  { n: 2, t: "Modo + Causa", short: "E2·5", full: "E2 Modo + E5 Causa" },
+  { n: 3, t: "Secuencia", short: "E3", full: "E3 Secuencia" },
+  { n: 4, t: "Situación", short: "E4", full: "E4 Situación" },
+  { n: 5, t: "Efecto", short: "E6", full: "E6 Efecto" },
+  { n: 6, t: "NPR", short: "NPR", full: "NPR" },
+  { n: 7, t: "Controles", short: "Ctrl", full: "Controles" },
+  { n: 8, t: "Revisión", short: "Rev.", full: "Revisión" },
 ];
+
+const TOTAL_STEPS = 8;
+
+function ElemBadge({
+  num,
+  label,
+  norma,
+  tone,
+}: {
+  num: string;
+  label: string;
+  norma?: string;
+  tone?: "blue" | "orange" | "neutral";
+}) {
+  // Tono fijo cuando se especifica (paso 2 con dos badges contrastantes),
+  // o derivado de la norma (Cobalt = DM, Naranja = Medicamentos).
+  const cls =
+    tone === "blue"
+      ? "bg-blue-600 text-white border-blue-700"
+      : tone === "orange"
+        ? "bg-orange-500 text-white border-orange-600"
+        : tone === "neutral"
+          ? "bg-muted text-muted-foreground border-border"
+          : norma === "NOM-059"
+            ? "bg-orange-500 text-white border-orange-600"
+            : "bg-primary text-primary-foreground border-primary";
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide whitespace-nowrap",
+        cls,
+      )}
+    >
+      <span className="font-mono">{num}</span>
+      <span>{label}</span>
+    </span>
+  );
+}
 
 function ListaMulti({
   items,
@@ -290,22 +331,19 @@ export function RiesgoWizardDialog({
   const canAdvance = (st: number): boolean => {
     if (st === 1) {
       const etapa = s.etapa_proceso === "__otra__" ? s.etapa_otra.trim() : s.etapa_proceso.trim();
+      return s.peligro.trim().length > 0 && etapa.length > 0;
+    }
+    if (st === 2) {
       return (
-        s.peligro.trim().length > 0 &&
-        etapa.length > 0 &&
         s.peligro_modo_falla.trim().length > 0 &&
         s.causas.filter((c) => c.trim()).length >= 1
       );
     }
-    if (st === 2) {
-      return (
-        s.pasos.filter((p) => p.trim()).length >= 2 &&
-        s.situacion_peligrosa.trim().length > 0 &&
-        s.efecto_dano.trim().length > 0
-      );
-    }
-    if (st === 3) return true;
-    if (st === 4) {
+    if (st === 3) return s.pasos.filter((p) => p.trim()).length >= 2;
+    if (st === 4) return s.situacion_peligrosa.trim().length > 0;
+    if (st === 5) return s.efecto_dano.trim().length > 0;
+    if (st === 6) return true;
+    if (st === 7) {
       if (requiereAccion) {
         return (
           s.accion_propuesta.trim().length > 0 &&
@@ -438,7 +476,7 @@ export function RiesgoWizardDialog({
     return [
       `Folio: ${folioCodigo} — Proceso: ${procesoEquipo || "N/D"}`,
       `Norma: ${normaConfig.nombre} (${normaKey}) — Detectabilidad: ${usaDet ? "sí" : "no"}`,
-      `ID en creación: #${nextNumeroId} — Paso actual del wizard: ${step} de 5`,
+      `ID en creación: #${nextNumeroId} — Paso actual del wizard: ${step} de ${TOTAL_STEPS}`,
       `Datos capturados hasta ahora:`,
       `• Peligro: ${s.peligro || "—"}`,
       `• Etapa: ${etapa || "—"}`,
@@ -514,7 +552,7 @@ export function RiesgoWizardDialog({
         <div className="border-b bg-primary text-primary-foreground p-4">
           <div className="flex items-baseline justify-between mb-3">
             <h2 className="text-lg font-bold">
-              Nuevo ID #{String(nextNumeroId).padStart(2, "0")} — Paso {step} de 5
+              Nuevo ID #{String(nextNumeroId).padStart(2, "0")} — Paso {step} de {TOTAL_STEPS}
             </h2>
             <div className="flex items-center gap-2">
               <Button
@@ -538,21 +576,56 @@ export function RiesgoWizardDialog({
               </Badge>
             </div>
           </div>
-          <div className="flex gap-1.5">
-            {STEPS.map((st) => (
-              <button
-                key={st.n}
-                type="button"
-                onClick={() => st.n < step && setStep(st.n)}
-                disabled={st.n > step}
-                className={cn(
-                  "flex-1 h-2 rounded-full transition-colors",
-                  st.n <= step ? "bg-accent" : "bg-primary-foreground/20",
-                  st.n < step && "cursor-pointer hover:bg-accent/80",
-                )}
-                aria-label={`Paso ${st.n}: ${st.t}`}
-              />
-            ))}
+          <div className="space-y-1.5">
+            <div className="flex gap-1">
+              {STEPS.map((st) => (
+                <button
+                  key={st.n}
+                  type="button"
+                  onClick={() => st.n < step && setStep(st.n)}
+                  disabled={st.n > step}
+                  className={cn(
+                    "flex-1 h-2 rounded-full transition-colors",
+                    st.n === step
+                      ? "bg-accent"
+                      : st.n < step
+                        ? "bg-accent/70 cursor-pointer hover:bg-accent"
+                        : "bg-primary-foreground/20",
+                  )}
+                  aria-label={`Paso ${st.n}: ${st.full}`}
+                />
+              ))}
+            </div>
+            <div className="hidden sm:flex gap-1 text-[10px] font-medium">
+              {STEPS.map((st) => (
+                <div
+                  key={st.n}
+                  className={cn(
+                    "flex-1 text-center truncate",
+                    st.n === step
+                      ? "text-accent font-bold"
+                      : "text-primary-foreground/60",
+                  )}
+                >
+                  {st.full}
+                </div>
+              ))}
+            </div>
+            <div className="flex sm:hidden gap-1 text-[9px] font-medium">
+              {STEPS.map((st) => (
+                <div
+                  key={st.n}
+                  className={cn(
+                    "flex-1 text-center truncate",
+                    st.n === step
+                      ? "text-accent font-bold"
+                      : "text-primary-foreground/60",
+                  )}
+                >
+                  {st.short}
+                </div>
+              ))}
+            </div>
           </div>
           {/* Tabs móviles cuando el asistente está abierto */}
           {asistenteAbierto && (
@@ -599,11 +672,17 @@ export function RiesgoWizardDialog({
         <div className="flex-1 overflow-y-auto p-4 sm:p-6">
           {step === 1 && (
             <div className="space-y-5 max-w-2xl mx-auto">
-              <div>
-                <h3 className="text-xl font-bold">Identifica el peligro</h3>
-                <p className="text-sm text-muted-foreground">
-                  Describe qué elemento, agente o condición puede causar daño.
-                </p>
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <div className="text-[11px] uppercase tracking-wide text-muted-foreground font-semibold">
+                    Elemento 1 de 6
+                  </div>
+                  <h3 className="text-xl font-bold">PELIGRO</h3>
+                  <p className="text-sm text-muted-foreground">
+                    La fuente del daño. Siempre un sustantivo — nunca una acción.
+                  </p>
+                </div>
+                <ElemBadge num="E1" label="Peligro" norma={normaKey} />
               </div>
 
               <div className="space-y-2">
@@ -614,7 +693,7 @@ export function RiesgoWizardDialog({
                   placeholder="Ej: Residuo químico, Bacteria, Falla eléctrica, Error humano..."
                 />
                 <p className="text-xs text-muted-foreground">
-                  Usa un sustantivo — nunca una acción. ✅ "Residuo de API" ❌ "No limpiar el equipo"
+                  ✅ Residuo de API &nbsp;&nbsp; ❌ No limpiar el equipo
                 </p>
                 <div className="flex flex-wrap gap-1.5 pt-1">
                   {getEjemplosPeligros(normaKey).map((ej) => (
@@ -656,19 +735,53 @@ export function RiesgoWizardDialog({
                   />
                 )}
               </div>
+            </div>
+          )}
 
-              <div className="space-y-2">
-                <Label>¿Cómo falla exactamente? *</Label>
-                <Textarea
-                  rows={2}
+          {step === 2 && (
+            <div className="space-y-5 max-w-2xl mx-auto">
+              {/* Bloque 1 — Modo de falla */}
+              <div className="rounded-lg border bg-card p-4 space-y-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <ElemBadge num="E2" label="Modo de falla" tone="blue" />
+                    <h3 className="text-base font-bold mt-2">
+                      ¿Cómo falla específicamente el proceso o componente?
+                    </h3>
+                    <p className="text-xs text-muted-foreground">
+                      El mecanismo exacto — no el peligro ni la causa.
+                    </p>
+                  </div>
+                </div>
+                <Input
                   value={s.peligro_modo_falla}
                   onChange={(e) => setS({ ...s, peligro_modo_falla: e.target.value })}
-                  placeholder="Ej: Filtro saturado sin alarma, Temporizador descalibrado, Operador omite paso del PNO"
+                  placeholder="Ej: Ciclo de enjuague incompleto por falla del temporizador"
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label>¿Por qué ocurre? (puedes agregar varias causas) *</Label>
+              <div className="flex items-center gap-2">
+                <div className="h-px flex-1 bg-border" />
+                <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+                  Origen raíz
+                </span>
+                <div className="h-px flex-1 bg-border" />
+              </div>
+
+              {/* Bloque 2 — Causa potencial */}
+              <div className="rounded-lg border bg-card p-4 space-y-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <ElemBadge num="E5" label="Causa potencial" tone="orange" />
+                    <h3 className="text-base font-bold mt-2">
+                      ¿Por qué ocurre ese fallo? (origen raíz)
+                    </h3>
+                    <p className="text-xs text-muted-foreground">
+                      Una causa por línea. Si la respuesta es "error humano" — pregunta por qué
+                      ocurre ese error.
+                    </p>
+                  </div>
+                </div>
                 <ListaMulti
                   items={s.causas}
                   setItems={(i) => setS({ ...s, causas: i })}
@@ -696,22 +809,35 @@ export function RiesgoWizardDialog({
             </div>
           )}
 
-          {step === 2 && (
+          {step === 3 && (
             <div className="space-y-5 max-w-2xl mx-auto">
-              <div>
-                <h3 className="text-xl font-bold">Describe la secuencia</h3>
-                <p className="text-sm text-muted-foreground">
-                  Explica paso a paso cómo el peligro llega a causar daño.
-                </p>
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <div className="text-[11px] uppercase tracking-wide text-muted-foreground font-semibold">
+                    Elemento 3 de 6
+                  </div>
+                  <h3 className="text-xl font-bold">SECUENCIA DE EVENTOS</h3>
+                  <p className="text-sm text-muted-foreground">
+                    La cadena causal paso a paso — cómo evoluciona el peligro hasta llegar al
+                    paciente.
+                  </p>
+                </div>
+                <ElemBadge num="E3" label="Secuencia" norma={normaKey} />
               </div>
 
               <div className="space-y-2">
-                <Label>¿Qué tiene que pasar para que el peligro cause daño? *</Label>
-                <p className="text-xs text-muted-foreground">{ayudas2.secuencia}</p>
+                <Label>Pasos de la secuencia (mínimo 3) *</Label>
+                <p className="text-xs text-muted-foreground">
+                  {ayudas2.secuencia} Incluye en qué momento fallan los controles existentes.
+                </p>
                 <ListaMulti
                   items={s.pasos}
                   setItems={(i) => setS({ ...s, pasos: i })}
-                  placeholder="Describe un paso"
+                  placeholder={
+                    s.peligro
+                      ? `Ej: El peligro "${s.peligro}" se activa cuando...`
+                      : "Ej: El peligro [PELIGRO] se activa cuando..."
+                  }
                   min={2}
                   max={8}
                 />
@@ -734,37 +860,103 @@ export function RiesgoWizardDialog({
                   ))}
                 </div>
               </div>
+            </div>
+          )}
 
-              <div className="space-y-2">
-                <Label>{ayudas2.situacionAyuda} *</Label>
-                <Textarea
-                  rows={2}
-                  value={s.situacion_peligrosa}
-                  onChange={(e) => setS({ ...s, situacion_peligrosa: e.target.value })}
-                  placeholder={ayudas2.situacionPlaceholder}
-                />
+          {step === 4 && (
+            <div className="space-y-5 max-w-2xl mx-auto">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <div className="text-[11px] uppercase tracking-wide text-muted-foreground font-semibold">
+                    Elemento 4 de 6
+                  </div>
+                  <h3 className="text-xl font-bold">SITUACIÓN PELIGROSA</h3>
+                  <p className="text-sm text-muted-foreground">
+                    El momento EXACTO en que el peligro toca el producto o el paciente.
+                  </p>
+                </div>
+                <ElemBadge num="E4" label="Situación" norma={normaKey} />
               </div>
 
               <div className="space-y-2">
-                <Label>¿Qué le pasaría al paciente o usuario final? *</Label>
-                <p className="text-xs text-muted-foreground">{ayudas2.efectoAyuda}</p>
+                <Label>{ayudas2.situacionAyuda} *</Label>
+                <p className="text-xs text-muted-foreground">
+                  No es el daño — es el instante de contacto. ¿Cuándo? ¿Dónde? ¿Bajo qué
+                  circunstancia?
+                </p>
                 <Textarea
                   rows={3}
-                  value={s.efecto_dano}
-                  onChange={(e) => setS({ ...s, efecto_dano: e.target.value })}
-                  placeholder="Ej: Reacción alérgica grave, Infección nosocomial, Sobredosis"
+                  value={s.situacion_peligrosa}
+                  onChange={(e) => setS({ ...s, situacion_peligrosa: e.target.value })}
+                  placeholder="Ej: Durante la implantación del dispositivo, el paciente es expuesto a..."
                 />
               </div>
             </div>
           )}
 
-          {step === 3 && (
-            <div className="space-y-6 max-w-3xl mx-auto">
-              <div>
-                <h3 className="text-xl font-bold">Evalúa el riesgo</h3>
-                <p className="text-sm text-muted-foreground">
-                  Mueve los controles para evaluar cada dimensión — el NPR se calcula automáticamente.
+          {step === 5 && (
+            <div className="space-y-5 max-w-2xl mx-auto">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <div className="text-[11px] uppercase tracking-wide text-muted-foreground font-semibold">
+                    Elemento 6 de 6
+                  </div>
+                  <h3 className="text-xl font-bold">EFECTO Y DAÑO POTENCIAL</h3>
+                  <p className="text-sm text-muted-foreground">
+                    La consecuencia en el PACIENTE o usuario final — no en el proceso.
+                  </p>
+                </div>
+                <ElemBadge num="E6" label="Efecto" norma={normaKey} />
+              </div>
+
+              <div className="space-y-2">
+                <Label>¿Qué le pasaría al paciente o usuario final? *</Label>
+                <p className="text-xs text-muted-foreground">
+                  Describe: tipo de lesión, reversibilidad, necesidad de intervención médica.
                 </p>
+                <Textarea
+                  rows={4}
+                  value={s.efecto_dano}
+                  onChange={(e) => setS({ ...s, efecto_dano: e.target.value })}
+                  placeholder="Ej: Reacción alérgica grave, Infección nosocomial, Sobredosis"
+                />
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  {[
+                    "Lesión permanente",
+                    "Requiere cirugía",
+                    "Hospitalización",
+                    "Lesión reversible",
+                    "Molestia menor",
+                    "Sin efecto clínico",
+                  ].map((ej) => (
+                    <button
+                      key={ej}
+                      type="button"
+                      onClick={() => {
+                        const sep = s.efecto_dano.trim() ? ". " : "";
+                        setS({ ...s, efecto_dano: s.efecto_dano + sep + ej });
+                      }}
+                      className="text-[11px] rounded-full border border-input bg-muted/40 hover:bg-accent hover:text-accent-foreground px-2.5 py-1 transition-colors"
+                    >
+                      + {ej}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {step === 6 && (
+            <div className="space-y-6 max-w-3xl mx-auto">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h3 className="text-xl font-bold">Evalúa el riesgo</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Mueve los controles para evaluar cada dimensión — el NPR se calcula
+                    automáticamente.
+                  </p>
+                </div>
+                <ElemBadge num="NPR" label="Evaluación" tone="neutral" />
               </div>
 
               <div className="grid md:grid-cols-3 gap-6">
@@ -856,13 +1048,16 @@ export function RiesgoWizardDialog({
             </div>
           )}
 
-          {step === 4 && (
+          {step === 7 && (
             <div className="space-y-6 max-w-3xl mx-auto">
-              <div>
-                <h3 className="text-xl font-bold">Documenta los controles</h3>
-                <p className="text-sm text-muted-foreground">
-                  Los controles reducen la probabilidad de que el riesgo ocurra o sea detectado.
-                </p>
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h3 className="text-xl font-bold">Documenta los controles</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Los controles reducen la probabilidad de que el riesgo ocurra o sea detectado.
+                  </p>
+                </div>
+                <ElemBadge num="Ctrl" label="Controles" tone="neutral" />
               </div>
 
               <div className="space-y-2">
@@ -952,13 +1147,16 @@ export function RiesgoWizardDialog({
             </div>
           )}
 
-          {step === 5 && (
+          {step === 8 && (
             <div className="space-y-5 max-w-3xl mx-auto">
-              <div>
-                <h3 className="text-xl font-bold">Revisa el ID de riesgo</h3>
-                <p className="text-sm text-muted-foreground">
-                  Verifica que todo esté correcto antes de guardar.
-                </p>
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h3 className="text-xl font-bold">Revisa el ID de riesgo</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Verifica que todo esté correcto antes de guardar.
+                  </p>
+                </div>
+                <ElemBadge num="Rev" label="Revisión" tone="neutral" />
               </div>
 
               <div className="grid sm:grid-cols-3 gap-3">
@@ -1076,7 +1274,7 @@ export function RiesgoWizardDialog({
             {step === 1 ? "Cancelar" : "Anterior"}
           </Button>
 
-          {step < 5 ? (
+          {step < TOTAL_STEPS ? (
             <Button
               type="button"
               onClick={() => setStep(step + 1)}
