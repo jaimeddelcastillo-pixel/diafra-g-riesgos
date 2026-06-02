@@ -112,12 +112,53 @@ function initialState(): WizardState {
 }
 
 const STEPS = [
-  { n: 1, t: "Peligro" },
-  { n: 2, t: "Secuencia" },
-  { n: 3, t: "Evaluación" },
-  { n: 4, t: "Controles" },
-  { n: 5, t: "Revisión" },
+  { n: 1, t: "Peligro", short: "E1", full: "E1 Peligro" },
+  { n: 2, t: "Modo + Causa", short: "E2·5", full: "E2 Modo + E5 Causa" },
+  { n: 3, t: "Secuencia", short: "E3", full: "E3 Secuencia" },
+  { n: 4, t: "Situación", short: "E4", full: "E4 Situación" },
+  { n: 5, t: "Efecto", short: "E6", full: "E6 Efecto" },
+  { n: 6, t: "NPR", short: "NPR", full: "NPR" },
+  { n: 7, t: "Controles", short: "Ctrl", full: "Controles" },
+  { n: 8, t: "Revisión", short: "Rev.", full: "Revisión" },
 ];
+
+const TOTAL_STEPS = 8;
+
+function ElemBadge({
+  num,
+  label,
+  norma,
+  tone,
+}: {
+  num: string;
+  label: string;
+  norma?: string;
+  tone?: "blue" | "orange" | "neutral";
+}) {
+  // Tono fijo cuando se especifica (paso 2 con dos badges contrastantes),
+  // o derivado de la norma (Cobalt = DM, Naranja = Medicamentos).
+  const cls =
+    tone === "blue"
+      ? "bg-blue-600 text-white border-blue-700"
+      : tone === "orange"
+        ? "bg-orange-500 text-white border-orange-600"
+        : tone === "neutral"
+          ? "bg-muted text-muted-foreground border-border"
+          : norma === "NOM-059"
+            ? "bg-orange-500 text-white border-orange-600"
+            : "bg-primary text-primary-foreground border-primary";
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide whitespace-nowrap",
+        cls,
+      )}
+    >
+      <span className="font-mono">{num}</span>
+      <span>{label}</span>
+    </span>
+  );
+}
 
 function ListaMulti({
   items,
