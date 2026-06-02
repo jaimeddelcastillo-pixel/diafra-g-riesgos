@@ -49,6 +49,7 @@ export function AssistantPanel({ open, onOpenChange, folioId = null, folioCodigo
   const [streaming, setStreaming] = useState(false);
   const [usage, setUsage] = useState<{ used: number; limit: number } | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const bottomRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [agente, setAgente] = useState<"dm" | "farma">("dm");
   const [conversacionId, setConversacionId] = useState<string | null>(null);
@@ -83,9 +84,28 @@ export function AssistantPanel({ open, onOpenChange, folioId = null, folioCodigo
     refreshConversaciones();
   }, [open, org?.id]);
 
+  const scrollToBottom = (behavior: ScrollBehavior = "auto") => {
+    // Radix ScrollArea forwards ref to root, so reach into the viewport directly.
+    const viewport = scrollRef.current?.querySelector<HTMLDivElement>(
+      "[data-radix-scroll-area-viewport]",
+    );
+    if (viewport) {
+      viewport.scrollTop = viewport.scrollHeight;
+    } else {
+      bottomRef.current?.scrollIntoView({ block: "end", behavior });
+    }
+  };
+
   useEffect(() => {
-    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    scrollToBottom(streaming ? "smooth" : "auto");
   }, [messages, streaming]);
+
+  // Al abrir el panel o cambiar de conversación, ir al último mensaje.
+  useEffect(() => {
+    if (!open) return;
+    const id = requestAnimationFrame(() => scrollToBottom("auto"));
+    return () => cancelAnimationFrame(id);
+  }, [open, conversacionId, loadingConv]);
 
   async function refreshUsage() {
     if (!org) return;
