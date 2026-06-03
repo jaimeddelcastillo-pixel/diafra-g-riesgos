@@ -1,5 +1,5 @@
 // Extracción de texto de archivos en el frontend para enviar al Asistente IA.
-// Soporta PDF (texto digital), XLSX y DOCX. Hasta 8 000 caracteres.
+// Soporta PDF (texto digital), XLSX y DOCX. Hasta 15 000 caracteres.
 
 import * as XLSX from "xlsx";
 import mammoth from "mammoth";
@@ -8,10 +8,10 @@ import pdfWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
 
-const MAX_CHARS = 8000;
+const MAX_CHARS = 15000;
 const MAX_BYTES = 10 * 1024 * 1024;
 const TRUNCATED_SUFFIX =
-  "\n\n[ARCHIVO TRUNCADO — se procesaron los primeros 8,000 caracteres. Para analizar el resto comparte las secciones adicionales.]";
+  "\n\n[ARCHIVO TRUNCADO — se procesaron los primeros 15,000 caracteres. Para analizar el resto comparte las secciones adicionales.]";
 
 export type ExtractKind = "pdf" | "xlsx" | "docx";
 export type ExtractFailReason =
