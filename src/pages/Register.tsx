@@ -26,7 +26,7 @@ import {
 import { PLANS, ADDONS, type PlanId, type AddonId } from "@/config/plans";
 import { NORMAS_CONFIG, type NormaKey } from "@/config/normas";
 import { ContactDialog } from "@/components/ContactDialog";
-import traceaBranding from "@/assets/tracea-branding.png.asset.json";
+import { AuthLayout } from "@/components/AuthLayout";
 
 type Step = 1 | 2 | 3 | 4;
 
@@ -201,23 +201,21 @@ export default function Register() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-2xl">
-        <CardHeader className="text-center space-y-3">
-          <img
-            src={traceaBranding.url}
-            alt="TRACEA — Follow the quality"
-            className="mx-auto h-20 w-auto object-contain"
-          />
-          <div>
-            <CardTitle className="sr-only">TRACEA</CardTitle>
-            <p className="text-xs text-muted-foreground">
-              {step === 1 && "Elige tu plan para comenzar"}
-              {step === 2 && "Datos de tu empresa"}
-              {step === 3 && "Datos del administrador"}
-              {step === 4 && "Confirma tu correo"}
-            </p>
-          </div>
+    <AuthLayout size="wide">
+      <Card className="w-full border-0 shadow-none lg:shadow-xl lg:border">
+        <CardHeader className="text-center space-y-3 px-0 lg:px-6">
+          <CardTitle className="text-2xl font-semibold tracking-tight">
+            {step === 1 && "Crea tu cuenta TRACEA"}
+            {step === 2 && "Datos de tu empresa"}
+            {step === 3 && "Datos del administrador"}
+            {step === 4 && "Confirma tu correo"}
+          </CardTitle>
+          <p className="text-sm text-muted-foreground">
+            {step === 1 && "Elige tu plan para comenzar"}
+            {step === 2 && "Información fiscal y de contacto"}
+            {step === 3 && "Cuenta principal de administración"}
+            {step === 4 && "Te enviamos un correo de verificación"}
+          </p>
 
           {seleccion && step > 1 && step < 4 && (
             <div className="rounded-md border border-primary/30 bg-primary/5 px-3 py-2 text-xs text-foreground">
@@ -278,7 +276,7 @@ export default function Register() {
           )}
         </CardHeader>
 
-        <CardContent>
+        <CardContent className="px-0 lg:px-6">
           {/* Paso 1 — Selección de plan */}
           {step === 1 && (
             <div className="space-y-4">
@@ -636,15 +634,6 @@ export default function Register() {
           )}
         </CardContent>
       </Card>
-      <div className="mt-4 text-center text-xs text-muted-foreground space-x-3">
-        <Link to="/terminos" className="hover:text-foreground underline-offset-2 hover:underline">
-          Términos y Condiciones
-        </Link>
-        <span className="text-border">·</span>
-        <Link to="/privacidad" className="hover:text-foreground underline-offset-2 hover:underline">
-          Aviso de Privacidad
-        </Link>
-      </div>
-    </div>
+    </AuthLayout>
   );
 }
