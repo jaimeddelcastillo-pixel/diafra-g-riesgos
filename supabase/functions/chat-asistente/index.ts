@@ -588,9 +588,9 @@ Deno.serve(async (req) => {
             // 2) Cache del historial cuando supera 10 mensajes: marcar último bloque
             //    del último mensaje del historial original (no los tool_results del loop).
             let messagesForApi: any[] = turnMessages;
-            if (messages.length > 10) {
+            if (trimmedMessages.length > 10) {
               messagesForApi = turnMessages.map((m) => m);
-              const lastHistoryIdx = messages.length - 1;
+              const lastHistoryIdx = trimmedMessages.length - 1;
               const target = messagesForApi[lastHistoryIdx];
               if (target) {
                 let content: any[];
@@ -615,7 +615,7 @@ Deno.serve(async (req) => {
                 "anthropic-version": "2023-06-01",
               },
               body: JSON.stringify({
-                model: CLAUDE_MODEL,
+                model: modelToUse,
                 max_tokens: 4096,
                 system: systemForApi,
                 tools: limitReached ? [TOOLS.find((t) => t.name === "proponer_riesgo")] : TOOLS,
