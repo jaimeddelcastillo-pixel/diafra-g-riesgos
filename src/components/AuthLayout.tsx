@@ -4,6 +4,8 @@ import { ShieldCheck, Sparkles, Activity } from "lucide-react";
 
 interface AuthLayoutProps {
   children: React.ReactNode;
+  /** "narrow" (default) = 60/40 split, max-w-md. "wide" = 45/55 split, max-w-2xl. */
+  size?: "narrow" | "wide";
 }
 
 /**
@@ -12,12 +14,15 @@ interface AuthLayoutProps {
  * Derecha (40%): contenido (formulario) sobre fondo claro.
  * En móvil se colapsa a una sola columna y el panel izquierdo se oculta.
  */
-export function AuthLayout({ children }: AuthLayoutProps) {
+export function AuthLayout({ children, size = "narrow" }: AuthLayoutProps) {
+  const leftWidth = size === "wide" ? "lg:w-[45%]" : "lg:w-[60%]";
+  const rightWidth = size === "wide" ? "lg:w-[55%]" : "lg:w-[40%]";
+  const innerMax = size === "wide" ? "max-w-2xl" : "max-w-md";
   return (
     <div className="min-h-screen w-full flex bg-background">
       {/* Panel izquierdo — 60% */}
       <aside
-        className="hidden lg:flex relative w-[60%] overflow-hidden flex-col justify-between p-12 xl:p-16 text-white"
+        className={`hidden lg:flex relative ${leftWidth} overflow-hidden flex-col justify-between p-12 xl:p-16 text-white`}
         style={{
           background:
             "radial-gradient(circle at 20% 20%, hsl(210 75% 37% / 0.55), transparent 55%)," +
@@ -89,9 +94,9 @@ export function AuthLayout({ children }: AuthLayoutProps) {
       </aside>
 
       {/* Panel derecho — 40% */}
-      <main className="flex-1 lg:w-[40%] flex flex-col">
+      <main className={`flex-1 ${rightWidth} flex flex-col`}>
         <div className="flex-1 flex items-center justify-center p-6 sm:p-10">
-          <div className="w-full max-w-md">{children}</div>
+          <div className={`w-full ${innerMax}`}>{children}</div>
         </div>
         <footer className="px-6 pb-6 text-center text-xs text-muted-foreground space-x-3">
           <Link to="/terminos" className="hover:text-foreground underline-offset-2 hover:underline">
