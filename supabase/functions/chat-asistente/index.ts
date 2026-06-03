@@ -14,7 +14,13 @@ const corsHeaders = {
 const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY")!;
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const CLAUDE_MODEL = "claude-sonnet-4-6";
+const CLAUDE_MODEL_SONNET = "claude-sonnet-4-6";
+const CLAUDE_MODEL_HAIKU = "claude-haiku-4-5-20251001";
+const MAX_HISTORY = 20;
+const HAIKU_TRIGGERS = ["/consulta", "/ayuda", "/resumen", "/estado"];
+const SONNET_TRIGGERS = ["/nuevo", "/folio", "/id", "/etapa", "/migrar", "/cerrar"];
+const HINT_SENTINEL = "[HINT_LARGA]";
+const HINT_TEXT = "_💡 Conversación larga detectada — escribe `/estado` para que el Asistente recupere el contexto del análisis._\n\n";
 
 const PLAN_LIMITS: Record<string, number> = {
   trial: 30,
@@ -510,18 +516,61 @@ Deno.serve(async (req) => {
     }
 
     // --- Loop agéntico server-side ---
-    const turnMessages: any[] = [...messages];
+    // Truncar historial a MAX_HISTORY para acotar costo en conversaciones largas
+    const trimmedMessages = messages.length > MAX_HISTORY
+      ? messages.slice(-MAX_HISTORY)
+      : messages;
+    const turnMessages: any[] = [...trimmedMessages];
     const allToolUses: any[] = [];
     let fullText = "";
     let tokensIn = 0, tokensOut = 0;
     let executedToolCalls = 0;
     let proposalEmitted = false;
 
+    // --- Selección de modelo: Haiku para consultas, Sonnet para operaciones ---
+    const userMsgText = typeof lastUser?.content === "string"
+      ? lastUser.content
+      : JSON.stringify(lastUser?.content ?? "");
+    const userLower = userMsgText.toLowerCase();
+    const lastAssistant = [...messages].reverse().find((m) => m.role === "assistant");
+    const lastAssistantText = typeof lastAssistant?.content === "string"
+      ? lastAssistant.content
+      : JSON.stringify(lastAssistant?.content ?? "");
+    const forceSonnet =
+      !!activeFolioId ||
+      SONNET_TRIGGERS.some((t) => userLower.includes(t));
+    const isConsultaMode =
+      !forceSonnet && (
+        HAIKU_TRIGGERS.some((t) => userLower.startsWith(t)) ||
+        lastAssistantText.includes("MODO: CONSULTA")
+      );
+    const modelToUse = isConsultaMode ? CLAUDE_MODEL_HAIKU : CLAUDE_MODEL_SONNET;
+    console.log(`[model] modelToUse=${modelToUse} | consulta=${isConsultaMode} | folio=${activeFolioId ? "y" : "n"} | msg=${userMsgText.slice(0, 50)}`);
+
+    // --- Hint de conversación larga (1 sola vez por conversación) ---
+    let emitHint = false;
+    if (messages.length > MAX_HISTORY && conversacion_id) {
+      const { data: prevHint } = await adminClient
+        .from("chat_mensajes")
+        .select("id")
+        .eq("conversacion_id", conversacion_id)
+        .eq("role", "assistant")
+        .ilike("contenido", `%${HINT_SENTINEL}%`)
+        .limit(1)
+        .maybeSingle();
+      emitHint = !prevHint;
+    }
+
     const encoder = new TextEncoder();
 
     const stream = new ReadableStream({
       async start(controller) {
         controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: "conversacion", id: conversacion_id })}\n\n`));
+
+        if (emitHint) {
+          fullText += HINT_TEXT + HINT_SENTINEL + "\n\n";
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: "content_block_delta", delta: { type: "text_delta", text: HINT_TEXT } })}\n\n`));
+        }
 
         try {
           // Hasta 5 vueltas de seguridad (3 tools + finalización)
@@ -539,9 +588,9 @@ Deno.serve(async (req) => {
             // 2) Cache del historial cuando supera 10 mensajes: marcar último bloque
             //    del último mensaje del historial original (no los tool_results del loop).
             let messagesForApi: any[] = turnMessages;
-            if (messages.length > 10) {
+            if (trimmedMessages.length > 10) {
               messagesForApi = turnMessages.map((m) => m);
-              const lastHistoryIdx = messages.length - 1;
+              const lastHistoryIdx = trimmedMessages.length - 1;
               const target = messagesForApi[lastHistoryIdx];
               if (target) {
                 let content: any[];
@@ -566,7 +615,7 @@ Deno.serve(async (req) => {
                 "anthropic-version": "2023-06-01",
               },
               body: JSON.stringify({
-                model: CLAUDE_MODEL,
+                model: modelToUse,
                 max_tokens: 4096,
                 system: systemForApi,
                 tools: limitReached ? [TOOLS.find((t) => t.name === "proponer_riesgo")] : TOOLS,
