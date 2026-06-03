@@ -26,6 +26,7 @@ import {
 import { PLANS, ADDONS, type PlanId, type AddonId } from "@/config/plans";
 import { NORMAS_CONFIG, type NormaKey } from "@/config/normas";
 import { ContactDialog } from "@/components/ContactDialog";
+import traceaBranding from "@/assets/tracea-branding.png.asset.json";
 
 type Step = 1 | 2 | 3 | 4;
 
@@ -203,19 +204,14 @@ export default function Register() {
     <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4">
       <Card className="w-full max-w-2xl">
         <CardHeader className="text-center space-y-3">
-          <div className="mx-auto h-14 w-14 flex items-center justify-center">
-            <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" className="h-14 w-14">
-              <rect x="1" y="1" width="17" height="17" rx="3" fill="#042C53" />
-              <rect x="22" y="1" width="17" height="17" rx="3" fill="#185FA5" />
-              <rect x="1" y="22" width="17" height="17" rx="3" fill="#185FA5" />
-              <rect x="22" y="22" width="17" height="17" rx="3" fill="#8587E8" />
-              <path d="M18 18L22 22" stroke="#8587E8" strokeWidth="2" strokeDasharray="2.5 2" strokeLinecap="round" />
-              <path d="M27 30.5L30.5 34L36 27" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </div>
+          <img
+            src={traceaBranding.url}
+            alt="TRACEA — Follow the quality"
+            className="mx-auto h-20 w-auto object-contain"
+          />
           <div>
-            <CardTitle className="text-xl tracking-wide">TRACEA</CardTitle>
-            <p className="text-xs text-muted-foreground mt-1">
+            <CardTitle className="sr-only">TRACEA</CardTitle>
+            <p className="text-xs text-muted-foreground">
               {step === 1 && "Elige tu plan para comenzar"}
               {step === 2 && "Datos de tu empresa"}
               {step === 3 && "Datos del administrador"}

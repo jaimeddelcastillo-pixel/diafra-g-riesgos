@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { Navigate, Link } from "react-router-dom";
 import { PLANS, ADDONS, type PlanId, type AddonId } from "@/config/plans";
+import traceaBranding from "@/assets/tracea-branding.png.asset.json";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -89,19 +90,14 @@ export default function Login() {
     <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4">
       <Card className="w-full max-w-sm">
         <CardHeader className="text-center space-y-3">
-          <div className="mx-auto h-14 w-14 flex items-center justify-center">
-            <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" className="h-14 w-14">
-              <rect x="1" y="1" width="17" height="17" rx="3" fill="#042C53"/>
-              <rect x="22" y="1" width="17" height="17" rx="3" fill="#185FA5"/>
-              <rect x="1" y="22" width="17" height="17" rx="3" fill="#185FA5"/>
-              <rect x="22" y="22" width="17" height="17" rx="3" fill="#8587E8"/>
-              <path d="M18 18L22 22" stroke="#8587E8" strokeWidth="2" strokeDasharray="2.5 2" strokeLinecap="round"/>
-              <path d="M27 30.5L30.5 34L36 27" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          </div>
+          <img
+            src={traceaBranding.url}
+            alt="TRACEA — Follow the quality"
+            className="mx-auto h-20 w-auto object-contain"
+          />
           <div>
-            <CardTitle className="text-xl tracking-wide">TRACEA</CardTitle>
-            <p className="text-xs text-muted-foreground mt-1">Plataforma de Gestión de Riesgos · NOM-241 y NOM-059 · FEUM</p>
+            <CardTitle className="sr-only">TRACEA</CardTitle>
+            <p className="text-xs text-muted-foreground">Plataforma de Gestión de Riesgos · NOM-241 y NOM-059 · FEUM</p>
           </div>
           {itemSeleccionado && (
             <div className="rounded-md border border-primary/30 bg-primary/5 px-3 py-2 text-xs text-foreground text-left">
