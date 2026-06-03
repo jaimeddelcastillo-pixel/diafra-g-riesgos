@@ -12,8 +12,8 @@ const PRICE_TO_PRODUCT: Record<string, string> = {
 };
 
 const PLAN_LIMITS: Record<string, number> = {
-  starter: 5,
-  professional: 25,
+  starter: 3,
+  professional: 10,
   enterprise: 9999,
 };
 
