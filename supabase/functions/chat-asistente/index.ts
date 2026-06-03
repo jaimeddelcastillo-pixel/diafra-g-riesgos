@@ -14,7 +14,13 @@ const corsHeaders = {
 const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY")!;
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const CLAUDE_MODEL = "claude-sonnet-4-6";
+const CLAUDE_MODEL_SONNET = "claude-sonnet-4-6";
+const CLAUDE_MODEL_HAIKU = "claude-haiku-4-5-20251001";
+const MAX_HISTORY = 20;
+const HAIKU_TRIGGERS = ["/consulta", "/ayuda", "/resumen", "/estado"];
+const SONNET_TRIGGERS = ["/nuevo", "/folio", "/id", "/etapa", "/migrar", "/cerrar"];
+const HINT_SENTINEL = "[HINT_LARGA]";
+const HINT_TEXT = "_💡 Conversación larga detectada — escribe `/estado` para que el Asistente recupere el contexto del análisis._\n\n";
 
 const PLAN_LIMITS: Record<string, number> = {
   trial: 30,
