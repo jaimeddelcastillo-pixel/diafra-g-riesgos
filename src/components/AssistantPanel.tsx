@@ -326,13 +326,26 @@ export function AssistantPanel({ open, onOpenChange, folioId = null, folioCodigo
         },
         body: JSON.stringify({ ...input, conversacion_id: conversacionId }),
       });
-      const data = await res.json().catch(() => ({}));
+      const data: any = await res.json().catch(() => ({}));
       if (!res.ok) {
-        throw new Error((data as any)?.error ?? `Error ${res.status}`);
+        throw new Error(data?.error ?? `Error ${res.status}`);
+      }
+      // Caso: similaridad detectada (>80% peligro + misma etapa). Preguntar e insertar con force.
+      if (data.ok === false && data.reason === "duplicate") {
+        const msg = data.message ?? `Ya existe un ID similar (#${data.existing_id}). ¿Insertar de todas formas?`;
+        if (confirm(msg)) {
+          await insertarRiesgo({ ...input, force: true, __risk_key: riskKey });
+        } else {
+          toast({ title: "Inserción cancelada", description: `Coincide con ID existente #${data.existing_id}.` });
+        }
+        return;
+      }
+      if (!data.riesgo) {
+        throw new Error(data?.message ?? "Respuesta inesperada del servidor");
       }
       setInsertedRiskKeys((prev) => new Set(prev).add(riskKey));
-      toast({ title: (data as any).duplicate ? "Riesgo ya existía" : "Riesgo insertado", description: `#${(data as any).riesgo.numero_id} en el folio.` });
-      setMessages((m) => [...m, { role: "assistant", content: `✅ Riesgo #${(data as any).riesgo.numero_id} ${(data as any).duplicate ? "ya existía" : "insertado"} en el folio.` }]);
+      toast({ title: data.duplicate ? "Riesgo ya existía" : "Riesgo insertado", description: `#${data.riesgo.numero_id} en el folio.` });
+      setMessages((m) => [...m, { role: "assistant", content: `✅ Riesgo #${data.riesgo.numero_id} ${data.duplicate ? "ya existía" : "insertado"} en el folio.` }]);
       refreshConversaciones();
     } catch (e: any) {
       toast({ title: "No se pudo insertar", description: e.message ?? String(e), variant: "destructive" });
