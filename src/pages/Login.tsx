@@ -9,7 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { Navigate, Link } from "react-router-dom";
 import { PLANS, ADDONS, type PlanId, type AddonId } from "@/config/plans";
-import traceaBranding from "@/assets/tracea-branding.png.asset.json";
+import { AuthLayout } from "@/components/AuthLayout";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -87,20 +87,19 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-sm">
-        <CardHeader className="text-center space-y-3">
-          <img
-            src={traceaBranding.url}
-            alt="TRACEA — Follow the quality"
-            className="mx-auto h-20 w-auto object-contain"
-          />
-          <div>
-            <CardTitle className="sr-only">TRACEA</CardTitle>
-            <p className="text-xs text-muted-foreground">Plataforma de Gestión de Riesgos · NOM-241 y NOM-059 · FEUM</p>
-          </div>
+    <AuthLayout>
+      <Card className="w-full border-0 shadow-none lg:shadow-xl lg:border">
+        <CardHeader className="space-y-2 px-0 lg:px-6">
+          <CardTitle className="text-2xl font-semibold tracking-tight">
+            {isSignUp ? "Crea tu cuenta" : "Bienvenido de vuelta"}
+          </CardTitle>
+          <p className="text-sm text-muted-foreground">
+            {isSignUp
+              ? "Regístrate para acceder a tu panel TRACEA."
+              : "Ingresa tus credenciales para acceder al panel."}
+          </p>
           {itemSeleccionado && (
-            <div className="rounded-md border border-primary/30 bg-primary/5 px-3 py-2 text-xs text-foreground text-left">
+            <div className="rounded-md border border-primary/30 bg-primary/5 px-3 py-2 text-xs text-foreground text-left mt-3">
               <p className="font-medium">
                 Inicia sesión para continuar con: {itemSeleccionado.nombre}
               </p>
@@ -110,7 +109,7 @@ export default function Login() {
             </div>
           )}
         </CardHeader>
-        <CardContent>
+        <CardContent className="px-0 lg:px-6">
           <form onSubmit={handleSubmit} className="space-y-4">
             {isSignUp && (
               <div className="space-y-2">
@@ -144,15 +143,6 @@ export default function Login() {
           </form>
         </CardContent>
       </Card>
-      <div className="mt-4 text-center text-xs text-muted-foreground space-x-3">
-        <Link to="/terminos" className="hover:text-foreground underline-offset-2 hover:underline">
-          Términos y Condiciones
-        </Link>
-        <span className="text-border">·</span>
-        <Link to="/privacidad" className="hover:text-foreground underline-offset-2 hover:underline">
-          Aviso de Privacidad
-        </Link>
-      </div>
-    </div>
+    </AuthLayout>
   );
 }
