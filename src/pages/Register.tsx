@@ -357,7 +357,14 @@ export default function Register() {
                         <span className="font-semibold text-sm">Curso</span>
                         <Badge variant="secondary" className="text-[10px]">DC-3 STPS</Badge>
                       </div>
-                      <p className="text-2xl font-bold text-foreground">$450 USD</p>
+                      <p className="text-2xl font-bold text-foreground">
+                        {curso.precio}
+                        {curso.precioAnterior && (
+                          <span className="text-sm font-normal text-muted-foreground line-through ml-2">
+                            {curso.precioAnterior}
+                          </span>
+                        )}
+                      </p>
                       <p className="text-xs text-muted-foreground">Pago único · 30 días de acceso</p>
                     </button>
                   );
