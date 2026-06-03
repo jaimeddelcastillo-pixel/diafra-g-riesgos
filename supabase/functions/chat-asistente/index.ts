@@ -531,6 +531,33 @@ Deno.serve(async (req) => {
               ? systemPrompt + "\n\n[AVISO INTERNO] Se alcanzó el límite de 3 búsquedas en este turno. Procede con la información disponible y entrega la respuesta final al usuario."
               : systemPrompt;
 
+            // --- Prompt caching ephemeral (5 min TTL) ---
+            // 1) Cache del system prompt (siempre). Requiere ≥1024 tokens en Sonnet — se cumple.
+            const systemForApi = [
+              { type: "text", text: sysForCall, cache_control: { type: "ephemeral" } },
+            ];
+            // 2) Cache del historial cuando supera 10 mensajes: marcar último bloque
+            //    del último mensaje del historial original (no los tool_results del loop).
+            let messagesForApi: any[] = turnMessages;
+            if (messages.length > 10) {
+              messagesForApi = turnMessages.map((m) => m);
+              const lastHistoryIdx = messages.length - 1;
+              const target = messagesForApi[lastHistoryIdx];
+              if (target) {
+                let content: any[];
+                if (typeof target.content === "string") {
+                  content = [{ type: "text", text: target.content, cache_control: { type: "ephemeral" } }];
+                } else if (Array.isArray(target.content) && target.content.length > 0) {
+                  content = [...target.content];
+                  const lastIdx = content.length - 1;
+                  content[lastIdx] = { ...content[lastIdx], cache_control: { type: "ephemeral" } };
+                } else {
+                  content = target.content;
+                }
+                messagesForApi[lastHistoryIdx] = { ...target, content };
+              }
+            }
+
             const anthRes = await fetch("https://api.anthropic.com/v1/messages", {
               method: "POST",
               headers: {
@@ -541,9 +568,9 @@ Deno.serve(async (req) => {
               body: JSON.stringify({
                 model: CLAUDE_MODEL,
                 max_tokens: 4096,
-                system: sysForCall,
+                system: systemForApi,
                 tools: limitReached ? [TOOLS.find((t) => t.name === "proponer_riesgo")] : TOOLS,
-                messages: turnMessages,
+                messages: messagesForApi,
               }),
             });
 
@@ -557,6 +584,11 @@ Deno.serve(async (req) => {
             const data = await anthRes.json();
             tokensIn += data.usage?.input_tokens ?? 0;
             tokensOut += data.usage?.output_tokens ?? 0;
+            const cacheCreate = data.usage?.cache_creation_input_tokens ?? 0;
+            const cacheRead = data.usage?.cache_read_input_tokens ?? 0;
+            if (cacheCreate || cacheRead) {
+              console.log(`[cache] create=${cacheCreate} read=${cacheRead} in=${data.usage?.input_tokens ?? 0} out=${data.usage?.output_tokens ?? 0} round=${round}`);
+            }
 
             const blocks = data.content ?? [];
             const toolUseBlocks: any[] = [];
