@@ -63,6 +63,7 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const priceId = String(body.priceId || "");
     const requestedQty = Math.max(1, Math.min(100, Number(body.quantity) || 1));
+    const action = String(body.action || "checkout"); // "checkout" | "change_plan"
     const config = PRICE_CATALOG[priceId];
     if (!config) {
       return new Response(JSON.stringify({ error: "Price ID no autorizado" }), {
@@ -105,11 +106,54 @@ Deno.serve(async (req) => {
 
     const { data: org } = await admin
       .from("organizations")
-      .select("id, nombre, stripe_customer_id")
+      .select("id, nombre, stripe_customer_id, stripe_subscription_id, subscription_status, plan")
       .eq("id", member.org_id)
       .maybeSingle();
 
     const stripe = new Stripe(stripeKey, { apiVersion: "2024-12-18.acacia" });
+
+    // Cambio de plan en suscripción ya activa (upgrade/downgrade con proration automática).
+    if (
+      action === "change_plan" &&
+      config.mode === "subscription" &&
+      org?.stripe_subscription_id &&
+      ["active", "trialing", "past_due"].includes(String((org as any).subscription_status ?? ""))
+    ) {
+      try {
+        const sub = await stripe.subscriptions.retrieve(org.stripe_subscription_id);
+        const currentItem = sub.items.data[0];
+        if (!currentItem) throw new Error("La suscripción no tiene items.");
+        if (currentItem.price.id === priceId) {
+          return new Response(
+            JSON.stringify({ error: "Ya estás suscrito a ese plan." }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+          );
+        }
+        await stripe.subscriptions.update(org.stripe_subscription_id, {
+          items: [{ id: currentItem.id, price: priceId }],
+          proration_behavior: "create_prorations",
+          metadata: {
+            org_id: member.org_id,
+            producto: config.producto,
+          },
+        });
+        // El webhook customer.subscription.updated actualizará plan/max_users.
+        return new Response(
+          JSON.stringify({
+            ok: true,
+            changed: true,
+            url: `${Deno.env.get("APP_URL") || "https://tracea.com.mx"}/checkout/success?change=1`,
+          }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      } catch (err) {
+        console.error("change_plan error", err);
+        return new Response(
+          JSON.stringify({ error: `No se pudo cambiar de plan: ${(err as Error).message}` }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+    }
 
     // Reutilizar customer si existe; si no, crearlo
     let customerId = org?.stripe_customer_id ?? null;

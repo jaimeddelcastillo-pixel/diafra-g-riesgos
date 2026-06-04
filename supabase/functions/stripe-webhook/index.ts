@@ -414,6 +414,8 @@ Deno.serve(async (req) => {
         if (producto && PLAN_LIMITS[producto]) {
           updates.plan = producto;
           updates.max_users = PLAN_LIMITS[producto];
+          // Al cambiar de plan, vuelve a habilitarse el aviso del 80% en el ciclo actual.
+          updates.alerta_80_enviada = false;
         }
         // Sincronizar gate de acceso con estado real de Stripe
         if (sub.status === "active" || sub.status === "trialing") {
@@ -463,6 +465,12 @@ Deno.serve(async (req) => {
           .eq("stripe_customer_id", customerId)
           .maybeSingle();
         if (!org) break;
+
+        // Renovación del ciclo: rehabilita el aviso del 80%.
+        await supabase
+          .from("organizations")
+          .update({ alerta_80_enviada: false })
+          .eq("id", org.id);
 
         await supabase.from("payment_history").insert({
           org_id: org.id,

@@ -313,6 +313,82 @@ async function getOrgContext(supabase: any, userId: string) {
   return member;
 }
 
+function fechaRenovacionTexto(): string {
+  const now = new Date();
+  const next = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
+  return next.toLocaleDateString("es-MX", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+}
+
+async function maybeEnviarAviso80(
+  adminClient: any,
+  org: { id: string; nombre?: string; alerta_80_enviada?: boolean },
+  usage: number,
+  limit: number,
+) {
+  try {
+    if (limit === -1 || limit <= 0) return;
+    const ratio = usage / limit;
+    if (ratio < 0.8 || ratio >= 1) return;
+
+    // Recargar flag actual (por si refresca en concurrencia)
+    const { data: orgRow } = await adminClient
+      .from("organizations")
+      .select("alerta_80_enviada, nombre")
+      .eq("id", org.id)
+      .maybeSingle();
+    if ((orgRow as any)?.alerta_80_enviada) return;
+
+    // Localizar admin para el correo
+    const { data: adminMember } = await adminClient
+      .from("org_members")
+      .select("user_id")
+      .eq("org_id", org.id)
+      .in("role", ["admin", "super_admin"])
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+    if (!(adminMember as any)?.user_id) return;
+    const { data: perfil } = await adminClient
+      .from("profiles")
+      .select("email, nombre")
+      .eq("id", (adminMember as any).user_id)
+      .maybeSingle();
+    const email = (perfil as any)?.email;
+    if (!email) return;
+
+    const restantes = Math.max(0, limit - usage);
+    const now = new Date();
+    const idem = `consultas-ia-aviso-80-${org.id}-${now.getUTCFullYear()}-${now.getUTCMonth() + 1}`;
+    await adminClient.functions.invoke("send-transactional-email", {
+      body: {
+        templateName: "consultas-ia-aviso-80",
+        recipientEmail: email,
+        idempotencyKey: idem,
+        templateData: {
+          nombre: (perfil as any)?.nombre,
+          organizacion: (orgRow as any)?.nombre ?? org.nombre,
+          usadas: usage,
+          limite: limit,
+          restantes,
+          fecha_renovacion: fechaRenovacionTexto(),
+          link: `${Deno.env.get("APP_URL") || "https://tracea.com.mx"}/precios?from=limite`,
+        },
+      },
+    });
+    await adminClient
+      .from("organizations")
+      .update({ alerta_80_enviada: true })
+      .eq("id", org.id);
+  } catch (err) {
+    console.warn("maybeEnviarAviso80 error", err);
+  }
+}
+
 async function getActivePrompt(supabase: any, nombre: "dm" | "farma") {
   const { data } = await supabase
     .from("agent_prompts")
@@ -521,6 +597,10 @@ Deno.serve(async (req) => {
           .from("organizations")
           .update({ consultas_ia_extras: Math.max(0, extras - 1) })
           .eq("id", org.id);
+      }
+      // Aviso por correo al cruzar el 80% del cupo del plan (una sola vez por ciclo)
+      if (limit !== -1) {
+        await maybeEnviarAviso80(adminClient, { id: org.id, nombre: org.nombre }, nuevoUsage, limit);
       }
     }
 
