@@ -6,6 +6,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { PLANS, ADDONS, type PlanId, type AddonId } from "@/config/plans";
 import iconNeon from "@/assets/tracea-icon-neon.png.asset.json";
 import iconDark from "@/assets/tracea-icon.png.asset.json";
+import loginBg from "@/assets/login-bg.png.asset.json";
 
 /* ---------- Iconos outline (símbolos SVG) ---------- */
 const ICONS: Record<string, JSX.Element> = {
@@ -237,9 +238,14 @@ export default function Login() {
       {/* Panel izquierdo 60% */}
       <aside
         className="hidden lg:flex relative w-[60%] overflow-hidden flex-col justify-between p-12 xl:p-16 text-white"
-        style={{ background: "#042C53" }}
+        style={{
+          backgroundColor: "#042C53",
+          backgroundImage: `url(${loginBg.url})`,
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+        }}
       >
-        <IconPattern />
+        {/* Patrón de íconos viene del fondo PNG */}
 
         {/* Top bar */}
         <div className="relative z-10 flex items-start justify-between">
