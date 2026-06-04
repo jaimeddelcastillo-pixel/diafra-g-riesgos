@@ -17,6 +17,8 @@ const PRICE_CATALOG: Record<string, { mode: "subscription" | "payment"; producto
   price_1TQ7kVKfwzAg4OKvjU9mVaun: { mode: "payment", producto: "curso" },
   price_1TQ7lbKfwzAg4OKvwQwizz4f: { mode: "payment", producto: "protocolos" },
   price_1TbRUHKfwzAg4OKvWE8uMR6y: { mode: "payment", producto: "dc3_extra" },
+  // Pack de 100 consultas IA — reemplazar por el Price ID real cuando se cree en Stripe
+  price_PENDIENTE_CONSULTAS_IA_100: { mode: "payment", producto: "consultas_ia_100" },
 };
 
 Deno.serve(async (req) => {
