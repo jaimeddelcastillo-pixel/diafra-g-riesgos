@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { Check, Loader2, Sparkles, Mail, Upload, TrendingUp, Shield } from "lucide-react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { Check, Loader2, Sparkles, Mail, Upload, TrendingUp, Shield, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -114,13 +114,16 @@ export default function Precios() {
   const { toast } = useToast();
   const navigate = useNavigate();
   const { user, loading, org } = useAuth();
+  const [searchParams] = useSearchParams();
+  const fromLimite = searchParams.get("from") === "limite";
 
   const haySesion = !!user && !loading;
   // Suscripción activa = la org tiene plan distinto de trial y está activa
   const tieneSuscripcionActiva =
     haySesion && !!org && org.activo === true && org.plan !== "trial";
+  const planActualId = org?.plan ?? null;
 
-  const startCheckout = async (priceId: string, key: PlanId | AddonId) => {
+  const startCheckout = async (priceId: string, key: PlanId | AddonId, action: "checkout" | "change_plan" = "checkout") => {
     // Sin sesión → siempre va a /register?plan=<key>
     if (!haySesion) {
       navigate(`/register?plan=${key}`);
@@ -137,9 +140,17 @@ export default function Precios() {
     setLoadingId(key);
     try {
       const { data, error } = await supabase.functions.invoke("create-checkout", {
-        body: { priceId },
+        body: { priceId, action },
       });
       if (error) throw error;
+      if ((data as any)?.changed) {
+        toast({
+          title: "Plan actualizado",
+          description: "Tu cambio de plan se aplicó con proración automática.",
+        });
+        navigate("/checkout/success?change=1");
+        return;
+      }
       if (!data?.url) throw new Error("No se recibió URL de checkout");
       window.location.href = data.url;
     } catch (err) {
@@ -189,6 +200,24 @@ export default function Precios() {
       </header>
 
       <main className="container mx-auto py-12 px-4 max-w-7xl">
+        {fromLimite && (
+          <div className="mb-8 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 text-destructive mt-0.5 shrink-0" />
+            <div className="text-sm">
+              <p className="font-medium text-foreground">
+                Agotaste tu cupo de consultas IA este mes.
+              </p>
+              <p className="text-muted-foreground mt-0.5">
+                Cambia a un plan superior para más consultas mensuales, o compra el{" "}
+                <a href="#consultas-extras" className="text-primary underline">
+                  pack de 100 consultas adicionales
+                </a>{" "}
+                sin cambiar de plan.
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Hero */}
         <section className="text-center mb-14">
           <Badge variant="secondary" className="mb-4">Planes en USD</Badge>
@@ -213,16 +242,22 @@ export default function Precios() {
             <Card
               key={plan.id}
               className={
-                plan.destacado
+                plan.id === planActualId
+                  ? "border-accent shadow-lg relative ring-2 ring-accent/40"
+                  : plan.destacado
                   ? "border-primary shadow-lg relative ring-2 ring-primary/20"
                   : "relative"
               }
             >
-              {plan.destacado && (
+              {plan.id === planActualId ? (
+                <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-accent text-accent-foreground hover:bg-accent">
+                  <Check className="w-3 h-3 mr-1" /> Tu plan actual
+                </Badge>
+              ) : plan.destacado ? (
                 <Badge className="absolute -top-3 left-1/2 -translate-x-1/2">
                   <Sparkles className="w-3 h-3 mr-1" /> Más popular
                 </Badge>
-              )}
+              ) : null}
               <CardHeader>
                 <CardTitle className="text-2xl">{plan.nombre}</CardTitle>
                 <CardDescription>{plan.descripcion}</CardDescription>
@@ -243,13 +278,36 @@ export default function Precios() {
               </CardContent>
               <CardFooter>
                 {plan.id === "enterprise" ? (
-                  <ContactDialog
+                  plan.id === planActualId ? (
+                    <Button className="w-full" variant="outline" disabled>
+                      Plan activo
+                    </Button>
+                  ) : (
+                    <ContactDialog
                     trigger={
                       <Button className="w-full" variant={plan.destacado ? "default" : "outline"}>
                         Contactar
                       </Button>
                     }
-                  />
+                    />
+                  )
+                ) : plan.id === planActualId ? (
+                  <Button className="w-full" variant="outline" disabled>
+                    Plan activo
+                  </Button>
+                ) : tieneSuscripcionActiva ? (
+                  <Button
+                    className="w-full"
+                    variant={plan.destacado ? "default" : "outline"}
+                    onClick={() => startCheckout(plan.priceId, plan.id, "change_plan")}
+                    disabled={loadingId !== null}
+                  >
+                    {loadingId === plan.id ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      `Cambiar a ${plan.nombre}`
+                    )}
+                  </Button>
                 ) : (
                   <Button
                     className="w-full"
@@ -393,7 +451,7 @@ export default function Precios() {
         </section>
 
         {/* Consultas adicionales — pack one-time que suma al límite mensual */}
-        <section className="mb-20">
+        <section id="consultas-extras" className="mb-20 scroll-mt-20">
           <header className="text-center mb-8">
             <h2 className="text-3xl font-bold mb-2 text-foreground">Consultas adicionales</h2>
             <p className="text-muted-foreground">
