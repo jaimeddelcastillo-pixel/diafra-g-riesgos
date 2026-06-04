@@ -514,7 +514,14 @@ Deno.serve(async (req) => {
         contenido: typeof lastUser.content === "string" ? lastUser.content : JSON.stringify(lastUser.content),
         agente,
       });
-      await bumpUsage(adminClient, org.id);
+      const nuevoUsage = await bumpUsage(adminClient, org.id);
+      // Si el plan ya estaba agotado, consumir una consulta extra.
+      if (limit !== -1 && nuevoUsage > limit && extras > 0) {
+        await adminClient
+          .from("organizations")
+          .update({ consultas_ia_extras: Math.max(0, extras - 1) })
+          .eq("id", org.id);
+      }
     }
 
     // --- Loop agéntico server-side ---
