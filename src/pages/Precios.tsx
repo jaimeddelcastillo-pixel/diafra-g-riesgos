@@ -9,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { ADDONS, PLANS, type AddonId, type PlanId } from "@/config/plans";
+import { ADDONS, PLANS, CONSULTAS_IA_PACK, type AddonId, type PlanId } from "@/config/plans";
 import { ContactDialog } from "@/components/ContactDialog";
 
 type FaqEntry =
