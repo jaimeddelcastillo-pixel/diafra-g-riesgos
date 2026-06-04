@@ -10,6 +10,8 @@ import remarkGfm from "remark-gfm";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { CONSULTAS_IA_PACK } from "@/config/plans";
+import { Link } from "react-router-dom";
 import {
   extractFileText,
   buildAttachmentPrefix,
@@ -47,7 +49,8 @@ export function AssistantPanel({ open, onOpenChange, folioId = null, folioCodigo
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
-  const [usage, setUsage] = useState<{ used: number; limit: number } | null>(null);
+  const [usage, setUsage] = useState<{ used: number; limit: number; extras: number } | null>(null);
+  const [comprandoPack, setComprandoPack] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -117,8 +120,33 @@ export function AssistantPanel({ open, onOpenChange, folioId = null, folioCodigo
       .eq("year", now.getUTCFullYear())
       .eq("month", now.getUTCMonth() + 1)
       .maybeSingle();
+    const { data: orgRow } = await supabase
+      .from("organizations")
+      .select("consultas_ia_extras")
+      .eq("id", org.id)
+      .maybeSingle();
     const limit = PLAN_LIMITS[org.plan] ?? 30;
-    setUsage({ used: data?.mensajes_consumidos ?? 0, limit });
+    setUsage({
+      used: data?.mensajes_consumidos ?? 0,
+      limit,
+      extras: (orgRow as any)?.consultas_ia_extras ?? 0,
+    });
+  }
+
+  async function comprarPackConsultas() {
+    setComprandoPack(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("create-checkout", {
+        body: { priceId: CONSULTAS_IA_PACK.priceId },
+      });
+      if (error) throw error;
+      if (!data?.url) throw new Error("No se recibió URL de checkout");
+      window.location.href = data.url;
+    } catch (e: any) {
+      toast({ title: "No se pudo iniciar la compra", description: e.message, variant: "destructive" });
+    } finally {
+      setComprandoPack(false);
+    }
   }
 
   async function refreshConversaciones() {
