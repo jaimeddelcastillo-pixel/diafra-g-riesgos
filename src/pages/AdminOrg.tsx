@@ -48,7 +48,19 @@ interface OrgDetail {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const planLabels: Record<string, string> = { trial: "Trial", pro: "Pro", enterprise: "Enterprise" };
+const planLabels: Record<string, string> = {
+  trial: "Trial",
+  starter: "Starter",
+  professional: "Professional",
+  enterprise: "Enterprise",
+};
+
+const planBadgeStyles: Record<string, string> = {
+  trial: "bg-yellow-100 text-yellow-800",
+  starter: "bg-sky-100 text-sky-800",
+  professional: "bg-blue-100 text-blue-800",
+  enterprise: "bg-purple-100 text-purple-800",
+};
 
 const roleLabels: Record<string, string> = {
   admin: "Administrador",
@@ -195,7 +207,7 @@ export default function AdminOrg() {
               <h1 className="text-xl font-bold truncate">{org?.nombre}</h1>
               <Badge variant="outline" className="font-mono text-xs">{org?.slug}</Badge>
               {org && (
-                <Badge className={`text-[10px] ${org.plan === "trial" ? "bg-yellow-100 text-yellow-800" : org.plan === "pro" ? "bg-blue-100 text-blue-800" : "bg-purple-100 text-purple-800"}`}>
+                <Badge className={`text-[10px] ${planBadgeStyles[org.plan] ?? "bg-muted text-foreground"}`}>
                   {planLabels[org.plan] ?? org.plan}
                 </Badge>
               )}
