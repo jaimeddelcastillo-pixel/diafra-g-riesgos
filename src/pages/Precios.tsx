@@ -392,6 +392,54 @@ export default function Precios() {
           </div>
         </section>
 
+        {/* Consultas adicionales — pack one-time que suma al límite mensual */}
+        <section className="mb-20">
+          <header className="text-center mb-8">
+            <h2 className="text-3xl font-bold mb-2 text-foreground">Consultas adicionales</h2>
+            <p className="text-muted-foreground">
+              ¿Te quedaste sin consultas IA antes de fin de mes? Compra un pack sin cambiar de plan.
+            </p>
+          </header>
+          <div className="max-w-md mx-auto">
+            <Card>
+              <CardHeader>
+                <CardTitle>{CONSULTAS_IA_PACK.nombre}</CardTitle>
+                <CardDescription>{CONSULTAS_IA_PACK.descripcion}</CardDescription>
+                <div className="pt-2">
+                  <span className="text-3xl font-bold text-foreground">{CONSULTAS_IA_PACK.precio}</span>
+                  <span className="text-muted-foreground text-sm ml-2">pago único</span>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-2">
+                  {CONSULTAS_IA_PACK.features.map((f) => (
+                    <li key={f} className="flex items-start gap-2 text-sm">
+                      <Check className="w-4 h-4 text-accent mt-0.5 shrink-0" />
+                      <span>{f}</span>
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+              <CardFooter>
+                <Button
+                  className="w-full"
+                  variant="outline"
+                  onClick={() => startCheckout(CONSULTAS_IA_PACK.priceId, CONSULTAS_IA_PACK.id)}
+                  disabled={loadingId !== null}
+                >
+                  {loadingId === CONSULTAS_IA_PACK.id ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : haySesion ? (
+                    "Comprar"
+                  ) : (
+                    "Crear cuenta y comprar"
+                  )}
+                </Button>
+              </CardFooter>
+            </Card>
+          </div>
+        </section>
+
         {/* Sección Responsable Sanitario + Director General */}
         <section className="mb-20 bg-muted/30 rounded-2xl p-6 sm:p-10 md:p-12">
           {/* Bloque superior — Responsable Sanitario */}
