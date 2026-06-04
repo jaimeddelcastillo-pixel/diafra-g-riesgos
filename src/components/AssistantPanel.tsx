@@ -407,7 +407,9 @@ export function AssistantPanel({ open, onOpenChange, folioId = null, folioCodigo
             <span>{folioCodigo ? `Contexto: ${folioCodigo}` : "Sin folio activo"}</span>
             {usage && (
               <span>
-                {limit === -1 ? "Ilimitado" : `${used}/${limit} mensajes`}
+                {limit === -1
+                  ? "Ilimitado"
+                  : `${used}/${limit} consultas${usage.extras > 0 ? ` (+${usage.extras} extras)` : ""}`}
               </span>
             )}
           </div>
@@ -431,10 +433,26 @@ export function AssistantPanel({ open, onOpenChange, folioId = null, folioCodigo
             Has usado el {Math.floor(pct)}% de tus mensajes este mes.
           </div>
         )}
-        {limit !== -1 && pct >= 100 && (
-          <div className="bg-destructive/10 text-foreground border-b border-destructive/30 px-4 py-2 text-xs flex items-center gap-2">
-            <AlertTriangle className="h-3 w-3 text-destructive" />
-            Sin mensajes este mes. Mejora tu plan para continuar.
+        {limit !== -1 && pct >= 100 && (usage?.extras ?? 0) === 0 && (
+          <div className="bg-destructive/10 text-foreground border-b border-destructive/30 px-4 py-3 text-xs flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+            <div className="flex items-center gap-2 flex-1">
+              <AlertTriangle className="h-3 w-3 text-destructive shrink-0" />
+              <span>Sin consultas este mes. Amplía tu plan o compra un pack para continuar.</span>
+            </div>
+            <div className="flex gap-2 shrink-0">
+              <Button asChild size="sm" variant="default" className="h-7 text-xs">
+                <Link to="/precios">Ampliar plan</Link>
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 text-xs"
+                onClick={comprarPackConsultas}
+                disabled={comprandoPack}
+              >
+                {comprandoPack ? <Loader2 className="h-3 w-3 animate-spin" /> : "Comprar 100 — $15 USD"}
+              </Button>
+            </div>
           </div>
         )}
 
