@@ -1064,6 +1064,7 @@ export type Database = {
           activo: boolean
           cancelled_at: string | null
           codigo_formato: string
+          consultas_ia_extras: number
           created_at: string
           curso_aviso_5d_enviado_at: string | null
           curso_expira_en: string | null
@@ -1105,6 +1106,7 @@ export type Database = {
           activo?: boolean
           cancelled_at?: string | null
           codigo_formato?: string
+          consultas_ia_extras?: number
           created_at?: string
           curso_aviso_5d_enviado_at?: string | null
           curso_expira_en?: string | null
@@ -1146,6 +1148,7 @@ export type Database = {
           activo?: boolean
           cancelled_at?: string | null
           codigo_formato?: string
+          consultas_ia_extras?: number
           created_at?: string
           curso_aviso_5d_enviado_at?: string | null
           curso_expira_en?: string | null

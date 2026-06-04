@@ -4,7 +4,7 @@
  */
 
 export type PlanId = "starter" | "professional" | "enterprise";
-export type AddonId = "curso" | "protocolos";
+export type AddonId = "curso" | "protocolos" | "consultas_ia_100";
 
 export interface Plan {
   id: PlanId;
@@ -125,6 +125,27 @@ export const ADDONS: Addon[] = [
     notaPie: "Disponible para clientes con suscripción activa",
   },
 ];
+
+/**
+ * Pack de Consultas IA — pago único que suma al límite mensual del plan.
+ * IMPORTANTE: el `priceId` debe reemplazarse por el real de Stripe en cuanto el cliente lo provea.
+ */
+export const CONSULTAS_IA_PACK: Addon = {
+  id: "consultas_ia_100",
+  nombre: "Pack 100 consultas IA",
+  priceId: "price_PENDIENTE_CONSULTAS_IA_100",
+  precio: "$15 USD",
+  descripcion:
+    "Se suman a tu límite mensual actual. No caducan hasta ser usadas.",
+  features: [
+    "+100 consultas al Asistente IA",
+    "Se suman al cupo de tu plan",
+    "Se consumen después del cupo mensual",
+    "No caducan",
+    "Pago único, sin renovación",
+  ],
+};
+export const CONSULTAS_POR_PACK = 100;
 
 export function findPriceConfig(priceId: string):
   | { tipo: "plan"; item: Plan }

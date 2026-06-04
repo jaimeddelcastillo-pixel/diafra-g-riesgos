@@ -9,6 +9,7 @@ const PRICE_TO_PRODUCT: Record<string, string> = {
   price_1TQ7kVKfwzAg4OKvjU9mVaun: "curso",
   price_1TQ7lbKfwzAg4OKvwQwizz4f: "protocolos",
   price_1TbRUHKfwzAg4OKvWE8uMR6y: "dc3_extra",
+  price_PENDIENTE_CONSULTAS_IA_100: "consultas_ia_100",
 };
 
 const PLAN_LIMITS: Record<string, number> = {
@@ -22,6 +23,11 @@ const PLAN_LABELS: Record<string, string> = {
   professional: "Professional",
   enterprise: "Enterprise",
   curso: "Curso + DC-3 + 1 Mes TRACEA",
+  consultas_ia_100: "Pack 100 consultas IA",
+};
+
+const CONSULTAS_POR_PACK: Record<string, number> = {
+  consultas_ia_100: 100,
 };
 
 const APP_URL = Deno.env.get("APP_URL") ?? "https://tracea.com.mx";
@@ -239,6 +245,46 @@ Deno.serve(async (req) => {
                 .eq("id", orgId);
             }
           }
+          // Pack de consultas IA — incrementar saldo de extras (idempotente).
+          if (producto && CONSULTAS_POR_PACK[producto]) {
+            const cantidad = CONSULTAS_POR_PACK[producto];
+            // Idempotencia: si ya hay un addon_purchases con esta session_id, no re-acreditar.
+            const { data: existing } = await supabase
+              .from("addon_purchases")
+              .select("id")
+              .eq("stripe_session_id", session.id)
+              .maybeSingle();
+            if (!existing) {
+              const { data: orgRow } = await supabase
+                .from("organizations")
+                .select("consultas_ia_extras")
+                .eq("id", orgId)
+                .maybeSingle();
+              const saldoActual = ((orgRow as any)?.consultas_ia_extras as number | undefined) ?? 0;
+              const nuevoSaldo = saldoActual + cantidad;
+              await supabase
+                .from("organizations")
+                .update({ consultas_ia_extras: nuevoSaldo })
+                .eq("id", orgId);
+
+              const contact = await getOrgContact(supabase, orgId);
+              if (contact.email) {
+                await sendTplEmail(
+                  supabase,
+                  "consultas-ia-acreditadas",
+                  contact.email,
+                  {
+                    nombre: contact.nombre,
+                    organizacion: contact.org_nombre,
+                    cantidad,
+                    total_extras: nuevoSaldo,
+                    link: `${APP_URL}/login`,
+                  },
+                  `consultas-ia-acreditadas-${session.id}`,
+                );
+              }
+            }
+          }
           // Registrar addon
           await supabase.from("addon_purchases").insert({
             org_id: orgId,
@@ -287,6 +333,54 @@ Deno.serve(async (req) => {
             updates.max_users = Math.max(maxActual, 3);
           }
           await supabase.from("organizations").update(updates).eq("id", orgId);
+        }
+        // OXXO: pack de consultas IA
+        if (session.mode === "payment" && producto && CONSULTAS_POR_PACK[producto]) {
+          const cantidad = CONSULTAS_POR_PACK[producto];
+          const { data: existing } = await supabase
+            .from("addon_purchases")
+            .select("id")
+            .eq("stripe_session_id", session.id)
+            .maybeSingle();
+          if (!existing) {
+            const { data: orgRow } = await supabase
+              .from("organizations")
+              .select("consultas_ia_extras")
+              .eq("id", orgId)
+              .maybeSingle();
+            const saldoActual = ((orgRow as any)?.consultas_ia_extras as number | undefined) ?? 0;
+            const nuevoSaldo = saldoActual + cantidad;
+            await supabase
+              .from("organizations")
+              .update({ consultas_ia_extras: nuevoSaldo })
+              .eq("id", orgId);
+            await supabase.from("addon_purchases").insert({
+              org_id: orgId,
+              producto,
+              stripe_session_id: session.id,
+              stripe_payment_intent_id: typeof session.payment_intent === "string"
+                ? session.payment_intent
+                : session.payment_intent?.id ?? null,
+              monto_usd: (session.amount_total ?? 0) / 100,
+              metadata: { price_id: priceId, oxxo: true },
+            });
+            const contact = await getOrgContact(supabase, orgId);
+            if (contact.email) {
+              await sendTplEmail(
+                supabase,
+                "consultas-ia-acreditadas",
+                contact.email,
+                {
+                  nombre: contact.nombre,
+                  organizacion: contact.org_nombre,
+                  cantidad,
+                  total_extras: nuevoSaldo,
+                  link: `${APP_URL}/login`,
+                },
+                `consultas-ia-acreditadas-${session.id}`,
+              );
+            }
+          }
         }
         break;
       }

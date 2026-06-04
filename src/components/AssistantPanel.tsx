@@ -10,6 +10,8 @@ import remarkGfm from "remark-gfm";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { CONSULTAS_IA_PACK } from "@/config/plans";
+import { Link } from "react-router-dom";
 import {
   extractFileText,
   buildAttachmentPrefix,
@@ -47,7 +49,8 @@ export function AssistantPanel({ open, onOpenChange, folioId = null, folioCodigo
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
-  const [usage, setUsage] = useState<{ used: number; limit: number } | null>(null);
+  const [usage, setUsage] = useState<{ used: number; limit: number; extras: number } | null>(null);
+  const [comprandoPack, setComprandoPack] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -117,8 +120,33 @@ export function AssistantPanel({ open, onOpenChange, folioId = null, folioCodigo
       .eq("year", now.getUTCFullYear())
       .eq("month", now.getUTCMonth() + 1)
       .maybeSingle();
+    const { data: orgRow } = await supabase
+      .from("organizations")
+      .select("consultas_ia_extras")
+      .eq("id", org.id)
+      .maybeSingle();
     const limit = PLAN_LIMITS[org.plan] ?? 30;
-    setUsage({ used: data?.mensajes_consumidos ?? 0, limit });
+    setUsage({
+      used: data?.mensajes_consumidos ?? 0,
+      limit,
+      extras: (orgRow as any)?.consultas_ia_extras ?? 0,
+    });
+  }
+
+  async function comprarPackConsultas() {
+    setComprandoPack(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("create-checkout", {
+        body: { priceId: CONSULTAS_IA_PACK.priceId },
+      });
+      if (error) throw error;
+      if (!data?.url) throw new Error("No se recibió URL de checkout");
+      window.location.href = data.url;
+    } catch (e: any) {
+      toast({ title: "No se pudo iniciar la compra", description: e.message, variant: "destructive" });
+    } finally {
+      setComprandoPack(false);
+    }
   }
 
   async function refreshConversaciones() {
@@ -379,7 +407,9 @@ export function AssistantPanel({ open, onOpenChange, folioId = null, folioCodigo
             <span>{folioCodigo ? `Contexto: ${folioCodigo}` : "Sin folio activo"}</span>
             {usage && (
               <span>
-                {limit === -1 ? "Ilimitado" : `${used}/${limit} mensajes`}
+                {limit === -1
+                  ? "Ilimitado"
+                  : `${used}/${limit} consultas${usage.extras > 0 ? ` (+${usage.extras} extras)` : ""}`}
               </span>
             )}
           </div>
@@ -403,10 +433,26 @@ export function AssistantPanel({ open, onOpenChange, folioId = null, folioCodigo
             Has usado el {Math.floor(pct)}% de tus mensajes este mes.
           </div>
         )}
-        {limit !== -1 && pct >= 100 && (
-          <div className="bg-destructive/10 text-foreground border-b border-destructive/30 px-4 py-2 text-xs flex items-center gap-2">
-            <AlertTriangle className="h-3 w-3 text-destructive" />
-            Sin mensajes este mes. Mejora tu plan para continuar.
+        {limit !== -1 && pct >= 100 && (usage?.extras ?? 0) === 0 && (
+          <div className="bg-destructive/10 text-foreground border-b border-destructive/30 px-4 py-3 text-xs flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+            <div className="flex items-center gap-2 flex-1">
+              <AlertTriangle className="h-3 w-3 text-destructive shrink-0" />
+              <span>Sin consultas este mes. Amplía tu plan o compra un pack para continuar.</span>
+            </div>
+            <div className="flex gap-2 shrink-0">
+              <Button asChild size="sm" variant="default" className="h-7 text-xs">
+                <Link to="/precios">Ampliar plan</Link>
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 text-xs"
+                onClick={comprarPackConsultas}
+                disabled={comprandoPack}
+              >
+                {comprandoPack ? <Loader2 className="h-3 w-3 animate-spin" /> : "Comprar 100 — $15 USD"}
+              </Button>
+            </div>
           </div>
         )}
 
