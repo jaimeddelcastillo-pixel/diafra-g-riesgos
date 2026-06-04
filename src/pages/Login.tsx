@@ -319,7 +319,7 @@ export default function Login() {
               <img
                 src={traceaLogo.url}
                 alt="TRACEA"
-                className="h-9 w-auto object-contain"
+                className="h-14 sm:h-16 lg:h-12 w-auto object-contain"
               />
             </div>
 
