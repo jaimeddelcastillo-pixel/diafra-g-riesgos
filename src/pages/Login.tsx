@@ -324,12 +324,12 @@ export default function Login() {
             </div>
 
             <h2
-              className="font-bold"
+              className="font-bold text-center"
               style={{ color: "#042C53", fontSize: "20px", fontFamily: "'Montserrat', sans-serif" }}
             >
               Acceso a la plataforma
             </h2>
-            <p className="mt-1.5" style={{ color: "#9ca3af", fontSize: "12px" }}>
+            <p className="mt-1.5 text-center" style={{ color: "#9ca3af", fontSize: "12px" }}>
               Ingresa tus credenciales para continuar.
             </p>
 
@@ -396,7 +396,7 @@ export default function Login() {
                     color: "#042C53",
                   }}
                 />
-                <div className="mt-1.5 text-right">
+                <div className="mt-1.5 text-center">
                   <Link
                     to="/recuperar"
                     style={{ color: "#185FA5", fontSize: "11px" }}
