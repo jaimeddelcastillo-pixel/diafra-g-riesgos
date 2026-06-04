@@ -383,6 +383,35 @@ export function AssistantPanel({ open, onOpenChange, folioId = null, folioCodigo
   const limit = usage?.limit ?? 0;
   const used = usage?.used ?? 0;
   const pct = limit === -1 ? 0 : limit === 0 ? 0 : (used / limit) * 100;
+  const extras = usage?.extras ?? 0;
+  const agotado = limit !== -1 && used >= limit && extras === 0;
+  const fechaRenovacion = useMemo(() => {
+    const now = new Date();
+    const next = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
+    return next.toLocaleDateString("es-MX", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+      timeZone: "UTC",
+    });
+  }, []);
+
+  // Aviso preventivo (80%) — UN solo toast por ciclo (year-month) por org.
+  useEffect(() => {
+    if (!usage || !org) return;
+    if (limit === -1 || limit <= 0) return;
+    const ratio = used / limit;
+    if (ratio < 0.8 || ratio >= 1) return;
+    const now = new Date();
+    const cycleKey = `tracea_aviso80_${org.id}_${now.getUTCFullYear()}_${now.getUTCMonth() + 1}`;
+    if (localStorage.getItem(cycleKey)) return;
+    const restantes = Math.max(0, limit - used);
+    toast({
+      title: `Te quedan ${restantes} consultas IA este mes`,
+      description: `Se renuevan el ${fechaRenovacion}. Puedes ampliar tu plan o comprar un pack de 100 consultas.`,
+    });
+    localStorage.setItem(cycleKey, "1");
+  }, [usage?.used, usage?.limit, org?.id, fechaRenovacion, limit, used, usage, org]);
 
   const grouped = useMemo(() => groupConversaciones(conversaciones), [conversaciones]);
 
@@ -430,27 +459,42 @@ export function AssistantPanel({ open, onOpenChange, folioId = null, folioCodigo
         {limit !== -1 && pct >= 80 && pct < 100 && (
           <div className="bg-warning/10 text-foreground border-b border-warning/30 px-4 py-2 text-xs flex items-center gap-2">
             <AlertTriangle className="h-3 w-3 text-warning" />
-            Has usado el {Math.floor(pct)}% de tus mensajes este mes.
+            Has usado el {Math.floor(pct)}% de tus consultas IA. Se renuevan el {fechaRenovacion}.
           </div>
         )}
-        {limit !== -1 && pct >= 100 && (usage?.extras ?? 0) === 0 && (
-          <div className="bg-destructive/10 text-foreground border-b border-destructive/30 px-4 py-3 text-xs flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
-            <div className="flex items-center gap-2 flex-1">
-              <AlertTriangle className="h-3 w-3 text-destructive shrink-0" />
-              <span>Sin consultas este mes. Amplía tu plan o compra un pack para continuar.</span>
+        {agotado && (
+          <div className="bg-destructive/10 text-foreground border-b border-destructive/30 px-4 py-3 text-sm flex flex-col gap-3">
+            <div className="flex items-start gap-2">
+              <AlertTriangle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
+              <div className="space-y-1">
+                <div className="font-medium">
+                  Agotaste tus {limit} consultas IA de este mes.
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  Se renuevan el <strong>{fechaRenovacion}</strong>. Mientras tanto puedes seguir trabajando con el wizard manual o ampliar tu plan.
+                </div>
+              </div>
             </div>
-            <div className="flex gap-2 shrink-0">
-              <Button asChild size="sm" variant="default" className="h-7 text-xs">
-                <Link to="/precios">Ampliar plan</Link>
+            <div className="flex flex-wrap gap-2">
+              <Button asChild size="sm" variant="default" className="h-8 text-xs">
+                <Link to="/precios?from=limite">Ampliar plan ahora</Link>
               </Button>
               <Button
                 size="sm"
                 variant="outline"
-                className="h-7 text-xs"
+                className="h-8 text-xs"
                 onClick={comprarPackConsultas}
                 disabled={comprandoPack}
               >
                 {comprandoPack ? <Loader2 className="h-3 w-3 animate-spin" /> : "Comprar 100 — $15 USD"}
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-8 text-xs"
+                onClick={() => onOpenChange(false)}
+              >
+                Continuar con wizard
               </Button>
             </div>
           </div>
@@ -549,7 +593,8 @@ export function AssistantPanel({ open, onOpenChange, folioId = null, folioCodigo
             <Textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Escribe tu pregunta o pega texto largo..."
+              placeholder={agotado ? "Sin consultas IA este mes — amplía tu plan para continuar" : "Escribe tu pregunta o pega texto largo..."}
+              disabled={agotado}
               className={`resize-y ${composerExpanded ? "min-h-[55vh] max-h-[70vh]" : "min-h-[72px] max-h-[40vh]"}`}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); }
@@ -559,6 +604,7 @@ export function AssistantPanel({ open, onOpenChange, folioId = null, folioCodigo
               onClick={sendMessage}
               disabled={
                 streaming ||
+                agotado ||
                 attachment?.status === "processing" ||
                 attachment?.status === "error" ||
                 (!input.trim() && attachment?.status !== "ready")
