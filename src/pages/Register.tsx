@@ -26,7 +26,7 @@ import {
 import { PLANS, ADDONS, type PlanId, type AddonId } from "@/config/plans";
 import { NORMAS_CONFIG, type NormaKey } from "@/config/normas";
 import { ContactDialog } from "@/components/ContactDialog";
-import traceaLogo from "@/assets/tracea-logo.png.asset.json";
+import traceaLogo from "@/assets/tracea-official.png.asset.json";
 
 type Step = 1 | 2 | 3 | 4;
 
@@ -202,12 +202,12 @@ export default function Register() {
 
   return (
     <div className="min-h-screen w-full bg-white flex flex-col">
-      <header className="px-6 sm:px-10 pt-8 flex justify-center sm:justify-start">
+      <header className="px-6 sm:px-10 pt-8 flex justify-center">
         <Link to="/" className="inline-flex items-center">
           <img
             src={traceaLogo.url}
             alt="TRACEA"
-            className="h-14 sm:h-16 w-auto object-contain"
+            className="h-32 sm:h-40 md:h-44 w-auto object-contain"
           />
         </Link>
       </header>

@@ -6,7 +6,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { PLANS, ADDONS, type PlanId, type AddonId } from "@/config/plans";
 import iconNeon from "@/assets/tracea-icon-neon.png.asset.json";
 import loginBg from "@/assets/login-bg.png.asset.json";
-import traceaLogo from "@/assets/tracea-logo.png.asset.json";
+import traceaLogo from "@/assets/tracea-official.png.asset.json";
 
 /* ---------- Iconos outline (símbolos SVG) ---------- */
 const ICONS: Record<string, JSX.Element> = {
@@ -315,11 +315,11 @@ export default function Login() {
         <div className="flex-1 flex items-center justify-center">
           <div className="w-full max-w-sm">
             {/* Logo */}
-            <div className="flex items-center mb-8 justify-center lg:justify-start">
+            <div className="flex items-center mb-8 justify-center">
               <img
                 src={traceaLogo.url}
                 alt="TRACEA"
-                className="h-14 sm:h-16 lg:h-12 w-auto object-contain"
+                className="h-32 sm:h-40 md:h-44 w-auto object-contain"
               />
             </div>
 
