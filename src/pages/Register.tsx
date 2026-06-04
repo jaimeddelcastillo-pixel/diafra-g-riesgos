@@ -202,12 +202,12 @@ export default function Register() {
 
   return (
     <div className="min-h-screen w-full bg-white flex flex-col">
-      <header className="px-6 sm:px-10 pt-8">
+      <header className="px-6 sm:px-10 pt-8 flex justify-center sm:justify-start">
         <Link to="/" className="inline-flex items-center">
           <img
             src={traceaLogo.url}
             alt="TRACEA"
-            className="h-10 w-auto object-contain"
+            className="h-14 sm:h-16 w-auto object-contain"
           />
         </Link>
       </header>
