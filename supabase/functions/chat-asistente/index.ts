@@ -307,7 +307,7 @@ const TOOL_RULES_ADDENDUM = `
 async function getOrgContext(supabase: any, userId: string) {
   const { data: member } = await supabase
     .from("org_members")
-    .select("org_id, role, organizations(id, nombre, plan, norma_aplicable, metodologia, usar_detectabilidad, umbral_npr_alto, umbral_npr_medio)")
+    .select("org_id, role, organizations(id, nombre, plan, norma_aplicable, metodologia, usar_detectabilidad, umbral_npr_alto, umbral_npr_medio, consultas_ia_extras)")
     .eq("user_id", userId)
     .maybeSingle();
   return member;
@@ -416,12 +416,14 @@ Deno.serve(async (req) => {
 
     // Verificar límite
     const limit = PLAN_LIMITS[org.plan] ?? 30;
+    const extras = Math.max(0, Number(org.consultas_ia_extras ?? 0));
     const usage = await getCurrentUsage(adminClient, org.id);
-    if (limit !== -1 && usage >= limit) {
+    const limiteEfectivo = limit === -1 ? -1 : limit + extras;
+    if (limit !== -1 && usage >= limiteEfectivo) {
       return new Response(JSON.stringify({
         error: "limite_alcanzado",
-        message: `Has alcanzado el límite mensual de ${limit} mensajes del plan ${org.plan}.`,
-        usage, limit,
+        message: `Has alcanzado el límite de ${limiteEfectivo} mensajes (${limit} del plan ${org.plan}${extras > 0 ? ` + ${extras} extras` : ""}).`,
+        usage, limit, extras,
       }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
