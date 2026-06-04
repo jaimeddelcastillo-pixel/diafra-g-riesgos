@@ -26,7 +26,7 @@ import {
 import { PLANS, ADDONS, type PlanId, type AddonId } from "@/config/plans";
 import { NORMAS_CONFIG, type NormaKey } from "@/config/normas";
 import { ContactDialog } from "@/components/ContactDialog";
-import { AuthLayout } from "@/components/AuthLayout";
+import traceaLogo from "@/assets/tracea-logo.png.asset.json";
 
 type Step = 1 | 2 | 3 | 4;
 
@@ -201,8 +201,19 @@ export default function Register() {
   };
 
   return (
-    <AuthLayout size="wide">
-      <Card className="w-full border-0 shadow-none lg:shadow-xl lg:border">
+    <div className="min-h-screen w-full bg-white flex flex-col">
+      <header className="px-6 sm:px-10 pt-8">
+        <Link to="/" className="inline-flex items-center">
+          <img
+            src={traceaLogo.url}
+            alt="TRACEA"
+            className="h-10 w-auto object-contain"
+          />
+        </Link>
+      </header>
+
+      <main className="flex-1 flex items-start sm:items-center justify-center px-4 sm:px-6 py-8">
+        <Card className="w-full max-w-2xl border-0 shadow-none sm:border sm:shadow-xl">
         <CardHeader className="text-center space-y-3 px-0 lg:px-6">
           <CardTitle className="text-2xl font-semibold tracking-tight">
             {step === 1 && "Crea tu cuenta TRACEA"}
@@ -634,6 +645,15 @@ export default function Register() {
           )}
         </CardContent>
       </Card>
-    </AuthLayout>
+      </main>
+
+      <footer className="px-6 pb-6 text-center text-xs text-muted-foreground space-x-3">
+        <Link to="/terminos" className="hover:text-foreground hover:underline">Términos</Link>
+        <span className="text-border">·</span>
+        <Link to="/privacidad" className="hover:text-foreground hover:underline">Privacidad</Link>
+        <span className="text-border">·</span>
+        <span>© {new Date().getFullYear()} TRACEA</span>
+      </footer>
+    </div>
   );
 }

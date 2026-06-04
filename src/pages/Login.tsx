@@ -5,8 +5,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { PLANS, ADDONS, type PlanId, type AddonId } from "@/config/plans";
 import iconNeon from "@/assets/tracea-icon-neon.png.asset.json";
-import iconDark from "@/assets/tracea-icon.png.asset.json";
 import loginBg from "@/assets/login-bg.png.asset.json";
+import traceaLogo from "@/assets/tracea-logo.png.asset.json";
 
 /* ---------- Iconos outline (símbolos SVG) ---------- */
 const ICONS: Record<string, JSX.Element> = {
@@ -250,12 +250,11 @@ export default function Login() {
         {/* Top bar */}
         <div className="relative z-10 flex items-start justify-between">
           <div className="flex items-center gap-3">
-            <div
-              className="flex h-8 w-8 items-center justify-center rounded-lg overflow-hidden"
-              style={{ background: "#8587E8" }}
-            >
-              <img src={iconNeon.url} alt="" className="h-full w-full object-contain" />
-            </div>
+            <img
+              src={iconNeon.url}
+              alt="TRACEA"
+              className="h-10 w-auto object-contain"
+            />
             <span
               className="text-white font-bold text-base"
               style={{ fontFamily: "'Montserrat', sans-serif", letterSpacing: "3.5px" }}
@@ -316,23 +315,12 @@ export default function Login() {
         <div className="flex-1 flex items-center justify-center">
           <div className="w-full max-w-sm">
             {/* Logo */}
-            <div className="flex items-center gap-2.5 mb-8 justify-center lg:justify-start">
-              <div
-                className="flex h-[26px] w-[26px] items-center justify-center rounded-md overflow-hidden"
-                style={{ background: "#042C53" }}
-              >
-                <img src={iconDark.url} alt="" className="h-full w-full object-contain" />
-              </div>
-              <span
-                className="font-bold text-sm"
-                style={{
-                  color: "#042C53",
-                  fontFamily: "'Montserrat', sans-serif",
-                  letterSpacing: "2.5px",
-                }}
-              >
-                TRACEA
-              </span>
+            <div className="flex items-center mb-8 justify-center lg:justify-start">
+              <img
+                src={traceaLogo.url}
+                alt="TRACEA"
+                className="h-9 w-auto object-contain"
+              />
             </div>
 
             <h2
