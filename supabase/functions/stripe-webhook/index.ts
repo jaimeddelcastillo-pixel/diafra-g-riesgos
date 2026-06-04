@@ -334,6 +334,54 @@ Deno.serve(async (req) => {
           }
           await supabase.from("organizations").update(updates).eq("id", orgId);
         }
+        // OXXO: pack de consultas IA
+        if (session.mode === "payment" && producto && CONSULTAS_POR_PACK[producto]) {
+          const cantidad = CONSULTAS_POR_PACK[producto];
+          const { data: existing } = await supabase
+            .from("addon_purchases")
+            .select("id")
+            .eq("stripe_session_id", session.id)
+            .maybeSingle();
+          if (!existing) {
+            const { data: orgRow } = await supabase
+              .from("organizations")
+              .select("consultas_ia_extras")
+              .eq("id", orgId)
+              .maybeSingle();
+            const saldoActual = ((orgRow as any)?.consultas_ia_extras as number | undefined) ?? 0;
+            const nuevoSaldo = saldoActual + cantidad;
+            await supabase
+              .from("organizations")
+              .update({ consultas_ia_extras: nuevoSaldo })
+              .eq("id", orgId);
+            await supabase.from("addon_purchases").insert({
+              org_id: orgId,
+              producto,
+              stripe_session_id: session.id,
+              stripe_payment_intent_id: typeof session.payment_intent === "string"
+                ? session.payment_intent
+                : session.payment_intent?.id ?? null,
+              monto_usd: (session.amount_total ?? 0) / 100,
+              metadata: { price_id: priceId, oxxo: true },
+            });
+            const contact = await getOrgContact(supabase, orgId);
+            if (contact.email) {
+              await sendTplEmail(
+                supabase,
+                "consultas-ia-acreditadas",
+                contact.email,
+                {
+                  nombre: contact.nombre,
+                  organizacion: contact.org_nombre,
+                  cantidad,
+                  total_extras: nuevoSaldo,
+                  link: `${APP_URL}/login`,
+                },
+                `consultas-ia-acreditadas-${session.id}`,
+              );
+            }
+          }
+        }
         break;
       }
 
