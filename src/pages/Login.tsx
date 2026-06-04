@@ -1,16 +1,176 @@
-import { useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
+import { useMemo, useState } from "react";
+import { useNavigate, useSearchParams, Navigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { Navigate, Link } from "react-router-dom";
 import { PLANS, ADDONS, type PlanId, type AddonId } from "@/config/plans";
-import { AuthLayout } from "@/components/AuthLayout";
+import iconNeon from "@/assets/tracea-icon-neon.png.asset.json";
+import iconDark from "@/assets/tracea-icon.png.asset.json";
 
+/* ---------- Iconos outline (símbolos SVG) ---------- */
+const ICONS: Record<string, JSX.Element> = {
+  nodes: (
+    <g>
+      <circle cx="4" cy="6" r="2" /><circle cx="20" cy="6" r="2" />
+      <circle cx="12" cy="18" r="2" />
+      <path d="M5.5 7.5 10.5 16.5 M18.5 7.5 13.5 16.5 M6 6 H18" />
+    </g>
+  ),
+  lineChart: (
+    <g>
+      <path d="M3 20 V4 M3 20 H21" />
+      <path d="M5 16 L10 11 L14 14 L20 6" />
+      <circle cx="5" cy="16" r="1.2" /><circle cx="10" cy="11" r="1.2" />
+      <circle cx="14" cy="14" r="1.2" /><circle cx="20" cy="6" r="1.2" />
+    </g>
+  ),
+  barChart: (
+    <g>
+      <path d="M3 20 V4 M3 20 H21" />
+      <rect x="6" y="12" width="3" height="6" /><rect x="11" y="8" width="3" height="10" />
+      <rect x="16" y="14" width="3" height="4" />
+    </g>
+  ),
+  alert: (
+    <g>
+      <path d="M12 3 L22 20 H2 Z" /><path d="M12 10 V14 M12 17 V17.5" />
+    </g>
+  ),
+  shield: (
+    <g>
+      <path d="M12 3 L20 6 V12 C20 16.5 16.5 19.5 12 21 C7.5 19.5 4 16.5 4 12 V6 Z" />
+      <path d="M8.5 12 L11 14.5 L15.5 10" />
+    </g>
+  ),
+  semaforo: (
+    <g>
+      <rect x="8" y="2" width="8" height="20" rx="3" />
+      <circle cx="12" cy="7" r="1.6" /><circle cx="12" cy="12" r="1.6" /><circle cx="12" cy="17" r="1.6" />
+    </g>
+  ),
+  lupa: (
+    <g>
+      <circle cx="10" cy="10" r="6" /><path d="M14.5 14.5 L20 20" />
+    </g>
+  ),
+  bell: (
+    <g>
+      <path d="M6 16 V11 C6 7.5 8.5 5 12 5 C15.5 5 18 7.5 18 11 V16 L20 18 H4 Z" />
+      <path d="M10 21 H14" />
+    </g>
+  ),
+  cycle: (
+    <g>
+      <path d="M20 12 A8 8 0 1 1 12 4" /><path d="M20 4 V9 H15" />
+    </g>
+  ),
+  gauge: (
+    <g>
+      <path d="M4 16 A8 8 0 0 1 20 16" /><path d="M12 16 L17 9" />
+      <circle cx="12" cy="16" r="1.2" />
+    </g>
+  ),
+  grid: (
+    <g>
+      <rect x="3" y="3" width="18" height="18" />
+      <path d="M3 9 H21 M3 15 H21 M9 3 V21 M15 3 V21" />
+    </g>
+  ),
+  qr: (
+    <g>
+      <rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" />
+      <rect x="3" y="14" width="7" height="7" />
+      <path d="M14 14 H17 V17 M21 14 V17 H18 M14 21 H17 V18 M21 21 V18" />
+    </g>
+  ),
+  chain: (
+    <g>
+      <circle cx="4" cy="12" r="2" /><circle cx="12" cy="12" r="2" /><circle cx="20" cy="12" r="2" />
+      <path d="M6 12 H10 M14 12 H18" />
+    </g>
+  ),
+  network: (
+    <g>
+      <circle cx="12" cy="4" r="1.8" /><circle cx="4" cy="14" r="1.8" />
+      <circle cx="20" cy="14" r="1.8" /><circle cx="12" cy="20" r="1.8" />
+      <path d="M12 6 L5 13 M12 6 L19 13 M5 15 L11 19 M19 15 L13 19 M5 14 H19" />
+    </g>
+  ),
+  checkBox: (
+    <g>
+      <rect x="3" y="3" width="18" height="18" rx="2" />
+      <path d="M7 12 L11 16 L17 8" />
+    </g>
+  ),
+  arrow: (
+    <g>
+      <path d="M3 12 H19" /><path d="M15 7 L20 12 L15 17" />
+    </g>
+  ),
+  biohazard: (
+    <g>
+      <circle cx="12" cy="12" r="2.5" />
+      <circle cx="12" cy="5" r="3" /><circle cx="6" cy="17" r="3" /><circle cx="18" cy="17" r="3" />
+    </g>
+  ),
+};
+const ICON_KEYS = Object.keys(ICONS);
+
+/* PRNG determinista para que el patrón no salte en cada render */
+function mulberry32(seed: number) {
+  return function () {
+    let t = (seed += 0x6d2b79f5);
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function IconPattern() {
+  const items = useMemo(() => {
+    const rand = mulberry32(73);
+    const arr: { x: number; y: number; s: number; r: number; o: number; k: string }[] = [];
+    for (let i = 0; i < 95; i++) {
+      arr.push({
+        x: rand() * 100,
+        y: rand() * 100,
+        s: 0.6 + rand() * 1.4, // escala
+        r: rand() * 360,
+        o: 0.1 + rand() * 0.03,
+        k: ICON_KEYS[Math.floor(rand() * ICON_KEYS.length)],
+      });
+    }
+    return arr;
+  }, []);
+
+  return (
+    <svg
+      aria-hidden
+      className="absolute inset-0 h-full w-full"
+      viewBox="0 0 100 100"
+      preserveAspectRatio="xMidYMid slice"
+      fill="none"
+      stroke="#ffffff"
+      strokeWidth="1.1"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      vectorEffect="non-scaling-stroke"
+    >
+      {items.map((it, i) => (
+        <g
+          key={i}
+          transform={`translate(${it.x} ${it.y}) rotate(${it.r}) scale(${(it.s * 4) / 24})`}
+          opacity={it.o}
+          style={{ transformOrigin: "center" }}
+        >
+          <g transform="translate(-12 -12)">{ICONS[it.k]}</g>
+        </g>
+      ))}
+    </svg>
+  );
+}
+
+/* ---------- Página ---------- */
 export default function Login() {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -29,8 +189,6 @@ export default function Login() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [isSignUp, setIsSignUp] = useState(false);
-  const [nombre, setNombre] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   if (loading) return null;
@@ -39,110 +197,266 @@ export default function Login() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
-
-    if (isSignUp) {
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: { nombre: nombre || email },
-          emailRedirectTo: window.location.origin,
-        },
-      });
-      if (error) {
-        toast({ title: "Error al registrar", description: error.message, variant: "destructive" });
-      } else {
-        toast({ title: "Registro exitoso", description: "Revisa tu correo para confirmar tu cuenta." });
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) {
+      toast({ title: "Error al iniciar sesión", description: error.message, variant: "destructive" });
+      setSubmitting(false);
+      return;
+    }
+    if (itemSeleccionado) {
+      try {
+        const { data, error: coError } = await supabase.functions.invoke("create-checkout", {
+          body: { priceId: itemSeleccionado.priceId },
+        });
+        if (coError) throw coError;
+        if (!data?.url) throw new Error("No se recibió URL de checkout");
+        window.location.href = data.url;
+        return;
+      } catch (e: any) {
+        toast({ title: "No pudimos iniciar el cobro", description: e.message, variant: "destructive" });
+        navigate("/precios");
       }
     } else {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) {
-        toast({ title: "Error al iniciar sesión", description: error.message, variant: "destructive" });
-      } else {
-        // Si vino con ?plan= → arrancar checkout; si no, al panel
-        if (itemSeleccionado) {
-          try {
-            const { data, error: coError } = await supabase.functions.invoke(
-              "create-checkout",
-              { body: { priceId: itemSeleccionado.priceId } },
-            );
-            if (coError) throw coError;
-            if (!data?.url) throw new Error("No se recibió URL de checkout");
-            window.location.href = data.url;
-            return;
-          } catch (e: any) {
-            toast({
-              title: "No pudimos iniciar el cobro",
-              description: e.message,
-              variant: "destructive",
-            });
-            navigate("/precios");
-          }
-        } else {
-          navigate("/");
-        }
-      }
+      navigate("/");
     }
     setSubmitting(false);
   };
 
+  const pills = [
+    { label: "COFEPRIS ready", icon: ICONS.shield },
+    { label: "Trazabilidad total", icon: ICONS.chain },
+    { label: "Tiempo real", icon: ICONS.lineChart },
+    { label: "NOM-059 · NOM-241", icon: ICONS.checkBox },
+  ];
+
   return (
-    <AuthLayout>
-      <Card className="w-full border-0 shadow-none lg:shadow-xl lg:border">
-        <CardHeader className="space-y-2 px-0 lg:px-6">
-          <CardTitle className="text-2xl font-semibold tracking-tight">
-            {isSignUp ? "Crea tu cuenta" : "Bienvenido de vuelta"}
-          </CardTitle>
-          <p className="text-sm text-muted-foreground">
-            {isSignUp
-              ? "Regístrate para acceder a tu panel TRACEA."
-              : "Ingresa tus credenciales para acceder al panel."}
-          </p>
-          {itemSeleccionado && (
-            <div className="rounded-md border border-primary/30 bg-primary/5 px-3 py-2 text-xs text-foreground text-left mt-3">
-              <p className="font-medium">
-                Inicia sesión para continuar con: {itemSeleccionado.nombre}
-              </p>
-              <p className="text-muted-foreground mt-0.5">
-                Te llevaremos directo al pago.
-              </p>
+    <div
+      className="min-h-screen w-full flex bg-white"
+      style={{ fontFamily: "'Inter', system-ui, sans-serif" }}
+    >
+      {/* Panel izquierdo 60% */}
+      <aside
+        className="hidden lg:flex relative w-[60%] overflow-hidden flex-col justify-between p-12 xl:p-16 text-white"
+        style={{ background: "#042C53" }}
+      >
+        <IconPattern />
+
+        {/* Top bar */}
+        <div className="relative z-10 flex items-start justify-between">
+          <div className="flex items-center gap-3">
+            <div
+              className="flex h-8 w-8 items-center justify-center rounded-lg overflow-hidden"
+              style={{ background: "#8587E8" }}
+            >
+              <img src={iconNeon.url} alt="" className="h-full w-full object-contain" />
             </div>
-          )}
-        </CardHeader>
-        <CardContent className="px-0 lg:px-6">
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {isSignUp && (
-              <div className="space-y-2">
-                <Label htmlFor="nombre">Nombre completo</Label>
-                <Input id="nombre" value={nombre} onChange={(e) => setNombre(e.target.value)} placeholder="Dr. García López" required />
+            <span
+              className="text-white font-bold text-base"
+              style={{ fontFamily: "'Montserrat', sans-serif", letterSpacing: "3.5px" }}
+            >
+              TRACEA
+            </span>
+          </div>
+          <span
+            className="text-[10px] font-semibold"
+            style={{ color: "#8587E8", letterSpacing: "2px", fontFamily: "'Montserrat', sans-serif" }}
+          >
+            V2.0 · CLOUD
+          </span>
+        </div>
+
+        {/* Bottom block */}
+        <div className="relative z-10 max-w-xl">
+          <h1
+            className="text-white font-bold leading-tight"
+            style={{ fontFamily: "'Montserrat', sans-serif", fontSize: "26px" }}
+          >
+            Gestión de riesgos
+            <br />
+            <span style={{ color: "#8587E8" }}>inteligente y trazable.</span>
+          </h1>
+
+          <div className="mt-6 flex flex-wrap gap-2">
+            {pills.map((p) => (
+              <span
+                key={p.label}
+                className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] text-white"
+                style={{
+                  background: "rgba(133,135,232,0.10)",
+                  border: "1px solid rgba(133,135,232,0.28)",
+                }}
+              >
+                <svg
+                  width="12"
+                  height="12"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="#8587E8"
+                  strokeWidth="1.6"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  {p.icon}
+                </svg>
+                {p.label}
+              </span>
+            ))}
+          </div>
+        </div>
+      </aside>
+
+      {/* Panel derecho 40% */}
+      <main className="flex-1 lg:w-[40%] flex flex-col bg-white" style={{ padding: "36px" }}>
+        <div className="flex-1 flex items-center justify-center">
+          <div className="w-full max-w-sm">
+            {/* Logo */}
+            <div className="flex items-center gap-2.5 mb-8 justify-center lg:justify-start">
+              <div
+                className="flex h-[26px] w-[26px] items-center justify-center rounded-md overflow-hidden"
+                style={{ background: "#042C53" }}
+              >
+                <img src={iconDark.url} alt="" className="h-full w-full object-contain" />
+              </div>
+              <span
+                className="font-bold text-sm"
+                style={{
+                  color: "#042C53",
+                  fontFamily: "'Montserrat', sans-serif",
+                  letterSpacing: "2.5px",
+                }}
+              >
+                TRACEA
+              </span>
+            </div>
+
+            <h2
+              className="font-bold"
+              style={{ color: "#042C53", fontSize: "20px", fontFamily: "'Montserrat', sans-serif" }}
+            >
+              Acceso a la plataforma
+            </h2>
+            <p className="mt-1.5" style={{ color: "#9ca3af", fontSize: "12px" }}>
+              Ingresa tus credenciales para continuar.
+            </p>
+
+            {itemSeleccionado && (
+              <div
+                className="mt-4 rounded-md px-3 py-2 text-[11px]"
+                style={{
+                  background: "rgba(24,95,165,0.06)",
+                  border: "1px solid rgba(24,95,165,0.25)",
+                  color: "#042C53",
+                }}
+              >
+                <p className="font-medium">
+                  Inicia sesión para continuar con: {itemSeleccionado.nombre}
+                </p>
               </div>
             )}
-            <div className="space-y-2">
-              <Label htmlFor="email">Correo electrónico</Label>
-              <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="usuario@tracea.mx" required />
+
+            <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+              <div>
+                <label
+                  htmlFor="email"
+                  className="block mb-1.5 font-semibold uppercase"
+                  style={{ fontSize: "11px", color: "#374151", letterSpacing: "0.6px" }}
+                >
+                  Correo electrónico
+                </label>
+                <input
+                  id="email"
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="nombre@empresa.com.mx"
+                  className="w-full h-10 px-3 text-sm bg-white outline-none transition-colors"
+                  style={{
+                    border: "1px solid #e5e7eb",
+                    borderRadius: "7px",
+                    color: "#042C53",
+                  }}
+                />
+              </div>
+
+              <div>
+                <label
+                  htmlFor="password"
+                  className="block mb-1.5 font-semibold uppercase"
+                  style={{ fontSize: "11px", color: "#374151", letterSpacing: "0.6px" }}
+                >
+                  Contraseña
+                </label>
+                <input
+                  id="password"
+                  type="password"
+                  required
+                  minLength={6}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••••"
+                  className="w-full h-10 px-3 text-sm bg-white outline-none transition-colors"
+                  style={{
+                    border: "1px solid #e5e7eb",
+                    borderRadius: "7px",
+                    color: "#042C53",
+                  }}
+                />
+                <div className="mt-1.5 text-right">
+                  <Link
+                    to="/recuperar"
+                    style={{ color: "#185FA5", fontSize: "11px" }}
+                    className="hover:underline"
+                  >
+                    ¿Olvidaste tu contraseña?
+                  </Link>
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={submitting}
+                className="w-full h-11 text-white font-semibold text-sm transition-opacity disabled:opacity-60"
+                style={{
+                  background: "#042C53",
+                  borderRadius: "7px",
+                  fontFamily: "'Montserrat', sans-serif",
+                  letterSpacing: "0.4px",
+                }}
+              >
+                {submitting ? "Procesando..." : "Iniciar sesión"}
+              </button>
+            </form>
+
+            <div className="my-6 h-px" style={{ background: "#e5e7eb" }} />
+
+            <div className="text-center space-y-2">
+              <Link
+                to="/register"
+                className="block hover:underline"
+                style={{ color: "#185FA5", fontSize: "11px" }}
+              >
+                ¿Nueva empresa? Crear cuenta →
+              </Link>
+              <Link
+                to="/precios"
+                className="block hover:underline"
+                style={{ color: "#185FA5", fontSize: "11px" }}
+              >
+                Ver planes y precios →
+              </Link>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Contraseña</Label>
-              <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" required minLength={6} />
-            </div>
-            <Button type="submit" className="w-full" disabled={submitting}>
-              {submitting ? "Procesando..." : isSignUp ? "Crear Cuenta" : "Iniciar Sesión"}
-            </Button>
-            <div className="space-y-2 text-center">
-              <p className="text-sm text-muted-foreground">
-                <Link to="/register" className="text-primary underline font-medium">
-                  ¿Nueva empresa? Crear cuenta →
-                </Link>
-              </p>
-              <p className="text-sm text-muted-foreground">
-                <Link to="/precios" className="text-primary underline font-medium">
-                  Ver planes y precios →
-                </Link>
-              </p>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
-    </AuthLayout>
+          </div>
+        </div>
+
+        <footer className="text-center" style={{ color: "#9ca3af", fontSize: "11px" }}>
+          <Link to="/terminos" className="hover:underline">Términos</Link>
+          <span className="mx-2">·</span>
+          <Link to="/privacidad" className="hover:underline">Privacidad</Link>
+          <span className="mx-2">·</span>
+          <span>© {new Date().getFullYear()} TRACEA</span>
+        </footer>
+      </main>
+    </div>
   );
 }
