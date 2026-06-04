@@ -1062,6 +1062,7 @@ export type Database = {
       organizations: {
         Row: {
           activo: boolean
+          alerta_80_enviada: boolean
           cancelled_at: string | null
           codigo_formato: string
           consultas_ia_extras: number
@@ -1104,6 +1105,7 @@ export type Database = {
         }
         Insert: {
           activo?: boolean
+          alerta_80_enviada?: boolean
           cancelled_at?: string | null
           codigo_formato?: string
           consultas_ia_extras?: number
@@ -1146,6 +1148,7 @@ export type Database = {
         }
         Update: {
           activo?: boolean
+          alerta_80_enviada?: boolean
           cancelled_at?: string | null
           codigo_formato?: string
           consultas_ia_extras?: number
