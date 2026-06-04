@@ -73,10 +73,16 @@ interface AdminData {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const planLabels: Record<string, string> = { trial: "Trial", pro: "Pro", enterprise: "Enterprise" };
+const planLabels: Record<string, string> = {
+  trial: "Trial",
+  starter: "Starter",
+  professional: "Professional",
+  enterprise: "Enterprise",
+};
 const planStyles: Record<string, string> = {
   trial: "bg-yellow-100 text-yellow-800 border-yellow-200",
-  pro: "bg-blue-100 text-blue-800 border-blue-200",
+  starter: "bg-sky-100 text-sky-800 border-sky-200",
+  professional: "bg-blue-100 text-blue-800 border-blue-200",
   enterprise: "bg-purple-100 text-purple-800 border-purple-200",
 };
 
