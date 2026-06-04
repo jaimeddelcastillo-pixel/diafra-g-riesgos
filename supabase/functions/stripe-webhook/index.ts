@@ -9,7 +9,7 @@ const PRICE_TO_PRODUCT: Record<string, string> = {
   price_1TQ7kVKfwzAg4OKvjU9mVaun: "curso",
   price_1TQ7lbKfwzAg4OKvwQwizz4f: "protocolos",
   price_1TbRUHKfwzAg4OKvWE8uMR6y: "dc3_extra",
-  price_PENDIENTE_CONSULTAS_IA_100: "consultas_ia_100",
+  price_1Teja1KfwzAg4OKvi5O0sjgh: "consultas_ia_100",
 };
 
 const PLAN_LIMITS: Record<string, number> = {

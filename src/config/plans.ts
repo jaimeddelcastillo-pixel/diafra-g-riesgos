@@ -133,7 +133,7 @@ export const ADDONS: Addon[] = [
 export const CONSULTAS_IA_PACK: Addon = {
   id: "consultas_ia_100",
   nombre: "Pack 100 consultas IA",
-  priceId: "price_PENDIENTE_CONSULTAS_IA_100",
+  priceId: "price_1Teja1KfwzAg4OKvi5O0sjgh",
   precio: "$15 USD",
   descripcion:
     "Se suman a tu límite mensual actual. No caducan hasta ser usadas.",
