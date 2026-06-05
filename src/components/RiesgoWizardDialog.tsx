@@ -59,6 +59,9 @@ interface Props {
   procesoEquipo: string;
   nextNumeroId: number;
   normaFolio?: string | null;
+  /** Tipo de folio actual (SGC, FAB, …). Si está vacío y el usuario elige
+   *  "documental/regulatorio", el wizard auto-asigna tipo_folio = "SGC". */
+  tipoFolio?: string | null;
 }
 
 type WizardState = {
@@ -302,6 +305,7 @@ export function RiesgoWizardDialog({
   procesoEquipo,
   nextNumeroId,
   normaFolio,
+  tipoFolio,
 }: Props) {
   const { toast } = useToast();
   const qc = useQueryClient();
