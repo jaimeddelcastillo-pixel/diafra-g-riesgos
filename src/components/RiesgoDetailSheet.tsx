@@ -5,6 +5,7 @@ import { Separator } from "@/components/ui/separator";
 import { Pencil, AlertTriangle, Clock, CheckCircle2 } from "lucide-react";
 import type { Riesgo } from "@/hooks/useFolios";
 import { getNPRLevel } from "@/hooks/useFolios";
+import { getDescripcionSeveridad, getNormaConfig, type TipoEscalaSeveridad } from "@/config/normas";
 
 function Field({ label, value, mono = false }: { label: string; value: React.ReactNode; mono?: boolean }) {
   const empty = value === null || value === undefined || value === "";
@@ -55,6 +56,9 @@ export function RiesgoDetailSheet({
   const nprRes = r.npr_residual ?? r.sev_residual * r.ocu_residual * r.det_residual;
   const level = getNPRLevel(npr, r.severidad);
   const levelRes = getNPRLevel(nprRes, r.sev_residual);
+  const tipoEscala = ((r as any).tipo_escala_severidad as TipoEscalaSeveridad) ?? "estandar";
+  const sevDesc = getDescripcionSeveridad(r.severidad, tipoEscala, getNormaConfig(null));
+  const esSGC = tipoEscala === "sgc_regulatorio";
 
   const verifEstado = !r.requiere_accion
     ? null
@@ -131,7 +135,29 @@ export function RiesgoDetailSheet({
           <Separator />
 
           <Group title="2. Evaluación inicial — Justificaciones">
-            <Field label="Severidad" value={`S = ${r.severidad}`} mono />
+            <Field
+              label="Severidad"
+              value={
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-mono">{`S = ${r.severidad}`}</span>
+                    <Badge
+                      variant="outline"
+                      className={
+                        esSGC
+                          ? "text-[9px] bg-orange-500/10 text-orange-700 border-orange-500/40"
+                          : "text-[9px] bg-primary/10 text-primary border-primary/40"
+                      }
+                    >
+                      {esSGC ? "Escala SGC/Regulatoria" : "Escala Estándar"}
+                    </Badge>
+                  </div>
+                  <div className="text-[11px] text-muted-foreground">
+                    {sevDesc.etiqueta} — {sevDesc.descripcion}
+                  </div>
+                </div>
+              }
+            />
             <Field label="Ocurrencia" value={`O = ${r.ocurrencia}`} mono />
             <Field label="Detectabilidad" value={r.detectabilidad_aplicable ? `D = ${r.deteccion}` : "No aplica"} mono />
             <div className="sm:col-span-2">

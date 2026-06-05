@@ -64,6 +64,8 @@ Deno.serve(async (req) => {
       sev_residual: clamp(body.sev_residual ?? body.severidad ?? 1),
       ocu_residual: clamp(body.ocu_residual ?? body.ocurrencia ?? 1),
       det_residual: clamp(body.det_residual ?? body.deteccion ?? 1),
+      tipo_escala_severidad:
+        body.tipo_escala_severidad === "sgc_regulatorio" ? "sgc_regulatorio" : "estandar",
     };
 
     const { data: duplicate, error: dupErr } = await userClient

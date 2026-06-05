@@ -602,7 +602,10 @@ export async function generateFolioPDF(
           idEmpty,
           `${t.procesoEquipo}:\n${r.etapa_proceso || "—"}`,
           { content: "S:", styles: { fontStyle: "bold", halign: "right", valign: "middle" } },
-          { content: String(r.severidad), styles: { fontStyle: "bold", halign: "center", valign: "middle", fontSize: 11 } },
+          {
+            content: `${r.severidad}\n(${(r as any).tipo_escala_severidad === "sgc_regulatorio" ? "Escala SGC" : "Escala Estándar"})`,
+            styles: { fontStyle: "bold", halign: "center", valign: "middle", fontSize: 9 },
+          },
           `Controles Actuales:\n${r.controles_actuales || "—"}`,
           { content: `Acción Implementada:\n${r.accion_implementada || "—"}`, colSpan: 2 },
         ],
