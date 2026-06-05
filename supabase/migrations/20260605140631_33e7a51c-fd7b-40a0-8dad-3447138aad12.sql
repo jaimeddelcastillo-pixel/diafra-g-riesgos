@@ -1,0 +1,1 @@
+ALTER TABLE public.riesgos ADD COLUMN tipo_escala_severidad TEXT NOT NULL DEFAULT 'estandar' CHECK (tipo_escala_severidad IN ('estandar','sgc_regulatorio'));

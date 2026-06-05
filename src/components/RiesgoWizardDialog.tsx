@@ -27,6 +27,8 @@ import {
   getNormaConfig,
   calcularNPR,
   getNPRLevelByNorma,
+  getDescripcionSeveridad,
+  type TipoEscalaSeveridad,
 } from "@/config/normas";
 import type { NormaKey } from "@/config/normas";
 import {
@@ -57,6 +59,9 @@ interface Props {
   procesoEquipo: string;
   nextNumeroId: number;
   normaFolio?: string | null;
+  /** Tipo de folio actual (SGC, FAB, …). Si está vacío y el usuario elige
+   *  "documental/regulatorio", el wizard auto-asigna tipo_folio = "SGC". */
+  tipoFolio?: string | null;
 }
 
 type WizardState = {
@@ -75,6 +80,7 @@ type WizardState = {
   ocurrencia: number;
   deteccion: number;
   poblacion: string;
+  tipo_escala_severidad: TipoEscalaSeveridad;
   // Paso 4
   controles_prev_a: string[];
   controles_prev_b: string[];
@@ -103,6 +109,7 @@ function initialState(): WizardState {
     ocurrencia: 1,
     deteccion: 1,
     poblacion: "",
+    tipo_escala_severidad: "estandar",
     controles_prev_a: [""],
     controles_prev_b: [""],
     controles_prev_c: [""],
@@ -298,6 +305,7 @@ export function RiesgoWizardDialog({
   procesoEquipo,
   nextNumeroId,
   normaFolio,
+  tipoFolio,
 }: Props) {
   const { toast } = useToast();
   const qc = useQueryClient();
@@ -435,6 +443,7 @@ export function RiesgoWizardDialog({
       severidad: s.severidad,
       ocurrencia: s.ocurrencia,
       deteccion: usaDet ? s.deteccion : 1,
+      tipo_escala_severidad: s.tipo_escala_severidad,
       detectabilidad_aplicable: usaDet,
       controles_prevencion: prevTxt,
       controles_deteccion: detTxt,
@@ -999,13 +1008,89 @@ export function RiesgoWizardDialog({
                 <ElemBadge num="NPR" label="Evaluación" tone="neutral" />
               </div>
 
+              {/* Selector de escala de Severidad — define qué catálogo aplica */}
+              <div className="rounded-lg border bg-card p-4 space-y-3">
+                <div>
+                  <Label className="text-sm font-semibold">¿Qué tipo de riesgo es este?</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Determina qué escala de Severidad aplica.
+                  </p>
+                </div>
+                <RadioGroup
+                  value={s.tipo_escala_severidad}
+                  onValueChange={async (v) => {
+                    const nuevo = v as TipoEscalaSeveridad;
+                    setS({ ...s, tipo_escala_severidad: nuevo });
+                    // Pre-seleccionar tipo_folio = SGC cuando el folio aún no tiene tipo
+                    if (nuevo === "sgc_regulatorio" && !tipoFolio) {
+                      try {
+                        await supabase.from("folios").update({ tipo_folio: "SGC" }).eq("id", folioId);
+                        qc.invalidateQueries({ queryKey: ["folio", folioId] });
+                      } catch (e) {
+                        console.warn("No se pudo pre-asignar tipo_folio=SGC", e);
+                      }
+                    }
+                  }}
+                  className="grid sm:grid-cols-2 gap-2"
+                >
+                  <label
+                    htmlFor="esc-estandar"
+                    className={cn(
+                      "flex items-start gap-2 rounded-md border p-3 cursor-pointer transition-colors",
+                      s.tipo_escala_severidad === "estandar"
+                        ? "border-primary bg-primary/5"
+                        : "hover:bg-muted/40",
+                    )}
+                  >
+                    <RadioGroupItem value="estandar" id="esc-estandar" className="mt-0.5" />
+                    <div className="space-y-0.5">
+                      <div className="text-sm font-semibold">Riesgo de producto o proceso</div>
+                      <div className="text-[11px] text-muted-foreground">
+                        Escala Estándar — impacto en paciente / usuario.
+                      </div>
+                    </div>
+                  </label>
+                  <label
+                    htmlFor="esc-sgc"
+                    className={cn(
+                      "flex items-start gap-2 rounded-md border p-3 cursor-pointer transition-colors",
+                      s.tipo_escala_severidad === "sgc_regulatorio"
+                        ? "border-orange-500 bg-orange-500/5"
+                        : "hover:bg-muted/40",
+                    )}
+                  >
+                    <RadioGroupItem value="sgc_regulatorio" id="esc-sgc" className="mt-0.5" />
+                    <div className="space-y-0.5">
+                      <div className="text-sm font-semibold">Riesgo documental o regulatorio</div>
+                      <div className="text-[11px] text-muted-foreground">
+                        Escala SGC — impacto ante COFEPRIS (observación, NC, recall).
+                      </div>
+                    </div>
+                  </label>
+                </RadioGroup>
+                <div
+                  className={cn(
+                    "text-[11px] rounded px-2 py-1 font-medium",
+                    s.tipo_escala_severidad === "sgc_regulatorio"
+                      ? "bg-orange-500/10 text-orange-700 dark:text-orange-300 border border-orange-500/30"
+                      : "bg-primary/10 text-primary border border-primary/30",
+                  )}
+                >
+                  Usando: {s.tipo_escala_severidad === "sgc_regulatorio" ? "Escala SGC/Regulatoria" : "Escala Estándar"}
+                </div>
+              </div>
+
               <div className="grid md:grid-cols-3 gap-6">
                 <div className="md:col-span-2 space-y-6">
                   <SliderField
                     label="Severidad (S)"
                     value={s.severidad}
                     onChange={(v) => setS({ ...s, severidad: v, sev_residual: Math.max(s.sev_residual, 1) })}
-                    description={getSeveridadTxt(normaKey, s.severidad)}
+                    description={
+                      s.tipo_escala_severidad === "sgc_regulatorio"
+                        ? `${getDescripcionSeveridad(s.severidad, "sgc_regulatorio", normaConfig).etiqueta} — ${getDescripcionSeveridad(s.severidad, "sgc_regulatorio", normaConfig).descripcion}`
+                        : getSeveridadTxt(normaKey, s.severidad)
+                    }
                   />
                   {sevCritica && (
                     <div className="flex items-start gap-2 rounded-md border border-npr-high bg-npr-high/10 p-3 text-sm">

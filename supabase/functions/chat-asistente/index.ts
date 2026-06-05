@@ -137,6 +137,11 @@ const TOOLS = [
         sev_residual: { type: "integer", minimum: 1, maximum: 10 },
         ocu_residual: { type: "integer", minimum: 1, maximum: 10 },
         det_residual: { type: "integer", minimum: 1, maximum: 10 },
+        tipo_escala_severidad: {
+          type: "string",
+          enum: ["estandar", "sgc_regulatorio"],
+          description: "Escala de Severidad aplicable. 'estandar' = riesgo de producto/proceso (impacto en paciente). 'sgc_regulatorio' = riesgo documental/regulatorio (impacto ante COFEPRIS: observaciones, NC, recall, suspensión BPF). Infiere del contexto del peligro; default 'estandar'.",
+        },
       },
       required: ["folio_id", "peligro", "modo_falla", "situacion_peligrosa", "efecto_dano", "severidad", "ocurrencia", "deteccion"],
     },
@@ -302,6 +307,7 @@ const TOOL_RULES_ADDENDUM = `
 10. Si la norma del folio es NOM-241, el campo de clasificación es "clase_dispositivo" (Clase I/II/III). Si es NOM-059, son tres campos: clasificacion_tipo, clasificacion_condicion_venta, clasificacion_riesgo_sanitario. NUNCA mezcles ambos esquemas; usa el correcto según norma_folio.
 11. proponer_riesgo REQUIERE 'modo_falla' (cómo falla el proceso/producto, p.ej. "contaminación cruzada", "dosis incorrecta"). Si el usuario no lo dio, pregúntalo antes de llamar la herramienta.
 12. Antes de proponer controles_prevencion o controles_deteccion nuevos, PREGUNTA al usuario qué controles_existentes ya tiene implementados y envíalos en ese campo. No dupliques en controles_prevencion lo que ya está en controles_existentes.
+13. Selecciona tipo_escala_severidad según la naturaleza del peligro: usa "sgc_regulatorio" cuando el riesgo es documental o de cumplimiento ante COFEPRIS (desviaciones, observaciones, no conformidades, hallazgos de auditoría, riesgo de recall o suspensión BPF). Usa "estandar" para todo riesgo cuyo impacto recae sobre producto, proceso o paciente. Si no está claro, default "estandar".
 `;
 
 async function getOrgContext(supabase: any, userId: string) {

@@ -29,6 +29,8 @@ import {
   CLASIFICACION_MED_TIPO,
   CLASIFICACION_MED_VENTA,
   CLASIFICACION_MED_RIESGO,
+  getDescripcionSeveridad,
+  type TipoEscalaSeveridad,
 } from "@/config/normas";
 
 // Componente para mostrar firmas usando URLs firmadas (bucket privado)
@@ -980,7 +982,7 @@ function SeccionRiesgoResidualGlobal({
 }
 
 // ─── Sección Riesgos ──────────────────────────────────────────────────────────
-function SeccionRiesgos({ riesgos, locked, folioId, folioCodigo, procesoEquipo, normaFolio, folioEstado }: { riesgos: Riesgo[]; locked: boolean; folioId: string; folioCodigo: string; procesoEquipo: string; normaFolio?: string | null; folioEstado?: string }) {
+function SeccionRiesgos({ riesgos, locked, folioId, folioCodigo, procesoEquipo, normaFolio, folioEstado, tipoFolio }: { riesgos: Riesgo[]; locked: boolean; folioId: string; folioCodigo: string; procesoEquipo: string; normaFolio?: string | null; folioEstado?: string; tipoFolio?: string | null }) {
   const [riesgoForm, setRiesgoForm] = useState<{ open: boolean; riesgo: Riesgo | null }>({ open: false, riesgo: null });
   const [wizardOpen, setWizardOpen] = useState(false);
   const [detalle, setDetalle] = useState<{ open: boolean; riesgo: Riesgo | null }>({ open: false, riesgo: null });
@@ -1201,7 +1203,25 @@ function SeccionRiesgos({ riesgos, locked, folioId, folioCodigo, procesoEquipo, 
                     <td className="border-r p-1.5 max-w-[110px] whitespace-pre-line">{r.efecto_dano}</td>
                     {/* Grupo 2: Evaluación inicial */}
                     <td className={`border-r p-1.5 text-center font-bold ${r.severidad >= 9 ? "text-destructive bg-destructive/10" : ""}`}>
-                      {r.severidad}
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="cursor-help">{r.severidad}</span>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="max-w-xs text-xs">
+                          {(() => {
+                            const te = ((r as any).tipo_escala_severidad as TipoEscalaSeveridad) ?? "estandar";
+                            const d = getDescripcionSeveridad(r.severidad, te, nc);
+                            return (
+                              <div className="space-y-0.5">
+                                <div className="font-semibold">
+                                  S={r.severidad} · {te === "sgc_regulatorio" ? "Escala SGC" : "Escala Estándar"}
+                                </div>
+                                <div>{d.etiqueta} — {d.descripcion}</div>
+                              </div>
+                            );
+                          })()}
+                        </TooltipContent>
+                      </Tooltip>
                     </td>
                     <td className="border-r p-1.5 text-center">{r.ocurrencia}</td>
                     <td className="border-r p-1.5 text-center">{r.deteccion}</td>
@@ -1304,6 +1324,7 @@ function SeccionRiesgos({ riesgos, locked, folioId, folioCodigo, procesoEquipo, 
           procesoEquipo={procesoEquipo}
           nextNumeroId={nextNumeroId}
           normaFolio={normaFolio}
+          tipoFolio={tipoFolio}
         />
       )}
       <RiesgoDetailSheet
@@ -1742,7 +1763,7 @@ export default function FolioDetail() {
           comite={comite}
         />
 
-        <SeccionRiesgos riesgos={riesgos} locked={locked} folioId={folio.id} folioCodigo={folio.codigo} procesoEquipo={folio.proceso_equipo || ""} normaFolio={folio.norma_folio} folioEstado={folio.estado} />
+        <SeccionRiesgos riesgos={riesgos} locked={locked} folioId={folio.id} folioCodigo={folio.codigo} procesoEquipo={folio.proceso_equipo || ""} normaFolio={folio.norma_folio} folioEstado={folio.estado} tipoFolio={folio.tipo_folio} />
 
         {/* Evidencias — pestaña documental para auditor */}
         <SeccionEvidencias riesgos={riesgos} folioCodigo={folio.codigo} folioId={folio.id} normaFolio={folio.norma_folio} />

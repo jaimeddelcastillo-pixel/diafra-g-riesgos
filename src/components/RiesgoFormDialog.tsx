@@ -22,6 +22,8 @@ import {
   calcularNPR,
   getNPRLevelByNorma,
   type CatalogoItem,
+  CATALOGO_SEVERIDAD_SGC,
+  type TipoEscalaSeveridad,
 } from "@/config/normas";
 import {
   CausaRaizSheet,
@@ -201,6 +203,7 @@ export function RiesgoFormDialog({ open, onClose, folioId, riesgo, nextNumeroId,
         severidad: riesgo.severidad,
         ocurrencia: riesgo.ocurrencia,
         deteccion: riesgo.deteccion,
+        tipo_escala_severidad: (riesgo.tipo_escala_severidad as TipoEscalaSeveridad) ?? "estandar",
         // Tab 3 — Controles
         controles_prevencion: riesgo.controles_prevencion || "",
         controles_deteccion: riesgo.controles_deteccion || "",
@@ -236,6 +239,7 @@ export function RiesgoFormDialog({ open, onClose, folioId, riesgo, nextNumeroId,
       severidad: 1,
       ocurrencia: 1,
       deteccion: 1,
+      tipo_escala_severidad: "estandar" as TipoEscalaSeveridad,
       // Tab 3 — Controles
       controles_prevencion: "",
       controles_deteccion: "",
@@ -357,6 +361,7 @@ export function RiesgoFormDialog({ open, onClose, folioId, riesgo, nextNumeroId,
       severidad: form.severidad,
       ocurrencia: form.ocurrencia,
       deteccion: form.deteccion,
+      tipo_escala_severidad: form.tipo_escala_severidad,
       // Tab 3 — Controles
       controles_prevencion: form.controles_prevencion.trim(),
       controles_deteccion: form.controles_deteccion.trim(),
@@ -634,6 +639,40 @@ export function RiesgoFormDialog({ open, onClose, folioId, riesgo, nextNumeroId,
             <p className="text-[10px] text-muted-foreground bg-muted/40 rounded px-2 py-1">
               Requerido por NOM-241 y FEUM (o NOM-059 y FEUM) — Evalúe la probabilidad de daño (S × O × D = NPR).
             </p>
+            {/* Selector de escala de Severidad */}
+            <div className="rounded-md border bg-card p-3 space-y-2">
+              <Label className="text-xs font-semibold">Tipo de riesgo (escala de Severidad)</Label>
+              <div className="flex flex-wrap gap-3">
+                <label className="inline-flex items-center gap-1.5 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="tipo-escala"
+                    value="estandar"
+                    checked={form.tipo_escala_severidad === "estandar"}
+                    onChange={() => update("tipo_escala_severidad", "estandar")}
+                  />
+                  <span className="text-xs">Producto/proceso (Estándar)</span>
+                </label>
+                <label className="inline-flex items-center gap-1.5 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="tipo-escala"
+                    value="sgc_regulatorio"
+                    checked={form.tipo_escala_severidad === "sgc_regulatorio"}
+                    onChange={() => update("tipo_escala_severidad", "sgc_regulatorio")}
+                  />
+                  <span className="text-xs">Documental/regulatorio (SGC)</span>
+                </label>
+              </div>
+              <p className={cn(
+                "text-[10px] font-medium rounded px-2 py-0.5 inline-block",
+                form.tipo_escala_severidad === "sgc_regulatorio"
+                  ? "bg-orange-500/10 text-orange-700 border border-orange-500/30"
+                  : "bg-primary/10 text-primary border border-primary/30",
+              )}>
+                {form.tipo_escala_severidad === "sgc_regulatorio" ? "Escala SGC/Regulatoria" : "Escala Estándar"}
+              </p>
+            </div>
             <div className={`grid gap-3 ${usaDeteccion ? "grid-cols-4" : "grid-cols-3"}`}>
               <div className="space-y-1.5">
                 <Label className="text-xs">Severidad (S)</Label>
@@ -645,7 +684,12 @@ export function RiesgoFormDialog({ open, onClose, folioId, riesgo, nextNumeroId,
                     {SCORES.map((s) => <SelectItem key={s} value={String(s)}>{s}</SelectItem>)}
                   </SelectContent>
                 </Select>
-                <CatalogoInline tipo="severidad" valorActual={form.severidad} datos={normaConfig.catalogoSeveridad} normaNombre={normaConfig.nombre} />
+                <CatalogoInline
+                  tipo="severidad"
+                  valorActual={form.severidad}
+                  datos={form.tipo_escala_severidad === "sgc_regulatorio" ? CATALOGO_SEVERIDAD_SGC : normaConfig.catalogoSeveridad}
+                  normaNombre={form.tipo_escala_severidad === "sgc_regulatorio" ? "Escala SGC/Regulatoria" : normaConfig.nombre}
+                />
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs">Ocurrencia (O)</Label>
