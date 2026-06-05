@@ -8,6 +8,7 @@ import {
   getNormaConfig,
   type NormaKey,
   type CatalogoItem,
+  CATALOGO_SEVERIDAD_SGC,
 } from "@/config/normas";
 
 type CatalogoKind = "severidad" | "ocurrencia" | "deteccion";
@@ -98,10 +99,30 @@ export default function Catalogos() {
         <TabsContent value="severidad">
           <Card>
             <CardContent className="pt-6">
-              <CatalogoTable
-                data={config.catalogoSeveridad}
-                title={`Severidad (S) — ${config.nombre}`}
-              />
+              <Tabs defaultValue="estandar">
+                <TabsList>
+                  <TabsTrigger value="estandar">Estándar (producto/proceso)</TabsTrigger>
+                  <TabsTrigger value="sgc">SGC/Regulatoria (documental)</TabsTrigger>
+                </TabsList>
+                <TabsContent value="estandar" className="pt-4">
+                  <p className="text-xs text-muted-foreground mb-3">
+                    Aplica a riesgos cuyo impacto recae sobre el <strong>producto, el proceso o el paciente</strong>.
+                  </p>
+                  <CatalogoTable
+                    data={config.catalogoSeveridad}
+                    title={`Severidad (S) — ${config.nombre}`}
+                  />
+                </TabsContent>
+                <TabsContent value="sgc" className="pt-4">
+                  <p className="text-xs text-muted-foreground mb-3">
+                    Aplica a riesgos <strong>documentales o regulatorios</strong> — impacto ante COFEPRIS, observaciones, no conformidades, recall.
+                  </p>
+                  <CatalogoTable
+                    data={CATALOGO_SEVERIDAD_SGC}
+                    title="Severidad (S) — Escala SGC/Regulatoria"
+                  />
+                </TabsContent>
+              </Tabs>
             </CardContent>
           </Card>
         </TabsContent>
