@@ -377,6 +377,7 @@ const ORIGENES_OTROS: OrigenGroup = {
   opciones: [
     "Mejora Continua",
     "Revisión de Riesgo Residual",
+    "Análisis de Brechas",
     "Otro",
   ],
 };
