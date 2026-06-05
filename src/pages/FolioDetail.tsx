@@ -1304,6 +1304,7 @@ function SeccionRiesgos({ riesgos, locked, folioId, folioCodigo, procesoEquipo, 
           procesoEquipo={procesoEquipo}
           nextNumeroId={nextNumeroId}
           normaFolio={normaFolio}
+          tipoFolio={folio.tipo_folio}
         />
       )}
       <RiesgoDetailSheet
