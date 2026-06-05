@@ -27,6 +27,8 @@ import {
   getNormaConfig,
   calcularNPR,
   getNPRLevelByNorma,
+  getDescripcionSeveridad,
+  type TipoEscalaSeveridad,
 } from "@/config/normas";
 import type { NormaKey } from "@/config/normas";
 import {
@@ -75,6 +77,7 @@ type WizardState = {
   ocurrencia: number;
   deteccion: number;
   poblacion: string;
+  tipo_escala_severidad: TipoEscalaSeveridad;
   // Paso 4
   controles_prev_a: string[];
   controles_prev_b: string[];
@@ -103,6 +106,7 @@ function initialState(): WizardState {
     ocurrencia: 1,
     deteccion: 1,
     poblacion: "",
+    tipo_escala_severidad: "estandar",
     controles_prev_a: [""],
     controles_prev_b: [""],
     controles_prev_c: [""],
