@@ -461,3 +461,57 @@ export function esClasificacionAltoRiesgo(
   if (tipo === "Biológico/biotecnológico") return true;
   return false;
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Escala de Severidad SGC / Regulatoria (riesgos documentales — impacto COFEPRIS)
+// Coexiste con la escala Estándar (impacto en producto / paciente). El usuario
+// elige cuál aplica al crear cada riesgo (campo `tipo_escala_severidad` en BD).
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type TipoEscalaSeveridad = "estandar" | "sgc_regulatorio";
+
+export const CATALOGO_SEVERIDAD_SGC: CatalogoItem[] = [
+  { valor: 1, etiqueta: "Sin impacto",                descripcion: "Sin impacto en SGC." },
+  { valor: 2, etiqueta: "Sin impacto",                descripcion: "Sin impacto en SGC." },
+  { valor: 3, etiqueta: "Corrección interna",         descripcion: "Corrección interna sin impacto regulatorio." },
+  { valor: 4, etiqueta: "Corrección interna",         descripcion: "Corrección interna sin impacto regulatorio." },
+  { valor: 5, etiqueta: "Observación interna",        descripcion: "Observación interna / Desviación documentada." },
+  { valor: 6, etiqueta: "NC menor",                   descripcion: "No conformidad menor documentada formalmente." },
+  { valor: 7, etiqueta: "Observación regulatoria",    descripcion: "Observación regulatoria con plan de acción obligatorio." },
+  { valor: 8, etiqueta: "NC mayor COFEPRIS",          descripcion: "No conformidad mayor COFEPRIS / Retiro de producto." },
+  { valor: 9, etiqueta: "Suspensión BPF / Recall II", descripcion: "Suspensión Certificado BPF / Recall Clase II." },
+  { valor: 10, etiqueta: "Clausura / Recall I",       descripcion: "Clausura de planta / Recall Clase I / Acción penal." },
+];
+
+export const ETIQUETA_ESCALA_SEVERIDAD: Record<TipoEscalaSeveridad, string> = {
+  estandar: "Escala Estándar",
+  sgc_regulatorio: "Escala SGC/Regulatoria",
+};
+
+/**
+ * Devuelve el catálogo de severidad aplicable según el tipo de escala.
+ * - "estandar" → catálogo de la norma (impacto producto/paciente).
+ * - "sgc_regulatorio" → CATALOGO_SEVERIDAD_SGC (impacto COFEPRIS).
+ */
+export function getCatalogoSeveridad(
+  tipoEscala: TipoEscalaSeveridad | string | null | undefined,
+  normaConfig: NormaConfig,
+): CatalogoItem[] {
+  return tipoEscala === "sgc_regulatorio" ? CATALOGO_SEVERIDAD_SGC : normaConfig.catalogoSeveridad;
+}
+
+/**
+ * Devuelve la descripción del nivel de severidad para un valor dado.
+ * Útil para tooltips, badges y bloques de detalle en cualquier vista.
+ */
+export function getDescripcionSeveridad(
+  valor: number,
+  tipoEscala: TipoEscalaSeveridad | string | null | undefined,
+  normaConfig: NormaConfig,
+): { etiqueta: string; descripcion: string } {
+  const cat = getCatalogoSeveridad(tipoEscala, normaConfig);
+  const item = cat.find((c) => c.valor === valor);
+  return item
+    ? { etiqueta: item.etiqueta, descripcion: item.descripcion }
+    : { etiqueta: "—", descripcion: "Valor fuera de rango (1–10)." };
+}
