@@ -443,6 +443,7 @@ export function RiesgoWizardDialog({
       severidad: s.severidad,
       ocurrencia: s.ocurrencia,
       deteccion: usaDet ? s.deteccion : 1,
+      tipo_escala_severidad: s.tipo_escala_severidad,
       detectabilidad_aplicable: usaDet,
       controles_prevencion: prevTxt,
       controles_deteccion: detTxt,
