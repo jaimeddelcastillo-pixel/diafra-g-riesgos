@@ -980,7 +980,7 @@ function SeccionRiesgoResidualGlobal({
 }
 
 // ─── Sección Riesgos ──────────────────────────────────────────────────────────
-function SeccionRiesgos({ riesgos, locked, folioId, folioCodigo, procesoEquipo, normaFolio, folioEstado }: { riesgos: Riesgo[]; locked: boolean; folioId: string; folioCodigo: string; procesoEquipo: string; normaFolio?: string | null; folioEstado?: string }) {
+function SeccionRiesgos({ riesgos, locked, folioId, folioCodigo, procesoEquipo, normaFolio, folioEstado, tipoFolio }: { riesgos: Riesgo[]; locked: boolean; folioId: string; folioCodigo: string; procesoEquipo: string; normaFolio?: string | null; folioEstado?: string; tipoFolio?: string | null }) {
   const [riesgoForm, setRiesgoForm] = useState<{ open: boolean; riesgo: Riesgo | null }>({ open: false, riesgo: null });
   const [wizardOpen, setWizardOpen] = useState(false);
   const [detalle, setDetalle] = useState<{ open: boolean; riesgo: Riesgo | null }>({ open: false, riesgo: null });
@@ -1304,7 +1304,7 @@ function SeccionRiesgos({ riesgos, locked, folioId, folioCodigo, procesoEquipo, 
           procesoEquipo={procesoEquipo}
           nextNumeroId={nextNumeroId}
           normaFolio={normaFolio}
-          tipoFolio={folio.tipo_folio}
+          tipoFolio={tipoFolio}
         />
       )}
       <RiesgoDetailSheet
@@ -1743,7 +1743,7 @@ export default function FolioDetail() {
           comite={comite}
         />
 
-        <SeccionRiesgos riesgos={riesgos} locked={locked} folioId={folio.id} folioCodigo={folio.codigo} procesoEquipo={folio.proceso_equipo || ""} normaFolio={folio.norma_folio} folioEstado={folio.estado} />
+        <SeccionRiesgos riesgos={riesgos} locked={locked} folioId={folio.id} folioCodigo={folio.codigo} procesoEquipo={folio.proceso_equipo || ""} normaFolio={folio.norma_folio} folioEstado={folio.estado} tipoFolio={folio.tipo_folio} />
 
         {/* Evidencias — pestaña documental para auditor */}
         <SeccionEvidencias riesgos={riesgos} folioCodigo={folio.codigo} folioId={folio.id} normaFolio={folio.norma_folio} />
