@@ -22,6 +22,8 @@ import {
   calcularNPR,
   getNPRLevelByNorma,
   type CatalogoItem,
+  CATALOGO_SEVERIDAD_SGC,
+  type TipoEscalaSeveridad,
 } from "@/config/normas";
 import {
   CausaRaizSheet,
@@ -201,6 +203,7 @@ export function RiesgoFormDialog({ open, onClose, folioId, riesgo, nextNumeroId,
         severidad: riesgo.severidad,
         ocurrencia: riesgo.ocurrencia,
         deteccion: riesgo.deteccion,
+        tipo_escala_severidad: (riesgo.tipo_escala_severidad as TipoEscalaSeveridad) ?? "estandar",
         // Tab 3 — Controles
         controles_prevencion: riesgo.controles_prevencion || "",
         controles_deteccion: riesgo.controles_deteccion || "",
@@ -236,6 +239,7 @@ export function RiesgoFormDialog({ open, onClose, folioId, riesgo, nextNumeroId,
       severidad: 1,
       ocurrencia: 1,
       deteccion: 1,
+      tipo_escala_severidad: "estandar" as TipoEscalaSeveridad,
       // Tab 3 — Controles
       controles_prevencion: "",
       controles_deteccion: "",
