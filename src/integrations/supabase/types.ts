@@ -1307,6 +1307,7 @@ export type Database = {
           sev_residual: number
           severidad: number
           situacion_peligrosa: string
+          tipo_escala_severidad: string
           updated_at: string
           verificado_por: string
         }
@@ -1345,6 +1346,7 @@ export type Database = {
           sev_residual?: number
           severidad?: number
           situacion_peligrosa?: string
+          tipo_escala_severidad?: string
           updated_at?: string
           verificado_por?: string
         }
@@ -1383,6 +1385,7 @@ export type Database = {
           sev_residual?: number
           severidad?: number
           situacion_peligrosa?: string
+          tipo_escala_severidad?: string
           updated_at?: string
           verificado_por?: string
         }
