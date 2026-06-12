@@ -536,11 +536,19 @@ function SeccionComite({
     queryKey: ["profiles-firmas", orgId ?? "all"],
     queryFn: async () => {
       if (orgId) {
-        const { data } = await supabase
+        // org_members.user_id apunta a auth.users (no a profiles), por lo que
+        // el join inferido falla. Resolvemos en dos pasos.
+        const { data: members } = await supabase
           .from("org_members")
-          .select("profiles!inner(id, nombre, cargo, firma_url)")
+          .select("user_id")
           .eq("org_id", orgId);
-        return (data ?? []).map((r: any) => r.profiles);
+        const ids = (members ?? []).map((m: any) => m.user_id).filter(Boolean);
+        if (ids.length === 0) return [];
+        const { data } = await supabase
+          .from("profiles")
+          .select("id, nombre, cargo, firma_url")
+          .in("id", ids);
+        return data || [];
       }
       const { data } = await supabase.from("profiles").select("id, nombre, cargo, firma_url");
       return data || [];
