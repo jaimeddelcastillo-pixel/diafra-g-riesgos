@@ -520,6 +520,8 @@ export default function Folios() {
   const [mostrarCancelados, setMostrarCancelados] = useState(false);
   const { data: folios, isLoading } = useFolios();
   const { data: allRiesgos, isLoading: loadingRiesgos } = useAllRiesgos();
+  const { hasRole, isSuperAdmin } = useAuth();
+  const puedeVerCancelados = hasRole("admin") || hasRole("responsable_sanitario") || isSuperAdmin();
 
   // Auto-abrir diálogo de nuevo folio si viene ?wizard=1 (desde onboarding)
   useEffect(() => {
@@ -570,6 +572,17 @@ export default function Folios() {
           <p className="text-sm text-muted-foreground">Archivos Maestros de Gestión de Riesgos</p>
         </div>
         <div className="flex items-center gap-2">
+          {totalCancelados > 0 && puedeVerCancelados && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-xs text-muted-foreground"
+              onClick={() => navigate("/admin/folios-cancelados")}
+              title="Ver panel completo de folios cancelados"
+            >
+              Panel de cancelados →
+            </Button>
+          )}
           {totalCancelados > 0 && (
             <label className="flex items-center gap-2 text-xs text-muted-foreground select-none">
               <Switch
