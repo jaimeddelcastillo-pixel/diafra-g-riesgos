@@ -1750,42 +1750,22 @@ export default function FolioDetail() {
             <Printer className="h-3 w-3" /> Generar PDF
           </Button>
 
-          {/* Eliminar folio — solo Borrador, admin o creador */}
-          {puedeEliminar && (
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-1 text-xs text-destructive hover:bg-destructive/10 hover:text-destructive"
-                  title="Eliminar folio"
-                >
-                  <Trash2 className="h-3 w-3" /> Eliminar
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>¿Eliminar folio {folio.codigo}?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    Esta acción es permanente. Se eliminarán el folio, todos sus riesgos,
-                    miembros del comité, firmas y versiones archivadas. La acción quedará
-                    registrada en el Audit Trail.
-                    <br />
-                    <br />
-                    Solo se pueden eliminar folios en estado <strong>Borrador</strong>.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                  <AlertDialogAction
-                    onClick={handleEliminarFolio}
-                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                  >
-                    Sí, eliminar
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+          {/* Cancelar / Eliminar folio — flujo NOM-241 / COFEPRIS */}
+          {puedeCancelar && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1 text-xs text-destructive hover:bg-destructive/10 hover:text-destructive"
+              title={
+                folio.estado === "Borrador"
+                  ? "Cancelar o eliminar folio"
+                  : "Cancelar folio (requiere justificación)"
+              }
+              onClick={abrirDialogoCancelacion}
+            >
+              <Trash2 className="h-3 w-3" />{" "}
+              {folio.estado === "Borrador" ? "Cancelar / Eliminar" : "Cancelar folio"}
+            </Button>
           )}
 
           {/* Botón Enviar a Firma + Checklist NOM-241-SSA1-2025 */}
