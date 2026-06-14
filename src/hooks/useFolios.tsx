@@ -97,6 +97,7 @@ export function getEstadoStyle(estado: string) {
     case "En Firma": return "bg-primary text-primary-foreground";
     case "Aprobado": return "bg-success text-success-foreground";
     case "Cerrado": return "bg-muted text-muted-foreground";
+    case "Cancelado": return "bg-muted text-muted-foreground border border-muted-foreground/40 line-through";
     default: return "";
   }
 }
