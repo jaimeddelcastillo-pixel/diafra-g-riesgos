@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { OrigenAnalisisSelect } from "@/components/OrigenAnalisisSelect";
-import { ArrowLeft, FileSignature, Lock, Printer, Plus, Pencil, Trash2, Save, X, History, AlertTriangle, Clock, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, FileSignature, Lock, Printer, Plus, Pencil, Trash2, Save, X, History, AlertTriangle, Clock, CheckCircle2, Sparkles } from "lucide-react";
 import { useFolioDetail, getNPRLevel, getEstadoStyle } from "@/hooks/useFolios";
 import type { Folio, Riesgo, FolioComite } from "@/hooks/useFolios";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -995,6 +995,7 @@ function SeccionRiesgoResidualGlobal({
 function SeccionRiesgos({ riesgos, locked, folioId, folioCodigo, procesoEquipo, normaFolio, folioEstado, tipoFolio }: { riesgos: Riesgo[]; locked: boolean; folioId: string; folioCodigo: string; procesoEquipo: string; normaFolio?: string | null; folioEstado?: string; tipoFolio?: string | null }) {
   const [riesgoForm, setRiesgoForm] = useState<{ open: boolean; riesgo: Riesgo | null }>({ open: false, riesgo: null });
   const [wizardOpen, setWizardOpen] = useState(false);
+  const [wizardEditar, setWizardEditar] = useState<{ open: boolean; riesgo: Riesgo | null }>({ open: false, riesgo: null });
   const [detalle, setDetalle] = useState<{ open: boolean; riesgo: Riesgo | null }>({ open: false, riesgo: null });
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -1282,6 +1283,22 @@ function SeccionRiesgos({ riesgos, locked, folioId, folioCodigo, procesoEquipo, 
                           >
                             <Pencil className="h-3 w-3" />
                           </Button>
+                          {(folioEstado === "Borrador" || folioEstado === "Rechazado") && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-6 w-6 text-orange-500 hover:text-orange-600 hover:bg-orange-500/10"
+                                  onClick={() => setWizardEditar({ open: true, riesgo: r })}
+                                  aria-label="Editar con el Asistente IA"
+                                >
+                                  <Sparkles className="h-3 w-3" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Editar con el Asistente IA</TooltipContent>
+                            </Tooltip>
+                          )}
                           <Button
                             variant="ghost"
                             size="icon"
@@ -1335,6 +1352,19 @@ function SeccionRiesgos({ riesgos, locked, folioId, folioCodigo, procesoEquipo, 
           nextNumeroId={nextNumeroId}
           normaFolio={normaFolio}
           tipoFolio={tipoFolio}
+        />
+      )}
+      {wizardEditar.open && wizardEditar.riesgo && (
+        <RiesgoWizardDialog
+          open={wizardEditar.open}
+          onClose={() => setWizardEditar({ open: false, riesgo: null })}
+          folioId={folioId}
+          folioCodigo={folioCodigo}
+          procesoEquipo={procesoEquipo}
+          nextNumeroId={nextNumeroId}
+          normaFolio={normaFolio}
+          tipoFolio={tipoFolio}
+          riesgo={wizardEditar.riesgo}
         />
       )}
       <RiesgoDetailSheet

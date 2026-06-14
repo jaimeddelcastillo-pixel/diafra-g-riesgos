@@ -50,6 +50,7 @@ import {
   type CausaRaizPayload,
 } from "@/components/causa-raiz/CausaRaizSheet";
 import { Search } from "lucide-react";
+import type { Riesgo } from "@/hooks/useFolios";
 
 interface Props {
   open: boolean;
@@ -62,6 +63,8 @@ interface Props {
   /** Tipo de folio actual (SGC, FAB, …). Si está vacío y el usuario elige
    *  "documental/regulatorio", el wizard auto-asigna tipo_folio = "SGC". */
   tipoFolio?: string | null;
+  /** Si se recibe, el wizard entra en modo EDICIÓN del riesgo dado. */
+  riesgo?: Riesgo | null;
 }
 
 type WizardState = {
@@ -121,6 +124,72 @@ function initialState(): WizardState {
     responsable: "",
     fecha_compromiso: "",
     justificacion_aceptabilidad: "",
+  };
+}
+
+// Parsea texto numerado tipo "1. foo\n2. bar" → ["foo","bar"]
+function parseListaNumerada(txt: string | null | undefined): string[] {
+  if (!txt) return [];
+  return txt
+    .split(/\r?\n/)
+    .map((l) => l.replace(/^\s*\d+\.\s*/, "").trim())
+    .filter(Boolean);
+}
+
+// Parsea controles de prevención con prefijo [A]/[B]/[C].
+// Líneas sin prefijo van a Nivel A por defecto.
+function parseControlesPrev(txt: string | null | undefined): {
+  a: string[]; b: string[]; c: string[];
+} {
+  const lineas = parseListaNumerada(txt);
+  const a: string[] = []; const b: string[] = []; const c: string[] = [];
+  for (const l of lineas) {
+    const m = l.match(/^\[(A|B|C)\]\s*(.*)$/i);
+    if (!m) { a.push(l); continue; }
+    const v = m[2].trim();
+    if (!v) continue;
+    if (m[1].toUpperCase() === "A") a.push(v);
+    else if (m[1].toUpperCase() === "B") b.push(v);
+    else c.push(v);
+  }
+  return { a, b, c };
+}
+
+function parseRiesgoToState(
+  r: Riesgo,
+  etapasFolio: string[],
+): WizardState {
+  const causas = parseListaNumerada(r.causa_potencial);
+  const pasos = parseListaNumerada(r.secuencia_eventos);
+  const prev = parseControlesPrev(r.controles_prevencion);
+  const det = parseListaNumerada(r.controles_deteccion);
+  const etapaMatch = etapasFolio.includes((r.etapa_proceso || "").trim());
+  const pasosFinal = pasos.length >= 2 ? pasos : [...pasos, "", ""].slice(0, 2);
+  return {
+    peligro: r.peligro || "",
+    etapa_proceso: etapaMatch ? r.etapa_proceso! : (r.etapa_proceso ? "__otra__" : ""),
+    etapa_otra: etapaMatch ? "" : (r.etapa_proceso || ""),
+    peligro_modo_falla: r.peligro_modo_falla || "",
+    causas: causas.length ? causas : [""],
+    pasos: pasosFinal,
+    situacion_peligrosa: r.situacion_peligrosa || "",
+    efecto_dano: r.efecto_dano || "",
+    severidad: r.severidad ?? 1,
+    ocurrencia: r.ocurrencia ?? 1,
+    deteccion: r.deteccion ?? 1,
+    poblacion: "",
+    tipo_escala_severidad: (r.tipo_escala_severidad as TipoEscalaSeveridad) || "estandar",
+    controles_prev_a: prev.a.length ? prev.a : [""],
+    controles_prev_b: prev.b.length ? prev.b : [""],
+    controles_prev_c: prev.c.length ? prev.c : [""],
+    controles_deteccion: det.length ? det : [""],
+    sev_residual: r.sev_residual ?? r.severidad ?? 1,
+    ocu_residual: r.ocu_residual ?? r.ocurrencia ?? 1,
+    det_residual: r.det_residual ?? r.deteccion ?? 1,
+    accion_propuesta: r.accion_propuesta || "",
+    responsable: r.responsable || "",
+    fecha_compromiso: r.fecha_compromiso || "",
+    justificacion_aceptabilidad: r.justificacion_aceptabilidad || "",
   };
 }
 
@@ -306,6 +375,7 @@ export function RiesgoWizardDialog({
   nextNumeroId,
   normaFolio,
   tipoFolio,
+  riesgo,
 }: Props) {
   const { toast } = useToast();
   const qc = useQueryClient();
@@ -319,6 +389,9 @@ export function RiesgoWizardDialog({
   const [extraJustificacion, setExtraJustificacion] = useState("");
   const [residualesEditados, setResidualesEditados] = useState(false);
 
+  const modoEdicion = !!riesgo;
+  const numeroIdMostrar = riesgo?.numero_id ?? nextNumeroId;
+
   const normaConfig = getNormaConfig(normaFolio);
   const usaDet = normaConfig.usarDetectabilidad;
   const normaKey = normaConfig.key;
@@ -331,6 +404,17 @@ export function RiesgoWizardDialog({
         .filter(Boolean),
     [procesoEquipo],
   );
+
+  // Hidratar estado al abrir en modo edición
+  useEffect(() => {
+    if (!open) return;
+    if (riesgo) {
+      setS(parseRiesgoToState(riesgo, etapasFolio));
+      setResidualesEditados(true);
+      setStep(1);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, riesgo?.id]);
 
   const npr = calcularNPR(s.severidad, s.ocurrencia, usaDet ? s.deteccion : 1, normaKey);
   const nprRes = calcularNPR(
@@ -430,9 +514,7 @@ export function RiesgoWizardDialog({
       .map((c, i) => `${i + 1}. ${c}`)
       .join("\n");
 
-    const payload = {
-      folio_id: folioId,
-      numero_id: nextNumeroId,
+    const payload: Record<string, unknown> = {
       etapa_proceso: etapaFinal,
       peligro: s.peligro.trim(),
       situacion_peligrosa: s.situacion_peligrosa.trim(),
@@ -456,7 +538,6 @@ export function RiesgoWizardDialog({
       sev_residual: s.sev_residual,
       ocu_residual: s.ocu_residual,
       det_residual: usaDet ? s.det_residual : 1,
-      dictamen: "Pendiente" as const,
     };
 
     if (extraJustificacion.trim()) {
@@ -468,7 +549,32 @@ export function RiesgoWizardDialog({
         .join("\n\n");
     }
 
-    const { error } = await supabase.from("riesgos").insert(payload);
+    if (modoEdicion && riesgo) {
+      const { error } = await supabase
+        .from("riesgos")
+        .update(payload as any)
+        .eq("id", riesgo.id);
+      setSaving(false);
+      if (error) {
+        toast({ title: "Error al actualizar", description: error.message, variant: "destructive" });
+        return false;
+      }
+      qc.invalidateQueries({ queryKey: ["folio", folioId] });
+      qc.invalidateQueries({ queryKey: ["all-riesgos"] });
+      toast({
+        title: `ID #${numeroIdMostrar} actualizado correctamente`,
+        description: `Wizard ${normaKey}`,
+      });
+      return true;
+    }
+
+    const insertPayload = {
+      ...payload,
+      folio_id: folioId,
+      numero_id: nextNumeroId,
+      dictamen: "Pendiente" as const,
+    };
+    const { error } = await supabase.from("riesgos").insert(insertPayload as any);
     setSaving(false);
     if (error) {
       toast({ title: "Error al guardar", description: error.message, variant: "destructive" });
@@ -481,6 +587,24 @@ export function RiesgoWizardDialog({
   };
 
   const handleGuardar = async () => {
+    if (modoEdicion) {
+      // Validación mínima antes de UPDATE
+      const etapaFinal =
+        s.etapa_proceso === "__otra__" ? s.etapa_otra.trim() : s.etapa_proceso.trim();
+      const faltas: { paso: number; msg: string }[] = [];
+      if (!s.peligro.trim() || !etapaFinal) faltas.push({ paso: 1, msg: "Peligro y etapa son obligatorios" });
+      if (!s.situacion_peligrosa.trim()) faltas.push({ paso: 4, msg: "Situación peligrosa es obligatoria" });
+      if (!s.efecto_dano.trim()) faltas.push({ paso: 5, msg: "Efecto / daño es obligatorio" });
+      if (faltas.length) {
+        toast({
+          title: "Faltan campos obligatorios",
+          description: faltas.map((f) => `Paso ${f.paso}: ${f.msg}`).join(" · "),
+          variant: "destructive",
+        });
+        setStep(faltas[0].paso);
+        return;
+      }
+    }
     const ok = await persist();
     if (ok) {
       reset();
@@ -521,7 +645,9 @@ export function RiesgoWizardDialog({
     return [
       `Folio: ${folioCodigo} — Proceso: ${procesoEquipo || "N/D"}`,
       `Norma: ${normaConfig.nombre} (${normaKey}) — Detectabilidad: ${usaDet ? "sí" : "no"}`,
-      `ID en creación: #${nextNumeroId} — Paso actual del wizard: ${step} de ${TOTAL_STEPS}`,
+      modoEdicion
+        ? `Estás editando el ID #${numeroIdMostrar} (${folioCodigo}) — el usuario puede modificar cualquier campo. Sugiere mejoras específicas sobre los valores actuales.`
+        : `ID en creación: #${nextNumeroId} — Paso actual del wizard: ${step} de ${TOTAL_STEPS}`,
       `Datos capturados hasta ahora:`,
       `• Peligro: ${s.peligro || "—"}`,
       `• Etapa: ${etapa || "—"}`,
@@ -600,8 +726,15 @@ export function RiesgoWizardDialog({
         {/* Header con barra de progreso */}
         <div className="border-b bg-primary text-primary-foreground p-4">
           <div className="flex items-baseline justify-between mb-3">
-            <h2 className="text-lg font-bold">
-              Nuevo ID #{String(nextNumeroId).padStart(2, "0")} — Paso {step} de {TOTAL_STEPS}
+            <h2 className="text-lg font-bold truncate pr-2">
+              {modoEdicion ? (
+                <>
+                  Editando ID #{String(numeroIdMostrar).padStart(2, "0")}
+                  {s.peligro ? ` — ${s.peligro.slice(0, 48)}` : ""}
+                </>
+              ) : (
+                <>Nuevo ID #{String(nextNumeroId).padStart(2, "0")} — Paso {step} de {TOTAL_STEPS}</>
+              )}
             </h2>
             <div className="flex items-center gap-2">
               <Button
@@ -631,13 +764,15 @@ export function RiesgoWizardDialog({
                 <button
                   key={st.n}
                   type="button"
-                  onClick={() => st.n < step && setStep(st.n)}
-                  disabled={st.n > step}
+                  onClick={() => {
+                    if (modoEdicion || st.n < step) setStep(st.n);
+                  }}
+                  disabled={!modoEdicion && st.n > step}
                   className={cn(
                     "flex-1 h-2 rounded-full transition-colors",
                     st.n === step
                       ? "bg-accent"
-                      : st.n < step
+                      : modoEdicion || st.n < step
                         ? "bg-accent/70 cursor-pointer hover:bg-accent"
                         : "bg-primary-foreground/20",
                   )}
@@ -1463,26 +1598,41 @@ export function RiesgoWizardDialog({
             </Button>
           ) : (
             <div className="flex flex-col sm:flex-row gap-2">
+              {!modoEdicion && (
+                <>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleGuardarYOtro}
+                    disabled={saving}
+                    className="gap-1"
+                  >
+                    <Plus className="h-4 w-4" /> Guardar y agregar otro
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleGuardarYAsistente}
+                    disabled={saving}
+                    className="gap-1"
+                  >
+                    <Sparkles className="h-4 w-4" /> Guardar y continuar con IA
+                  </Button>
+                </>
+              )}
               <Button
                 type="button"
-                variant="outline"
-                onClick={handleGuardarYOtro}
+                onClick={handleGuardar}
                 disabled={saving}
-                className="gap-1"
+                className={cn(
+                  "gap-1",
+                  modoEdicion && "bg-orange-500 hover:bg-orange-600 text-white",
+                )}
               >
-                <Plus className="h-4 w-4" /> Guardar y agregar otro
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleGuardarYAsistente}
-                disabled={saving}
-                className="gap-1"
-              >
-                <Sparkles className="h-4 w-4" /> Guardar y continuar con IA
-              </Button>
-              <Button type="button" onClick={handleGuardar} disabled={saving} className="gap-1">
-                <Check className="h-4 w-4" /> {saving ? "Guardando..." : "Guardar ID"}
+                <Check className="h-4 w-4" />
+                {saving
+                  ? modoEdicion ? "Actualizando..." : "Guardando..."
+                  : modoEdicion ? "Actualizar ID" : "Insertar ID"}
               </Button>
             </div>
           )}
