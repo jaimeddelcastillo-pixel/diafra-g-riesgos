@@ -94,12 +94,17 @@ export default function Dashboard() {
   const isLoading = loadingFolios || loadingRisks;
 
   // ── Cálculos SGC ────────────────────────────────────────────────────────────
-  const foliosActivos = fols.filter((f) => f.estado !== "Cerrado");
+  // Excluir cancelados de los cálculos operativos (NOM-241: no cuentan como análisis vigente)
+  const cancelados = fols.filter((f) => f.estado === "Cancelado");
+  const foliosVigentes = fols.filter((f) => f.estado !== "Cancelado");
+  const foliosActivos = foliosVigentes.filter((f) => f.estado !== "Cerrado");
   const critical = risks.filter((r) => (r.npr ?? 0) > 150 || r.severidad >= 9);
-  const aprobados = fols.filter((f) => f.conclusion === "Aprobado");
-  const rechazados = fols.filter((f) => f.conclusion === "Rechazado");
-  const enFirma = fols.filter((f) => f.estado === "En Firma");
-  const borradores = fols.filter((f) => f.estado === "Borrador");
+  // "Aprobado" regulatorio = firmado por Responsable Sanitario (estado del workflow),
+  // NO la conclusión técnica del análisis AMEF.
+  const aprobados = foliosVigentes.filter((f) => f.estado === "Aprobado");
+  const rechazados = foliosVigentes.filter((f) => f.conclusion === "Rechazado");
+  const enFirma = foliosVigentes.filter((f) => f.estado === "En Firma");
+  const borradores = foliosVigentes.filter((f) => f.estado === "Borrador");
 
   // Acciones pendientes: riesgos críticos sin acción propuesta
   const accionesPendientes = risks.filter((r) => ((r.npr ?? 0) > 150 || r.severidad >= 9) && !r.accion_propuesta);
@@ -139,25 +144,26 @@ export default function Dashboard() {
 
   // Avance captura FEUM / ISO 14971 ponderado por estado del folio
   // Aprobado = 100%, En Firma = 75%, Borrador con riesgos = 50%, Rechazado = 0%, Sin riesgos = 0%
-  const foliosConRiesgo = fols.filter((f) => risks.some((r) => r.folio_id === f.id));
-  const puntosAMEF = fols.reduce((sum, f) => {
+  const foliosConRiesgo = foliosVigentes.filter((f) => risks.some((r) => r.folio_id === f.id));
+  const puntosAMEF = foliosVigentes.reduce((sum, f) => {
     const tieneRiesgos = risks.some((r) => r.folio_id === f.id);
     if (!tieneRiesgos) return sum + 0;
-    if (f.conclusion === "Aprobado") return sum + 100;
+    if (f.estado === "Aprobado") return sum + 100;
     if (f.conclusion === "Rechazado") return sum + 0;
     if (f.estado === "En Firma") return sum + 75;
     return sum + 50; // Borrador con riesgos capturados
   }, 0);
-  const avanceAMEF = fols.length > 0 ? Math.round(puntosAMEF / fols.length) : 0;
+  const avanceAMEF = foliosVigentes.length > 0 ? Math.round(puntosAMEF / foliosVigentes.length) : 0;
 
-  // % aprobados sobre folios activos (excluye borradores sin riesgos)
-  const foliosConActividad = fols.filter((f) => f.estado !== "Borrador" || risks.some((r) => r.folio_id === f.id));
+  // % aprobados sobre folios vigentes (excluye cancelados; capa al 100% por seguridad)
   const pctAprobados =
-    foliosConActividad.length > 0 ? Math.round((aprobados.length / foliosConActividad.length) * 100) : 0;
+    foliosVigentes.length > 0
+      ? Math.min(100, Math.round((aprobados.length / foliosVigentes.length) * 100))
+      : 0;
 
   // Semáforo general SGC
   const puntajeSGC = Math.round(
-    (aprobados.length / Math.max(fols.length, 1)) * 40 + // 40% peso aprobados
+    (aprobados.length / Math.max(foliosVigentes.length, 1)) * 40 + // 40% peso aprobados
       (avanceAMEF / 100) * 30 + // 30% peso avance FEUM / ISO 14971
       ((critical.length === 0 ? 100 : reduccionCriticos) / 100) * 30, // 30% reducción riesgos
   );
