@@ -354,6 +354,35 @@ export async function generateFolioPDF(
     doc.setTextColor(0);
   }
 
+  // Tira informativa con datos de cancelación (sólo página 1)
+  function addCanceladoMetaStrip() {
+    if (folio.estado !== "Cancelado") return;
+    const y = margin + headerH + 1;
+    const h = 4.5;
+    doc.setFillColor(255, 235, 235);
+    doc.setDrawColor(180, 0, 0);
+    doc.setLineWidth(0.3);
+    doc.rect(margin, y, pageW - 2 * margin, h, "FD");
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(7);
+    doc.setTextColor(180, 0, 0);
+    const fecha = (folio as any).cancelado_en
+      ? new Date((folio as any).cancelado_en).toLocaleDateString("es-MX")
+      : "—";
+    const motivo = pdfSafeText(
+      `${getMotivoLabel((folio as any).motivo_cancelacion_codigo)}${
+        (folio as any).motivo_cancelacion ? " — " + (folio as any).motivo_cancelacion : ""
+      }`,
+    );
+    doc.text(
+      `FOLIO CANCELADO  ·  Fecha: ${fecha}  ·  Motivo: ${motivo}`.slice(0, 220),
+      pageW / 2,
+      y + 3.2,
+      { align: "center" },
+    );
+    doc.setTextColor(0);
+  }
+
   function newPage(): number {
     if (pageNum > 0) doc.addPage();
     pageNum++;
