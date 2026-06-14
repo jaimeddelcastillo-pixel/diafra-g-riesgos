@@ -127,6 +127,72 @@ function initialState(): WizardState {
   };
 }
 
+// Parsea texto numerado tipo "1. foo\n2. bar" → ["foo","bar"]
+function parseListaNumerada(txt: string | null | undefined): string[] {
+  if (!txt) return [];
+  return txt
+    .split(/\r?\n/)
+    .map((l) => l.replace(/^\s*\d+\.\s*/, "").trim())
+    .filter(Boolean);
+}
+
+// Parsea controles de prevención con prefijo [A]/[B]/[C].
+// Líneas sin prefijo van a Nivel A por defecto.
+function parseControlesPrev(txt: string | null | undefined): {
+  a: string[]; b: string[]; c: string[];
+} {
+  const lineas = parseListaNumerada(txt);
+  const a: string[] = []; const b: string[] = []; const c: string[] = [];
+  for (const l of lineas) {
+    const m = l.match(/^\[(A|B|C)\]\s*(.*)$/i);
+    if (!m) { a.push(l); continue; }
+    const v = m[2].trim();
+    if (!v) continue;
+    if (m[1].toUpperCase() === "A") a.push(v);
+    else if (m[1].toUpperCase() === "B") b.push(v);
+    else c.push(v);
+  }
+  return { a, b, c };
+}
+
+function parseRiesgoToState(
+  r: Riesgo,
+  etapasFolio: string[],
+): WizardState {
+  const causas = parseListaNumerada(r.causa_potencial);
+  const pasos = parseListaNumerada(r.secuencia_eventos);
+  const prev = parseControlesPrev(r.controles_prevencion);
+  const det = parseListaNumerada(r.controles_deteccion);
+  const etapaMatch = etapasFolio.includes((r.etapa_proceso || "").trim());
+  const pasosFinal = pasos.length >= 2 ? pasos : [...pasos, "", ""].slice(0, 2);
+  return {
+    peligro: r.peligro || "",
+    etapa_proceso: etapaMatch ? r.etapa_proceso! : (r.etapa_proceso ? "__otra__" : ""),
+    etapa_otra: etapaMatch ? "" : (r.etapa_proceso || ""),
+    peligro_modo_falla: r.peligro_modo_falla || "",
+    causas: causas.length ? causas : [""],
+    pasos: pasosFinal,
+    situacion_peligrosa: r.situacion_peligrosa || "",
+    efecto_dano: r.efecto_dano || "",
+    severidad: r.severidad ?? 1,
+    ocurrencia: r.ocurrencia ?? 1,
+    deteccion: r.deteccion ?? 1,
+    poblacion: "",
+    tipo_escala_severidad: (r.tipo_escala_severidad as TipoEscalaSeveridad) || "estandar",
+    controles_prev_a: prev.a.length ? prev.a : [""],
+    controles_prev_b: prev.b.length ? prev.b : [""],
+    controles_prev_c: prev.c.length ? prev.c : [""],
+    controles_deteccion: det.length ? det : [""],
+    sev_residual: r.sev_residual ?? r.severidad ?? 1,
+    ocu_residual: r.ocu_residual ?? r.ocurrencia ?? 1,
+    det_residual: r.det_residual ?? r.deteccion ?? 1,
+    accion_propuesta: r.accion_propuesta || "",
+    responsable: r.responsable || "",
+    fecha_compromiso: r.fecha_compromiso || "",
+    justificacion_aceptabilidad: r.justificacion_aceptabilidad || "",
+  };
+}
+
 const STEPS = [
   { n: 1, t: "Peligro", short: "E1", full: "E1 Peligro" },
   { n: 2, t: "Modo + Causa", short: "E2·5", full: "E2 Modo + E5 Causa" },
