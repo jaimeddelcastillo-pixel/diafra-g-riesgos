@@ -18,6 +18,17 @@ import { SeccionDictamen } from "@/components/SeccionDictamen";
 import { SeccionEvidencias } from "@/components/SeccionEvidencias";
 import { ComiteTab } from "@/components/comite/ComiteTab";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
@@ -1512,7 +1523,7 @@ export default function FolioDetail() {
   const navigate = useNavigate();
   const { data, isLoading, refetch } = useFolioDetail(id);
   const queryClient = useQueryClient();
-  const { hasRole, org } = useAuth();
+  const { user, hasRole, org } = useAuth();
   const { toast } = useToast();
 
   const isAdmin = hasRole("admin") || hasRole("responsable_sanitario");
@@ -1535,6 +1546,29 @@ export default function FolioDetail() {
 
   const { folio, riesgos, comite } = data;
   const locked = folio.estado !== "Borrador" && !isAdmin;
+
+  // ── Eliminar folio (RLS: solo Borrador, admin o creador) ─────────────────
+  const puedeEliminar =
+    folio.estado === "Borrador" &&
+    (hasRole("admin") || folio.created_by === user?.id);
+
+  const handleEliminarFolio = async () => {
+    const { error } = await supabase.from("folios").delete().eq("id", folio.id);
+    if (error) {
+      toast({
+        title: "No se pudo eliminar el folio",
+        description: error.message,
+        variant: "destructive",
+      });
+      return;
+    }
+    toast({
+      title: "Folio eliminado",
+      description: `${folio.codigo} y todos sus riesgos asociados fueron eliminados.`,
+    });
+    queryClient.invalidateQueries({ queryKey: ["folios"] });
+    navigate("/folios");
+  };
 
   // Verificar si hay riesgos críticos sin evidencia — bloquea envío a firma
   const criticosSinEvidencia = riesgos.filter((r) => {
@@ -1694,6 +1728,44 @@ export default function FolioDetail() {
           >
             <Printer className="h-3 w-3" /> Generar PDF
           </Button>
+
+          {/* Eliminar folio — solo Borrador, admin o creador */}
+          {puedeEliminar && (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1 text-xs text-destructive hover:bg-destructive/10 hover:text-destructive"
+                  title="Eliminar folio"
+                >
+                  <Trash2 className="h-3 w-3" /> Eliminar
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>¿Eliminar folio {folio.codigo}?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Esta acción es permanente. Se eliminarán el folio, todos sus riesgos,
+                    miembros del comité, firmas y versiones archivadas. La acción quedará
+                    registrada en el Audit Trail.
+                    <br />
+                    <br />
+                    Solo se pueden eliminar folios en estado <strong>Borrador</strong>.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={handleEliminarFolio}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    Sí, eliminar
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          )}
 
           {/* Botón Enviar a Firma + Checklist NOM-241-SSA1-2025 */}
           {folio.estado === "Borrador" && (
