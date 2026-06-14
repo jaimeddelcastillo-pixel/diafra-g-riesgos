@@ -744,13 +744,15 @@ export function RiesgoWizardDialog({
                 <button
                   key={st.n}
                   type="button"
-                  onClick={() => st.n < step && setStep(st.n)}
-                  disabled={st.n > step}
+                  onClick={() => {
+                    if (modoEdicion || st.n < step) setStep(st.n);
+                  }}
+                  disabled={!modoEdicion && st.n > step}
                   className={cn(
                     "flex-1 h-2 rounded-full transition-colors",
                     st.n === step
                       ? "bg-accent"
-                      : st.n < step
+                      : modoEdicion || st.n < step
                         ? "bg-accent/70 cursor-pointer hover:bg-accent"
                         : "bg-primary-foreground/20",
                   )}
