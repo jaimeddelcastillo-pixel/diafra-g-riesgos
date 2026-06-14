@@ -22,6 +22,7 @@ import AdminCursos from "./pages/AdminCursos";
 import AdminCursoEditor from "./pages/AdminCursoEditor";
 import AdminCursoEvaluacion from "./pages/AdminCursoEvaluacion";
 import AdminFolios from "./pages/AdminFolios";
+import AdminFoliosCancelados from "./pages/AdminFoliosCancelados";
 import MisProtocolos from "./pages/MisProtocolos";
 import Soporte from "./pages/Soporte";
 import Login from "./pages/Login";
