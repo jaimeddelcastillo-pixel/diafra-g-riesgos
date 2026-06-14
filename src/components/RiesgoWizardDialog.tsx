@@ -375,6 +375,7 @@ export function RiesgoWizardDialog({
   nextNumeroId,
   normaFolio,
   tipoFolio,
+  riesgo,
 }: Props) {
   const { toast } = useToast();
   const qc = useQueryClient();
@@ -388,6 +389,9 @@ export function RiesgoWizardDialog({
   const [extraJustificacion, setExtraJustificacion] = useState("");
   const [residualesEditados, setResidualesEditados] = useState(false);
 
+  const modoEdicion = !!riesgo;
+  const numeroIdMostrar = riesgo?.numero_id ?? nextNumeroId;
+
   const normaConfig = getNormaConfig(normaFolio);
   const usaDet = normaConfig.usarDetectabilidad;
   const normaKey = normaConfig.key;
@@ -400,6 +404,17 @@ export function RiesgoWizardDialog({
         .filter(Boolean),
     [procesoEquipo],
   );
+
+  // Hidratar estado al abrir en modo edición
+  useEffect(() => {
+    if (!open) return;
+    if (riesgo) {
+      setS(parseRiesgoToState(riesgo, etapasFolio));
+      setResidualesEditados(true);
+      setStep(1);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, riesgo?.id]);
 
   const npr = calcularNPR(s.severidad, s.ocurrencia, usaDet ? s.deteccion : 1, normaKey);
   const nprRes = calcularNPR(
