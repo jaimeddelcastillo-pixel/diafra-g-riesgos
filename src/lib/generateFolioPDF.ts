@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Folio, Riesgo, FolioComite } from "@/hooks/useFolios";
 import { fetchOrgLogoDataUrl } from "@/lib/orgLogo";
 import { getNormaConfig, calcularNPR, getNPRLevelByNorma, getClasificacionMode } from "@/config/normas";
+import { getMotivoLabel } from "@/config/motivos-cancelacion";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
