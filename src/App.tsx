@@ -71,6 +71,7 @@ const App = () => (
               <Route path="/admin/cursos/:id" element={<AdminCursoEditor />} />
               <Route path="/admin/cursos/:id/evaluacion" element={<AdminCursoEvaluacion />} />
               <Route path="/admin/folios" element={<AdminFolios />} />
+              <Route path="/admin/folios-cancelados" element={<AdminFoliosCancelados />} />
               <Route path="/mis-protocolos" element={<MisProtocolos />} />
               <Route path="/soporte" element={<Soporte />} />
               <Route path="/soporte/:id" element={<Soporte />} />
