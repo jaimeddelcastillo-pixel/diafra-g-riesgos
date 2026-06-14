@@ -17,6 +17,8 @@ import { useFolios, useAllRiesgos, getEstadoStyle, getNPRLevel } from "@/hooks/u
 import { OrigenAnalisisSelect } from "@/components/OrigenAnalisisSelect";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { getMotivoLabel } from "@/config/motivos-cancelacion";
 import {
   getTiposDisponibles,
   getTipoLabel,
@@ -515,6 +517,7 @@ export default function Folios() {
   const navigate = useNavigate();
   const [nuevoOpen, setNuevoOpen] = useState(false);
   const [tipoFiltro, setTipoFiltro] = useState<string>("todos");
+  const [mostrarCancelados, setMostrarCancelados] = useState(false);
   const { data: folios, isLoading } = useFolios();
   const { data: allRiesgos, isLoading: loadingRiesgos } = useAllRiesgos();
 
@@ -538,7 +541,11 @@ export default function Folios() {
   });
 
   const cargando = isLoading || loadingRiesgos;
-  const todos = folios || [];
+  const todosRaw = folios || [];
+  const totalCancelados = todosRaw.filter((f) => f.estado === "Cancelado").length;
+  const todos = mostrarCancelados
+    ? todosRaw
+    : todosRaw.filter((f) => f.estado !== "Cancelado");
 
   const { org } = useAuth();
   const tiposDisponibles = getTiposDisponibles((org as any)?.norma_aplicable);
@@ -563,6 +570,15 @@ export default function Folios() {
           <p className="text-sm text-muted-foreground">Archivos Maestros de Gestión de Riesgos</p>
         </div>
         <div className="flex items-center gap-2">
+          {totalCancelados > 0 && (
+            <label className="flex items-center gap-2 text-xs text-muted-foreground select-none">
+              <Switch
+                checked={mostrarCancelados}
+                onCheckedChange={setMostrarCancelados}
+              />
+              Mostrar cancelados ({totalCancelados})
+            </label>
+          )}
           {/* Botones de exportación — solo visibles cuando hay folios */}
           {lista.length > 0 && (
             <>
