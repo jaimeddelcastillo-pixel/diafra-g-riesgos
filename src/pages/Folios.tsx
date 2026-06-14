@@ -17,6 +17,8 @@ import { useFolios, useAllRiesgos, getEstadoStyle, getNPRLevel } from "@/hooks/u
 import { OrigenAnalisisSelect } from "@/components/OrigenAnalisisSelect";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { getMotivoLabel } from "@/config/motivos-cancelacion";
 import {
   getTiposDisponibles,
   getTipoLabel,
@@ -515,6 +517,7 @@ export default function Folios() {
   const navigate = useNavigate();
   const [nuevoOpen, setNuevoOpen] = useState(false);
   const [tipoFiltro, setTipoFiltro] = useState<string>("todos");
+  const [mostrarCancelados, setMostrarCancelados] = useState(false);
   const { data: folios, isLoading } = useFolios();
   const { data: allRiesgos, isLoading: loadingRiesgos } = useAllRiesgos();
 
@@ -538,9 +541,15 @@ export default function Folios() {
   });
 
   const cargando = isLoading || loadingRiesgos;
-  const todos = folios || [];
+  const todosRaw = folios || [];
+  const totalCancelados = todosRaw.filter((f) => f.estado === "Cancelado").length;
+  const todos = mostrarCancelados
+    ? todosRaw
+    : todosRaw.filter((f) => f.estado !== "Cancelado");
 
-  const { org } = useAuth();
+  const { org, hasRole, isSuperAdmin } = useAuth();
+  const puedeVerCancelados =
+    hasRole("admin") || hasRole("responsable_sanitario") || isSuperAdmin();
   const tiposDisponibles = getTiposDisponibles((org as any)?.norma_aplicable);
 
   const lista =
@@ -563,6 +572,26 @@ export default function Folios() {
           <p className="text-sm text-muted-foreground">Archivos Maestros de Gestión de Riesgos</p>
         </div>
         <div className="flex items-center gap-2">
+          {totalCancelados > 0 && puedeVerCancelados && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-xs text-muted-foreground"
+              onClick={() => navigate("/admin/folios-cancelados")}
+              title="Ver panel completo de folios cancelados"
+            >
+              Panel de cancelados →
+            </Button>
+          )}
+          {totalCancelados > 0 && (
+            <label className="flex items-center gap-2 text-xs text-muted-foreground select-none">
+              <Switch
+                checked={mostrarCancelados}
+                onCheckedChange={setMostrarCancelados}
+              />
+              Mostrar cancelados ({totalCancelados})
+            </label>
+          )}
           {/* Botones de exportación — solo visibles cuando hay folios */}
           {lista.length > 0 && (
             <>
@@ -676,11 +705,14 @@ export default function Folios() {
           const riesgos = riesgosMap.get(folio.id) || [];
           const criticos = riesgos.filter((r) => (r.npr ?? 0) > 150 || r.severidad >= 9).length;
           const accionesPendientes = riesgos.filter((r) => r.requiere_accion && !r.accion_implementada).length;
+          const esCancelado = folio.estado === "Cancelado";
 
           return (
             <Card
               key={folio.id}
-              className="hover:shadow-md transition-shadow cursor-pointer"
+              className={`hover:shadow-md transition-shadow cursor-pointer ${
+                esCancelado ? "opacity-70 border-dashed" : ""
+              }`}
               onClick={() => navigate(`/folios/${folio.id}`)}
             >
               <CardContent className="py-4">
@@ -699,6 +731,15 @@ export default function Folios() {
                       <p className="text-xs text-muted-foreground">
                         Origen: {folio.origen} · Inicio: {folio.fecha_inicio}
                       </p>
+                      {esCancelado && (
+                        <p className="text-[11px] text-destructive mt-0.5 truncate">
+                          Cancelado: {getMotivoLabel((folio as any).motivo_cancelacion_codigo)}
+                          {(folio as any).motivo_cancelacion ? ` — ${(folio as any).motivo_cancelacion}` : ""}
+                          {(folio as any).cancelado_en
+                            ? ` · ${new Date((folio as any).cancelado_en).toLocaleDateString("es-MX")}`
+                            : ""}
+                        </p>
+                      )}
                     </div>
                   </div>
 

@@ -793,6 +793,8 @@ export type Database = {
         Row: {
           alcance: string | null
           beneficio_clinico: string
+          cancelado_en: string | null
+          cancelado_por: string | null
           clase_dispositivo: string
           clasificacion_categoria: string
           clasificacion_condicion_venta: string
@@ -810,6 +812,8 @@ export type Database = {
           id: string
           justificacion_tecnica: string | null
           metodologia_folio: string
+          motivo_cancelacion: string | null
+          motivo_cancelacion_codigo: string | null
           norma_folio: string
           normas_aplicables: string[]
           numero_lote: string
@@ -825,6 +829,8 @@ export type Database = {
         Insert: {
           alcance?: string | null
           beneficio_clinico?: string
+          cancelado_en?: string | null
+          cancelado_por?: string | null
           clase_dispositivo?: string
           clasificacion_categoria?: string
           clasificacion_condicion_venta?: string
@@ -842,6 +848,8 @@ export type Database = {
           id?: string
           justificacion_tecnica?: string | null
           metodologia_folio?: string
+          motivo_cancelacion?: string | null
+          motivo_cancelacion_codigo?: string | null
           norma_folio?: string
           normas_aplicables?: string[]
           numero_lote?: string
@@ -857,6 +865,8 @@ export type Database = {
         Update: {
           alcance?: string | null
           beneficio_clinico?: string
+          cancelado_en?: string | null
+          cancelado_por?: string | null
           clase_dispositivo?: string
           clasificacion_categoria?: string
           clasificacion_condicion_venta?: string
@@ -874,6 +884,8 @@ export type Database = {
           id?: string
           justificacion_tecnica?: string | null
           metodologia_folio?: string
+          motivo_cancelacion?: string | null
+          motivo_cancelacion_codigo?: string | null
           norma_folio?: string
           normas_aplicables?: string[]
           numero_lote?: string
@@ -1607,6 +1619,55 @@ export type Database = {
         Args: { p_folio_id: string; p_motivo?: string }
         Returns: string
       }
+      cancelar_folio: {
+        Args: {
+          p_folio_id: string
+          p_motivo_codigo: string
+          p_motivo_texto: string
+        }
+        Returns: {
+          alcance: string | null
+          beneficio_clinico: string
+          cancelado_en: string | null
+          cancelado_por: string | null
+          clase_dispositivo: string
+          clasificacion_categoria: string
+          clasificacion_condicion_venta: string
+          clasificacion_riesgo_sanitario: string
+          clasificacion_tipo: string
+          codigo: string
+          conclusion: string | null
+          control_cambios_id: string | null
+          created_at: string
+          created_by: string | null
+          desviacion_id: string | null
+          estado: Database["public"]["Enums"]["estado_folio"]
+          fecha_cierre: string | null
+          fecha_inicio: string
+          id: string
+          justificacion_tecnica: string | null
+          metodologia_folio: string
+          motivo_cancelacion: string | null
+          motivo_cancelacion_codigo: string | null
+          norma_folio: string
+          normas_aplicables: string[]
+          numero_lote: string
+          numero_modelo: string
+          numero_version: string
+          org_id: string
+          origen: string
+          proceso_equipo: string
+          riesgo_residual_global: string
+          tipo_folio: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "folios"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       delete_email: {
         Args: { message_id: number; queue_name: string }
         Returns: boolean
@@ -1669,7 +1730,12 @@ export type Database = {
         | "responsable_sanitario"
         | "super_admin"
       dictamen_tipo: "Aceptable" | "No Aceptable" | "Pendiente"
-      estado_folio: "Borrador" | "En Firma" | "Aprobado" | "Cerrado"
+      estado_folio:
+        | "Borrador"
+        | "En Firma"
+        | "Aprobado"
+        | "Cerrado"
+        | "Cancelado"
       org_estado: "pendiente" | "activo" | "suspendido" | "cancelado"
       origen_riesgo:
         | "Diseño"
@@ -1827,7 +1893,13 @@ export const Constants = {
         "super_admin",
       ],
       dictamen_tipo: ["Aceptable", "No Aceptable", "Pendiente"],
-      estado_folio: ["Borrador", "En Firma", "Aprobado", "Cerrado"],
+      estado_folio: [
+        "Borrador",
+        "En Firma",
+        "Aprobado",
+        "Cerrado",
+        "Cancelado",
+      ],
       org_estado: ["pendiente", "activo", "suspendido", "cancelado"],
       origen_riesgo: [
         "Diseño",

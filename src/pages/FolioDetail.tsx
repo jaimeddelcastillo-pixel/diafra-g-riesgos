@@ -18,17 +18,8 @@ import { SeccionDictamen } from "@/components/SeccionDictamen";
 import { SeccionEvidencias } from "@/components/SeccionEvidencias";
 import { ComiteTab } from "@/components/comite/ComiteTab";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+import { CancelarFolioDialog } from "@/components/CancelarFolioDialog";
+import { getMotivoLabel } from "@/config/motivos-cancelacion";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
@@ -1530,6 +1521,10 @@ export default function FolioDetail() {
 
   const [enviandoFirma, setEnviandoFirma] = useState(false);
   const [showChecklist, setShowChecklist] = useState(false);
+  const [cancelarOpen, setCancelarOpen] = useState(false);
+  const [cancelarModo, setCancelarModo] = useState<
+    "borrador_intermedio" | "avanzado" | "delete_fisico"
+  >("borrador_intermedio");
 
   if (isLoading) {
     return (
@@ -1545,29 +1540,55 @@ export default function FolioDetail() {
   }
 
   const { folio, riesgos, comite } = data;
-  const locked = folio.estado !== "Borrador" && !isAdmin;
+  const esCancelado = folio.estado === "Cancelado";
+  // Folios cancelados quedan totalmente bloqueados para todos (incluido admin).
+  const locked = esCancelado || (folio.estado !== "Borrador" && !isAdmin);
 
-  // ── Eliminar folio (RLS: solo Borrador, admin o creador) ─────────────────
-  const puedeEliminar =
-    folio.estado === "Borrador" &&
-    (hasRole("admin") || folio.created_by === user?.id);
+  // ── Reglas de cancelación / eliminación ──────────────────────────────────
+  // Borrador: admin/RS o el creador pueden cancelar.
+  // En Firma / Aprobado / Cerrado: sólo admin/RS.
+  // Cancelado: nadie (botón oculto).
+  const puedeCancelar =
+    !esCancelado &&
+    (isAdmin ||
+      (folio.estado === "Borrador" && folio.created_by === user?.id));
 
-  const handleEliminarFolio = async () => {
-    const { error } = await supabase.from("folios").delete().eq("id", folio.id);
-    if (error) {
-      toast({
-        title: "No se pudo eliminar el folio",
-        description: error.message,
-        variant: "destructive",
-      });
-      return;
+  const abrirDialogoCancelacion = async () => {
+    if (folio.estado === "Borrador") {
+      // Detectar si es el último número emitido para esa org/año/tipo.
+      // Si lo es → DELETE físico (recicla contador). Si no → CANCELADO.
+      const m = folio.codigo.match(/^GR-([A-Z]+)-(\d{4})-(\d+)$/);
+      let esUltimo = false;
+      if (m && folio.org_id) {
+        const tipo = m[1];
+        const year = parseInt(m[2], 10);
+        const num = parseInt(m[3], 10);
+        try {
+          const { data: seq } = await supabase
+            .from("folio_sequence")
+            .select("last_number")
+            .eq("org_id", folio.org_id)
+            .eq("year", year)
+            .eq("tipo", tipo)
+            .maybeSingle();
+          esUltimo = !!seq && (seq as any).last_number === num;
+        } catch {
+          esUltimo = false;
+        }
+      }
+      setCancelarModo(esUltimo ? "delete_fisico" : "borrador_intermedio");
+    } else {
+      setCancelarModo("avanzado");
     }
-    toast({
-      title: "Folio eliminado",
-      description: `${folio.codigo} y todos sus riesgos asociados fueron eliminados.`,
-    });
+    setCancelarOpen(true);
+  };
+
+  const onCancelacionExitosa = () => {
     queryClient.invalidateQueries({ queryKey: ["folios"] });
-    navigate("/folios");
+    queryClient.invalidateQueries({ queryKey: ["folio", folio.id] });
+    if (cancelarModo === "delete_fisico") {
+      navigate("/folios");
+    }
   };
 
   // Verificar si hay riesgos críticos sin evidencia — bloquea envío a firma
@@ -1682,7 +1703,30 @@ export default function FolioDetail() {
       {showChecklist && (
         <div className="fixed inset-0 z-40" onClick={() => setShowChecklist(false)} />
       )}
+      <CancelarFolioDialog
+        open={cancelarOpen}
+        onClose={() => setCancelarOpen(false)}
+        folioId={folio.id}
+        folioCodigo={folio.codigo}
+        modo={cancelarModo}
+        onSuccess={onCancelacionExitosa}
+      />
     <div className="space-y-5 max-w-[1400px] mx-auto">
+      {esCancelado && (
+        <div className="rounded-md border border-destructive/40 bg-destructive/5 px-4 py-3 text-sm">
+          <div className="font-semibold text-destructive flex items-center gap-2">
+            <AlertTriangle className="h-4 w-4" />
+            Folio CANCELADO — sin valor regulatorio
+          </div>
+          <div className="mt-1 text-xs text-muted-foreground">
+            <strong>Motivo:</strong> {getMotivoLabel(folio.motivo_cancelacion_codigo)}
+            {folio.motivo_cancelacion ? ` — ${folio.motivo_cancelacion}` : ""}
+            {folio.cancelado_en && (
+              <> · <strong>Fecha:</strong> {new Date(folio.cancelado_en).toLocaleDateString("es-MX")}</>
+            )}
+          </div>
+        </div>
+      )}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="icon" onClick={() => navigate("/folios")}>
@@ -1729,42 +1773,22 @@ export default function FolioDetail() {
             <Printer className="h-3 w-3" /> Generar PDF
           </Button>
 
-          {/* Eliminar folio — solo Borrador, admin o creador */}
-          {puedeEliminar && (
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-1 text-xs text-destructive hover:bg-destructive/10 hover:text-destructive"
-                  title="Eliminar folio"
-                >
-                  <Trash2 className="h-3 w-3" /> Eliminar
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>¿Eliminar folio {folio.codigo}?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    Esta acción es permanente. Se eliminarán el folio, todos sus riesgos,
-                    miembros del comité, firmas y versiones archivadas. La acción quedará
-                    registrada en el Audit Trail.
-                    <br />
-                    <br />
-                    Solo se pueden eliminar folios en estado <strong>Borrador</strong>.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                  <AlertDialogAction
-                    onClick={handleEliminarFolio}
-                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                  >
-                    Sí, eliminar
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+          {/* Cancelar / Eliminar folio — flujo NOM-241 / COFEPRIS */}
+          {puedeCancelar && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1 text-xs text-destructive hover:bg-destructive/10 hover:text-destructive"
+              title={
+                folio.estado === "Borrador"
+                  ? "Cancelar o eliminar folio"
+                  : "Cancelar folio (requiere justificación)"
+              }
+              onClick={abrirDialogoCancelacion}
+            >
+              <Trash2 className="h-3 w-3" />{" "}
+              {folio.estado === "Borrador" ? "Cancelar / Eliminar" : "Cancelar folio"}
+            </Button>
           )}
 
           {/* Botón Enviar a Firma + Checklist NOM-241-SSA1-2025 */}
