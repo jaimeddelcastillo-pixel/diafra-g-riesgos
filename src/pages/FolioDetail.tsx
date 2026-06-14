@@ -1703,7 +1703,30 @@ export default function FolioDetail() {
       {showChecklist && (
         <div className="fixed inset-0 z-40" onClick={() => setShowChecklist(false)} />
       )}
+      <CancelarFolioDialog
+        open={cancelarOpen}
+        onClose={() => setCancelarOpen(false)}
+        folioId={folio.id}
+        folioCodigo={folio.codigo}
+        modo={cancelarModo}
+        onSuccess={onCancelacionExitosa}
+      />
     <div className="space-y-5 max-w-[1400px] mx-auto">
+      {esCancelado && (
+        <div className="rounded-md border border-destructive/40 bg-destructive/5 px-4 py-3 text-sm">
+          <div className="font-semibold text-destructive flex items-center gap-2">
+            <AlertTriangle className="h-4 w-4" />
+            Folio CANCELADO — sin valor regulatorio
+          </div>
+          <div className="mt-1 text-xs text-muted-foreground">
+            <strong>Motivo:</strong> {getMotivoLabel(folio.motivo_cancelacion_codigo)}
+            {folio.motivo_cancelacion ? ` — ${folio.motivo_cancelacion}` : ""}
+            {folio.cancelado_en && (
+              <> · <strong>Fecha:</strong> {new Date(folio.cancelado_en).toLocaleDateString("es-MX")}</>
+            )}
+          </div>
+        </div>
+      )}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="icon" onClick={() => navigate("/folios")}>
