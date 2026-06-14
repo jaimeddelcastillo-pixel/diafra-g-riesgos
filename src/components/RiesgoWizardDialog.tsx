@@ -627,7 +627,9 @@ export function RiesgoWizardDialog({
     return [
       `Folio: ${folioCodigo} — Proceso: ${procesoEquipo || "N/D"}`,
       `Norma: ${normaConfig.nombre} (${normaKey}) — Detectabilidad: ${usaDet ? "sí" : "no"}`,
-      `ID en creación: #${nextNumeroId} — Paso actual del wizard: ${step} de ${TOTAL_STEPS}`,
+      modoEdicion
+        ? `Estás editando el ID #${numeroIdMostrar} (${folioCodigo}) — el usuario puede modificar cualquier campo. Sugiere mejoras específicas sobre los valores actuales.`
+        : `ID en creación: #${nextNumeroId} — Paso actual del wizard: ${step} de ${TOTAL_STEPS}`,
       `Datos capturados hasta ahora:`,
       `• Peligro: ${s.peligro || "—"}`,
       `• Etapa: ${etapa || "—"}`,
