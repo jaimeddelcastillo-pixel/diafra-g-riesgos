@@ -642,12 +642,20 @@ export function RiesgoWizardDialog({
     const etapa = s.etapa_proceso === "__otra__" ? s.etapa_otra : s.etapa_proceso;
     const causas = s.causas.filter((c) => c.trim()).join("; ");
     const pasos = s.pasos.filter((p) => p.trim()).join(" → ");
-    return [
+    const lineas: string[] = [];
+
+    if (modoEdicion && riesgo) {
+      lineas.push(
+        `*[EDITANDO ID: ${riesgo.numero_id}]* *[FOLIO: ${folioCodigo}]* *[PELIGRO ACTUAL: ${riesgo.peligro}]* *[MODO_FALLA ACTUAL: ${riesgo.peligro_modo_falla}]* *[SITUACION ACTUAL: ${riesgo.situacion_peligrosa}]* *[SECUENCIA ACTUAL: ${riesgo.secuencia_eventos}]* *[CAUSA ACTUAL: ${riesgo.causa_potencial}]* *[EFECTO ACTUAL: ${riesgo.efecto_dano}]* *[S=${riesgo.severidad} O=${riesgo.ocurrencia} D=${riesgo.deteccion} NPR=${riesgo.npr ?? "N/D"}]* *[ESCALA: ${riesgo.tipo_escala_severidad}]* *[CONTROLES ACTUALES: ${riesgo.controles_actuales ?? "—"}]*`,
+        `Estás editando el ID #${numeroIdMostrar} (${folioCodigo}) — el usuario puede modificar cualquier campo. Sugiere mejoras específicas sobre los valores actuales.`
+      );
+    } else {
+      lineas.push(`ID en creación: #${nextNumeroId} — Paso actual del wizard: ${step} de ${TOTAL_STEPS}`);
+    }
+
+    lineas.push(
       `Folio: ${folioCodigo} — Proceso: ${procesoEquipo || "N/D"}`,
       `Norma: ${normaConfig.nombre} (${normaKey}) — Detectabilidad: ${usaDet ? "sí" : "no"}`,
-      modoEdicion
-        ? `Estás editando el ID #${numeroIdMostrar} (${folioCodigo}) — el usuario puede modificar cualquier campo. Sugiere mejoras específicas sobre los valores actuales.`
-        : `ID en creación: #${nextNumeroId} — Paso actual del wizard: ${step} de ${TOTAL_STEPS}`,
       `Datos capturados hasta ahora:`,
       `• Peligro: ${s.peligro || "—"}`,
       `• Etapa: ${etapa || "—"}`,
@@ -664,7 +672,9 @@ export function RiesgoWizardDialog({
       ].join("; ") || "—"}`,
       `• Controles detección: ${s.controles_deteccion.filter((x) => x.trim()).join("; ") || "—"}`,
       `• NPR residual: ${nprRes}`,
-    ].join("\n");
+    );
+
+    return lineas.join("\n");
   };
 
   const aplicarSugerencia = (field: WizardApplyField, value: string | number) => {
