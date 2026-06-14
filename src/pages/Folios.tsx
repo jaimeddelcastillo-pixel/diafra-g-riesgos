@@ -692,11 +692,14 @@ export default function Folios() {
           const riesgos = riesgosMap.get(folio.id) || [];
           const criticos = riesgos.filter((r) => (r.npr ?? 0) > 150 || r.severidad >= 9).length;
           const accionesPendientes = riesgos.filter((r) => r.requiere_accion && !r.accion_implementada).length;
+          const esCancelado = folio.estado === "Cancelado";
 
           return (
             <Card
               key={folio.id}
-              className="hover:shadow-md transition-shadow cursor-pointer"
+              className={`hover:shadow-md transition-shadow cursor-pointer ${
+                esCancelado ? "opacity-70 border-dashed" : ""
+              }`}
               onClick={() => navigate(`/folios/${folio.id}`)}
             >
               <CardContent className="py-4">
@@ -715,6 +718,15 @@ export default function Folios() {
                       <p className="text-xs text-muted-foreground">
                         Origen: {folio.origen} · Inicio: {folio.fecha_inicio}
                       </p>
+                      {esCancelado && (
+                        <p className="text-[11px] text-destructive mt-0.5 truncate">
+                          Cancelado: {getMotivoLabel((folio as any).motivo_cancelacion_codigo)}
+                          {(folio as any).motivo_cancelacion ? ` — ${(folio as any).motivo_cancelacion}` : ""}
+                          {(folio as any).cancelado_en
+                            ? ` · ${new Date((folio as any).cancelado_en).toLocaleDateString("es-MX")}`
+                            : ""}
+                        </p>
+                      )}
                     </div>
                   </div>
 
