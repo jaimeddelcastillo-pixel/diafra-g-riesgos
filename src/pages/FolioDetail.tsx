@@ -1521,6 +1521,10 @@ export default function FolioDetail() {
 
   const [enviandoFirma, setEnviandoFirma] = useState(false);
   const [showChecklist, setShowChecklist] = useState(false);
+  const [cancelarOpen, setCancelarOpen] = useState(false);
+  const [cancelarModo, setCancelarModo] = useState<
+    "borrador_intermedio" | "avanzado" | "delete_fisico"
+  >("borrador_intermedio");
 
   if (isLoading) {
     return (
@@ -1536,29 +1540,55 @@ export default function FolioDetail() {
   }
 
   const { folio, riesgos, comite } = data;
-  const locked = folio.estado !== "Borrador" && !isAdmin;
+  const esCancelado = folio.estado === "Cancelado";
+  // Folios cancelados quedan totalmente bloqueados para todos (incluido admin).
+  const locked = esCancelado || (folio.estado !== "Borrador" && !isAdmin);
 
-  // ── Eliminar folio (RLS: solo Borrador, admin o creador) ─────────────────
-  const puedeEliminar =
-    folio.estado === "Borrador" &&
-    (hasRole("admin") || folio.created_by === user?.id);
+  // ── Reglas de cancelación / eliminación ──────────────────────────────────
+  // Borrador: admin/RS o el creador pueden cancelar.
+  // En Firma / Aprobado / Cerrado: sólo admin/RS.
+  // Cancelado: nadie (botón oculto).
+  const puedeCancelar =
+    !esCancelado &&
+    (isAdmin ||
+      (folio.estado === "Borrador" && folio.created_by === user?.id));
 
-  const handleEliminarFolio = async () => {
-    const { error } = await supabase.from("folios").delete().eq("id", folio.id);
-    if (error) {
-      toast({
-        title: "No se pudo eliminar el folio",
-        description: error.message,
-        variant: "destructive",
-      });
-      return;
+  const abrirDialogoCancelacion = async () => {
+    if (folio.estado === "Borrador") {
+      // Detectar si es el último número emitido para esa org/año/tipo.
+      // Si lo es → DELETE físico (recicla contador). Si no → CANCELADO.
+      const m = folio.codigo.match(/^GR-([A-Z]+)-(\d{4})-(\d+)$/);
+      let esUltimo = false;
+      if (m && folio.org_id) {
+        const tipo = m[1];
+        const year = parseInt(m[2], 10);
+        const num = parseInt(m[3], 10);
+        try {
+          const { data: seq } = await supabase
+            .from("folio_sequence")
+            .select("last_number")
+            .eq("org_id", folio.org_id)
+            .eq("year", year)
+            .eq("tipo", tipo)
+            .maybeSingle();
+          esUltimo = !!seq && (seq as any).last_number === num;
+        } catch {
+          esUltimo = false;
+        }
+      }
+      setCancelarModo(esUltimo ? "delete_fisico" : "borrador_intermedio");
+    } else {
+      setCancelarModo("avanzado");
     }
-    toast({
-      title: "Folio eliminado",
-      description: `${folio.codigo} y todos sus riesgos asociados fueron eliminados.`,
-    });
+    setCancelarOpen(true);
+  };
+
+  const onCancelacionExitosa = () => {
     queryClient.invalidateQueries({ queryKey: ["folios"] });
-    navigate("/folios");
+    queryClient.invalidateQueries({ queryKey: ["folio", folio.id] });
+    if (cancelarModo === "delete_fisico") {
+      navigate("/folios");
+    }
   };
 
   // Verificar si hay riesgos críticos sin evidencia — bloquea envío a firma
