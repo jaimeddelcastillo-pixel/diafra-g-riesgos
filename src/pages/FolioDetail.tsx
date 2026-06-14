@@ -1354,6 +1354,19 @@ function SeccionRiesgos({ riesgos, locked, folioId, folioCodigo, procesoEquipo, 
           tipoFolio={tipoFolio}
         />
       )}
+      {wizardEditar.open && wizardEditar.riesgo && (
+        <RiesgoWizardDialog
+          open={wizardEditar.open}
+          onClose={() => setWizardEditar({ open: false, riesgo: null })}
+          folioId={folioId}
+          folioCodigo={folioCodigo}
+          procesoEquipo={procesoEquipo}
+          nextNumeroId={nextNumeroId}
+          normaFolio={normaFolio}
+          tipoFolio={tipoFolio}
+          riesgo={wizardEditar.riesgo}
+        />
+      )}
       <RiesgoDetailSheet
         riesgo={detalle.riesgo}
         open={detalle.open}
