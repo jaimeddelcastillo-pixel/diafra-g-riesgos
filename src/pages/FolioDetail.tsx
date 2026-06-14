@@ -1283,6 +1283,22 @@ function SeccionRiesgos({ riesgos, locked, folioId, folioCodigo, procesoEquipo, 
                           >
                             <Pencil className="h-3 w-3" />
                           </Button>
+                          {(folioEstado === "Borrador" || folioEstado === "Rechazado") && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-6 w-6 text-orange-500 hover:text-orange-600 hover:bg-orange-500/10"
+                                  onClick={() => setWizardEditar({ open: true, riesgo: r })}
+                                  aria-label="Editar con el Asistente IA"
+                                >
+                                  <Sparkles className="h-3 w-3" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Editar con el Asistente IA</TooltipContent>
+                            </Tooltip>
+                          )}
                           <Button
                             variant="ghost"
                             size="icon"
