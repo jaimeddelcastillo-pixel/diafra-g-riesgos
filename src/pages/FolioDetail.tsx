@@ -18,6 +18,17 @@ import { SeccionDictamen } from "@/components/SeccionDictamen";
 import { SeccionEvidencias } from "@/components/SeccionEvidencias";
 import { ComiteTab } from "@/components/comite/ComiteTab";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
@@ -1512,7 +1523,7 @@ export default function FolioDetail() {
   const navigate = useNavigate();
   const { data, isLoading, refetch } = useFolioDetail(id);
   const queryClient = useQueryClient();
-  const { hasRole, org } = useAuth();
+  const { user, hasRole, org } = useAuth();
   const { toast } = useToast();
 
   const isAdmin = hasRole("admin") || hasRole("responsable_sanitario");
@@ -1535,6 +1546,29 @@ export default function FolioDetail() {
 
   const { folio, riesgos, comite } = data;
   const locked = folio.estado !== "Borrador" && !isAdmin;
+
+  // ── Eliminar folio (RLS: solo Borrador, admin o creador) ─────────────────
+  const puedeEliminar =
+    folio.estado === "Borrador" &&
+    (hasRole("admin") || folio.created_by === user?.id);
+
+  const handleEliminarFolio = async () => {
+    const { error } = await supabase.from("folios").delete().eq("id", folio.id);
+    if (error) {
+      toast({
+        title: "No se pudo eliminar el folio",
+        description: error.message,
+        variant: "destructive",
+      });
+      return;
+    }
+    toast({
+      title: "Folio eliminado",
+      description: `${folio.codigo} y todos sus riesgos asociados fueron eliminados.`,
+    });
+    queryClient.invalidateQueries({ queryKey: ["folios"] });
+    navigate("/folios");
+  };
 
   // Verificar si hay riesgos críticos sin evidencia — bloquea envío a firma
   const criticosSinEvidencia = riesgos.filter((r) => {
