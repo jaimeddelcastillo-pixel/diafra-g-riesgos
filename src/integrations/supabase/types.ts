@@ -1669,7 +1669,12 @@ export type Database = {
         | "responsable_sanitario"
         | "super_admin"
       dictamen_tipo: "Aceptable" | "No Aceptable" | "Pendiente"
-      estado_folio: "Borrador" | "En Firma" | "Aprobado" | "Cerrado"
+      estado_folio:
+        | "Borrador"
+        | "En Firma"
+        | "Aprobado"
+        | "Cerrado"
+        | "Cancelado"
       org_estado: "pendiente" | "activo" | "suspendido" | "cancelado"
       origen_riesgo:
         | "Diseño"
@@ -1827,7 +1832,13 @@ export const Constants = {
         "super_admin",
       ],
       dictamen_tipo: ["Aceptable", "No Aceptable", "Pendiente"],
-      estado_folio: ["Borrador", "En Firma", "Aprobado", "Cerrado"],
+      estado_folio: [
+        "Borrador",
+        "En Firma",
+        "Aprobado",
+        "Cerrado",
+        "Cancelado",
+      ],
       org_estado: ["pendiente", "activo", "suspendido", "cancelado"],
       origen_riesgo: [
         "Diseño",
