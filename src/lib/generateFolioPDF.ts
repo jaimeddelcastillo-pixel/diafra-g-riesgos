@@ -962,6 +962,7 @@ export async function generateFolioPDF(
     doc.setPage(i);
     addHeader(i, totalPgs);
     addFooter();
+    addCanceladoWatermark();
   }
 
   doc.save(`${folio.codigo}_${folio.proceso_equipo.replace(/[^a-zA-Z0-9]/g, "_")}.pdf`);
