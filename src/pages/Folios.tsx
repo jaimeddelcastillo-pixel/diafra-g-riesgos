@@ -547,7 +547,9 @@ export default function Folios() {
     ? todosRaw
     : todosRaw.filter((f) => f.estado !== "Cancelado");
 
-  const { org } = useAuth();
+  const { org, hasRole, isSuperAdmin } = useAuth();
+  const puedeVerCancelados =
+    hasRole("admin") || hasRole("responsable_sanitario") || isSuperAdmin();
   const tiposDisponibles = getTiposDisponibles((org as any)?.norma_aplicable);
 
   const lista =
