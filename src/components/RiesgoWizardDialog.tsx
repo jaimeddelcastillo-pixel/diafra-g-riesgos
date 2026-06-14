@@ -1578,26 +1578,41 @@ export function RiesgoWizardDialog({
             </Button>
           ) : (
             <div className="flex flex-col sm:flex-row gap-2">
+              {!modoEdicion && (
+                <>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleGuardarYOtro}
+                    disabled={saving}
+                    className="gap-1"
+                  >
+                    <Plus className="h-4 w-4" /> Guardar y agregar otro
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleGuardarYAsistente}
+                    disabled={saving}
+                    className="gap-1"
+                  >
+                    <Sparkles className="h-4 w-4" /> Guardar y continuar con IA
+                  </Button>
+                </>
+              )}
               <Button
                 type="button"
-                variant="outline"
-                onClick={handleGuardarYOtro}
+                onClick={handleGuardar}
                 disabled={saving}
-                className="gap-1"
+                className={cn(
+                  "gap-1",
+                  modoEdicion && "bg-orange-500 hover:bg-orange-600 text-white",
+                )}
               >
-                <Plus className="h-4 w-4" /> Guardar y agregar otro
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleGuardarYAsistente}
-                disabled={saving}
-                className="gap-1"
-              >
-                <Sparkles className="h-4 w-4" /> Guardar y continuar con IA
-              </Button>
-              <Button type="button" onClick={handleGuardar} disabled={saving} className="gap-1">
-                <Check className="h-4 w-4" /> {saving ? "Guardando..." : "Guardar ID"}
+                <Check className="h-4 w-4" />
+                {saving
+                  ? modoEdicion ? "Actualizando..." : "Guardando..."
+                  : modoEdicion ? "Actualizar ID" : "Insertar ID"}
               </Button>
             </div>
           )}
