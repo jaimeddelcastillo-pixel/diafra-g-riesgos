@@ -995,6 +995,7 @@ function SeccionRiesgoResidualGlobal({
 function SeccionRiesgos({ riesgos, locked, folioId, folioCodigo, procesoEquipo, normaFolio, folioEstado, tipoFolio }: { riesgos: Riesgo[]; locked: boolean; folioId: string; folioCodigo: string; procesoEquipo: string; normaFolio?: string | null; folioEstado?: string; tipoFolio?: string | null }) {
   const [riesgoForm, setRiesgoForm] = useState<{ open: boolean; riesgo: Riesgo | null }>({ open: false, riesgo: null });
   const [wizardOpen, setWizardOpen] = useState(false);
+  const [wizardEditar, setWizardEditar] = useState<{ open: boolean; riesgo: Riesgo | null }>({ open: false, riesgo: null });
   const [detalle, setDetalle] = useState<{ open: boolean; riesgo: Riesgo | null }>({ open: false, riesgo: null });
   const { toast } = useToast();
   const queryClient = useQueryClient();
