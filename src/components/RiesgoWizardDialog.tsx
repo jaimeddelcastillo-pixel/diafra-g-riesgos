@@ -514,9 +514,7 @@ export function RiesgoWizardDialog({
       .map((c, i) => `${i + 1}. ${c}`)
       .join("\n");
 
-    const payload = {
-      folio_id: folioId,
-      numero_id: nextNumeroId,
+    const payload: Record<string, unknown> = {
       etapa_proceso: etapaFinal,
       peligro: s.peligro.trim(),
       situacion_peligrosa: s.situacion_peligrosa.trim(),
@@ -540,7 +538,6 @@ export function RiesgoWizardDialog({
       sev_residual: s.sev_residual,
       ocu_residual: s.ocu_residual,
       det_residual: usaDet ? s.det_residual : 1,
-      dictamen: "Pendiente" as const,
     };
 
     if (extraJustificacion.trim()) {
@@ -552,7 +549,32 @@ export function RiesgoWizardDialog({
         .join("\n\n");
     }
 
-    const { error } = await supabase.from("riesgos").insert(payload);
+    if (modoEdicion && riesgo) {
+      const { error } = await supabase
+        .from("riesgos")
+        .update(payload as any)
+        .eq("id", riesgo.id);
+      setSaving(false);
+      if (error) {
+        toast({ title: "Error al actualizar", description: error.message, variant: "destructive" });
+        return false;
+      }
+      qc.invalidateQueries({ queryKey: ["folio", folioId] });
+      qc.invalidateQueries({ queryKey: ["all-riesgos"] });
+      toast({
+        title: `ID #${numeroIdMostrar} actualizado correctamente`,
+        description: `Wizard ${normaKey}`,
+      });
+      return true;
+    }
+
+    const insertPayload = {
+      ...payload,
+      folio_id: folioId,
+      numero_id: nextNumeroId,
+      dictamen: "Pendiente" as const,
+    };
+    const { error } = await supabase.from("riesgos").insert(insertPayload as any);
     setSaving(false);
     if (error) {
       toast({ title: "Error al guardar", description: error.message, variant: "destructive" });
