@@ -587,6 +587,24 @@ export function RiesgoWizardDialog({
   };
 
   const handleGuardar = async () => {
+    if (modoEdicion) {
+      // Validación mínima antes de UPDATE
+      const etapaFinal =
+        s.etapa_proceso === "__otra__" ? s.etapa_otra.trim() : s.etapa_proceso.trim();
+      const faltas: { paso: number; msg: string }[] = [];
+      if (!s.peligro.trim() || !etapaFinal) faltas.push({ paso: 1, msg: "Peligro y etapa son obligatorios" });
+      if (!s.situacion_peligrosa.trim()) faltas.push({ paso: 4, msg: "Situación peligrosa es obligatoria" });
+      if (!s.efecto_dano.trim()) faltas.push({ paso: 5, msg: "Efecto / daño es obligatorio" });
+      if (faltas.length) {
+        toast({
+          title: "Faltan campos obligatorios",
+          description: faltas.map((f) => `Paso ${f.paso}: ${f.msg}`).join(" · "),
+          variant: "destructive",
+        });
+        setStep(faltas[0].paso);
+        return;
+      }
+    }
     const ok = await persist();
     if (ok) {
       reset();
