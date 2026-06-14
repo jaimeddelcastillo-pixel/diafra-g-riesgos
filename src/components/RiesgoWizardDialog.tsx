@@ -706,8 +706,15 @@ export function RiesgoWizardDialog({
         {/* Header con barra de progreso */}
         <div className="border-b bg-primary text-primary-foreground p-4">
           <div className="flex items-baseline justify-between mb-3">
-            <h2 className="text-lg font-bold">
-              Nuevo ID #{String(nextNumeroId).padStart(2, "0")} — Paso {step} de {TOTAL_STEPS}
+            <h2 className="text-lg font-bold truncate pr-2">
+              {modoEdicion ? (
+                <>
+                  Editando ID #{String(numeroIdMostrar).padStart(2, "0")}
+                  {s.peligro ? ` — ${s.peligro.slice(0, 48)}` : ""}
+                </>
+              ) : (
+                <>Nuevo ID #{String(nextNumeroId).padStart(2, "0")} — Paso {step} de {TOTAL_STEPS}</>
+              )}
             </h2>
             <div className="flex items-center gap-2">
               <Button
