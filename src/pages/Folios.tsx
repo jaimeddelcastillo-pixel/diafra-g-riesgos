@@ -520,8 +520,6 @@ export default function Folios() {
   const [mostrarCancelados, setMostrarCancelados] = useState(false);
   const { data: folios, isLoading } = useFolios();
   const { data: allRiesgos, isLoading: loadingRiesgos } = useAllRiesgos();
-  const { hasRole, isSuperAdmin } = useAuth();
-  const puedeVerCancelados = hasRole("admin") || hasRole("responsable_sanitario") || isSuperAdmin();
 
   // Auto-abrir diálogo de nuevo folio si viene ?wizard=1 (desde onboarding)
   useEffect(() => {
