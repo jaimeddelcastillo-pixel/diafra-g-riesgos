@@ -50,6 +50,7 @@ import {
   type CausaRaizPayload,
 } from "@/components/causa-raiz/CausaRaizSheet";
 import { Search } from "lucide-react";
+import type { Riesgo } from "@/hooks/useFolios";
 
 interface Props {
   open: boolean;
@@ -62,6 +63,8 @@ interface Props {
   /** Tipo de folio actual (SGC, FAB, …). Si está vacío y el usuario elige
    *  "documental/regulatorio", el wizard auto-asigna tipo_folio = "SGC". */
   tipoFolio?: string | null;
+  /** Si se recibe, el wizard entra en modo EDICIÓN del riesgo dado. */
+  riesgo?: Riesgo | null;
 }
 
 type WizardState = {
