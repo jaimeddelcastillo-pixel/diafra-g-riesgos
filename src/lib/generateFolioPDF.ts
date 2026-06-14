@@ -320,8 +320,37 @@ export async function generateFolioPDF(
     doc.setFontSize(6);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(60);
-    const txt = `Documento confidencial propiedad de ${orgNombre.toUpperCase()}, queda prohibido su uso, divulgación y/o reproducción total o parcial sin previa autorización.`;
-    doc.text(txt, pageW / 2, pageH - 4, { align: "center" });
+    if (folio.estado === "Cancelado") {
+      doc.setTextColor(180, 0, 0);
+      doc.text(
+        "Este folio fue CANCELADO y no tiene valor regulatorio como análisis de riesgo aprobado.",
+        pageW / 2,
+        pageH - 4,
+        { align: "center" },
+      );
+    } else {
+      const txt = `Documento confidencial propiedad de ${orgNombre.toUpperCase()}, queda prohibido su uso, divulgación y/o reproducción total o parcial sin previa autorización.`;
+      doc.text(txt, pageW / 2, pageH - 4, { align: "center" });
+    }
+    doc.setTextColor(0);
+  }
+
+  // Marca de agua diagonal "CANCELADO" en cada página
+  function addCanceladoWatermark() {
+    if (folio.estado !== "Cancelado") return;
+    const gs = (doc as any).GState ? new (doc as any).GState({ opacity: 0.18 }) : null;
+    if (gs) (doc as any).setGState(gs);
+    doc.setTextColor(180, 0, 0);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(110);
+    doc.text("CANCELADO", pageW / 2, pageH / 2 + 20, {
+      align: "center",
+      angle: 30,
+    });
+    if (gs) {
+      const reset = new (doc as any).GState({ opacity: 1 });
+      (doc as any).setGState(reset);
+    }
     doc.setTextColor(0);
   }
 
