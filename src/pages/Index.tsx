@@ -405,21 +405,28 @@ export default function Dashboard() {
                 count: enFirma.length,
                 color: "bg-blue-500",
                 text: "text-blue-700",
-                pct: fols.length > 0 ? Math.round((enFirma.length / fols.length) * 100) : 0,
+                pct: foliosVigentes.length > 0 ? Math.round((enFirma.length / foliosVigentes.length) * 100) : 0,
               },
               {
                 label: "Borrador",
                 count: borradores.length,
                 color: "bg-gray-400",
                 text: "text-gray-600",
-                pct: fols.length > 0 ? Math.round((borradores.length / fols.length) * 100) : 0,
+                pct: foliosVigentes.length > 0 ? Math.round((borradores.length / foliosVigentes.length) * 100) : 0,
               },
               {
                 label: "Rechazados",
                 count: rechazados.length,
                 color: "bg-red-500",
                 text: "text-red-700",
-                pct: fols.length > 0 ? Math.round((rechazados.length / fols.length) * 100) : 0,
+                pct: foliosVigentes.length > 0 ? Math.round((rechazados.length / foliosVigentes.length) * 100) : 0,
+              },
+              {
+                label: "Cancelados",
+                count: cancelados.length,
+                color: "bg-muted-foreground/60",
+                text: "text-muted-foreground",
+                pct: fols.length > 0 ? Math.round((cancelados.length / fols.length) * 100) : 0,
               },
             ].map((item) => (
               <div key={item.label} className="space-y-1">
