@@ -25,6 +25,7 @@ import { Input } from "@/components/ui/input";
 import { useIsTrial, TRIAL_DOWNLOAD_TOOLTIP } from "@/lib/trialRestrictions";
 import { useNavigate } from "react-router-dom";
 import { useCurso, type CursoDB, type LeccionDB } from "@/hooks/useCurso";
+import { descargarArchivoStorage } from "@/lib/descargarArchivo";
 
 type Guia = {
   id: string;
@@ -299,18 +300,8 @@ export default function Capacitacion() {
   }, [org?.id]);
 
   const descargarGuia = async (g: Guia) => {
-    const { data } = await supabase.storage
-      .from("tracea-recursos")
-      .createSignedUrl(g.storagePath, 60);
-    if (data?.signedUrl) {
-      window.open(data.signedUrl, "_blank");
-      return true;
-    }
-    const { data: pub } = supabase.storage.from("tracea-recursos").getPublicUrl(g.storagePath);
-    if (pub?.publicUrl) {
-      window.open(pub.publicUrl, "_blank");
-      return true;
-    }
+    const ok = await descargarArchivoStorage("tracea-recursos", g.storagePath);
+    if (ok) return true;
     toast({
       title: "Documento no disponible",
       description: "Este recurso aún no ha sido cargado por el equipo TRACEA.",
@@ -320,18 +311,8 @@ export default function Capacitacion() {
   };
 
   const descargarRecurso = async (r: Recurso) => {
-    const { data } = await supabase.storage
-      .from("tracea-recursos")
-      .createSignedUrl(r.storagePath, 60);
-    if (data?.signedUrl) {
-      window.open(data.signedUrl, "_blank");
-      return;
-    }
-    const { data: pub } = supabase.storage.from("tracea-recursos").getPublicUrl(r.storagePath);
-    if (pub?.publicUrl) {
-      window.open(pub.publicUrl, "_blank");
-      return;
-    }
+    const ok = await descargarArchivoStorage("tracea-recursos", r.storagePath);
+    if (ok) return;
     toast({
       title: "Documento no disponible",
       description: "Este recurso aún no ha sido cargado por el equipo TRACEA.",

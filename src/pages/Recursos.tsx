@@ -31,6 +31,7 @@ import {
 import { useIsTrial, TRIAL_DOWNLOAD_TOOLTIP } from "@/lib/trialRestrictions";
 import { Link } from "react-router-dom";
 import { Lock } from "lucide-react";
+import { descargarArchivoStorage } from "@/lib/descargarArchivo";
 
 type DocTipo =
   | "PNO"
@@ -276,24 +277,14 @@ export default function Recursos() {
   }, [org?.id, puedeEliminar]);
 
   const handleDescargarReferencia = async (ref: ReferenciaDoc) => {
-    const { data, error } = await supabase.storage
-      .from("tracea-recursos")
-      .createSignedUrl(ref.storagePath, 60);
-    if (error || !data) {
-      // Fallback a URL pública
-      const { data: pub } = supabase.storage.from("tracea-recursos").getPublicUrl(ref.storagePath);
-      if (pub?.publicUrl) {
-        window.open(pub.publicUrl, "_blank");
-        return;
-      }
+    const ok = await descargarArchivoStorage("tracea-recursos", ref.storagePath);
+    if (!ok) {
       toast({
         title: "Documento no disponible",
         description: "Este recurso aún no ha sido cargado por el equipo TRACEA.",
         variant: "destructive",
       });
-      return;
     }
-    window.open(data.signedUrl, "_blank");
   };
 
   const handleUpload = async () => {
