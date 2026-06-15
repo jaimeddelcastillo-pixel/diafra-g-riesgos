@@ -25,6 +25,7 @@ import { Input } from "@/components/ui/input";
 import { useIsTrial, TRIAL_DOWNLOAD_TOOLTIP } from "@/lib/trialRestrictions";
 import { useNavigate } from "react-router-dom";
 import { useCurso, type CursoDB, type LeccionDB } from "@/hooks/useCurso";
+import { descargarArchivoStorage } from "@/lib/descargarArchivo";
 
 type Guia = {
   id: string;

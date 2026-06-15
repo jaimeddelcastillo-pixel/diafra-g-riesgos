@@ -31,6 +31,7 @@ import {
 import { useIsTrial, TRIAL_DOWNLOAD_TOOLTIP } from "@/lib/trialRestrictions";
 import { Link } from "react-router-dom";
 import { Lock } from "lucide-react";
+import { descargarArchivoStorage } from "@/lib/descargarArchivo";
 
 type DocTipo =
   | "PNO"
