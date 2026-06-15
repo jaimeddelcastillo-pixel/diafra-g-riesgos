@@ -105,8 +105,8 @@ const RECURSOS_TRACEA: Recurso[] = [
   },
   {
     id: "glosario-regulatorio",
-    titulo: "Glosario Regulatorio NOM-241 / NOM-059",
-    descripcion: "Definiciones clave para hablar el idioma de COFEPRIS.",
+    titulo: "Glosario",
+    descripcion: "Definiciones clave para hablar el idioma de programación (material útil para validación de sistemas).",
     storagePath: "glosario-regulatorio.pdf",
   },
 ];
