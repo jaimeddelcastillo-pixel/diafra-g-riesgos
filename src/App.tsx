@@ -27,6 +27,8 @@ import MisProtocolos from "./pages/MisProtocolos";
 import Soporte from "./pages/Soporte";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import Recuperar from "./pages/Recuperar";
+import ResetPassword from "./pages/ResetPassword";
 import Unsubscribe from "./pages/Unsubscribe";
 import Precios from "./pages/Precios";
 import CheckoutSuccess from "./pages/CheckoutSuccess";
@@ -47,6 +49,8 @@ const App = () => (
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/recuperar" element={<Recuperar />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/precios" element={<Precios />} />
             <Route path="/unsubscribe" element={<Unsubscribe />} />
             <Route path="/checkout/success" element={<CheckoutSuccess />} />
