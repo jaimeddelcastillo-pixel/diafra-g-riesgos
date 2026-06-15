@@ -343,12 +343,34 @@ export default function Capacitacion() {
       return;
     }
     if (l.tipo === "descarga") {
-      const refGuiaId = DESCARGA_GUIA_MAP[l.leccion_id];
-      if (!refGuiaId) return;
       if (isTrial) {
         toast({
           title: "Descarga restringida en prueba gratuita",
           description: TRIAL_DOWNLOAD_TOOLTIP,
+          variant: "destructive",
+        });
+        return;
+      }
+      // Prioridad 1: archivo subido desde el editor admin (guardado en BD)
+      if (l.archivo_storage) {
+        const ok = await descargarArchivoStorage("tracea-recursos", l.archivo_storage, l.archivo_storage);
+        if (ok) {
+          marcarCompletada(cursoLegacy, l.leccion_id);
+        } else {
+          toast({
+            title: "Documento no disponible",
+            description: "El archivo aún no ha sido cargado o no existe en el bucket.",
+            variant: "destructive",
+          });
+        }
+        return;
+      }
+      // Prioridad 2 (legacy): mapa a guías hardcodeadas
+      const refGuiaId = DESCARGA_GUIA_MAP[l.leccion_id];
+      if (!refGuiaId) {
+        toast({
+          title: "Documento no disponible",
+          description: "Esta lección aún no tiene archivo asignado.",
           variant: "destructive",
         });
         return;
