@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Plus, Trash2, Save, ChevronUp, ChevronDown } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Save, ChevronUp, ChevronDown, Upload } from "lucide-react";
 import { toast } from "sonner";
 
 type Curso = { id: string; norma: string; titulo: string; descripcion: string; activo: boolean };
@@ -37,6 +37,7 @@ export default function AdminCursoEditor() {
   const [lecciones, setLecciones] = useState<Record<string, Leccion[]>>({});
   const [archivos, setArchivos] = useState<string[]>([]);
   const [load, setLoad] = useState(true);
+  const [uploadingLec, setUploadingLec] = useState<string | null>(null);
 
   const fetchAll = useCallback(async () => {
     if (!id) return;
@@ -72,6 +73,52 @@ export default function AdminCursoEditor() {
       setArchivos((data ?? []).map((f) => f.name).filter((n) => !n.startsWith(".")));
     })();
   }, []);
+
+  const refreshArchivos = async () => {
+    const { data } = await supabase.storage.from("tracea-recursos").list("", { limit: 100 });
+    setArchivos((data ?? []).map((f) => f.name).filter((n) => !n.startsWith(".")));
+  };
+
+  const subirArchivo = async (l: Leccion, file: File) => {
+    if (file.type !== "application/pdf" && !file.name.toLowerCase().endsWith(".pdf")) {
+      toast.error("Solo se permiten archivos PDF");
+      return;
+    }
+    if (file.size > 20 * 1024 * 1024) {
+      toast.error("El archivo excede 20 MB");
+      return;
+    }
+    setUploadingLec(l.id);
+    try {
+      const existing = new Set(archivos);
+      let nombre = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+      if (existing.has(nombre)) {
+        const ts = Date.now();
+        const dot = nombre.lastIndexOf(".");
+        nombre = dot > 0 ? `${nombre.slice(0, dot)}_${ts}${nombre.slice(dot)}` : `${nombre}_${ts}`;
+      }
+      const { error: upErr } = await supabase.storage
+        .from("tracea-recursos")
+        .upload(nombre, file, { contentType: "application/pdf", upsert: false });
+      if (upErr) {
+        toast.error(upErr.message);
+        return;
+      }
+      await refreshArchivos();
+      const { error: dbErr } = await (supabase as any)
+        .from("curso_lecciones")
+        .update({ archivo_storage: nombre })
+        .eq("id", l.id);
+      if (dbErr) {
+        toast.error(dbErr.message);
+        return;
+      }
+      updLec(l.modulo_id, l.id, { archivo_storage: nombre });
+      toast.success(`Archivo subido: ${nombre}`);
+    } finally {
+      setUploadingLec(null);
+    }
+  };
 
   if (loading) return null;
   if (!isSuperAdmin()) return <Navigate to="/" replace />;
@@ -264,17 +311,45 @@ export default function AdminCursoEditor() {
                   {l.tipo === "descarga" && (
                     <div>
                       <Label className="text-xs">Archivo en bucket tracea-recursos</Label>
-                      <Select
-                        value={l.archivo_storage ?? ""}
-                        onValueChange={(v) => updLec(m.id, l.id, { archivo_storage: v })}
-                      >
-                        <SelectTrigger><SelectValue placeholder="Seleccionar archivo" /></SelectTrigger>
-                        <SelectContent>
-                          {archivos.map((a) => (
-                            <SelectItem key={a} value={a}>{a}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1">
+                          <Select
+                            value={l.archivo_storage ?? ""}
+                            onValueChange={(v) => updLec(m.id, l.id, { archivo_storage: v })}
+                          >
+                            <SelectTrigger><SelectValue placeholder="Seleccionar archivo" /></SelectTrigger>
+                            <SelectContent>
+                              {archivos.map((a) => (
+                                <SelectItem key={a} value={a}>{a}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <label>
+                          <input
+                            type="file"
+                            accept="application/pdf,.pdf"
+                            className="hidden"
+                            onChange={(e) => {
+                              const f = e.target.files?.[0];
+                              if (f) subirArchivo(l, f);
+                              e.target.value = "";
+                            }}
+                          />
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            disabled={uploadingLec === l.id}
+                            asChild
+                          >
+                            <span className="cursor-pointer">
+                              <Upload className="h-3 w-3 mr-1" />
+                              {uploadingLec === l.id ? "Subiendo..." : "Subir PDF"}
+                            </span>
+                          </Button>
+                        </label>
+                      </div>
                     </div>
                   )}
                   <div className="flex flex-wrap items-center gap-4">
