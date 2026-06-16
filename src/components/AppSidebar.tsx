@@ -32,7 +32,7 @@ const orgNavItems = [
   { title: "Recursos", url: "/recursos", icon: Library, onboarding: "recursos" },
   { title: "Mis Protocolos", url: "/mis-protocolos", icon: FileBadge, onboarding: undefined },
   { title: "Capacitación", url: "/capacitacion", icon: GraduationCap, onboarding: "capacitacion" },
-  { title: "Auditoría", url: "/auditoria", icon: Settings, onboarding: undefined },
+  { title: "Auditoría", url: "/auditoria", icon: Search, onboarding: undefined },
   { title: "Configuración", url: "/configuracion", icon: Settings, onboarding: undefined },
 ];
 
