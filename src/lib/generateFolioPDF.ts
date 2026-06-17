@@ -521,8 +521,8 @@ export async function generateFolioPDF(
             m.nombre,
             m.cargo,
             m.responsabilidad,
-            m.firmado ? "✓ Firmado" : "Pendiente",
-            m.fecha_firma ? fmtDate(m.fecha_firma) : "—",
+            m.firmado ? "✓ Firmado" : "",
+            m.fecha_firma ? fmtDate(m.fecha_firma) : "",
           ]),
     theme: "grid",
     styles: {
@@ -530,7 +530,7 @@ export async function generateFolioPDF(
       cellPadding: 3,
       lineColor: [0, 0, 0],
       lineWidth: 0.2,
-      minCellHeight: 11,
+      minCellHeight: 16,
       valign: "middle",
     },
     headStyles: {
