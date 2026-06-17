@@ -408,6 +408,13 @@ export async function generateFolioPDF(
     autoTable(doc, sanitizePdfValue(options));
   }
 
+  // Formatea valor opcional: "N/A" se muestra literal; vacío => "—".
+  const fmtNA = (v: any): string => {
+    if (v === "N/A") return "N/A";
+    const s = (v ?? "").toString().trim();
+    return s.length > 0 ? s : "—";
+  };
+
   // ─── PÁGINA 1: I. DESCRIPCIÓN + II. COMITÉ ──────────────────────────────────
   let y = newPage();
   y = sectionHeader(y, "I.", "DESCRIPCIÓN");
