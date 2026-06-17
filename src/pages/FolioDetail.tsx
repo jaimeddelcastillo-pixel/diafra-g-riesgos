@@ -455,22 +455,18 @@ function SeccionDescripcion({ folio, locked, onSaved }: { folio: Folio; locked: 
                 placeholder="1.0"
               />
             </div>
-            <div className="space-y-1">
-              <label className="text-[10px] font-semibold text-muted-foreground uppercase">Identificación del proceso / dispositivo</label>
-              <Input
-                value={form.numero_modelo}
-                onChange={(e) => setForm({ ...form, numero_modelo: e.target.value })}
-                placeholder="Ej. MAN-SGC-01, PCT-500, Lote XYZ…"
-              />
-            </div>
-            <div className="space-y-1">
-              <label className="text-[10px] font-semibold text-muted-foreground uppercase">Lote / Revisión</label>
-              <Input
-                value={form.numero_lote}
-                onChange={(e) => setForm({ ...form, numero_lote: e.target.value })}
-                placeholder="L-2026-001"
-              />
-            </div>
+            <OptionalTextField
+              label="Identificación del proceso / dispositivo"
+              value={form.numero_modelo}
+              onChange={(v) => setForm({ ...form, numero_modelo: v })}
+              placeholder="Ej. MAN-SGC-01, PCT-500, Lote XYZ…"
+            />
+            <OptionalTextField
+              label="Lote / Revisión"
+              value={form.numero_lote}
+              onChange={(v) => setForm({ ...form, numero_lote: v })}
+              placeholder="L-2026-001"
+            />
           </div>
           {/* ─── Clasificación (adaptable según norma) ─── */}
           <div className="border-t pt-3 mt-3 space-y-3">
