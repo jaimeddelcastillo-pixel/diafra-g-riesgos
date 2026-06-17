@@ -426,6 +426,125 @@ export function RiesgoWizardDialog({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, riesgo?.id]);
 
+  // === Borrador / cierre seguro ============================================
+  const draftKey = useMemo(() => {
+    if (!folioId) return null;
+    return modoEdicion && riesgo
+      ? `tracea:wizard:draft:edit:${riesgo.id}`
+      : `tracea:wizard:draft:new:${folioId}`;
+  }, [modoEdicion, riesgo?.id, folioId]);
+
+  // Snapshot inicial para detectar cambios (en edición, contra el riesgo cargado).
+  const snapshotInicialRef = useRef<string>("");
+  useEffect(() => {
+    if (!open) return;
+    const base = riesgo ? parseRiesgoToState(riesgo, etapasFolio) : initialState();
+    snapshotInicialRef.current = JSON.stringify(base);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, riesgo?.id]);
+
+  const isDirty = useMemo(() => {
+    if (!open) return false;
+    return JSON.stringify(s) !== snapshotInicialRef.current;
+  }, [s, open]);
+
+  const clearDraft = () => {
+    if (draftKey) {
+      try { localStorage.removeItem(draftKey); } catch { /* noop */ }
+    }
+  };
+
+  // Auto-guardado de borrador con debounce
+  useEffect(() => {
+    if (!open || !draftKey || !isDirty) return;
+    const t = setTimeout(() => {
+      try {
+        localStorage.setItem(
+          draftKey,
+          JSON.stringify({
+            s,
+            step,
+            extraJustificacion,
+            residualesEditados,
+            causaRaizAplicado,
+            savedAt: new Date().toISOString(),
+          }),
+        );
+      } catch { /* quota / privado */ }
+    }, 600);
+    return () => clearTimeout(t);
+  }, [open, draftKey, isDirty, s, step, extraJustificacion, residualesEditados, causaRaizAplicado]);
+
+  // Banner de recuperación al abrir (solo creación)
+  const [borradorRecuperable, setBorradorRecuperable] = useState<{
+    savedAt: string;
+    payload: any;
+  } | null>(null);
+  useEffect(() => {
+    if (!open) { setBorradorRecuperable(null); return; }
+    if (modoEdicion) return;
+    if (!draftKey) return;
+    try {
+      const raw = localStorage.getItem(draftKey);
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      if (parsed && parsed.s) {
+        setBorradorRecuperable({ savedAt: parsed.savedAt, payload: parsed });
+      }
+    } catch { /* noop */ }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, draftKey, modoEdicion]);
+
+  const recuperarBorrador = () => {
+    if (!borradorRecuperable) return;
+    const p = borradorRecuperable.payload;
+    setS(p.s as WizardState);
+    setStep(p.step ?? 1);
+    if (typeof p.extraJustificacion === "string") setExtraJustificacion(p.extraJustificacion);
+    if (typeof p.residualesEditados === "boolean") setResidualesEditados(p.residualesEditados);
+    if (typeof p.causaRaizAplicado === "boolean") setCausaRaizAplicado(p.causaRaizAplicado);
+    setBorradorRecuperable(null);
+    toast({ title: "Borrador recuperado", description: "Continúa donde te quedaste." });
+  };
+  const descartarBorrador = () => {
+    clearDraft();
+    setBorradorRecuperable(null);
+  };
+
+  // Aviso del navegador al recargar/cerrar pestaña si hay cambios sin guardar
+  useEffect(() => {
+    if (!open || !isDirty) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [open, isDirty]);
+
+  // Confirmación al cerrar
+  const [confirmCerrarOpen, setConfirmCerrarOpen] = useState(false);
+  const intentarCerrar = () => {
+    if (isDirty) {
+      setConfirmCerrarOpen(true);
+      return;
+    }
+    reset();
+    onClose();
+  };
+  const salirGuardandoBorrador = () => {
+    // El borrador ya fue persistido por el efecto; solo cerramos.
+    setConfirmCerrarOpen(false);
+    reset();
+    onClose();
+  };
+  const salirDescartando = () => {
+    clearDraft();
+    setConfirmCerrarOpen(false);
+    reset();
+    onClose();
+  };
+
   const npr = calcularNPR(s.severidad, s.ocurrencia, usaDet ? s.deteccion : 1, normaKey);
   const nprRes = calcularNPR(
     s.sev_residual,
