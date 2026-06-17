@@ -408,22 +408,18 @@ function SeccionDescripcion({ folio, locked, onSaved }: { folio: Folio; locked: 
               onChange={(v) => setForm({ ...form, origen: v as any })}
             />
           </div>
-          <div className="space-y-1">
-            <label className="text-[10px] font-semibold text-muted-foreground uppercase">ID Desviación</label>
-            <Input
-              value={form.desviacion_id}
-              onChange={(e) => setForm({ ...form, desviacion_id: e.target.value })}
-              placeholder="DES-2026-XXX"
-            />
-          </div>
-          <div className="space-y-1">
-            <label className="text-[10px] font-semibold text-muted-foreground uppercase">Control de Cambios</label>
-            <Input
-              value={form.control_cambios_id}
-              onChange={(e) => setForm({ ...form, control_cambios_id: e.target.value })}
-              placeholder="CC-2026-XXX"
-            />
-          </div>
+          <OptionalTextField
+            label="ID Desviación"
+            value={form.desviacion_id}
+            onChange={(v) => setForm({ ...form, desviacion_id: v })}
+            placeholder="DES-2026-XXX"
+          />
+          <OptionalTextField
+            label="Control de Cambios"
+            value={form.control_cambios_id}
+            onChange={(v) => setForm({ ...form, control_cambios_id: v })}
+            placeholder="CC-2026-XXX"
+          />
           <div className="space-y-1">
             <label className="text-[10px] font-semibold text-muted-foreground uppercase">Fecha Inicio</label>
             <Input
