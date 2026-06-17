@@ -1,5 +1,15 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -416,6 +426,125 @@ export function RiesgoWizardDialog({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, riesgo?.id]);
 
+  // === Borrador / cierre seguro ============================================
+  const draftKey = useMemo(() => {
+    if (!folioId) return null;
+    return modoEdicion && riesgo
+      ? `tracea:wizard:draft:edit:${riesgo.id}`
+      : `tracea:wizard:draft:new:${folioId}`;
+  }, [modoEdicion, riesgo?.id, folioId]);
+
+  // Snapshot inicial para detectar cambios (en edición, contra el riesgo cargado).
+  const snapshotInicialRef = useRef<string>("");
+  useEffect(() => {
+    if (!open) return;
+    const base = riesgo ? parseRiesgoToState(riesgo, etapasFolio) : initialState();
+    snapshotInicialRef.current = JSON.stringify(base);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, riesgo?.id]);
+
+  const isDirty = useMemo(() => {
+    if (!open) return false;
+    return JSON.stringify(s) !== snapshotInicialRef.current;
+  }, [s, open]);
+
+  const clearDraft = () => {
+    if (draftKey) {
+      try { localStorage.removeItem(draftKey); } catch { /* noop */ }
+    }
+  };
+
+  // Auto-guardado de borrador con debounce
+  useEffect(() => {
+    if (!open || !draftKey || !isDirty) return;
+    const t = setTimeout(() => {
+      try {
+        localStorage.setItem(
+          draftKey,
+          JSON.stringify({
+            s,
+            step,
+            extraJustificacion,
+            residualesEditados,
+            causaRaizAplicado,
+            savedAt: new Date().toISOString(),
+          }),
+        );
+      } catch { /* quota / privado */ }
+    }, 600);
+    return () => clearTimeout(t);
+  }, [open, draftKey, isDirty, s, step, extraJustificacion, residualesEditados, causaRaizAplicado]);
+
+  // Banner de recuperación al abrir (solo creación)
+  const [borradorRecuperable, setBorradorRecuperable] = useState<{
+    savedAt: string;
+    payload: any;
+  } | null>(null);
+  useEffect(() => {
+    if (!open) { setBorradorRecuperable(null); return; }
+    if (modoEdicion) return;
+    if (!draftKey) return;
+    try {
+      const raw = localStorage.getItem(draftKey);
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      if (parsed && parsed.s) {
+        setBorradorRecuperable({ savedAt: parsed.savedAt, payload: parsed });
+      }
+    } catch { /* noop */ }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, draftKey, modoEdicion]);
+
+  const recuperarBorrador = () => {
+    if (!borradorRecuperable) return;
+    const p = borradorRecuperable.payload;
+    setS(p.s as WizardState);
+    setStep(p.step ?? 1);
+    if (typeof p.extraJustificacion === "string") setExtraJustificacion(p.extraJustificacion);
+    if (typeof p.residualesEditados === "boolean") setResidualesEditados(p.residualesEditados);
+    if (typeof p.causaRaizAplicado === "boolean") setCausaRaizAplicado(p.causaRaizAplicado);
+    setBorradorRecuperable(null);
+    toast({ title: "Borrador recuperado", description: "Continúa donde te quedaste." });
+  };
+  const descartarBorrador = () => {
+    clearDraft();
+    setBorradorRecuperable(null);
+  };
+
+  // Aviso del navegador al recargar/cerrar pestaña si hay cambios sin guardar
+  useEffect(() => {
+    if (!open || !isDirty) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [open, isDirty]);
+
+  // Confirmación al cerrar
+  const [confirmCerrarOpen, setConfirmCerrarOpen] = useState(false);
+  const intentarCerrar = () => {
+    if (isDirty) {
+      setConfirmCerrarOpen(true);
+      return;
+    }
+    reset();
+    onClose();
+  };
+  const salirGuardandoBorrador = () => {
+    // El borrador ya fue persistido por el efecto; solo cerramos.
+    setConfirmCerrarOpen(false);
+    reset();
+    onClose();
+  };
+  const salirDescartando = () => {
+    clearDraft();
+    setConfirmCerrarOpen(false);
+    reset();
+    onClose();
+  };
+
   const npr = calcularNPR(s.severidad, s.ocurrencia, usaDet ? s.deteccion : 1, normaKey);
   const nprRes = calcularNPR(
     s.sev_residual,
@@ -608,17 +737,19 @@ export function RiesgoWizardDialog({
     const ok = await persist();
     if (ok) {
       reset();
+      clearDraft();
       onClose();
     }
   };
   const handleGuardarYOtro = async () => {
     const ok = await persist();
-    if (ok) reset();
+    if (ok) { reset(); clearDraft(); }
   };
   const handleGuardarYAsistente = async () => {
     const ok = await persist();
     if (ok) {
       reset();
+      clearDraft();
       onClose();
       window.dispatchEvent(
         new CustomEvent("tracea:open-assistant", { detail: { folioId, folioCodigo } }),
@@ -726,13 +857,36 @@ export function RiesgoWizardDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={(o) => !o && (reset(), onClose())}>
+    <>
+    <Dialog open={open} onOpenChange={(o) => { if (!o) intentarCerrar(); }}>
       <DialogContent
+        onEscapeKeyDown={(e) => { if (isDirty) { e.preventDefault(); setConfirmCerrarOpen(true); } }}
+        onPointerDownOutside={(e) => { if (isDirty) { e.preventDefault(); setConfirmCerrarOpen(true); } }}
+        onInteractOutside={(e) => { if (isDirty) { e.preventDefault(); setConfirmCerrarOpen(true); } }}
         className={cn(
           "p-0 flex flex-col gap-0 overflow-hidden w-[96vw] h-[95vh] sm:h-auto sm:max-h-[92vh]",
           asistenteAbierto ? "max-w-6xl" : "max-w-4xl",
         )}
       >
+        {borradorRecuperable && (
+          <div className="bg-amber-50 border-b border-amber-200 px-4 py-2 flex items-center justify-between gap-3 text-xs">
+            <div className="text-amber-900">
+              <strong>Borrador encontrado</strong>
+              {borradorRecuperable.savedAt && (
+                <> · guardado el {new Date(borradorRecuperable.savedAt).toLocaleString()}</>
+              )}
+              . ¿Continuar donde te quedaste?
+            </div>
+            <div className="flex gap-2 shrink-0">
+              <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={descartarBorrador}>
+                Descartar
+              </Button>
+              <Button size="sm" className="h-7 text-xs" onClick={recuperarBorrador}>
+                Recuperar
+              </Button>
+            </div>
+          </div>
+        )}
         {/* Header con barra de progreso */}
         <div className="border-b bg-primary text-primary-foreground p-4">
           <div className="flex items-baseline justify-between mb-3">
@@ -1589,7 +1743,7 @@ export function RiesgoWizardDialog({
           <Button
             type="button"
             variant="outline"
-            onClick={() => (step === 1 ? (reset(), onClose()) : setStep(step - 1))}
+            onClick={() => (step === 1 ? intentarCerrar() : setStep(step - 1))}
             disabled={saving}
             className="gap-1"
           >
@@ -1695,6 +1849,28 @@ export function RiesgoWizardDialog({
         }}
       />
     </Dialog>
+    <AlertDialog open={confirmCerrarOpen} onOpenChange={setConfirmCerrarOpen}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>¿Salir del wizard?</AlertDialogTitle>
+          <AlertDialogDescription>
+            Tienes cambios sin guardar. Si sales ahora, tu avance quedará guardado
+            como <strong>borrador</strong> en este navegador y podrás continuar la
+            próxima vez que abras el wizard de este folio.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Continuar editando</AlertDialogCancel>
+          <Button variant="ghost" onClick={salirDescartando}>
+            Salir y descartar
+          </Button>
+          <AlertDialogAction onClick={salirGuardandoBorrador}>
+            Salir y guardar borrador
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 }
 
