@@ -193,6 +193,75 @@ function FormField({ label, value, className = "" }: { label: string; value: Rea
   );
 }
 
+// Renderiza valores opcionales: "N/A" se muestra como etiqueta neutra; vacío → guion.
+function displayOpt(v: any): React.ReactNode {
+  if (v === "N/A") return <span className="font-mono text-xs text-muted-foreground">N/A</span>;
+  return v;
+}
+
+// Campo opcional con checkbox "N/A" (texto libre).
+function OptionalTextField({
+  label,
+  value,
+  onChange,
+  placeholder,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+}) {
+  const isNA = value === "N/A";
+  return (
+    <div className="space-y-1">
+      <div className="flex items-center justify-between gap-2">
+        <label className="text-[10px] font-semibold text-muted-foreground uppercase">{label}</label>
+        <label className="flex items-center gap-1 text-[10px] text-muted-foreground cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={isNA}
+            onChange={(e) => onChange(e.target.checked ? "N/A" : "")}
+            className="h-3 w-3 cursor-pointer"
+          />
+          N/A
+        </label>
+      </div>
+      <Input
+        value={isNA ? "" : value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={isNA ? "N/A" : placeholder}
+        disabled={isNA}
+      />
+    </div>
+  );
+}
+
+// Encabezado con checkbox N/A reutilizable para campos Select.
+function NAToggleLabel({
+  label,
+  isNA,
+  onToggle,
+}: {
+  label: string;
+  isNA: boolean;
+  onToggle: (na: boolean) => void;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-2">
+      <label className="text-[10px] font-semibold text-muted-foreground uppercase">{label}</label>
+      <label className="flex items-center gap-1 text-[10px] text-muted-foreground cursor-pointer select-none">
+        <input
+          type="checkbox"
+          checked={isNA}
+          onChange={(e) => onToggle(e.target.checked)}
+          className="h-3 w-3 cursor-pointer"
+        />
+        N/A
+      </label>
+    </div>
+  );
+}
+
 // ─── Sección Descripción ──────────────────────────────────────────────────────
 function SeccionDescripcion({ folio, locked, onSaved }: { folio: Folio; locked: boolean; onSaved: () => void }) {
   const [editing, setEditing] = useState(false);
@@ -280,15 +349,16 @@ function SeccionDescripcion({ folio, locked, onSaved }: { folio: Folio; locked: 
             value={<span className="font-mono font-semibold text-primary">{folio.numero_version || "1.0"}</span>}
             className="col-span-2"
           />
-          <FormField label="Identificación del proceso / dispositivo" value={folio.numero_modelo} className="col-span-2" />
-          <FormField label="Lote / Rev." value={folio.numero_lote} className="col-span-2" />
+          <FormField label="Identificación del proceso / dispositivo" value={displayOpt(folio.numero_modelo)} className="col-span-2" />
+          <FormField label="Lote / Rev." value={displayOpt(folio.numero_lote)} className="col-span-2" />
           {getClasificacionMode(folio.norma_folio, folio.clasificacion_categoria) === "dm" ? (
-            <FormField label="Clase" value={folio.clase_dispositivo} className="col-span-2 border-r-0" />
+            <FormField label="Clase" value={displayOpt(folio.clase_dispositivo)} className="col-span-2 border-r-0" />
           ) : (
             <FormField
               label="Clasificación"
               value={
                 [folio.clasificacion_tipo, folio.clasificacion_condicion_venta, folio.clasificacion_riesgo_sanitario]
+                  .map((v) => (v === "N/A" ? "N/A" : v))
                   .filter(Boolean)
                   .join(" · ")
               }
@@ -307,8 +377,8 @@ function SeccionDescripcion({ folio, locked, onSaved }: { folio: Folio; locked: 
             }
             className="col-span-3"
           />
-          <FormField label="Desviación" value={folio.desviacion_id} className="col-span-2" />
-          <FormField label="Control de Cambios" value={folio.control_cambios_id} className="col-span-3 border-r-0" />
+          <FormField label="Desviación" value={displayOpt(folio.desviacion_id)} className="col-span-2" />
+          <FormField label="Control de Cambios" value={displayOpt(folio.control_cambios_id)} className="col-span-3 border-r-0" />
         </div>
         <div className="grid grid-cols-4">
           <FormField label="Fecha Inicio" value={folio.fecha_inicio} />
@@ -338,22 +408,18 @@ function SeccionDescripcion({ folio, locked, onSaved }: { folio: Folio; locked: 
               onChange={(v) => setForm({ ...form, origen: v as any })}
             />
           </div>
-          <div className="space-y-1">
-            <label className="text-[10px] font-semibold text-muted-foreground uppercase">ID Desviación</label>
-            <Input
-              value={form.desviacion_id}
-              onChange={(e) => setForm({ ...form, desviacion_id: e.target.value })}
-              placeholder="DES-2026-XXX"
-            />
-          </div>
-          <div className="space-y-1">
-            <label className="text-[10px] font-semibold text-muted-foreground uppercase">Control de Cambios</label>
-            <Input
-              value={form.control_cambios_id}
-              onChange={(e) => setForm({ ...form, control_cambios_id: e.target.value })}
-              placeholder="CC-2026-XXX"
-            />
-          </div>
+          <OptionalTextField
+            label="ID Desviación"
+            value={form.desviacion_id}
+            onChange={(v) => setForm({ ...form, desviacion_id: v })}
+            placeholder="DES-2026-XXX"
+          />
+          <OptionalTextField
+            label="Control de Cambios"
+            value={form.control_cambios_id}
+            onChange={(v) => setForm({ ...form, control_cambios_id: v })}
+            placeholder="CC-2026-XXX"
+          />
           <div className="space-y-1">
             <label className="text-[10px] font-semibold text-muted-foreground uppercase">Fecha Inicio</label>
             <Input
@@ -389,22 +455,18 @@ function SeccionDescripcion({ folio, locked, onSaved }: { folio: Folio; locked: 
                 placeholder="1.0"
               />
             </div>
-            <div className="space-y-1">
-              <label className="text-[10px] font-semibold text-muted-foreground uppercase">Identificación del proceso / dispositivo</label>
-              <Input
-                value={form.numero_modelo}
-                onChange={(e) => setForm({ ...form, numero_modelo: e.target.value })}
-                placeholder="Ej. MAN-SGC-01, PCT-500, Lote XYZ…"
-              />
-            </div>
-            <div className="space-y-1">
-              <label className="text-[10px] font-semibold text-muted-foreground uppercase">Lote / Revisión</label>
-              <Input
-                value={form.numero_lote}
-                onChange={(e) => setForm({ ...form, numero_lote: e.target.value })}
-                placeholder="L-2026-001"
-              />
-            </div>
+            <OptionalTextField
+              label="Identificación del proceso / dispositivo"
+              value={form.numero_modelo}
+              onChange={(v) => setForm({ ...form, numero_modelo: v })}
+              placeholder="Ej. MAN-SGC-01, PCT-500, Lote XYZ…"
+            />
+            <OptionalTextField
+              label="Lote / Revisión"
+              value={form.numero_lote}
+              onChange={(v) => setForm({ ...form, numero_lote: v })}
+              placeholder="L-2026-001"
+            />
           </div>
           {/* ─── Clasificación (adaptable según norma) ─── */}
           <div className="border-t pt-3 mt-3 space-y-3">
@@ -435,62 +497,94 @@ function SeccionDescripcion({ folio, locked, onSaved }: { folio: Folio; locked: 
             )}
             {modo === "dm" ? (
               <div className="space-y-1">
-                <label className="text-[10px] font-semibold text-muted-foreground uppercase">Clase del dispositivo</label>
-                <Select
-                  value={form.clase_dispositivo}
-                  onValueChange={(v) => setForm({ ...form, clase_dispositivo: v })}
-                >
-                  <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
-                  <SelectContent>
-                    {CLASIFICACION_DM.map((c) => (
-                      <SelectItem key={c.valor} value={c.valor}>{c.etiqueta}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <NAToggleLabel
+                  label="Clase del dispositivo"
+                  isNA={form.clase_dispositivo === "N/A"}
+                  onToggle={(na) => setForm({ ...form, clase_dispositivo: na ? "N/A" : "" })}
+                />
+                {form.clase_dispositivo === "N/A" ? (
+                  <Input value="N/A" disabled />
+                ) : (
+                  <Select
+                    value={form.clase_dispositivo}
+                    onValueChange={(v) => setForm({ ...form, clase_dispositivo: v })}
+                  >
+                    <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
+                    <SelectContent>
+                      {CLASIFICACION_DM.map((c) => (
+                        <SelectItem key={c.valor} value={c.valor}>{c.etiqueta}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
               </div>
             ) : (
               <div className="grid grid-cols-3 gap-3">
                 <div className="space-y-1">
-                  <label className="text-[10px] font-semibold text-muted-foreground uppercase">Tipo de medicamento</label>
-                  <Select
-                    value={form.clasificacion_tipo}
-                    onValueChange={(v) => setForm({ ...form, clasificacion_tipo: v })}
-                  >
-                    <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
-                    <SelectContent>
-                      {CLASIFICACION_MED_TIPO.map((c) => (
-                        <SelectItem key={c.valor} value={c.valor}>{c.etiqueta}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <NAToggleLabel
+                    label="Tipo de medicamento"
+                    isNA={form.clasificacion_tipo === "N/A"}
+                    onToggle={(na) => setForm({ ...form, clasificacion_tipo: na ? "N/A" : "" })}
+                  />
+                  {form.clasificacion_tipo === "N/A" ? (
+                    <Input value="N/A" disabled />
+                  ) : (
+                    <Select
+                      value={form.clasificacion_tipo}
+                      onValueChange={(v) => setForm({ ...form, clasificacion_tipo: v })}
+                    >
+                      <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
+                      <SelectContent>
+                        {CLASIFICACION_MED_TIPO.map((c) => (
+                          <SelectItem key={c.valor} value={c.valor}>{c.etiqueta}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[10px] font-semibold text-muted-foreground uppercase">Condición de venta</label>
-                  <Select
-                    value={form.clasificacion_condicion_venta}
-                    onValueChange={(v) => setForm({ ...form, clasificacion_condicion_venta: v })}
-                  >
-                    <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
-                    <SelectContent>
-                      {CLASIFICACION_MED_VENTA.map((c) => (
-                        <SelectItem key={c.valor} value={c.valor}>{c.etiqueta}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <NAToggleLabel
+                    label="Condición de venta"
+                    isNA={form.clasificacion_condicion_venta === "N/A"}
+                    onToggle={(na) => setForm({ ...form, clasificacion_condicion_venta: na ? "N/A" : "" })}
+                  />
+                  {form.clasificacion_condicion_venta === "N/A" ? (
+                    <Input value="N/A" disabled />
+                  ) : (
+                    <Select
+                      value={form.clasificacion_condicion_venta}
+                      onValueChange={(v) => setForm({ ...form, clasificacion_condicion_venta: v })}
+                    >
+                      <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
+                      <SelectContent>
+                        {CLASIFICACION_MED_VENTA.map((c) => (
+                          <SelectItem key={c.valor} value={c.valor}>{c.etiqueta}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[10px] font-semibold text-muted-foreground uppercase">Nivel de riesgo sanitario</label>
-                  <Select
-                    value={form.clasificacion_riesgo_sanitario}
-                    onValueChange={(v) => setForm({ ...form, clasificacion_riesgo_sanitario: v })}
-                  >
-                    <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
-                    <SelectContent>
-                      {CLASIFICACION_MED_RIESGO.map((c) => (
-                        <SelectItem key={c.valor} value={c.valor}>{c.etiqueta}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <NAToggleLabel
+                    label="Nivel de riesgo sanitario"
+                    isNA={form.clasificacion_riesgo_sanitario === "N/A"}
+                    onToggle={(na) => setForm({ ...form, clasificacion_riesgo_sanitario: na ? "N/A" : "" })}
+                  />
+                  {form.clasificacion_riesgo_sanitario === "N/A" ? (
+                    <Input value="N/A" disabled />
+                  ) : (
+                    <Select
+                      value={form.clasificacion_riesgo_sanitario}
+                      onValueChange={(v) => setForm({ ...form, clasificacion_riesgo_sanitario: v })}
+                    >
+                      <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
+                      <SelectContent>
+                        {CLASIFICACION_MED_RIESGO.map((c) => (
+                          <SelectItem key={c.valor} value={c.valor}>{c.etiqueta}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
                 </div>
               </div>
             )}

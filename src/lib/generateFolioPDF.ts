@@ -408,6 +408,13 @@ export async function generateFolioPDF(
     autoTable(doc, sanitizePdfValue(options));
   }
 
+  // Formatea valor opcional: "N/A" se muestra literal; vacío => "—".
+  const fmtNA = (v: any): string => {
+    if (v === "N/A") return "N/A";
+    const s = (v ?? "").toString().trim();
+    return s.length > 0 ? s : "—";
+  };
+
   // ─── PÁGINA 1: I. DESCRIPCIÓN + II. COMITÉ ──────────────────────────────────
   let y = newPage();
   y = sectionHeader(y, "I.", "DESCRIPCIÓN");
@@ -420,12 +427,13 @@ export async function generateFolioPDF(
         const labelClas = modo === "dm" ? "Clase Dispositivo:" : "Clasificación:";
         const valorClas =
           modo === "dm"
-            ? folio.clase_dispositivo || "—"
+            ? fmtNA(folio.clase_dispositivo)
             : [
                 (folio as any).clasificacion_tipo,
                 (folio as any).clasificacion_condicion_venta,
                 (folio as any).clasificacion_riesgo_sanitario,
               ]
+                .map((v) => (v === "N/A" ? "N/A" : v))
                 .filter(Boolean)
                 .join(" · ") || "—";
         // En medicamentos mostramos Queja/Devolución en la 3ª columna (en lugar de Clasificación
@@ -455,15 +463,15 @@ export async function generateFolioPDF(
         { content: "Origen:", styles: { fontStyle: "bold", fillColor: [248, 248, 248] } },
         folio.origen || "—",
         { content: "Desviación:", styles: { fontStyle: "bold", fillColor: [248, 248, 248] } },
-        folio.desviacion_id || "—",
+        fmtNA(folio.desviacion_id),
       ],
       [
         { content: "Identificación proceso/dispositivo:", styles: { fontStyle: "bold", fillColor: [248, 248, 248] } },
-        folio.numero_modelo || "—",
+        fmtNA(folio.numero_modelo),
         { content: "Número de Lote:", styles: { fontStyle: "bold", fillColor: [248, 248, 248] } },
-        folio.numero_lote || "—",
+        fmtNA(folio.numero_lote),
         { content: "Control de Cambios:", styles: { fontStyle: "bold", fillColor: [248, 248, 248] } },
-        folio.control_cambios_id || "—",
+        fmtNA(folio.control_cambios_id),
       ],
       [
         { content: "Fecha Inicio:", styles: { fontStyle: "bold", fillColor: [248, 248, 248] } },
@@ -476,11 +484,11 @@ export async function generateFolioPDF(
       ...(getClasificacionMode(folio.norma_folio, (folio as any).clasificacion_categoria) === "med"
         ? [([
             { content: "Tipo de medicamento:", styles: { fontStyle: "bold", fillColor: [248, 248, 248] } },
-            { content: (folio as any).clasificacion_tipo || "—" },
+            { content: fmtNA((folio as any).clasificacion_tipo) },
             { content: "Condición de venta:", styles: { fontStyle: "bold", fillColor: [248, 248, 248] } },
-            { content: (folio as any).clasificacion_condicion_venta || "—" },
+            { content: fmtNA((folio as any).clasificacion_condicion_venta) },
             { content: "Nivel de riesgo sanitario:", styles: { fontStyle: "bold", fillColor: [248, 248, 248] } },
-            { content: (folio as any).clasificacion_riesgo_sanitario || "—" },
+            { content: fmtNA((folio as any).clasificacion_riesgo_sanitario) },
           ] as any)]
         : []),
       [
@@ -513,8 +521,8 @@ export async function generateFolioPDF(
             m.nombre,
             m.cargo,
             m.responsabilidad,
-            m.firmado ? "✓ Firmado" : "Pendiente",
-            m.fecha_firma ? fmtDate(m.fecha_firma) : "—",
+            m.firmado ? "✓ Firmado" : "",
+            m.fecha_firma ? fmtDate(m.fecha_firma) : "",
           ]),
     theme: "grid",
     styles: {
@@ -522,7 +530,7 @@ export async function generateFolioPDF(
       cellPadding: 3,
       lineColor: [0, 0, 0],
       lineWidth: 0.2,
-      minCellHeight: 11,
+      minCellHeight: 16,
       valign: "middle",
     },
     headStyles: {
