@@ -857,8 +857,11 @@ export function RiesgoWizardDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={(o) => !o && (reset(), onClose())}>
+    <Dialog open={open} onOpenChange={(o) => { if (!o) intentarCerrar(); }}>
       <DialogContent
+        onEscapeKeyDown={(e) => { if (isDirty) { e.preventDefault(); setConfirmCerrarOpen(true); } }}
+        onPointerDownOutside={(e) => { if (isDirty) { e.preventDefault(); setConfirmCerrarOpen(true); } }}
+        onInteractOutside={(e) => { if (isDirty) { e.preventDefault(); setConfirmCerrarOpen(true); } }}
         className={cn(
           "p-0 flex flex-col gap-0 overflow-hidden w-[96vw] h-[95vh] sm:h-auto sm:max-h-[92vh]",
           asistenteAbierto ? "max-w-6xl" : "max-w-4xl",
