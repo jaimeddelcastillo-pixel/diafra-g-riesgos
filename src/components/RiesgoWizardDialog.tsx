@@ -737,17 +737,19 @@ export function RiesgoWizardDialog({
     const ok = await persist();
     if (ok) {
       reset();
+      clearDraft();
       onClose();
     }
   };
   const handleGuardarYOtro = async () => {
     const ok = await persist();
-    if (ok) reset();
+    if (ok) { reset(); clearDraft(); }
   };
   const handleGuardarYAsistente = async () => {
     const ok = await persist();
     if (ok) {
       reset();
+      clearDraft();
       onClose();
       window.dispatchEvent(
         new CustomEvent("tracea:open-assistant", { detail: { folioId, folioCodigo } }),
