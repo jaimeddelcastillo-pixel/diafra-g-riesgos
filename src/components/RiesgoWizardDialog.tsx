@@ -1848,6 +1848,28 @@ export function RiesgoWizardDialog({
         }}
       />
     </Dialog>
+    <AlertDialog open={confirmCerrarOpen} onOpenChange={setConfirmCerrarOpen}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>¿Salir del wizard?</AlertDialogTitle>
+          <AlertDialogDescription>
+            Tienes cambios sin guardar. Si sales ahora, tu avance quedará guardado
+            como <strong>borrador</strong> en este navegador y podrás continuar la
+            próxima vez que abras el wizard de este folio.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Continuar editando</AlertDialogCancel>
+          <Button variant="ghost" onClick={salirDescartando}>
+            Salir y descartar
+          </Button>
+          <AlertDialogAction onClick={salirGuardandoBorrador}>
+            Salir y guardar borrador
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 }
 
