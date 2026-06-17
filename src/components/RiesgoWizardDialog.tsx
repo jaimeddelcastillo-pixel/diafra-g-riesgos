@@ -867,6 +867,25 @@ export function RiesgoWizardDialog({
           asistenteAbierto ? "max-w-6xl" : "max-w-4xl",
         )}
       >
+        {borradorRecuperable && (
+          <div className="bg-amber-50 border-b border-amber-200 px-4 py-2 flex items-center justify-between gap-3 text-xs">
+            <div className="text-amber-900">
+              <strong>Borrador encontrado</strong>
+              {borradorRecuperable.savedAt && (
+                <> · guardado el {new Date(borradorRecuperable.savedAt).toLocaleString()}</>
+              )}
+              . ¿Continuar donde te quedaste?
+            </div>
+            <div className="flex gap-2 shrink-0">
+              <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={descartarBorrador}>
+                Descartar
+              </Button>
+              <Button size="sm" className="h-7 text-xs" onClick={recuperarBorrador}>
+                Recuperar
+              </Button>
+            </div>
+          </div>
+        )}
         {/* Header con barra de progreso */}
         <div className="border-b bg-primary text-primary-foreground p-4">
           <div className="flex items-baseline justify-between mb-3">
