@@ -427,12 +427,13 @@ export async function generateFolioPDF(
         const labelClas = modo === "dm" ? "Clase Dispositivo:" : "Clasificación:";
         const valorClas =
           modo === "dm"
-            ? folio.clase_dispositivo || "—"
+            ? fmtNA(folio.clase_dispositivo)
             : [
                 (folio as any).clasificacion_tipo,
                 (folio as any).clasificacion_condicion_venta,
                 (folio as any).clasificacion_riesgo_sanitario,
               ]
+                .map((v) => (v === "N/A" ? "N/A" : v))
                 .filter(Boolean)
                 .join(" · ") || "—";
         // En medicamentos mostramos Queja/Devolución en la 3ª columna (en lugar de Clasificación
