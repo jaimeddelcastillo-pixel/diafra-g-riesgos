@@ -193,6 +193,75 @@ function FormField({ label, value, className = "" }: { label: string; value: Rea
   );
 }
 
+// Renderiza valores opcionales: "N/A" se muestra como etiqueta neutra; vacío → guion.
+function displayOpt(v: any): React.ReactNode {
+  if (v === "N/A") return <span className="font-mono text-xs text-muted-foreground">N/A</span>;
+  return v;
+}
+
+// Campo opcional con checkbox "N/A" (texto libre).
+function OptionalTextField({
+  label,
+  value,
+  onChange,
+  placeholder,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+}) {
+  const isNA = value === "N/A";
+  return (
+    <div className="space-y-1">
+      <div className="flex items-center justify-between gap-2">
+        <label className="text-[10px] font-semibold text-muted-foreground uppercase">{label}</label>
+        <label className="flex items-center gap-1 text-[10px] text-muted-foreground cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={isNA}
+            onChange={(e) => onChange(e.target.checked ? "N/A" : "")}
+            className="h-3 w-3 cursor-pointer"
+          />
+          N/A
+        </label>
+      </div>
+      <Input
+        value={isNA ? "" : value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={isNA ? "N/A" : placeholder}
+        disabled={isNA}
+      />
+    </div>
+  );
+}
+
+// Encabezado con checkbox N/A reutilizable para campos Select.
+function NAToggleLabel({
+  label,
+  isNA,
+  onToggle,
+}: {
+  label: string;
+  isNA: boolean;
+  onToggle: (na: boolean) => void;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-2">
+      <label className="text-[10px] font-semibold text-muted-foreground uppercase">{label}</label>
+      <label className="flex items-center gap-1 text-[10px] text-muted-foreground cursor-pointer select-none">
+        <input
+          type="checkbox"
+          checked={isNA}
+          onChange={(e) => onToggle(e.target.checked)}
+          className="h-3 w-3 cursor-pointer"
+        />
+        N/A
+      </label>
+    </div>
+  );
+}
+
 // ─── Sección Descripción ──────────────────────────────────────────────────────
 function SeccionDescripcion({ folio, locked, onSaved }: { folio: Folio; locked: boolean; onSaved: () => void }) {
   const [editing, setEditing] = useState(false);
