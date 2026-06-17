@@ -857,6 +857,7 @@ export function RiesgoWizardDialog({
   };
 
   return (
+    <>
     <Dialog open={open} onOpenChange={(o) => { if (!o) intentarCerrar(); }}>
       <DialogContent
         onEscapeKeyDown={(e) => { if (isDirty) { e.preventDefault(); setConfirmCerrarOpen(true); } }}
