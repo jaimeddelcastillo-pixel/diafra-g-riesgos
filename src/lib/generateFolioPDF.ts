@@ -462,15 +462,15 @@ export async function generateFolioPDF(
         { content: "Origen:", styles: { fontStyle: "bold", fillColor: [248, 248, 248] } },
         folio.origen || "—",
         { content: "Desviación:", styles: { fontStyle: "bold", fillColor: [248, 248, 248] } },
-        folio.desviacion_id || "—",
+        fmtNA(folio.desviacion_id),
       ],
       [
         { content: "Identificación proceso/dispositivo:", styles: { fontStyle: "bold", fillColor: [248, 248, 248] } },
-        folio.numero_modelo || "—",
+        fmtNA(folio.numero_modelo),
         { content: "Número de Lote:", styles: { fontStyle: "bold", fillColor: [248, 248, 248] } },
-        folio.numero_lote || "—",
+        fmtNA(folio.numero_lote),
         { content: "Control de Cambios:", styles: { fontStyle: "bold", fillColor: [248, 248, 248] } },
-        folio.control_cambios_id || "—",
+        fmtNA(folio.control_cambios_id),
       ],
       [
         { content: "Fecha Inicio:", styles: { fontStyle: "bold", fillColor: [248, 248, 248] } },
@@ -483,11 +483,11 @@ export async function generateFolioPDF(
       ...(getClasificacionMode(folio.norma_folio, (folio as any).clasificacion_categoria) === "med"
         ? [([
             { content: "Tipo de medicamento:", styles: { fontStyle: "bold", fillColor: [248, 248, 248] } },
-            { content: (folio as any).clasificacion_tipo || "—" },
+            { content: fmtNA((folio as any).clasificacion_tipo) },
             { content: "Condición de venta:", styles: { fontStyle: "bold", fillColor: [248, 248, 248] } },
-            { content: (folio as any).clasificacion_condicion_venta || "—" },
+            { content: fmtNA((folio as any).clasificacion_condicion_venta) },
             { content: "Nivel de riesgo sanitario:", styles: { fontStyle: "bold", fillColor: [248, 248, 248] } },
-            { content: (folio as any).clasificacion_riesgo_sanitario || "—" },
+            { content: fmtNA((folio as any).clasificacion_riesgo_sanitario) },
           ] as any)]
         : []),
       [
