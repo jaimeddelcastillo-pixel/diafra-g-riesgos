@@ -1,45 +1,53 @@
+# Mejorar la experiencia del Wizard de Riesgos
 
-## Objetivo
+## Problema
 
-1. En el **PDF**, cuando un integrante del comité no haya firmado digitalmente, dejar las celdas de **Firma** y **Fecha Firma** completamente vacías (en lugar de "Pendiente" / "—") para permitir firma autógrafa al imprimir.
-2. En la **Sección I — Descripción** del folio, añadir un checkbox **N/A** en los campos no obligatorios para marcarlos explícitamente como no aplicables (mostrar "N/A" en la UI y PDF). Los obligatorios no tendrán esa opción.
+Hoy, en `RiesgoWizardDialog`, cualquier cierre del diálogo (clic fuera, tecla Esc, botón X, navegación por error) ejecuta `reset()` y descarta TODO lo capturado, sin aviso y sin posibilidad de regresar. Eso provoca:
 
-## Cambios
+- Salidas accidentales al desplazarse o al pulsar Esc.
+- Pérdida total al activar atajos del navegador (por ejemplo captura de pantalla) y cerrar el modal resultante.
+- Frustración al recapturar 5–7 pasos de información.
 
-### 1. PDF — `src/lib/generateFolioPDF.ts` (Sección II, ~líneas 506-518)
-- Reemplazar `m.firmado ? "✓ Firmado" : "Pendiente"` → `m.firmado ? "✓ Firmado" : ""`
-- Reemplazar `m.fecha_firma ? fmtDate(m.fecha_firma) : "—"` → `m.fecha_firma ? fmtDate(m.fecha_firma) : ""`
-- Aumentar `minCellHeight` de la tabla de comité (de 11 → ~16) para dar espacio físico suficiente a la firma autógrafa al imprimir.
-- Mantener "—" únicamente cuando no hay comité asignado (fila placeholder).
+## Solución propuesta (3 capas de protección)
 
-### 2. Sección I — Descripción (`src/pages/FolioDetail.tsx`, `SeccionDescripcion`)
+### 1. Auto-guardado de borrador en `localStorage`
 
-**Campos obligatorios (sin opción N/A):**
-- Proceso / Producto / Equipo / Sistema Analizado
-- Origen
-- Fecha Inicio y Fecha Cierre
-- Alcance
-- Versión Doc.
+- Mientras el wizard está abierto, persistir el estado `s`, `step`, y banderas auxiliares (`residualesEditados`, `causaRaizAplicado`, `extraJustificacion`) con debounce (~600 ms) en una clave por folio:
+  - Crear nuevo: `tracea:wizard:draft:new:<folioId>`
+  - Editar existente: `tracea:wizard:draft:edit:<riesgoId>`
+- Al abrir el wizard, si existe un borrador no vacío y no es modo edición ya hidratado, mostrar un banner **"Recuperar borrador del <fecha>"** con dos acciones: **Recuperar** (carga el estado y posiciona en el último paso) o **Descartar**.
+- Borrar el borrador cuando: se guarda con éxito, se descarta explícitamente, o el usuario confirma "Salir sin guardar".
 
-**Campos con checkbox N/A (texto libre):**
-- ID Desviación
-- Control de Cambios
-- Identificación del proceso / dispositivo (`numero_modelo`)
-- Lote / Revisión (`numero_lote`)
-- Clase del dispositivo / Clasificación (categoría, tipo, condición venta, riesgo sanitario)
+### 2. Confirmación inteligente al cerrar
 
-**Comportamiento:**
-- En modo edición: junto al label aparece un checkbox "N/A". Al marcarlo, el input se deshabilita y el valor guardado es la cadena `"N/A"`. Al desmarcarlo, el campo se vacía y se rehabilita.
-- Al cargar el formulario, si el valor existente es `"N/A"` el checkbox aparece marcado automáticamente.
-- En modo lectura (UI) y en el **PDF**: si el valor es `"N/A"` se muestra literalmente `N/A` (en lugar del guion `—` que indica vacío).
-- Almacenamiento: se guarda en las mismas columnas de texto existentes; no se requiere migración de base de datos.
+- Calcular `isDirty` comparando `s` contra `initialState` (o contra el snapshot inicial en modo edición).
+- Interceptar el cierre del `Dialog`:
+  - Reemplazar `onOpenChange={(o) => !o && (reset(), onClose())}` por un handler que, si `isDirty`, abra un `AlertDialog` de confirmación: **"¿Salir del wizard? Tu avance quedará guardado como borrador y podrás continuar después."** con botones **Continuar editando** (default) y **Salir y guardar borrador**.
+  - Bloquear cierre por Esc y por clic fuera cuando `isDirty` usando `onEscapeKeyDown`/`onPointerDownOutside` con `e.preventDefault()` y disparar el mismo `AlertDialog` (no cerrar silenciosamente).
+- El botón "Cancelar" del paso 1 y el botón X del header llaman al mismo flujo.
 
-### 3. PDF — `src/lib/generateFolioPDF.ts` (Sección I)
-- Helper local `fmtNA(v)` que devuelve `"N/A"` si el valor es exactamente `"N/A"`, el valor si tiene contenido, o `"—"` si está vacío.
-- Aplicar a las celdas de los campos opcionales listados arriba para que el PDF refleje el estado N/A.
+### 3. Aviso de salida del navegador
 
-## Notas
+- Añadir `beforeunload` mientras el wizard está abierto y `isDirty` para que, si el usuario recarga o cierra la pestaña, el navegador pida confirmación (aparte del borrador ya persistido en `localStorage`).
 
-- No hay cambios de base de datos.
-- No se modifica la lógica de validación de obligatorios existente (`alcance`, etc. siguen siendo críticos).
-- No se afectan otras secciones del PDF ni el flujo de firma electrónica.
+## Cambios concretos
+
+### `src/components/RiesgoWizardDialog.tsx`
+- Nuevo helper `useWizardDraft(key, state, step, enabled)` con debounce que `setItem`/`removeItem`.
+- Nuevo estado `recuperarVisible` y banner al inicio del `DialogContent`.
+- Nuevo `AlertDialog` "Salir del wizard" controlado por estado `confirmCerrarOpen`.
+- Reemplazar handler de `onOpenChange` por `intentarCerrar()`.
+- Añadir `onEscapeKeyDown` y `onPointerDownOutside` en `DialogContent`.
+- En `handleGuardar`, `handleGuardarYOtro`, `handleGuardarYAsistente`: tras éxito, limpiar la clave del borrador.
+- Hook `useEffect` para registrar/desregistrar `beforeunload`.
+- Computar `isDirty` con `useMemo` (`JSON.stringify(s) !== JSON.stringify(initialState)` para crear; comparar contra snapshot inicial para editar).
+
+### Sin cambios
+- Lógica de validación, persistencia en BD, scoring NPR, Asistente IA y causa raíz.
+- No hay cambios en backend ni en otros componentes.
+
+## Resultado esperado
+
+- Cerrar el wizard nunca pierde datos sin antes preguntar.
+- Si algo externo cierra el modal (atajos del navegador, navegación), al reabrir el wizard del mismo folio aparece el banner para recuperar exactamente donde se quedó.
+- El usuario puede cerrar a propósito con un clic y confirmación, sabiendo que su avance queda guardado.
