@@ -1723,7 +1723,7 @@ export function RiesgoWizardDialog({
           <Button
             type="button"
             variant="outline"
-            onClick={() => (step === 1 ? (reset(), onClose()) : setStep(step - 1))}
+            onClick={() => (step === 1 ? intentarCerrar() : setStep(step - 1))}
             disabled={saving}
             className="gap-1"
           >
