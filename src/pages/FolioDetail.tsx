@@ -497,62 +497,94 @@ function SeccionDescripcion({ folio, locked, onSaved }: { folio: Folio; locked: 
             )}
             {modo === "dm" ? (
               <div className="space-y-1">
-                <label className="text-[10px] font-semibold text-muted-foreground uppercase">Clase del dispositivo</label>
-                <Select
-                  value={form.clase_dispositivo}
-                  onValueChange={(v) => setForm({ ...form, clase_dispositivo: v })}
-                >
-                  <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
-                  <SelectContent>
-                    {CLASIFICACION_DM.map((c) => (
-                      <SelectItem key={c.valor} value={c.valor}>{c.etiqueta}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <NAToggleLabel
+                  label="Clase del dispositivo"
+                  isNA={form.clase_dispositivo === "N/A"}
+                  onToggle={(na) => setForm({ ...form, clase_dispositivo: na ? "N/A" : "" })}
+                />
+                {form.clase_dispositivo === "N/A" ? (
+                  <Input value="N/A" disabled />
+                ) : (
+                  <Select
+                    value={form.clase_dispositivo}
+                    onValueChange={(v) => setForm({ ...form, clase_dispositivo: v })}
+                  >
+                    <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
+                    <SelectContent>
+                      {CLASIFICACION_DM.map((c) => (
+                        <SelectItem key={c.valor} value={c.valor}>{c.etiqueta}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
               </div>
             ) : (
               <div className="grid grid-cols-3 gap-3">
                 <div className="space-y-1">
-                  <label className="text-[10px] font-semibold text-muted-foreground uppercase">Tipo de medicamento</label>
-                  <Select
-                    value={form.clasificacion_tipo}
-                    onValueChange={(v) => setForm({ ...form, clasificacion_tipo: v })}
-                  >
-                    <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
-                    <SelectContent>
-                      {CLASIFICACION_MED_TIPO.map((c) => (
-                        <SelectItem key={c.valor} value={c.valor}>{c.etiqueta}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <NAToggleLabel
+                    label="Tipo de medicamento"
+                    isNA={form.clasificacion_tipo === "N/A"}
+                    onToggle={(na) => setForm({ ...form, clasificacion_tipo: na ? "N/A" : "" })}
+                  />
+                  {form.clasificacion_tipo === "N/A" ? (
+                    <Input value="N/A" disabled />
+                  ) : (
+                    <Select
+                      value={form.clasificacion_tipo}
+                      onValueChange={(v) => setForm({ ...form, clasificacion_tipo: v })}
+                    >
+                      <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
+                      <SelectContent>
+                        {CLASIFICACION_MED_TIPO.map((c) => (
+                          <SelectItem key={c.valor} value={c.valor}>{c.etiqueta}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[10px] font-semibold text-muted-foreground uppercase">Condición de venta</label>
-                  <Select
-                    value={form.clasificacion_condicion_venta}
-                    onValueChange={(v) => setForm({ ...form, clasificacion_condicion_venta: v })}
-                  >
-                    <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
-                    <SelectContent>
-                      {CLASIFICACION_MED_VENTA.map((c) => (
-                        <SelectItem key={c.valor} value={c.valor}>{c.etiqueta}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <NAToggleLabel
+                    label="Condición de venta"
+                    isNA={form.clasificacion_condicion_venta === "N/A"}
+                    onToggle={(na) => setForm({ ...form, clasificacion_condicion_venta: na ? "N/A" : "" })}
+                  />
+                  {form.clasificacion_condicion_venta === "N/A" ? (
+                    <Input value="N/A" disabled />
+                  ) : (
+                    <Select
+                      value={form.clasificacion_condicion_venta}
+                      onValueChange={(v) => setForm({ ...form, clasificacion_condicion_venta: v })}
+                    >
+                      <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
+                      <SelectContent>
+                        {CLASIFICACION_MED_VENTA.map((c) => (
+                          <SelectItem key={c.valor} value={c.valor}>{c.etiqueta}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[10px] font-semibold text-muted-foreground uppercase">Nivel de riesgo sanitario</label>
-                  <Select
-                    value={form.clasificacion_riesgo_sanitario}
-                    onValueChange={(v) => setForm({ ...form, clasificacion_riesgo_sanitario: v })}
-                  >
-                    <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
-                    <SelectContent>
-                      {CLASIFICACION_MED_RIESGO.map((c) => (
-                        <SelectItem key={c.valor} value={c.valor}>{c.etiqueta}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <NAToggleLabel
+                    label="Nivel de riesgo sanitario"
+                    isNA={form.clasificacion_riesgo_sanitario === "N/A"}
+                    onToggle={(na) => setForm({ ...form, clasificacion_riesgo_sanitario: na ? "N/A" : "" })}
+                  />
+                  {form.clasificacion_riesgo_sanitario === "N/A" ? (
+                    <Input value="N/A" disabled />
+                  ) : (
+                    <Select
+                      value={form.clasificacion_riesgo_sanitario}
+                      onValueChange={(v) => setForm({ ...form, clasificacion_riesgo_sanitario: v })}
+                    >
+                      <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
+                      <SelectContent>
+                        {CLASIFICACION_MED_RIESGO.map((c) => (
+                          <SelectItem key={c.valor} value={c.valor}>{c.etiqueta}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
                 </div>
               </div>
             )}
