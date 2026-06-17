@@ -662,7 +662,7 @@ export async function generateFolioPDF(
           `${t.procesoEquipo}:\n${r.etapa_proceso || "—"}`,
           { content: "S:", styles: { fontStyle: "bold", halign: "right", valign: "middle" } },
           {
-            content: `${r.severidad}\n(${(r as any).tipo_escala_severidad === "sgc_regulatorio" ? "Escala SGC" : "Escala Estándar"})`,
+            content: String(r.severidad),
             styles: { fontStyle: "bold", halign: "center", valign: "middle", fontSize: 9 },
           },
           `Controles Actuales:\n${r.controles_actuales || "—"}`,
