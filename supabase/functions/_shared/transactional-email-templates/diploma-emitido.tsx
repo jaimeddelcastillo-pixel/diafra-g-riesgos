@@ -34,8 +34,8 @@ const DiplomaEmitidoEmail = ({
       </Section>
       <Text style={text}>
         TRACEA Academy te emite el diploma de aprovechamiento del programa de capacitación en
-        Gestión de Riesgos conforme a {norma || 'NOM-241-SSA1-2025'}. El PDF está adjunto a este
-        correo y también disponible para descarga desde la plataforma.
+        Gestión de Riesgos conforme a {norma || 'NOM-241-SSA1-2025'}. Puedes descargarlo
+        directamente desde la plataforma con el botón a continuación.
       </Text>
       <Section style={infoBox}>
         <Text style={dataRow}><strong>Curso:</strong> {curso_titulo || '—'}</Text>
