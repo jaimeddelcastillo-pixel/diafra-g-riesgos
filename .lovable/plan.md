@@ -1,53 +1,88 @@
-# Mejorar la experiencia del Wizard de Riesgos
 
-## Problema
+# Plan: Alinear plataforma con el guion del Módulo 4
 
-Hoy, en `RiesgoWizardDialog`, cualquier cierre del diálogo (clic fuera, tecla Esc, botón X, navegación por error) ejecuta `reset()` y descarta TODO lo capturado, sin aviso y sin posibilidad de regresar. Eso provoca:
+Objetivo: que el guion narrado del Módulo 4 sea verdad en la plataforma. Cuatro frentes independientes entregados juntos.
 
-- Salidas accidentales al desplazarse o al pulsar Esc.
-- Pérdida total al activar atajos del navegador (por ejemplo captura de pantalla) y cerrar el modal resultante.
-- Frustración al recapturar 5–7 pasos de información.
+---
 
-## Solución propuesta (3 capas de protección)
+## 1. Separar Dictamen Aprobado del Cierre del Expediente
 
-### 1. Auto-guardado de borrador en `localStorage`
+Sustento: ISO 14971 §8 distingue la **revisión de la gestión de riesgos** (que produce el dictamen aprobado) del **archivo de gestión de riesgos** (expediente cerrado y bloqueado). Son dos momentos auditables distintos — colapsarlos elimina trazabilidad que COFEPRIS puede solicitar.
 
-- Mientras el wizard está abierto, persistir el estado `s`, `step`, y banderas auxiliares (`residualesEditados`, `causaRaizAplicado`, `extraJustificacion`) con debounce (~600 ms) en una clave por folio:
-  - Crear nuevo: `tracea:wizard:draft:new:<folioId>`
-  - Editar existente: `tracea:wizard:draft:edit:<riesgoId>`
-- Al abrir el wizard, si existe un borrador no vacío y no es modo edición ya hidratado, mostrar un banner **"Recuperar borrador del <fecha>"** con dos acciones: **Recuperar** (carga el estado y posiciona en el último paso) o **Descartar**.
-- Borrar el borrador cuando: se guarda con éxito, se descarta explícitamente, o el usuario confirma "Salir sin guardar".
+Cambios:
 
-### 2. Confirmación inteligente al cerrar
+1. **Firma del Dictamen → estado Aprobado** (comportamiento actual intacto). En `folio-workflow` acción `dictamen` con `conclusion === "Aprobado"`, el folio queda en `Aprobado` y el audit trail registra `"Dictamen aprobado por Responsable Sanitario"` con timestamp, hash SHA-256, IP y `user_id` del RS.
+2. **Nuevo botón "Cerrar expediente"** en `FolioDetail.tsx`, visible **solo cuando** `estado === "Aprobado"` y el usuario es elaborador (rol Calidad / `created_by`), Responsable Sanitario o Admin. Llama a nueva acción `cerrar` en `folio-workflow` que pasa el folio a `Cerrado` y registra `"Expediente cerrado"` con timestamp, `user_id` e IP.
+3. **Estado `Cerrado`**: inalterable, solo lectura, reapertura solo mediante nueva versión con justificación (acción `reabrir` existente).
+4. **`getEstadoStyle` y chips** en `useFolios.tsx`, `FolioDetail` y listas: los cuatro estados visibles (Borrador, En Firma, Aprobado, Cerrado) deben tener color/ícono distintos — especialmente Aprobado vs Cerrado.
 
-- Calcular `isDirty` comparando `s` contra `initialState` (o contra el snapshot inicial en modo edición).
-- Interceptar el cierre del `Dialog`:
-  - Reemplazar `onOpenChange={(o) => !o && (reset(), onClose())}` por un handler que, si `isDirty`, abra un `AlertDialog` de confirmación: **"¿Salir del wizard? Tu avance quedará guardado como borrador y podrás continuar después."** con botones **Continuar editando** (default) y **Salir y guardar borrador**.
-  - Bloquear cierre por Esc y por clic fuera cuando `isDirty` usando `onEscapeKeyDown`/`onPointerDownOutside` con `e.preventDefault()` y disparar el mismo `AlertDialog` (no cerrar silenciosamente).
-- El botón "Cancelar" del paso 1 y el botón X del header llaman al mismo flujo.
+## 2. Reset de firmas del comité al rechazar
 
-### 3. Aviso de salida del navegador
+Hoy el reset solo ocurre al "Reabrir". En `folio-workflow` acción `dictamen` con `conclusion !== "Aprobado"`, después de `archivar_version_folio` ejecutar el mismo bloque de reset sobre `folio_comite` (`firmado=false`, `fecha_firma=null`, `ip_firma=""`, `user_agent=""`, `texto_compromiso=""`, `hash_documento=""`) y limpiar `comite_votos` de la ronda.
 
-- Añadir `beforeunload` mientras el wizard está abierto y `isDirty` para que, si el usuario recarga o cierra la pestaña, el navegador pida confirmación (aparte del borrador ya persistido en `localStorage`).
+## 3. Alertas automáticas de revisión periódica (12 meses)
 
-## Cambios concretos
+Nueva edge function `check-folios-revision` ejecutada diariamente vía `pg_cron`:
+- Busca folios `Cerrado` con >12 meses desde última aprobación (NOM-241).
+- Envía correo al RS (plantilla `folio-revision-pendiente`) y registra evento en `audit_trail` para no repetir en <30 días.
+- Plantilla React Email TRACEA navy + teal con datos del folio y link directo.
+- Cron registrado vía la herramienta interna.
 
-### `src/components/RiesgoWizardDialog.tsx`
-- Nuevo helper `useWizardDraft(key, state, step, enabled)` con debounce que `setItem`/`removeItem`.
-- Nuevo estado `recuperarVisible` y banner al inicio del `DialogContent`.
-- Nuevo `AlertDialog` "Salir del wizard" controlado por estado `confirmCerrarOpen`.
-- Reemplazar handler de `onOpenChange` por `intentarCerrar()`.
-- Añadir `onEscapeKeyDown` y `onPointerDownOutside` en `DialogContent`.
-- En `handleGuardar`, `handleGuardarYOtro`, `handleGuardarYAsistente`: tras éxito, limpiar la clave del borrador.
-- Hook `useEffect` para registrar/desregistrar `beforeunload`.
-- Computar `isDirty` con `useMemo` (`JSON.stringify(s) !== JSON.stringify(initialState)` para crear; comparar contra snapshot inicial para editar).
+## 4. Examen final del estudiante + diploma automático
 
-### Sin cambios
-- Lógica de validación, persistencia en BD, scoring NPR, Asistente IA y causa raíz.
-- No hay cambios en backend ni en otros componentes.
+### 4.1 Datos
+Nuevas tablas (con RLS + GRANT):
+- `curso_examen_intentos` — respuestas (jsonb), correctas, total, calificación, bloque_resumen, aprobado, started_at, finished_at, num_intento.
+- `curso_diplomas` — folio `DIP-YYYY-NNN`, user_id, curso_id, intento_id, fecha_emision, calificacion, hash_verificacion, pdf_path.
 
-## Resultado esperado
+Reglas: máx **3 intentos**, **≥ 80%** (16/20), **5 preguntas aleatorias por bloque** (marco_regulatorio, metodologia, casos_practicos, flujo_aprobacion). Si reprueba, indica bloques con más fallas y módulos a repasar. RLS: alumno ve solo lo suyo; admin de la org ve todos los suyos.
 
-- Cerrar el wizard nunca pierde datos sin antes preguntar.
-- Si algo externo cierra el modal (atajos del navegador, navegación), al reabrir el wizard del mismo folio aparece el banner para recuperar exactamente donde se quedó.
-- El usuario puede cerrar a propósito con un clic y confirmación, sabiendo que su avance queda guardado.
+### 4.2 UI
+- Nueva ruta `/capacitacion/:cursoId/examen`: instrucciones → pregunta por pregunta con contador "correctas hasta ahora" → resultados con desglose por bloque → si aprueba, "Ver diploma" + correo; si reprueba, módulos a repasar + "Reintentar" mientras queden intentos.
+- Botón "Tomar evaluación final" en `Capacitacion.tsx` cuando el alumno completó los 4 módulos.
+
+### 4.3 Diploma PDF
+Estilo "industrial médico" — paleta `#0B2545 / #13A8A8 / #F5F7FA / #0F3C5F`, sans serif, marco con líneas técnicas.
+
+Contenido:
+- Logo TRACEA + título "Diploma de aprovechamiento".
+- Nombre del alumno, curso, norma, fecha, calificación.
+- Duración total y lista breve de módulos aprobados.
+- Folio único `DIP-YYYY-NNN` + QR a `https://www.tracea.com.mx/diploma/verificar/:hash`.
+- Firma del instructor (imagen) — **pendiente del usuario**: PNG transparente del Ing. Jaime David Del Castillo Couret (~200×80px) o autorización de facsímil escrito.
+- **Pie legal (texto exacto):**
+
+  > Documento de aprovechamiento académico emitido por TRACEA Academy en cumplimiento del programa de capacitación en Gestión de Riesgos conforme a NOM-241-SSA1-2025 y FEUM Suplemento para Dispositivos Médicos 5.0. Instructor: Ing. Jaime David Del Castillo Couret. Verificación en línea: tracea.com.mx/diploma/verificar/:hash
+
+- **Sin mención del DC-3** en el PDF ni en el correo. El diploma es el único documento que se emite automáticamente al aprobar el examen.
+
+Ruta pública `/diploma/verificar/:hash` que muestra válido/no válido, nombre, curso, fecha, calificación.
+
+### 4.4 Generación y envío
+- Edge function `emitir-diploma` invocada al aprobar el examen: genera PDF (jsPDF, patrón de `generateFolioPDF.ts`), sube al bucket privado nuevo `diplomas` (signed URLs), registra `curso_diplomas` y dispara correo `diploma-emitido` con PDF adjunto. El correo **no menciona el DC-3**; informa únicamente del diploma emitido y enlaza a la verificación pública.
+- UI de resultados: botón "Descargar diploma" con signed URL inmediata.
+
+---
+
+## Archivos y áreas tocadas
+
+```text
+supabase/functions/folio-workflow/index.ts        (nueva acción "cerrar" + reset firmas en rechazo)
+supabase/functions/check-folios-revision/         (nuevo cron 12m)
+supabase/functions/emitir-diploma/                (nuevo)
+supabase/functions/_shared/transactional-email-templates/
+  folio-revision-pendiente.tsx                    (nuevo)
+  diploma-emitido.tsx                             (nuevo, sin mención DC-3)
+  registry.ts                                     (registrar)
+supabase/migrations/...                           (curso_examen_intentos, curso_diplomas, bucket diplomas, cron 12m, evento "cerrado" en audit)
+src/pages/Capacitacion.tsx                        (botón evaluación final)
+src/pages/ExamenFinal.tsx                         (nueva)
+src/pages/DiplomaVerificar.tsx                    (nueva ruta pública)
+src/pages/FolioDetail.tsx                         (botón "Cerrar expediente")
+src/lib/generateDiplomaPDF.ts                     (nuevo, con pie legal exacto)
+src/hooks/useFolios.tsx                           (estilos diferenciados Aprobado vs Cerrado)
+```
+
+## Pendiente del usuario
+
+1. Firma PNG transparente del Ing. Jaime David Del Castillo Couret (~200×80px) — o confirmar facsímil escrito.
