@@ -1999,6 +1999,19 @@ export default function FolioDetail() {
               En proceso de firma
             </Badge>
           )}
+
+          {/* Cerrar expediente — solo Aprobado, por elaborador / RS / admin */}
+          {puedeCerrar && (
+            <Button
+              size="sm"
+              className="gap-1 text-xs"
+              onClick={handleCerrarExpediente}
+              title="Bloquear el archivo de gestión de riesgos (ISO 14971 §8)"
+            >
+              <Lock className="h-3 w-3" />
+              Cerrar expediente
+            </Button>
+          )}
         </div>
       </div>
 
