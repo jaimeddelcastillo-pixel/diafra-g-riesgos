@@ -390,6 +390,91 @@ export type Database = {
         }
         Relationships: []
       }
+      curso_diplomas: {
+        Row: {
+          alumno_email: string
+          alumno_nombre: string
+          calificacion: number
+          created_at: string
+          curso_id: string
+          curso_norma: string
+          curso_titulo: string
+          duracion_horas: number | null
+          fecha_emision: string
+          folio: string
+          hash_verificacion: string
+          id: string
+          intento_id: string | null
+          modulos_aprobados: Json
+          org_id: string | null
+          pdf_path: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          alumno_email: string
+          alumno_nombre: string
+          calificacion: number
+          created_at?: string
+          curso_id: string
+          curso_norma: string
+          curso_titulo: string
+          duracion_horas?: number | null
+          fecha_emision?: string
+          folio: string
+          hash_verificacion: string
+          id?: string
+          intento_id?: string | null
+          modulos_aprobados?: Json
+          org_id?: string | null
+          pdf_path?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          alumno_email?: string
+          alumno_nombre?: string
+          calificacion?: number
+          created_at?: string
+          curso_id?: string
+          curso_norma?: string
+          curso_titulo?: string
+          duracion_horas?: number | null
+          fecha_emision?: string
+          folio?: string
+          hash_verificacion?: string
+          id?: string
+          intento_id?: string | null
+          modulos_aprobados?: Json
+          org_id?: string | null
+          pdf_path?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "curso_diplomas_curso_id_fkey"
+            columns: ["curso_id"]
+            isOneToOne: false
+            referencedRelation: "cursos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "curso_diplomas_intento_id_fkey"
+            columns: ["intento_id"]
+            isOneToOne: false
+            referencedRelation: "curso_examen_intentos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "curso_diplomas_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       curso_evaluacion_preguntas: {
         Row: {
           activo: boolean
@@ -445,6 +530,78 @@ export type Database = {
             columns: ["curso_id"]
             isOneToOne: false
             referencedRelation: "cursos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      curso_examen_intentos: {
+        Row: {
+          aprobado: boolean
+          bloque_resumen: Json
+          calificacion: number
+          correctas: number
+          created_at: string
+          curso_id: string
+          finished_at: string | null
+          id: string
+          num_intento: number
+          org_id: string | null
+          preguntas_ids: string[]
+          respuestas: Json
+          started_at: string
+          total: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          aprobado?: boolean
+          bloque_resumen?: Json
+          calificacion?: number
+          correctas?: number
+          created_at?: string
+          curso_id: string
+          finished_at?: string | null
+          id?: string
+          num_intento?: number
+          org_id?: string | null
+          preguntas_ids?: string[]
+          respuestas?: Json
+          started_at?: string
+          total?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          aprobado?: boolean
+          bloque_resumen?: Json
+          calificacion?: number
+          correctas?: number
+          created_at?: string
+          curso_id?: string
+          finished_at?: string | null
+          id?: string
+          num_intento?: number
+          org_id?: string | null
+          preguntas_ids?: string[]
+          respuestas?: Json
+          started_at?: string
+          total?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "curso_examen_intentos_curso_id_fkey"
+            columns: ["curso_id"]
+            isOneToOne: false
+            referencedRelation: "cursos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "curso_examen_intentos_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]
@@ -573,6 +730,21 @@ export type Database = {
           orden?: number
           titulo?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      diploma_sequence: {
+        Row: {
+          last_number: number
+          year: number
+        }
+        Insert: {
+          last_number?: number
+          year: number
+        }
+        Update: {
+          last_number?: number
+          year?: number
         }
         Relationships: []
       }
@@ -1698,6 +1870,7 @@ export type Database = {
         }
         Returns: number
       }
+      next_diploma_folio: { Args: never; Returns: string }
       next_folio_code:
         | { Args: never; Returns: string }
         | { Args: { p_tipo: string }; Returns: string }
