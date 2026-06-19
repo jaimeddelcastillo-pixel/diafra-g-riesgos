@@ -179,7 +179,7 @@ export default function AdminCursoEditor() {
       .from("curso_lecciones")
       .update({
         titulo: l.titulo, tipo: l.tipo, url_video: l.url_video, archivo_storage: l.archivo_storage,
-        proximamente: l.proximamente, activo: l.activo, orden: l.orden,
+        proximamente: l.proximamente, activo: l.activo, orden: l.orden, leccion_id: l.leccion_id,
       })
       .eq("id", l.id);
     if (error) toast.error(error.message); else toast.success("Lección guardada");
@@ -294,8 +294,12 @@ export default function AdminCursoEditor() {
                       </Select>
                     </div>
                     <div>
-                      <Label className="text-xs">ID lección (no editar tras crear)</Label>
-                      <Input value={l.leccion_id} disabled />
+                      <Label className="text-xs">ID lección (único por curso)</Label>
+                      <Input
+                        value={l.leccion_id}
+                        onChange={(e) => updLec(m.id, l.id, { leccion_id: e.target.value })}
+                        placeholder="ej. nom241-1-intro"
+                      />
                     </div>
                   </div>
                   {l.tipo === "video" && (
