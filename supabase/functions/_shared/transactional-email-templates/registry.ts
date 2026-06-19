@@ -22,6 +22,8 @@ import { template as contactoSoporte } from './contacto-soporte.tsx'
 import { template as bienvenidaDemo } from './bienvenida-demo.tsx'
 import { template as consultasIaAcreditadas } from './consultas-ia-acreditadas.tsx'
 import { template as consultasIaAviso80 } from './consultas-ia-aviso-80.tsx'
+import { template as folioRevisionPendiente } from './folio-revision-pendiente.tsx'
+import { template as diplomaEmitido } from './diploma-emitido.tsx'
 
 export const TEMPLATES: Record<string, TemplateEntry> = {
   'bienvenida-usuario': bienvenidaUsuario,
@@ -37,4 +39,6 @@ export const TEMPLATES: Record<string, TemplateEntry> = {
   'bienvenida-demo': bienvenidaDemo,
   'consultas-ia-acreditadas': consultasIaAcreditadas,
   'consultas-ia-aviso-80': consultasIaAviso80,
+  'folio-revision-pendiente': folioRevisionPendiente,
+  'diploma-emitido': diplomaEmitido,
 }

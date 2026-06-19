@@ -1821,6 +1821,37 @@ export default function FolioDetail() {
     }
   };
 
+  // ── Cerrar expediente (Aprobado → Cerrado) ──
+  const handleCerrarExpediente = async () => {
+    const ok = window.confirm(
+      "¿Cerrar definitivamente este expediente?\n\n" +
+      "El archivo de gestión de riesgos quedará bloqueado y solo podrá reabrirse mediante una nueva versión con justificación (ISO 14971 §8).",
+    );
+    if (!ok) return;
+    try {
+      const { data: result, error } = await supabase.functions.invoke("folio-workflow", {
+        body: { accion: "cerrar", folio_id: folio.id },
+      });
+      if (error) throw new Error(error.message);
+      if (result?.error) throw new Error(result.error);
+      toast({
+        title: "🗂️ Expediente cerrado",
+        description: result?.mensaje || `Folio ${folio.codigo} cerrado.`,
+      });
+      handleRefresh();
+    } catch (err: any) {
+      toast({
+        title: "Error al cerrar expediente",
+        description: err.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const puedeCerrar =
+    folio.estado === "Aprobado" &&
+    (isAdmin || folio.created_by === user?.id);
+
   return (
     <>
       {/* Overlay para cerrar checklist al hacer clic fuera */}
@@ -1967,6 +1998,19 @@ export default function FolioDetail() {
               <FileSignature className="h-3 w-3" />
               En proceso de firma
             </Badge>
+          )}
+
+          {/* Cerrar expediente — solo Aprobado, por elaborador / RS / admin */}
+          {puedeCerrar && (
+            <Button
+              size="sm"
+              className="gap-1 text-xs"
+              onClick={handleCerrarExpediente}
+              title="Bloquear el archivo de gestión de riesgos (ISO 14971 §8)"
+            >
+              <Lock className="h-3 w-3" />
+              Cerrar expediente
+            </Button>
           )}
         </div>
       </div>

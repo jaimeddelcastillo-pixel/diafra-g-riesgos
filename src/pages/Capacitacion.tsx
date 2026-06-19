@@ -506,6 +506,29 @@ export default function Capacitacion() {
               </AccordionItem>
             ))}
           </Accordion>
+
+          {/* Evaluación final + diploma cuando se completaron todas las lecciones */}
+          {total > 0 && completadas === total && (
+            <div className="mt-6 rounded-md border border-[hsl(var(--primary))] bg-[hsl(var(--primary))]/5 p-4 flex items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-semibold flex items-center gap-2">
+                  <Award className="h-4 w-4 text-[hsl(var(--primary))]" />
+                  Has completado todos los módulos
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Toma la evaluación final (20 preguntas, ≥ 80 % para aprobar) y recibe tu diploma de TRACEA Academy.
+                </p>
+              </div>
+              <Button
+                size="sm"
+                className="gap-2 shrink-0"
+                onClick={() => navigate(`/capacitacion/${curso.id}/examen`)}
+              >
+                <Award className="h-4 w-4" />
+                Tomar evaluación final
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
     );

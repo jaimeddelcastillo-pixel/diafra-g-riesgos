@@ -12,6 +12,8 @@ import Auditoria from "./pages/Auditoria";
 import Catalogos from "./pages/Catalogos";
 import Recursos from "./pages/Recursos.tsx";
 import Capacitacion from "./pages/Capacitacion";
+import ExamenFinal from "./pages/ExamenFinal";
+import DiplomaVerificar from "./pages/DiplomaVerificar";
 import Configuracion from "./pages/Configuracion";
 import Admin from "./pages/Admin";
 import AdminOrg from "./pages/AdminOrg";
@@ -57,6 +59,7 @@ const App = () => (
             <Route path="/pago-pendiente" element={<PagoPendiente />} />
             <Route path="/terminos" element={<Terminos />} />
             <Route path="/privacidad" element={<Privacidad />} />
+            <Route path="/diploma/verificar/:hash" element={<DiplomaVerificar />} />
             <Route element={<AppLayout />}>
               <Route path="/" element={<Index />} />
               <Route path="/folios" element={<Folios />} />
@@ -65,6 +68,7 @@ const App = () => (
               <Route path="/catalogos" element={<Catalogos />} />
               <Route path="/recursos" element={<Recursos />} />
               <Route path="/capacitacion" element={<Capacitacion />} />
+              <Route path="/capacitacion/:cursoId/examen" element={<ExamenFinal />} />
               <Route path="/configuracion" element={<Configuracion />} />
               <Route path="/admin" element={<Admin />} />
               <Route path="/admin/org/:id" element={<AdminOrg />} />
