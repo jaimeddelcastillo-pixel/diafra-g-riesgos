@@ -1,9 +1,10 @@
 // supabase/functions/folio-workflow/index.ts v3
-// Maneja 4 acciones (multi-norma: NOM-241 / NOM-059, "frozen" en folios.norma_folio):
+// Maneja 5 acciones (multi-norma: NOM-241 / NOM-059, "frozen" en folios.norma_folio):
 //   1. enviar-a-firma   → valida completitud según norma + cambia estado + correos al comité
 //   2. firmar           → registra firma con hash + IP + texto_compromiso + notifica aprobador
 //   3. dictamen         → aprobador final aprueba o rechaza + correo al capturista
 //   4. reabrir          → archiva versión actual, regresa a Borrador, incrementa versión
+//   5. cerrar           → pasa de Aprobado → Cerrado (archivo de gestión de riesgos bloqueado)
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
@@ -490,6 +491,17 @@ Deno.serve(async (req) => {
         p_folio_id: folio_id,
         p_motivo: motivo || `Rechazado por ${norma.terminologia.aprobadorFinal} — requiere corrección`,
       });
+      // Resetear firmas del comité para la nueva ronda (ISO 14971 §8: nueva revisión)
+      await admin.from("folio_comite").update({
+        firmado: false,
+        fecha_firma: null,
+        ip_firma: "",
+        user_agent: "",
+        texto_compromiso: "",
+        hash_documento: "",
+      }).eq("folio_id", folio_id);
+      // Limpiar votos previos del comité para la nueva ronda
+      await admin.from("comite_votos").delete().eq("folio_id", folio_id);
     }
 
     if (folio.created_by) {
@@ -568,6 +580,36 @@ Deno.serve(async (req) => {
       success: true,
       version_archivada: versionArchivada.data,
       mensaje: `Folio ${folio.codigo} reabierto para nueva revisión`,
+    });
+  }
+
+  // ─── ACCIÓN 5: Cerrar expediente (Aprobado → Cerrado) ────────────────────────
+  // ISO 14971 §8: el archivo de gestión de riesgos queda bloqueado y solo se
+  // reabre mediante una nueva versión con justificación.
+  if (accion === "cerrar") {
+    const { data: folio } = await admin
+      .from("folios")
+      .select("id, estado, codigo, created_by, org_id")
+      .eq("id", folio_id)
+      .single();
+
+    if (!folio) return json({ error: "Folio no encontrado" }, 404);
+    if (folio.org_id !== callerOrgId) return json({ error: "Sin permiso para este folio" }, 403);
+    if (folio.estado !== "Aprobado") {
+      return json({ error: "Solo se pueden cerrar folios en estado Aprobado" }, 400);
+    }
+
+    const esElaborador = folio.created_by === user.id;
+    const esPriv = ["admin", "responsable_sanitario"].includes(callerRole ?? "");
+    if (!esElaborador && !esPriv) {
+      return json({ error: "Sin permiso para cerrar este expediente" }, 403);
+    }
+
+    await admin.from("folios").update({ estado: "Cerrado" }).eq("id", folio_id);
+
+    return json({
+      success: true,
+      mensaje: `Expediente ${folio.codigo} cerrado — archivo de gestión de riesgos bloqueado`,
     });
   }
 
