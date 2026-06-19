@@ -346,7 +346,6 @@ Deno.serve(async (req) => {
 
     // Email con PDF adjunto
     try {
-      const pdfBase64 = btoa(String.fromCharCode(...pdfBytes));
       await admin.functions.invoke("send-transactional-email", {
         body: {
           templateName: "diploma-emitido",
@@ -362,9 +361,6 @@ Deno.serve(async (req) => {
             verificacion_url: verificacionUrl,
             descarga_url: signed?.signedUrl ?? verificacionUrl,
           },
-          attachments: [
-            { filename: `${folio}.pdf`, content: pdfBase64, contentType: "application/pdf" },
-          ],
         },
       });
     } catch (e) {
