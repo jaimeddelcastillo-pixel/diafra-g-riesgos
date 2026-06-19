@@ -14,15 +14,15 @@ interface Props {
   calificacion?: number | string
   fecha?: string
   verificacion_url?: string
-  descarga_url?: string
+  plataforma_url?: string
 }
 
 const DiplomaEmitidoEmail = ({
-  nombre, curso_titulo, norma, folio_diploma, calificacion, fecha, verificacion_url, descarga_url,
+  nombre, curso_titulo, norma, folio_diploma, calificacion, fecha, verificacion_url, plataforma_url,
 }: Props) => {
   const saludo = nombre ? `Estimado(a) ${nombre},` : 'Hola,'
   const verLink = verificacion_url || 'https://tracea.com.mx'
-  const descLink = descarga_url || verLink
+  const misDiplomasLink = plataforma_url || 'https://tracea.com.mx/mis-diplomas'
   return (
     <TraceaShell preview={`Diploma emitido — ${folio_diploma || 'TRACEA Academy'}`}>
       <Heading style={h1}>¡Felicidades! Diploma emitido</Heading>
@@ -34,8 +34,9 @@ const DiplomaEmitidoEmail = ({
       </Section>
       <Text style={text}>
         TRACEA Academy te emite el diploma de aprovechamiento del programa de capacitación en
-        Gestión de Riesgos conforme a {norma || 'NOM-241-SSA1-2025'}. Puedes descargarlo
-        directamente desde la plataforma con el botón a continuación.
+        Gestión de Riesgos conforme a {norma || 'NOM-241-SSA1-2025'}. Tu diploma queda disponible
+        permanentemente en la plataforma; puedes descargarlo cuando lo necesites desde la sección
+        "Mis diplomas".
       </Text>
       <Section style={infoBox}>
         <Text style={dataRow}><strong>Curso:</strong> {curso_titulo || '—'}</Text>
@@ -44,8 +45,11 @@ const DiplomaEmitidoEmail = ({
         <Text style={dataRow}><strong>Fecha de emisión:</strong> {fecha || '—'}</Text>
       </Section>
       <Section style={{ textAlign: 'center', margin: '32px 0' }}>
-        <Button href={descLink} style={button}>Descargar diploma</Button>
+        <Button href={misDiplomasLink} style={button}>Ver mis diplomas</Button>
       </Section>
+      <Text style={smallText}>
+        Inicia sesión en TRACEA Academy y descarga tu diploma desde "Mis diplomas".
+      </Text>
       <Hr style={hrStyle} />
       <Text style={smallText}>Verificación pública del diploma:</Text>
       <Text style={linkFallback}>{verLink}</Text>
@@ -68,6 +72,6 @@ export const template = {
     calificacion: 90,
     fecha: '19 de junio de 2026',
     verificacion_url: 'https://tracea.com.mx/diploma/verificar/abc123',
-    descarga_url: 'https://tracea.com.mx/diploma/verificar/abc123',
+    plataforma_url: 'https://tracea.com.mx/mis-diplomas',
   },
 } satisfies TemplateEntry

@@ -14,6 +14,7 @@ import Recursos from "./pages/Recursos.tsx";
 import Capacitacion from "./pages/Capacitacion";
 import ExamenFinal from "./pages/ExamenFinal";
 import DiplomaVerificar from "./pages/DiplomaVerificar";
+import MisDiplomas from "./pages/MisDiplomas";
 import Configuracion from "./pages/Configuracion";
 import Admin from "./pages/Admin";
 import AdminOrg from "./pages/AdminOrg";
@@ -69,6 +70,7 @@ const App = () => (
               <Route path="/recursos" element={<Recursos />} />
               <Route path="/capacitacion" element={<Capacitacion />} />
               <Route path="/capacitacion/:cursoId/examen" element={<ExamenFinal />} />
+              <Route path="/mis-diplomas" element={<MisDiplomas />} />
               <Route path="/configuracion" element={<Configuracion />} />
               <Route path="/admin" element={<Admin />} />
               <Route path="/admin/org/:id" element={<AdminOrg />} />
