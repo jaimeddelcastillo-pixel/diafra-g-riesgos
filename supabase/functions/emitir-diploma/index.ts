@@ -368,7 +368,7 @@ Deno.serve(async (req) => {
             calificacion,
             fecha: fmtFechaLarga(fecha),
             verificacion_url: verificacionUrl,
-            descarga_url: signed?.signedUrl ?? verificacionUrl,
+            plataforma_url: `${APP_URL}/mis-diplomas`,
           },
         },
       });
