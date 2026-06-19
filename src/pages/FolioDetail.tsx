@@ -1821,6 +1821,37 @@ export default function FolioDetail() {
     }
   };
 
+  // ── Cerrar expediente (Aprobado → Cerrado) ──
+  const handleCerrarExpediente = async () => {
+    const ok = window.confirm(
+      "¿Cerrar definitivamente este expediente?\n\n" +
+      "El archivo de gestión de riesgos quedará bloqueado y solo podrá reabrirse mediante una nueva versión con justificación (ISO 14971 §8).",
+    );
+    if (!ok) return;
+    try {
+      const { data: result, error } = await supabase.functions.invoke("folio-workflow", {
+        body: { accion: "cerrar", folio_id: folio.id },
+      });
+      if (error) throw new Error(error.message);
+      if (result?.error) throw new Error(result.error);
+      toast({
+        title: "🗂️ Expediente cerrado",
+        description: result?.mensaje || `Folio ${folio.codigo} cerrado.`,
+      });
+      handleRefresh();
+    } catch (err: any) {
+      toast({
+        title: "Error al cerrar expediente",
+        description: err.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const puedeCerrar =
+    folio.estado === "Aprobado" &&
+    (isAdmin || folio.created_by === user?.id);
+
   return (
     <>
       {/* Overlay para cerrar checklist al hacer clic fuera */}
