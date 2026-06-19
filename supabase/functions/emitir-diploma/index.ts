@@ -9,6 +9,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { jsPDF } from "https://esm.sh/jspdf@2.5.2";
 import QRCode from "https://esm.sh/qrcode@1.5.4";
+import { FIRMA_JDC_PNG_BASE64, FIRMA_JDC_WIDTH_MM, FIRMA_JDC_HEIGHT_MM } from "./firma.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -180,6 +181,14 @@ async function generarDiplomaPDF(opts: {
   doc.text("Verificación en línea", W - 36, H - 30, { align: "center" });
 
   // Firma del instructor (líneas + nombre)
+  // Firma manuscrita escaneada (PNG transparente) sobre la línea
+  try {
+    const firmaW = FIRMA_JDC_WIDTH_MM;
+    const firmaH = FIRMA_JDC_HEIGHT_MM;
+    const firmaX = 72.5 - firmaW / 2;
+    const firmaY = H - 40 - firmaH + 2; // base justo encima de la línea
+    doc.addImage(FIRMA_JDC_PNG_BASE64, "PNG", firmaX, firmaY, firmaW, firmaH);
+  } catch (_) { /* fallback silencioso a línea + nombre */ }
   doc.setDrawColor(40, 40, 40);
   doc.setLineWidth(0.3);
   doc.line(35, H - 40, 110, H - 40);
