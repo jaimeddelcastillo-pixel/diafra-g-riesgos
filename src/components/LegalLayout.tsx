@@ -70,6 +70,10 @@ export function LegalLayout({ titulo, subtitulo, children }: LegalLayoutProps) {
               Aviso de Privacidad
             </Link>
             <span className="text-border">·</span>
+            <Link to="/confianza" className="hover:text-foreground underline-offset-2 hover:underline">
+              Centro de Confianza
+            </Link>
+            <span className="text-border">·</span>
             <a
               href="mailto:soporte@tracea.com.mx"
               className="hover:text-foreground underline-offset-2 hover:underline"

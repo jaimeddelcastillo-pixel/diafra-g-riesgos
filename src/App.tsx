@@ -14,6 +14,7 @@ import Recursos from "./pages/Recursos.tsx";
 import Capacitacion from "./pages/Capacitacion";
 import ExamenFinal from "./pages/ExamenFinal";
 import DiplomaVerificar from "./pages/DiplomaVerificar";
+import Confianza from "./pages/Confianza";
 import MisDiplomas from "./pages/MisDiplomas";
 import Configuracion from "./pages/Configuracion";
 import Admin from "./pages/Admin";
@@ -61,6 +62,7 @@ const App = () => (
             <Route path="/pago-pendiente" element={<PagoPendiente />} />
             <Route path="/terminos" element={<Terminos />} />
             <Route path="/privacidad" element={<Privacidad />} />
+            <Route path="/confianza" element={<Confianza />} />
             <Route path="/diploma/verificar/:hash" element={<DiplomaVerificar />} />
             <Route element={<AppLayout />}>
               <Route path="/" element={<Index />} />
