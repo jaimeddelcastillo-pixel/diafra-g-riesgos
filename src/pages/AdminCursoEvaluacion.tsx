@@ -76,7 +76,11 @@ export default function AdminCursoEvaluacion() {
   if (load) return <div className="p-6 text-sm text-muted-foreground">Cargando...</div>;
 
   const activas = preguntas.filter((p) => p.activo).length;
-  const completo = activas >= META;
+  const porBloque = BLOQUES.map((b) => ({
+    ...b,
+    n: preguntas.filter((p) => p.activo && p.bloque === b.v).length,
+  }));
+  const completo = porBloque.every((b) => b.n >= MIN_POR_BLOQUE);
 
   const agregar = async () => {
     const nextOrden = (preguntas[preguntas.length - 1]?.orden ?? 0) + 1;
