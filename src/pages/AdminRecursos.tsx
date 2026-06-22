@@ -48,6 +48,30 @@ const RECURSOS_FIJOS: RecursoFijo[] = [
     descripcion: "Plantilla oficial TRACEA AMGR · NOM-059 / FEUM Medicamentos.",
     norma: "NOM-059",
   },
+  {
+    path: "guia-s9-dm.pdf",
+    titulo: "Guía Técnica S≥9 — Dispositivos Médicos",
+    descripcion: "Material de capacitación. Severidad crítica en gestión de riesgos · NOM-241 / FEUM DM.",
+    norma: "NOM-241",
+  },
+  {
+    path: "guia-s9-med.pdf",
+    titulo: "Guía Técnica S≥9 — Medicamentos",
+    descripcion: "Material de capacitación. Severidad crítica y Regla S+1 · NOM-059 / FEUM Medicamentos.",
+    norma: "NOM-059",
+  },
+  {
+    path: "manual-tracea.pdf",
+    titulo: "Manual de Usuario TRACEA",
+    descripcion: "Manual de usuario de la plataforma TRACEA visible en Capacitación → Recursos.",
+    norma: "NOM-241",
+  },
+  {
+    path: "glosario-regulatorio.pdf",
+    titulo: "Glosario Regulatorio",
+    descripcion: "Glosario de términos regulatorios visible en Capacitación → Recursos.",
+    norma: "NOM-241",
+  },
 ];
 
 interface FileMeta {
