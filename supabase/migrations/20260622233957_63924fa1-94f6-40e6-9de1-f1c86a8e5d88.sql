@@ -1,0 +1,2 @@
+ALTER TABLE public.curso_lecciones DROP CONSTRAINT IF EXISTS curso_lecciones_leccion_id_key;
+ALTER TABLE public.curso_lecciones ADD CONSTRAINT curso_lecciones_modulo_leccion_id_key UNIQUE (modulo_id, leccion_id);
