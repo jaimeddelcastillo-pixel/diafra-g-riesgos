@@ -387,9 +387,9 @@ export default function ExamenFinal() {
                     <Eye className="h-4 w-4" /> Revisar mis respuestas
                   </summary>
                   <div className="p-3 space-y-3">
-                    {preguntas.map((p, i) => {
-                      const r = respuestas[p.id];
-                      const ok = r === p.respuesta_correcta;
+                    {(resultado.detalles ?? []).map((p, i) => {
+                      const r = p.respuesta_usuario;
+                      const ok = p.correcta;
                       return (
                         <div key={p.id} className="rounded border bg-background p-3 text-sm">
                           <div className="flex items-center justify-between mb-1">
