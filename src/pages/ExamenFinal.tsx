@@ -92,11 +92,18 @@ export default function ExamenFinal() {
   const [curso, setCurso] = useState<{ id: string; titulo: string; norma: string } | null>(null);
   const [numIntentoPrevio, setNumIntentoPrevio] = useState(0);
   const [yaAprobo, setYaAprobo] = useState<string | null>(null); // intento_id si ya aprobó
+  const [bancoOk, setBancoOk] = useState<{ ok: boolean; faltantes: string[] }>({ ok: true, faltantes: [] });
   const [step, setStep] = useState<"intro" | "exam" | "result">("intro");
-  const [preguntas, setPreguntas] = useState<Pregunta[]>([]);
+  const [preguntas, setPreguntas] = useState<PreguntaShuffled[]>([]);
   const [idx, setIdx] = useState(0);
+  // respuesta guardada como la letra ORIGINAL de la pregunta (A-D del banco)
   const [respuestas, setRespuestas] = useState<Record<string, string>>({});
+  const [marcadas, setMarcadas] = useState<Record<string, boolean>>({});
   const [intentoId, setIntentoId] = useState<string | null>(null);
+  const [startedAt, setStartedAt] = useState<number | null>(null);
+  const [tiempoRestante, setTiempoRestante] = useState<number>(TIEMPO_LIMITE_SEG);
+  const [confirmarEnviar, setConfirmarEnviar] = useState(false);
+  const tabBlurRef = useRef(0);
   const [resultado, setResultado] = useState<{
     correctas: number;
     calificacion: number;
@@ -104,7 +111,7 @@ export default function ExamenFinal() {
     bloque_resumen: Record<string, { correctas: number; total: number }>;
     intento_id: string;
   } | null>(null);
-  const [diplomaUrl, setDiplomaUrl] = useState<string | null>(null);
+  const [diplomaFolio, setDiplomaFolio] = useState<string | null>(null);
   const [emitiendoDiploma, setEmitiendoDiploma] = useState(false);
 
   useEffect(() => {
