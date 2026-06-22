@@ -397,6 +397,123 @@ export default function AdminCursoEvaluacion() {
           </CardContent>
         </Card>
       ))}
+
+      {/* ─── Modal Importar ──────────────────────────────────────────── */}
+      <Dialog open={importOpen} onOpenChange={setImportOpen}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Importar preguntas</DialogTitle>
+            <DialogDescription>
+              Pega un arreglo JSON o un CSV con las preguntas. Bloques válidos: marco_regulatorio, metodologia, casos_practicos, flujo_aprobacion.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label className="text-xs">Formato</Label>
+                <RadioGroup
+                  value={importFormat}
+                  onValueChange={(v) => { setImportFormat(v as any); setImportPreview(null); setImportError(null); }}
+                  className="flex gap-4 mt-1"
+                >
+                  <label className="flex items-center gap-2 text-sm">
+                    <RadioGroupItem value="json" /> JSON
+                  </label>
+                  <label className="flex items-center gap-2 text-sm">
+                    <RadioGroupItem value="csv" /> CSV
+                  </label>
+                </RadioGroup>
+              </div>
+              <div>
+                <Label className="text-xs">Modo</Label>
+                <RadioGroup
+                  value={importMode}
+                  onValueChange={(v) => setImportMode(v as any)}
+                  className="flex gap-4 mt-1"
+                >
+                  <label className="flex items-center gap-2 text-sm">
+                    <RadioGroupItem value="append" /> Agregar al banco
+                  </label>
+                  <label className="flex items-center gap-2 text-sm">
+                    <RadioGroupItem value="replace" /> Reemplazar banco
+                  </label>
+                </RadioGroup>
+              </div>
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <Label className="text-xs">Contenido ({importFormat.toUpperCase()})</Label>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  className="h-6 text-xs"
+                  onClick={() => setImportText(importFormat === "json" ? PLANTILLA_JSON : PLANTILLA_CSV)}
+                >
+                  Cargar plantilla
+                </Button>
+              </div>
+              <Textarea
+                value={importText}
+                onChange={(e) => { setImportText(e.target.value); setImportPreview(null); setImportError(null); }}
+                rows={10}
+                className="font-mono text-xs"
+                placeholder={importFormat === "json" ? PLANTILLA_JSON : PLANTILLA_CSV}
+              />
+            </div>
+
+            {importError && (
+              <div className="rounded border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive">
+                {importError}
+              </div>
+            )}
+
+            {importPreview && (
+              <div className="rounded border bg-muted/30 p-3 space-y-2">
+                <div className="text-sm font-semibold">
+                  Vista previa: {importPreview.length} pregunta(s)
+                </div>
+                <div className="flex flex-wrap gap-2 text-xs">
+                  {BLOQUES.map((b) => {
+                    const c = importPreview.filter((p) => p.bloque === b.v).length;
+                    return (
+                      <Badge key={b.v} variant="outline">{b.l}: {c}</Badge>
+                    );
+                  })}
+                </div>
+                <div className="max-h-48 overflow-y-auto space-y-1 text-xs">
+                  {importPreview.slice(0, 10).map((p, i) => (
+                    <div key={i} className="truncate">
+                      <span className="font-semibold">{i + 1}.</span> [{p.bloque}] {p.pregunta}{" "}
+                      <span className="text-muted-foreground">→ {p.respuesta_correcta}</span>
+                    </div>
+                  ))}
+                  {importPreview.length > 10 && (
+                    <div className="text-muted-foreground">… y {importPreview.length - 10} más</div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setImportOpen(false)} disabled={importing}>
+              Cancelar
+            </Button>
+            {!importPreview ? (
+              <Button onClick={generarPreview} disabled={!importText.trim()}>
+                Validar
+              </Button>
+            ) : (
+              <Button onClick={confirmarImport} disabled={importing}>
+                {importing ? "Importando…" : `Importar ${importPreview.length}`}
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
