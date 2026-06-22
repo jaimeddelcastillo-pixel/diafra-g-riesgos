@@ -284,7 +284,9 @@ export default function AdminCursoEvaluacion() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold">Evaluación · {cursoNorma}</h1>
-          <p className="text-sm text-muted-foreground">Banco de preguntas del examen final.</p>
+          <p className="text-sm text-muted-foreground">
+            Banco de preguntas del examen final. En cada intento se sortean {POR_BLOQUE_EXAMEN} por bloque ({POR_BLOQUE_EXAMEN * 4} en total).
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <Badge
@@ -295,17 +297,41 @@ export default function AdminCursoEvaluacion() {
                 : "bg-yellow-500/15 text-yellow-700 dark:text-yellow-400 border-yellow-500/30"
             }
           >
-            {activas} de {META} preguntas cargadas
+            {activas} preguntas activas · mínimo {META}
           </Badge>
           {completo ? (
-            <Badge className="bg-emerald-500 text-white">Evaluación completa</Badge>
+            <Badge className="bg-emerald-500 text-white">Evaluación lista</Badge>
           ) : (
             <Badge variant="outline" className="border-yellow-500/40 text-yellow-700 dark:text-yellow-400">
-              Faltan {META - activas}
+              Faltan bloques por completar
             </Badge>
           )}
+          <Button size="sm" variant="outline" onClick={() => setImportOpen(true)}>
+            <Upload className="h-4 w-4 mr-2" /> Importar
+          </Button>
           <Button size="sm" onClick={agregar}><Plus className="h-4 w-4 mr-2" /> Agregar pregunta</Button>
         </div>
+      </div>
+
+      {/* Contador por bloque */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+        {porBloque.map((b) => {
+          const ok = b.n >= MIN_POR_BLOQUE;
+          const warn = b.n >= POR_BLOQUE_EXAMEN && b.n < MIN_POR_BLOQUE;
+          const cls = ok
+            ? "border-emerald-500/40 bg-emerald-500/5 text-emerald-700 dark:text-emerald-400"
+            : warn
+              ? "border-yellow-500/40 bg-yellow-500/5 text-yellow-700 dark:text-yellow-400"
+              : "border-destructive/40 bg-destructive/5 text-destructive";
+          return (
+            <div key={b.v} className={`rounded border px-3 py-2 text-xs ${cls}`}>
+              <div className="font-semibold">{b.l}</div>
+              <div className="text-[11px] opacity-80">
+                {b.n} / {MIN_POR_BLOQUE} activas {ok ? "✓" : warn ? "· faltan para sortear sin repetir" : `· faltan ${MIN_POR_BLOQUE - b.n}`}
+              </div>
+            </div>
+          );
+        })}
       </div>
 
       {preguntas.length === 0 && (
