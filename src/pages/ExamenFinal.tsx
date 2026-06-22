@@ -134,12 +134,58 @@ export default function ExamenFinal() {
       const aprobado = (prev ?? []).find((i: any) => i.aprobado);
       if (aprobado) setYaAprobo(aprobado.id);
 
+      // Validar banco por bloque (≥7 activas por bloque)
+      const { data: bank } = await supabase
+        .from("curso_evaluacion_preguntas")
+        .select("bloque, activo")
+        .eq("curso_id", cursoId)
+        .eq("activo", true);
+      const cuenta: Record<string, number> = {};
+      for (const r of (bank as any[]) ?? []) cuenta[r.bloque] = (cuenta[r.bloque] || 0) + 1;
+      const faltantes: string[] = [];
+      for (const b of ["marco_regulatorio", "metodologia", "casos_practicos", "flujo_aprobacion"]) {
+        if ((cuenta[b] || 0) < MIN_BANCO_BLOQUE) faltantes.push(BLOQUE_LABEL[b]);
+      }
+      setBancoOk({ ok: faltantes.length === 0, faltantes });
+
       setLoading(false);
     })();
   }, [cursoId, user]);
 
+  // Temporizador
+  useEffect(() => {
+    if (step !== "exam" || !startedAt) return;
+    const t = setInterval(() => {
+      const elapsed = Math.floor((Date.now() - startedAt) / 1000);
+      const restante = TIEMPO_LIMITE_SEG - elapsed;
+      setTiempoRestante(restante);
+      if (restante <= 0) {
+        clearInterval(t);
+        enviar(true);
+      }
+    }, 1000);
+    return () => clearInterval(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, startedAt]);
+
+  // Anti-trampa: contar cambios de pestaña/ventana
+  useEffect(() => {
+    if (step !== "exam") return;
+    const onBlur = () => { if (document.hidden) tabBlurRef.current += 1; };
+    document.addEventListener("visibilitychange", onBlur);
+    return () => document.removeEventListener("visibilitychange", onBlur);
+  }, [step]);
+
   const iniciarExamen = async () => {
     if (!cursoId || !user) return;
+    if (!bancoOk.ok) {
+      toast({
+        title: "Banco incompleto",
+        description: `Faltan preguntas activas en: ${bancoOk.faltantes.join(", ")}.`,
+        variant: "destructive",
+      });
+      return;
+    }
     const { data: all, error } = await supabase
       .from("curso_evaluacion_preguntas")
       .select("*")
@@ -153,6 +199,14 @@ export default function ExamenFinal() {
     const seleccion: Pregunta[] = [];
     for (const b of bloques) {
       const enBloque = (all as any[]).filter((p) => p.bloque === b);
+      if (enBloque.length < MIN_BANCO_BLOQUE) {
+        toast({
+          title: "Banco insuficiente",
+          description: `El bloque "${BLOQUE_LABEL[b]}" necesita al menos ${MIN_BANCO_BLOQUE} preguntas activas.`,
+          variant: "destructive",
+        });
+        return;
+      }
       seleccion.push(...pickRandom(enBloque, POR_BLOQUE));
     }
     if (seleccion.length < TOTAL_PREGUNTAS) {
@@ -163,6 +217,10 @@ export default function ExamenFinal() {
       });
       return;
     }
+
+    // Barajar también el orden global de las 20 preguntas
+    const seleccionMezclada = pickRandom(seleccion, seleccion.length);
+    const shuffled = seleccionMezclada.map(shuffleOpciones);
 
     // Crear intento
     const { data: orgMember } = await supabase
@@ -178,8 +236,9 @@ export default function ExamenFinal() {
         org_id: (orgMember as any)?.org_id ?? null,
         curso_id: cursoId,
         num_intento: numIntentoPrevio + 1,
-        preguntas_ids: seleccion.map((p) => p.id),
+        preguntas_ids: shuffled.map((p) => p.id),
         total: TOTAL_PREGUNTAS,
+        tiempo_limite_seg: TIEMPO_LIMITE_SEG,
       })
       .select()
       .single();
@@ -188,21 +247,34 @@ export default function ExamenFinal() {
       return;
     }
     setIntentoId(nuevo.id);
-    setPreguntas(seleccion);
+    setPreguntas(shuffled);
     setRespuestas({});
+    setMarcadas({});
     setIdx(0);
+    tabBlurRef.current = 0;
+    setStartedAt(Date.now());
+    setTiempoRestante(TIEMPO_LIMITE_SEG);
     setStep("exam");
   };
 
   const responder = (op: string) => {
     const p = preguntas[idx];
-    setRespuestas((r) => ({ ...r, [p.id]: op }));
+    // op es la letra MOSTRADA → guardar la letra ORIGINAL del banco
+    const sel = p.opciones.find((o) => o.letra === op);
+    if (!sel) return;
+    setRespuestas((r) => ({ ...r, [p.id]: sel.original }));
+  };
+
+  const toggleMarcar = (pid: string) => {
+    setMarcadas((m) => ({ ...m, [pid]: !m[pid] }));
   };
 
   const correctasHasta = preguntas.slice(0, idx + 1).filter((p) => respuestas[p.id] === p.respuesta_correcta).length;
 
-  const enviar = async () => {
+  const enviar = async (autoExpirado = false) => {
     if (!intentoId) return;
+    const now = Date.now();
+    const duracionSeg = startedAt ? Math.floor((now - startedAt) / 1000) : null;
     let correctas = 0;
     const bloqueRes: Record<string, { correctas: number; total: number }> = {};
     for (const p of preguntas) {
@@ -225,11 +297,20 @@ export default function ExamenFinal() {
         bloque_resumen: bloqueRes,
         aprobado,
         finished_at: new Date().toISOString(),
+        duracion_seg: duracionSeg,
+        tab_blur_count: tabBlurRef.current,
       })
       .eq("id", intentoId);
 
     setResultado({ correctas, calificacion: calif, aprobado, bloque_resumen: bloqueRes, intento_id: intentoId });
     setStep("result");
+
+    if (autoExpirado) {
+      toast({
+        title: "Tiempo agotado",
+        description: "El examen se envió automáticamente.",
+      });
+    }
 
     if (aprobado) {
       await emitirDiploma(intentoId);
@@ -244,7 +325,7 @@ export default function ExamenFinal() {
       });
       if (error) throw new Error(error.message);
       if (data?.error) throw new Error(data.error);
-      setDiplomaUrl(data?.download_url ?? null);
+      setDiplomaFolio(data?.folio ?? null);
       toast({ title: "🎓 Diploma emitido", description: `Folio ${data?.folio}` });
     } catch (err: any) {
       toast({ title: "Error al emitir diploma", description: err.message, variant: "destructive" });
