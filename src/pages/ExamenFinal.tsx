@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -8,7 +8,17 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Award, ArrowLeft, Download, RefreshCw, CheckCircle2, XCircle } from "lucide-react";
+import { Award, ArrowLeft, RefreshCw, CheckCircle2, XCircle, Clock, Flag, Eye } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 type Pregunta = {
   id: string;
@@ -22,6 +32,12 @@ type Pregunta = {
   justificacion: string;
 };
 
+// Pregunta con las opciones barajadas por intento (anti-trampa visual).
+// Mantenemos el mapeo letra-mostrada → letra-original para corregir.
+type PreguntaShuffled = Pregunta & {
+  opciones: { letra: "A" | "B" | "C" | "D"; texto: string; original: "A" | "B" | "C" | "D" }[];
+};
+
 const BLOQUE_LABEL: Record<string, string> = {
   marco_regulatorio: "Marco regulatorio",
   metodologia: "Metodología",
@@ -33,6 +49,8 @@ const MAX_INTENTOS = 3;
 const UMBRAL_APROBACION = 80; // %
 const TOTAL_PREGUNTAS = 20;
 const POR_BLOQUE = 5;
+const MIN_BANCO_BLOQUE = 7;
+const TIEMPO_LIMITE_SEG = 45 * 60; // 45 min
 
 function pickRandom<T>(arr: T[], n: number): T[] {
   const copy = [...arr];
@@ -41,6 +59,27 @@ function pickRandom<T>(arr: T[], n: number): T[] {
     [copy[i], copy[j]] = [copy[j], copy[i]];
   }
   return copy.slice(0, n);
+}
+
+function shuffleOpciones(p: Pregunta): PreguntaShuffled {
+  const base: Array<{ original: "A" | "B" | "C" | "D"; texto: string }> = [
+    { original: "A", texto: p.opcion_a },
+    { original: "B", texto: p.opcion_b },
+    { original: "C", texto: p.opcion_c },
+    { original: "D", texto: p.opcion_d },
+  ];
+  const mezcla = pickRandom(base, 4);
+  const letras: Array<"A" | "B" | "C" | "D"> = ["A", "B", "C", "D"];
+  return {
+    ...p,
+    opciones: mezcla.map((m, i) => ({ letra: letras[i], texto: m.texto, original: m.original })),
+  };
+}
+
+function fmtMMSS(seg: number): string {
+  const m = Math.max(0, Math.floor(seg / 60));
+  const s = Math.max(0, seg % 60);
+  return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 }
 
 export default function ExamenFinal() {
