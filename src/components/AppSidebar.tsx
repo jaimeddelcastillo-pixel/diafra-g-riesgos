@@ -21,6 +21,7 @@ const adminNavItems = [
   { title: "Tickets", url: "/admin/tickets", icon: Ticket },
   { title: "Agentes IA", url: "/admin/agentes-ia", icon: Sparkles },
   { title: "Protocolos (addon)", url: "/admin/protocolos", icon: FileBadge },
+  { title: "Recursos públicos", url: "/admin/recursos", icon: Library },
   { title: "Cursos", url: "/admin/cursos", icon: GraduationCap },
   { title: "Gestión de Folios", url: "/admin/folios", icon: FileText },
 ];
