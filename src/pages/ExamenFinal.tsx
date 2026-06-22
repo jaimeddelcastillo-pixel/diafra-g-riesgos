@@ -28,8 +28,8 @@ type Pregunta = {
   opcion_b: string;
   opcion_c: string;
   opcion_d: string;
-  respuesta_correcta: string;
-  justificacion: string;
+  // respuesta_correcta y justificacion NO se exponen al cliente durante el examen.
+  // Sólo se reciben del servidor al calificar (ver resultado.detalles).
 };
 
 // Pregunta con las opciones barajadas por intento (anti-trampa visual).
@@ -110,6 +110,19 @@ export default function ExamenFinal() {
     aprobado: boolean;
     bloque_resumen: Record<string, { correctas: number; total: number }>;
     intento_id: string;
+    detalles?: Array<{
+      id: string;
+      bloque: string;
+      pregunta: string;
+      opcion_a: string;
+      opcion_b: string;
+      opcion_c: string;
+      opcion_d: string;
+      respuesta_correcta: string;
+      justificacion: string;
+      respuesta_usuario: string | null;
+      correcta: boolean;
+    }>;
   } | null>(null);
   const [diplomaFolio, setDiplomaFolio] = useState<string | null>(null);
   const [emitiendoDiploma, setEmitiendoDiploma] = useState(false);
@@ -134,14 +147,11 @@ export default function ExamenFinal() {
       const aprobado = (prev ?? []).find((i: any) => i.aprobado);
       if (aprobado) setYaAprobo(aprobado.id);
 
-      // Validar banco por bloque (≥7 activas por bloque)
-      const { data: bank } = await supabase
-        .from("curso_evaluacion_preguntas")
-        .select("bloque, activo")
-        .eq("curso_id", cursoId)
-        .eq("activo", true);
-      const cuenta: Record<string, number> = {};
-      for (const r of (bank as any[]) ?? []) cuenta[r.bloque] = (cuenta[r.bloque] || 0) + 1;
+      // Validar banco por bloque (≥7 activas por bloque) vía RPC (no expone preguntas).
+      const { data: bank } = await (supabase as any).rpc("examen_validar_banco", {
+        p_curso_id: cursoId,
+      });
+      const cuenta: Record<string, number> = (bank as Record<string, number>) ?? {};
       const faltantes: string[] = [];
       for (const b of ["marco_regulatorio", "metodologia", "casos_practicos", "flujo_aprobacion"]) {
         if ((cuenta[b] || 0) < MIN_BANCO_BLOQUE) faltantes.push(BLOQUE_LABEL[b]);
@@ -186,67 +196,31 @@ export default function ExamenFinal() {
       });
       return;
     }
-    const { data: all, error } = await supabase
-      .from("curso_evaluacion_preguntas")
-      .select("*")
-      .eq("curso_id", cursoId)
-      .eq("activo", true);
-    if (error || !all) {
-      toast({ title: "Error", description: "No se pudieron cargar las preguntas.", variant: "destructive" });
-      return;
-    }
-    const bloques = ["marco_regulatorio", "metodologia", "casos_practicos", "flujo_aprobacion"];
-    const seleccion: Pregunta[] = [];
-    for (const b of bloques) {
-      const enBloque = (all as any[]).filter((p) => p.bloque === b);
-      if (enBloque.length < MIN_BANCO_BLOQUE) {
-        toast({
-          title: "Banco insuficiente",
-          description: `El bloque "${BLOQUE_LABEL[b]}" necesita al menos ${MIN_BANCO_BLOQUE} preguntas activas.`,
-          variant: "destructive",
-        });
-        return;
-      }
-      seleccion.push(...pickRandom(enBloque, POR_BLOQUE));
-    }
-    if (seleccion.length < TOTAL_PREGUNTAS) {
+    // El servidor selecciona las 20 preguntas aleatorias (5 por bloque), crea el intento
+    // y devuelve las preguntas SIN respuesta correcta ni justificación.
+    const { data, error } = await (supabase as any).rpc("examen_iniciar", {
+      p_curso_id: cursoId,
+    });
+    if (error || !data) {
       toast({
-        title: "Banco de preguntas incompleto",
-        description: `Se requieren al menos ${POR_BLOQUE} preguntas por bloque (${TOTAL_PREGUNTAS} en total).`,
+        title: "Error",
+        description: error?.message ?? "No se pudo iniciar la evaluación.",
         variant: "destructive",
       });
       return;
     }
-
-    // Barajar también el orden global de las 20 preguntas
-    const seleccionMezclada = pickRandom(seleccion, seleccion.length);
-    const shuffled = seleccionMezclada.map(shuffleOpciones);
-
-    // Crear intento
-    const { data: orgMember } = await supabase
-      .from("org_members")
-      .select("org_id")
-      .eq("user_id", user.id)
-      .maybeSingle();
-
-    const { data: nuevo, error: errIns } = await supabase
-      .from("curso_examen_intentos")
-      .insert({
-        user_id: user.id,
-        org_id: (orgMember as any)?.org_id ?? null,
-        curso_id: cursoId,
-        num_intento: numIntentoPrevio + 1,
-        preguntas_ids: shuffled.map((p) => p.id),
-        total: TOTAL_PREGUNTAS,
-        tiempo_limite_seg: TIEMPO_LIMITE_SEG,
-      })
-      .select()
-      .single();
-    if (errIns) {
-      toast({ title: "Error", description: errIns.message, variant: "destructive" });
+    const preguntasSrv: Pregunta[] = (data.preguntas as Pregunta[]) ?? [];
+    if (preguntasSrv.length < TOTAL_PREGUNTAS) {
+      toast({
+        title: "Banco insuficiente",
+        description: `Se requieren al menos ${POR_BLOQUE} preguntas activas por bloque.`,
+        variant: "destructive",
+      });
       return;
     }
-    setIntentoId(nuevo.id);
+    // Barajar localmente el orden de opciones de cada pregunta (anti-trampa visual).
+    const shuffled = preguntasSrv.map(shuffleOpciones);
+    setIntentoId(data.intento_id as string);
     setPreguntas(shuffled);
     setRespuestas({});
     setMarcadas({});
@@ -269,40 +243,35 @@ export default function ExamenFinal() {
     setMarcadas((m) => ({ ...m, [pid]: !m[pid] }));
   };
 
-  const correctasHasta = preguntas.slice(0, idx + 1).filter((p) => respuestas[p.id] === p.respuesta_correcta).length;
-
   const enviar = async (autoExpirado = false) => {
     if (!intentoId) return;
     const now = Date.now();
     const duracionSeg = startedAt ? Math.floor((now - startedAt) / 1000) : null;
-    let correctas = 0;
-    const bloqueRes: Record<string, { correctas: number; total: number }> = {};
-    for (const p of preguntas) {
-      const r = respuestas[p.id];
-      const ok = r === p.respuesta_correcta;
-      if (ok) correctas++;
-      bloqueRes[p.bloque] = bloqueRes[p.bloque] || { correctas: 0, total: 0 };
-      bloqueRes[p.bloque].total++;
-      if (ok) bloqueRes[p.bloque].correctas++;
+    // Calificación server-side
+    const { data, error } = await (supabase as any).rpc("examen_calificar", {
+      p_intento_id: intentoId,
+      p_respuestas: respuestas,
+      p_duracion_seg: duracionSeg,
+      p_tab_blur_count: tabBlurRef.current,
+    });
+    if (error || !data) {
+      toast({
+        title: "Error al enviar",
+        description: error?.message ?? "No se pudo calificar el examen.",
+        variant: "destructive",
+      });
+      return;
     }
-    const calif = (correctas / TOTAL_PREGUNTAS) * 100;
-    const aprobado = calif >= UMBRAL_APROBACION;
-
-    await supabase
-      .from("curso_examen_intentos")
-      .update({
-        respuestas: respuestas,
-        correctas,
-        calificacion: calif,
-        bloque_resumen: bloqueRes,
-        aprobado,
-        finished_at: new Date().toISOString(),
-        duracion_seg: duracionSeg,
-        tab_blur_count: tabBlurRef.current,
-      })
-      .eq("id", intentoId);
-
-    setResultado({ correctas, calificacion: calif, aprobado, bloque_resumen: bloqueRes, intento_id: intentoId });
+    const calif = Number(data.calificacion) || 0;
+    const aprobado = !!data.aprobado;
+    setResultado({
+      correctas: data.correctas ?? 0,
+      calificacion: calif,
+      aprobado,
+      bloque_resumen: (data.bloque_resumen as any) ?? {},
+      intento_id: intentoId,
+      detalles: data.detalles ?? [],
+    });
     setStep("result");
 
     if (autoExpirado) {
