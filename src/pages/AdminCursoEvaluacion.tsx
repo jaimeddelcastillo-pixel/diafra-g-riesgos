@@ -111,6 +111,171 @@ export default function AdminCursoEvaluacion() {
     setPreguntas((prev) => prev.map((x) => (x.id === pid ? { ...x, ...patch } : x)));
   };
 
+  // ─── Importador JSON / CSV ─────────────────────────────────────────────
+  const [importOpen, setImportOpen] = useState(false);
+  const [importMode, setImportMode] = useState<"append" | "replace">("append");
+  const [importFormat, setImportFormat] = useState<"json" | "csv">("json");
+  const [importText, setImportText] = useState("");
+  const [importPreview, setImportPreview] = useState<Array<Omit<Pregunta, "id" | "curso_id" | "orden" | "activo">> | null>(null);
+  const [importError, setImportError] = useState<string | null>(null);
+  const [importing, setImporting] = useState(false);
+
+  const PLANTILLA_JSON = JSON.stringify(
+    [
+      {
+        bloque: "marco_regulatorio",
+        pregunta: "¿Qué norma sustituye a la NOM-241-SSA1-2012 a partir de 2025?",
+        opcion_a: "NOM-059-SSA1-2015",
+        opcion_b: "NOM-241-SSA1-2025",
+        opcion_c: "ISO 13485:2016",
+        opcion_d: "FEUM 12.0",
+        respuesta_correcta: "B",
+        justificacion: "La NOM-241-SSA1-2025 sustituye a su versión 2012 para BPF de dispositivos médicos.",
+      },
+    ],
+    null,
+    2,
+  );
+  const PLANTILLA_CSV =
+    "bloque,pregunta,A,B,C,D,correcta,justificacion\n" +
+    'marco_regulatorio,"¿Qué norma sustituye a la NOM-241-SSA1-2012?","NOM-059","NOM-241-SSA1-2025","ISO 13485","FEUM 12.0",B,"Sustituye a la versión 2012."';
+
+  // Parser CSV con soporte de comillas dobles
+  function parseCSV(text: string): string[][] {
+    const rows: string[][] = [];
+    let cur: string[] = [];
+    let field = "";
+    let inQuotes = false;
+    for (let i = 0; i < text.length; i++) {
+      const c = text[i];
+      if (inQuotes) {
+        if (c === '"') {
+          if (text[i + 1] === '"') { field += '"'; i++; } else { inQuotes = false; }
+        } else { field += c; }
+      } else {
+        if (c === '"') inQuotes = true;
+        else if (c === ",") { cur.push(field); field = ""; }
+        else if (c === "\n" || c === "\r") {
+          if (field !== "" || cur.length) { cur.push(field); rows.push(cur); cur = []; field = ""; }
+          if (c === "\r" && text[i + 1] === "\n") i++;
+        } else { field += c; }
+      }
+    }
+    if (field !== "" || cur.length) { cur.push(field); rows.push(cur); }
+    return rows.filter((r) => r.some((x) => x.trim() !== ""));
+  }
+
+  function validarItem(it: any, idx: number): string | null {
+    if (!it || typeof it !== "object") return `Fila ${idx + 1}: formato inválido`;
+    if (!BLOQUES_SET.has(it.bloque)) return `Fila ${idx + 1}: bloque inválido "${it.bloque}"`;
+    if (!String(it.pregunta || "").trim()) return `Fila ${idx + 1}: pregunta vacía`;
+    for (const k of ["opcion_a", "opcion_b", "opcion_c", "opcion_d"]) {
+      if (!String(it[k] || "").trim()) return `Fila ${idx + 1}: ${k} vacía`;
+    }
+    if (!["A", "B", "C", "D"].includes(it.respuesta_correcta))
+      return `Fila ${idx + 1}: respuesta_correcta debe ser A, B, C o D`;
+    return null;
+  }
+
+  const generarPreview = () => {
+    setImportError(null);
+    setImportPreview(null);
+    try {
+      let items: any[] = [];
+      if (importFormat === "json") {
+        const parsed = JSON.parse(importText);
+        if (!Array.isArray(parsed)) throw new Error("El JSON debe ser un arreglo");
+        items = parsed;
+      } else {
+        const rows = parseCSV(importText);
+        if (rows.length < 2) throw new Error("CSV vacío o sin filas");
+        const header = rows[0].map((h) => h.trim().toLowerCase());
+        const need = ["bloque", "pregunta", "a", "b", "c", "d", "correcta", "justificacion"];
+        for (const n of need) {
+          if (!header.includes(n)) throw new Error(`Falta columna "${n}" en encabezado`);
+        }
+        const idx = (k: string) => header.indexOf(k);
+        items = rows.slice(1).map((r) => ({
+          bloque: r[idx("bloque")]?.trim(),
+          pregunta: r[idx("pregunta")]?.trim(),
+          opcion_a: r[idx("a")]?.trim(),
+          opcion_b: r[idx("b")]?.trim(),
+          opcion_c: r[idx("c")]?.trim(),
+          opcion_d: r[idx("d")]?.trim(),
+          respuesta_correcta: r[idx("correcta")]?.trim().toUpperCase(),
+          justificacion: r[idx("justificacion")]?.trim() ?? "",
+        }));
+      }
+      for (let i = 0; i < items.length; i++) {
+        const err = validarItem(items[i], i);
+        if (err) throw new Error(err);
+      }
+      // Duplicados de enunciado dentro del lote
+      const enunciados = new Set<string>();
+      for (let i = 0; i < items.length; i++) {
+        const e = items[i].pregunta.trim().toLowerCase();
+        if (enunciados.has(e)) throw new Error(`Fila ${i + 1}: pregunta duplicada`);
+        enunciados.add(e);
+      }
+      setImportPreview(items.map((it) => ({
+        bloque: it.bloque,
+        pregunta: it.pregunta.trim(),
+        opcion_a: it.opcion_a.trim(),
+        opcion_b: it.opcion_b.trim(),
+        opcion_c: it.opcion_c.trim(),
+        opcion_d: it.opcion_d.trim(),
+        respuesta_correcta: it.respuesta_correcta,
+        justificacion: String(it.justificacion ?? "").trim(),
+      })));
+    } catch (e: any) {
+      setImportError(e.message ?? "Error al procesar el contenido");
+    }
+  };
+
+  const confirmarImport = async () => {
+    if (!importPreview || !id) return;
+    setImporting(true);
+    try {
+      if (importMode === "replace") {
+        const { error: delErr } = await (supabase as any)
+          .from("curso_evaluacion_preguntas")
+          .delete()
+          .eq("curso_id", id);
+        if (delErr) throw new Error(delErr.message);
+      }
+      const baseOrden = importMode === "replace"
+        ? 0
+        : (preguntas[preguntas.length - 1]?.orden ?? 0);
+      const rows = importPreview.map((p, i) => ({
+        curso_id: id,
+        bloque: p.bloque,
+        pregunta: p.pregunta,
+        opcion_a: p.opcion_a,
+        opcion_b: p.opcion_b,
+        opcion_c: p.opcion_c,
+        opcion_d: p.opcion_d,
+        respuesta_correcta: p.respuesta_correcta,
+        justificacion: p.justificacion,
+        orden: baseOrden + i + 1,
+        activo: true,
+      }));
+      const { error: insErr } = await (supabase as any)
+        .from("curso_evaluacion_preguntas")
+        .insert(rows);
+      if (insErr) throw new Error(insErr.message);
+      toast.success(`${rows.length} pregunta(s) importada(s)`);
+      setImportOpen(false);
+      setImportText("");
+      setImportPreview(null);
+      setImportError(null);
+      fetchAll();
+    } catch (e: any) {
+      setImportError(e.message ?? "Error al importar");
+    } finally {
+      setImporting(false);
+    }
+  };
+
   return (
     <div className="container mx-auto p-6 space-y-6">
       <Button variant="ghost" size="sm" onClick={() => navigate("/admin/cursos")}>
