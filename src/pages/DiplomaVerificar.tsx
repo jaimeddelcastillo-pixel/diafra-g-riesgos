@@ -23,12 +23,9 @@ export default function DiplomaVerificar() {
   useEffect(() => {
     if (!hash) return;
     (async () => {
-      const { data } = await supabase
-        .from("curso_diplomas")
-        .select("folio, alumno_nombre, curso_titulo, curso_norma, fecha_emision, calificacion")
-        .eq("hash_verificacion", hash)
-        .maybeSingle();
-      setDip((data as any) ?? null);
+      const { data } = await supabase.rpc("verificar_diploma", { p_hash: hash });
+      const row = Array.isArray(data) ? data[0] : null;
+      setDip((row as any) ?? null);
       setLoading(false);
     })();
   }, [hash]);
