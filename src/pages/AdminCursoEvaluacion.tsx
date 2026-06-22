@@ -10,16 +10,31 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Plus, Trash2, Save } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Save, Upload } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "sonner";
 
-const META = 20;
+// Banco mínimo por bloque (anti-trampa por sorteo): se cargan 7-8 por bloque
+// y el examen sortea 5 por bloque en cada intento.
+const MIN_POR_BLOQUE = 7;
+const POR_BLOQUE_EXAMEN = 5;
+const META = MIN_POR_BLOQUE * 4; // 28
 const BLOQUES = [
   { v: "marco_regulatorio", l: "Marco regulatorio" },
   { v: "metodologia", l: "Metodología" },
   { v: "casos_practicos", l: "Casos prácticos" },
   { v: "flujo_aprobacion", l: "Flujo de aprobación" },
 ];
+const BLOQUES_SET = new Set(BLOQUES.map((b) => b.v));
 
 type Pregunta = {
   id: string;
@@ -61,7 +76,11 @@ export default function AdminCursoEvaluacion() {
   if (load) return <div className="p-6 text-sm text-muted-foreground">Cargando...</div>;
 
   const activas = preguntas.filter((p) => p.activo).length;
-  const completo = activas >= META;
+  const porBloque = BLOQUES.map((b) => ({
+    ...b,
+    n: preguntas.filter((p) => p.activo && p.bloque === b.v).length,
+  }));
+  const completo = porBloque.every((b) => b.n >= MIN_POR_BLOQUE);
 
   const agregar = async () => {
     const nextOrden = (preguntas[preguntas.length - 1]?.orden ?? 0) + 1;
@@ -92,6 +111,171 @@ export default function AdminCursoEvaluacion() {
     setPreguntas((prev) => prev.map((x) => (x.id === pid ? { ...x, ...patch } : x)));
   };
 
+  // ─── Importador JSON / CSV ─────────────────────────────────────────────
+  const [importOpen, setImportOpen] = useState(false);
+  const [importMode, setImportMode] = useState<"append" | "replace">("append");
+  const [importFormat, setImportFormat] = useState<"json" | "csv">("json");
+  const [importText, setImportText] = useState("");
+  const [importPreview, setImportPreview] = useState<Array<Omit<Pregunta, "id" | "curso_id" | "orden" | "activo">> | null>(null);
+  const [importError, setImportError] = useState<string | null>(null);
+  const [importing, setImporting] = useState(false);
+
+  const PLANTILLA_JSON = JSON.stringify(
+    [
+      {
+        bloque: "marco_regulatorio",
+        pregunta: "¿Qué norma sustituye a la NOM-241-SSA1-2012 a partir de 2025?",
+        opcion_a: "NOM-059-SSA1-2015",
+        opcion_b: "NOM-241-SSA1-2025",
+        opcion_c: "ISO 13485:2016",
+        opcion_d: "FEUM 12.0",
+        respuesta_correcta: "B",
+        justificacion: "La NOM-241-SSA1-2025 sustituye a su versión 2012 para BPF de dispositivos médicos.",
+      },
+    ],
+    null,
+    2,
+  );
+  const PLANTILLA_CSV =
+    "bloque,pregunta,A,B,C,D,correcta,justificacion\n" +
+    'marco_regulatorio,"¿Qué norma sustituye a la NOM-241-SSA1-2012?","NOM-059","NOM-241-SSA1-2025","ISO 13485","FEUM 12.0",B,"Sustituye a la versión 2012."';
+
+  // Parser CSV con soporte de comillas dobles
+  function parseCSV(text: string): string[][] {
+    const rows: string[][] = [];
+    let cur: string[] = [];
+    let field = "";
+    let inQuotes = false;
+    for (let i = 0; i < text.length; i++) {
+      const c = text[i];
+      if (inQuotes) {
+        if (c === '"') {
+          if (text[i + 1] === '"') { field += '"'; i++; } else { inQuotes = false; }
+        } else { field += c; }
+      } else {
+        if (c === '"') inQuotes = true;
+        else if (c === ",") { cur.push(field); field = ""; }
+        else if (c === "\n" || c === "\r") {
+          if (field !== "" || cur.length) { cur.push(field); rows.push(cur); cur = []; field = ""; }
+          if (c === "\r" && text[i + 1] === "\n") i++;
+        } else { field += c; }
+      }
+    }
+    if (field !== "" || cur.length) { cur.push(field); rows.push(cur); }
+    return rows.filter((r) => r.some((x) => x.trim() !== ""));
+  }
+
+  function validarItem(it: any, idx: number): string | null {
+    if (!it || typeof it !== "object") return `Fila ${idx + 1}: formato inválido`;
+    if (!BLOQUES_SET.has(it.bloque)) return `Fila ${idx + 1}: bloque inválido "${it.bloque}"`;
+    if (!String(it.pregunta || "").trim()) return `Fila ${idx + 1}: pregunta vacía`;
+    for (const k of ["opcion_a", "opcion_b", "opcion_c", "opcion_d"]) {
+      if (!String(it[k] || "").trim()) return `Fila ${idx + 1}: ${k} vacía`;
+    }
+    if (!["A", "B", "C", "D"].includes(it.respuesta_correcta))
+      return `Fila ${idx + 1}: respuesta_correcta debe ser A, B, C o D`;
+    return null;
+  }
+
+  const generarPreview = () => {
+    setImportError(null);
+    setImportPreview(null);
+    try {
+      let items: any[] = [];
+      if (importFormat === "json") {
+        const parsed = JSON.parse(importText);
+        if (!Array.isArray(parsed)) throw new Error("El JSON debe ser un arreglo");
+        items = parsed;
+      } else {
+        const rows = parseCSV(importText);
+        if (rows.length < 2) throw new Error("CSV vacío o sin filas");
+        const header = rows[0].map((h) => h.trim().toLowerCase());
+        const need = ["bloque", "pregunta", "a", "b", "c", "d", "correcta", "justificacion"];
+        for (const n of need) {
+          if (!header.includes(n)) throw new Error(`Falta columna "${n}" en encabezado`);
+        }
+        const idx = (k: string) => header.indexOf(k);
+        items = rows.slice(1).map((r) => ({
+          bloque: r[idx("bloque")]?.trim(),
+          pregunta: r[idx("pregunta")]?.trim(),
+          opcion_a: r[idx("a")]?.trim(),
+          opcion_b: r[idx("b")]?.trim(),
+          opcion_c: r[idx("c")]?.trim(),
+          opcion_d: r[idx("d")]?.trim(),
+          respuesta_correcta: r[idx("correcta")]?.trim().toUpperCase(),
+          justificacion: r[idx("justificacion")]?.trim() ?? "",
+        }));
+      }
+      for (let i = 0; i < items.length; i++) {
+        const err = validarItem(items[i], i);
+        if (err) throw new Error(err);
+      }
+      // Duplicados de enunciado dentro del lote
+      const enunciados = new Set<string>();
+      for (let i = 0; i < items.length; i++) {
+        const e = items[i].pregunta.trim().toLowerCase();
+        if (enunciados.has(e)) throw new Error(`Fila ${i + 1}: pregunta duplicada`);
+        enunciados.add(e);
+      }
+      setImportPreview(items.map((it) => ({
+        bloque: it.bloque,
+        pregunta: it.pregunta.trim(),
+        opcion_a: it.opcion_a.trim(),
+        opcion_b: it.opcion_b.trim(),
+        opcion_c: it.opcion_c.trim(),
+        opcion_d: it.opcion_d.trim(),
+        respuesta_correcta: it.respuesta_correcta,
+        justificacion: String(it.justificacion ?? "").trim(),
+      })));
+    } catch (e: any) {
+      setImportError(e.message ?? "Error al procesar el contenido");
+    }
+  };
+
+  const confirmarImport = async () => {
+    if (!importPreview || !id) return;
+    setImporting(true);
+    try {
+      if (importMode === "replace") {
+        const { error: delErr } = await (supabase as any)
+          .from("curso_evaluacion_preguntas")
+          .delete()
+          .eq("curso_id", id);
+        if (delErr) throw new Error(delErr.message);
+      }
+      const baseOrden = importMode === "replace"
+        ? 0
+        : (preguntas[preguntas.length - 1]?.orden ?? 0);
+      const rows = importPreview.map((p, i) => ({
+        curso_id: id,
+        bloque: p.bloque,
+        pregunta: p.pregunta,
+        opcion_a: p.opcion_a,
+        opcion_b: p.opcion_b,
+        opcion_c: p.opcion_c,
+        opcion_d: p.opcion_d,
+        respuesta_correcta: p.respuesta_correcta,
+        justificacion: p.justificacion,
+        orden: baseOrden + i + 1,
+        activo: true,
+      }));
+      const { error: insErr } = await (supabase as any)
+        .from("curso_evaluacion_preguntas")
+        .insert(rows);
+      if (insErr) throw new Error(insErr.message);
+      toast.success(`${rows.length} pregunta(s) importada(s)`);
+      setImportOpen(false);
+      setImportText("");
+      setImportPreview(null);
+      setImportError(null);
+      fetchAll();
+    } catch (e: any) {
+      setImportError(e.message ?? "Error al importar");
+    } finally {
+      setImporting(false);
+    }
+  };
+
   return (
     <div className="container mx-auto p-6 space-y-6">
       <Button variant="ghost" size="sm" onClick={() => navigate("/admin/cursos")}>
@@ -100,7 +284,9 @@ export default function AdminCursoEvaluacion() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold">Evaluación · {cursoNorma}</h1>
-          <p className="text-sm text-muted-foreground">Banco de preguntas del examen final.</p>
+          <p className="text-sm text-muted-foreground">
+            Banco de preguntas del examen final. En cada intento se sortean {POR_BLOQUE_EXAMEN} por bloque ({POR_BLOQUE_EXAMEN * 4} en total).
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <Badge
@@ -111,17 +297,41 @@ export default function AdminCursoEvaluacion() {
                 : "bg-yellow-500/15 text-yellow-700 dark:text-yellow-400 border-yellow-500/30"
             }
           >
-            {activas} de {META} preguntas cargadas
+            {activas} preguntas activas · mínimo {META}
           </Badge>
           {completo ? (
-            <Badge className="bg-emerald-500 text-white">Evaluación completa</Badge>
+            <Badge className="bg-emerald-500 text-white">Evaluación lista</Badge>
           ) : (
             <Badge variant="outline" className="border-yellow-500/40 text-yellow-700 dark:text-yellow-400">
-              Faltan {META - activas}
+              Faltan bloques por completar
             </Badge>
           )}
+          <Button size="sm" variant="outline" onClick={() => setImportOpen(true)}>
+            <Upload className="h-4 w-4 mr-2" /> Importar
+          </Button>
           <Button size="sm" onClick={agregar}><Plus className="h-4 w-4 mr-2" /> Agregar pregunta</Button>
         </div>
+      </div>
+
+      {/* Contador por bloque */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+        {porBloque.map((b) => {
+          const ok = b.n >= MIN_POR_BLOQUE;
+          const warn = b.n >= POR_BLOQUE_EXAMEN && b.n < MIN_POR_BLOQUE;
+          const cls = ok
+            ? "border-emerald-500/40 bg-emerald-500/5 text-emerald-700 dark:text-emerald-400"
+            : warn
+              ? "border-yellow-500/40 bg-yellow-500/5 text-yellow-700 dark:text-yellow-400"
+              : "border-destructive/40 bg-destructive/5 text-destructive";
+          return (
+            <div key={b.v} className={`rounded border px-3 py-2 text-xs ${cls}`}>
+              <div className="font-semibold">{b.l}</div>
+              <div className="text-[11px] opacity-80">
+                {b.n} / {MIN_POR_BLOQUE} activas {ok ? "✓" : warn ? "· faltan para sortear sin repetir" : `· faltan ${MIN_POR_BLOQUE - b.n}`}
+              </div>
+            </div>
+          );
+        })}
       </div>
 
       {preguntas.length === 0 && (
@@ -187,6 +397,123 @@ export default function AdminCursoEvaluacion() {
           </CardContent>
         </Card>
       ))}
+
+      {/* ─── Modal Importar ──────────────────────────────────────────── */}
+      <Dialog open={importOpen} onOpenChange={setImportOpen}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Importar preguntas</DialogTitle>
+            <DialogDescription>
+              Pega un arreglo JSON o un CSV con las preguntas. Bloques válidos: marco_regulatorio, metodologia, casos_practicos, flujo_aprobacion.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label className="text-xs">Formato</Label>
+                <RadioGroup
+                  value={importFormat}
+                  onValueChange={(v) => { setImportFormat(v as any); setImportPreview(null); setImportError(null); }}
+                  className="flex gap-4 mt-1"
+                >
+                  <label className="flex items-center gap-2 text-sm">
+                    <RadioGroupItem value="json" /> JSON
+                  </label>
+                  <label className="flex items-center gap-2 text-sm">
+                    <RadioGroupItem value="csv" /> CSV
+                  </label>
+                </RadioGroup>
+              </div>
+              <div>
+                <Label className="text-xs">Modo</Label>
+                <RadioGroup
+                  value={importMode}
+                  onValueChange={(v) => setImportMode(v as any)}
+                  className="flex gap-4 mt-1"
+                >
+                  <label className="flex items-center gap-2 text-sm">
+                    <RadioGroupItem value="append" /> Agregar al banco
+                  </label>
+                  <label className="flex items-center gap-2 text-sm">
+                    <RadioGroupItem value="replace" /> Reemplazar banco
+                  </label>
+                </RadioGroup>
+              </div>
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <Label className="text-xs">Contenido ({importFormat.toUpperCase()})</Label>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  className="h-6 text-xs"
+                  onClick={() => setImportText(importFormat === "json" ? PLANTILLA_JSON : PLANTILLA_CSV)}
+                >
+                  Cargar plantilla
+                </Button>
+              </div>
+              <Textarea
+                value={importText}
+                onChange={(e) => { setImportText(e.target.value); setImportPreview(null); setImportError(null); }}
+                rows={10}
+                className="font-mono text-xs"
+                placeholder={importFormat === "json" ? PLANTILLA_JSON : PLANTILLA_CSV}
+              />
+            </div>
+
+            {importError && (
+              <div className="rounded border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive">
+                {importError}
+              </div>
+            )}
+
+            {importPreview && (
+              <div className="rounded border bg-muted/30 p-3 space-y-2">
+                <div className="text-sm font-semibold">
+                  Vista previa: {importPreview.length} pregunta(s)
+                </div>
+                <div className="flex flex-wrap gap-2 text-xs">
+                  {BLOQUES.map((b) => {
+                    const c = importPreview.filter((p) => p.bloque === b.v).length;
+                    return (
+                      <Badge key={b.v} variant="outline">{b.l}: {c}</Badge>
+                    );
+                  })}
+                </div>
+                <div className="max-h-48 overflow-y-auto space-y-1 text-xs">
+                  {importPreview.slice(0, 10).map((p, i) => (
+                    <div key={i} className="truncate">
+                      <span className="font-semibold">{i + 1}.</span> [{p.bloque}] {p.pregunta}{" "}
+                      <span className="text-muted-foreground">→ {p.respuesta_correcta}</span>
+                    </div>
+                  ))}
+                  {importPreview.length > 10 && (
+                    <div className="text-muted-foreground">… y {importPreview.length - 10} más</div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setImportOpen(false)} disabled={importing}>
+              Cancelar
+            </Button>
+            {!importPreview ? (
+              <Button onClick={generarPreview} disabled={!importText.trim()}>
+                Validar
+              </Button>
+            ) : (
+              <Button onClick={confirmarImport} disabled={importing}>
+                {importing ? "Importando…" : `Importar ${importPreview.length}`}
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -8,7 +8,17 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Award, ArrowLeft, Download, RefreshCw, CheckCircle2, XCircle } from "lucide-react";
+import { Award, ArrowLeft, RefreshCw, CheckCircle2, XCircle, Clock, Flag, Eye } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 type Pregunta = {
   id: string;
@@ -22,6 +32,12 @@ type Pregunta = {
   justificacion: string;
 };
 
+// Pregunta con las opciones barajadas por intento (anti-trampa visual).
+// Mantenemos el mapeo letra-mostrada → letra-original para corregir.
+type PreguntaShuffled = Pregunta & {
+  opciones: { letra: "A" | "B" | "C" | "D"; texto: string; original: "A" | "B" | "C" | "D" }[];
+};
+
 const BLOQUE_LABEL: Record<string, string> = {
   marco_regulatorio: "Marco regulatorio",
   metodologia: "Metodología",
@@ -33,6 +49,8 @@ const MAX_INTENTOS = 3;
 const UMBRAL_APROBACION = 80; // %
 const TOTAL_PREGUNTAS = 20;
 const POR_BLOQUE = 5;
+const MIN_BANCO_BLOQUE = 7;
+const TIEMPO_LIMITE_SEG = 45 * 60; // 45 min
 
 function pickRandom<T>(arr: T[], n: number): T[] {
   const copy = [...arr];
@@ -41,6 +59,27 @@ function pickRandom<T>(arr: T[], n: number): T[] {
     [copy[i], copy[j]] = [copy[j], copy[i]];
   }
   return copy.slice(0, n);
+}
+
+function shuffleOpciones(p: Pregunta): PreguntaShuffled {
+  const base: Array<{ original: "A" | "B" | "C" | "D"; texto: string }> = [
+    { original: "A", texto: p.opcion_a },
+    { original: "B", texto: p.opcion_b },
+    { original: "C", texto: p.opcion_c },
+    { original: "D", texto: p.opcion_d },
+  ];
+  const mezcla = pickRandom(base, 4);
+  const letras: Array<"A" | "B" | "C" | "D"> = ["A", "B", "C", "D"];
+  return {
+    ...p,
+    opciones: mezcla.map((m, i) => ({ letra: letras[i], texto: m.texto, original: m.original })),
+  };
+}
+
+function fmtMMSS(seg: number): string {
+  const m = Math.max(0, Math.floor(seg / 60));
+  const s = Math.max(0, seg % 60);
+  return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 }
 
 export default function ExamenFinal() {
@@ -53,11 +92,18 @@ export default function ExamenFinal() {
   const [curso, setCurso] = useState<{ id: string; titulo: string; norma: string } | null>(null);
   const [numIntentoPrevio, setNumIntentoPrevio] = useState(0);
   const [yaAprobo, setYaAprobo] = useState<string | null>(null); // intento_id si ya aprobó
+  const [bancoOk, setBancoOk] = useState<{ ok: boolean; faltantes: string[] }>({ ok: true, faltantes: [] });
   const [step, setStep] = useState<"intro" | "exam" | "result">("intro");
-  const [preguntas, setPreguntas] = useState<Pregunta[]>([]);
+  const [preguntas, setPreguntas] = useState<PreguntaShuffled[]>([]);
   const [idx, setIdx] = useState(0);
+  // respuesta guardada como la letra ORIGINAL de la pregunta (A-D del banco)
   const [respuestas, setRespuestas] = useState<Record<string, string>>({});
+  const [marcadas, setMarcadas] = useState<Record<string, boolean>>({});
   const [intentoId, setIntentoId] = useState<string | null>(null);
+  const [startedAt, setStartedAt] = useState<number | null>(null);
+  const [tiempoRestante, setTiempoRestante] = useState<number>(TIEMPO_LIMITE_SEG);
+  const [confirmarEnviar, setConfirmarEnviar] = useState(false);
+  const tabBlurRef = useRef(0);
   const [resultado, setResultado] = useState<{
     correctas: number;
     calificacion: number;
@@ -65,7 +111,7 @@ export default function ExamenFinal() {
     bloque_resumen: Record<string, { correctas: number; total: number }>;
     intento_id: string;
   } | null>(null);
-  const [diplomaUrl, setDiplomaUrl] = useState<string | null>(null);
+  const [diplomaFolio, setDiplomaFolio] = useState<string | null>(null);
   const [emitiendoDiploma, setEmitiendoDiploma] = useState(false);
 
   useEffect(() => {
@@ -88,12 +134,58 @@ export default function ExamenFinal() {
       const aprobado = (prev ?? []).find((i: any) => i.aprobado);
       if (aprobado) setYaAprobo(aprobado.id);
 
+      // Validar banco por bloque (≥7 activas por bloque)
+      const { data: bank } = await supabase
+        .from("curso_evaluacion_preguntas")
+        .select("bloque, activo")
+        .eq("curso_id", cursoId)
+        .eq("activo", true);
+      const cuenta: Record<string, number> = {};
+      for (const r of (bank as any[]) ?? []) cuenta[r.bloque] = (cuenta[r.bloque] || 0) + 1;
+      const faltantes: string[] = [];
+      for (const b of ["marco_regulatorio", "metodologia", "casos_practicos", "flujo_aprobacion"]) {
+        if ((cuenta[b] || 0) < MIN_BANCO_BLOQUE) faltantes.push(BLOQUE_LABEL[b]);
+      }
+      setBancoOk({ ok: faltantes.length === 0, faltantes });
+
       setLoading(false);
     })();
   }, [cursoId, user]);
 
+  // Temporizador
+  useEffect(() => {
+    if (step !== "exam" || !startedAt) return;
+    const t = setInterval(() => {
+      const elapsed = Math.floor((Date.now() - startedAt) / 1000);
+      const restante = TIEMPO_LIMITE_SEG - elapsed;
+      setTiempoRestante(restante);
+      if (restante <= 0) {
+        clearInterval(t);
+        enviar(true);
+      }
+    }, 1000);
+    return () => clearInterval(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, startedAt]);
+
+  // Anti-trampa: contar cambios de pestaña/ventana
+  useEffect(() => {
+    if (step !== "exam") return;
+    const onBlur = () => { if (document.hidden) tabBlurRef.current += 1; };
+    document.addEventListener("visibilitychange", onBlur);
+    return () => document.removeEventListener("visibilitychange", onBlur);
+  }, [step]);
+
   const iniciarExamen = async () => {
     if (!cursoId || !user) return;
+    if (!bancoOk.ok) {
+      toast({
+        title: "Banco incompleto",
+        description: `Faltan preguntas activas en: ${bancoOk.faltantes.join(", ")}.`,
+        variant: "destructive",
+      });
+      return;
+    }
     const { data: all, error } = await supabase
       .from("curso_evaluacion_preguntas")
       .select("*")
@@ -107,6 +199,14 @@ export default function ExamenFinal() {
     const seleccion: Pregunta[] = [];
     for (const b of bloques) {
       const enBloque = (all as any[]).filter((p) => p.bloque === b);
+      if (enBloque.length < MIN_BANCO_BLOQUE) {
+        toast({
+          title: "Banco insuficiente",
+          description: `El bloque "${BLOQUE_LABEL[b]}" necesita al menos ${MIN_BANCO_BLOQUE} preguntas activas.`,
+          variant: "destructive",
+        });
+        return;
+      }
       seleccion.push(...pickRandom(enBloque, POR_BLOQUE));
     }
     if (seleccion.length < TOTAL_PREGUNTAS) {
@@ -117,6 +217,10 @@ export default function ExamenFinal() {
       });
       return;
     }
+
+    // Barajar también el orden global de las 20 preguntas
+    const seleccionMezclada = pickRandom(seleccion, seleccion.length);
+    const shuffled = seleccionMezclada.map(shuffleOpciones);
 
     // Crear intento
     const { data: orgMember } = await supabase
@@ -132,8 +236,9 @@ export default function ExamenFinal() {
         org_id: (orgMember as any)?.org_id ?? null,
         curso_id: cursoId,
         num_intento: numIntentoPrevio + 1,
-        preguntas_ids: seleccion.map((p) => p.id),
+        preguntas_ids: shuffled.map((p) => p.id),
         total: TOTAL_PREGUNTAS,
+        tiempo_limite_seg: TIEMPO_LIMITE_SEG,
       })
       .select()
       .single();
@@ -142,21 +247,34 @@ export default function ExamenFinal() {
       return;
     }
     setIntentoId(nuevo.id);
-    setPreguntas(seleccion);
+    setPreguntas(shuffled);
     setRespuestas({});
+    setMarcadas({});
     setIdx(0);
+    tabBlurRef.current = 0;
+    setStartedAt(Date.now());
+    setTiempoRestante(TIEMPO_LIMITE_SEG);
     setStep("exam");
   };
 
   const responder = (op: string) => {
     const p = preguntas[idx];
-    setRespuestas((r) => ({ ...r, [p.id]: op }));
+    // op es la letra MOSTRADA → guardar la letra ORIGINAL del banco
+    const sel = p.opciones.find((o) => o.letra === op);
+    if (!sel) return;
+    setRespuestas((r) => ({ ...r, [p.id]: sel.original }));
+  };
+
+  const toggleMarcar = (pid: string) => {
+    setMarcadas((m) => ({ ...m, [pid]: !m[pid] }));
   };
 
   const correctasHasta = preguntas.slice(0, idx + 1).filter((p) => respuestas[p.id] === p.respuesta_correcta).length;
 
-  const enviar = async () => {
+  const enviar = async (autoExpirado = false) => {
     if (!intentoId) return;
+    const now = Date.now();
+    const duracionSeg = startedAt ? Math.floor((now - startedAt) / 1000) : null;
     let correctas = 0;
     const bloqueRes: Record<string, { correctas: number; total: number }> = {};
     for (const p of preguntas) {
@@ -179,11 +297,20 @@ export default function ExamenFinal() {
         bloque_resumen: bloqueRes,
         aprobado,
         finished_at: new Date().toISOString(),
+        duracion_seg: duracionSeg,
+        tab_blur_count: tabBlurRef.current,
       })
       .eq("id", intentoId);
 
     setResultado({ correctas, calificacion: calif, aprobado, bloque_resumen: bloqueRes, intento_id: intentoId });
     setStep("result");
+
+    if (autoExpirado) {
+      toast({
+        title: "Tiempo agotado",
+        description: "El examen se envió automáticamente.",
+      });
+    }
 
     if (aprobado) {
       await emitirDiploma(intentoId);
@@ -198,7 +325,7 @@ export default function ExamenFinal() {
       });
       if (error) throw new Error(error.message);
       if (data?.error) throw new Error(data.error);
-      setDiplomaUrl(data?.download_url ?? null);
+      setDiplomaFolio(data?.folio ?? null);
       toast({ title: "🎓 Diploma emitido", description: `Folio ${data?.folio}` });
     } catch (err: any) {
       toast({ title: "Error al emitir diploma", description: err.message, variant: "destructive" });
@@ -248,17 +375,23 @@ export default function ExamenFinal() {
 
             {resultado.aprobado ? (
               <div className="space-y-2">
-                <p className="text-sm text-muted-foreground">
-                  Tu diploma se ha emitido automáticamente y enviamos un correo con el enlace.
+                <div className="rounded border border-emerald-500/40 bg-emerald-500/5 p-4 text-center">
+                  <p className="text-sm font-semibold text-emerald-700">
+                    🎓 Diploma emitido
+                  </p>
+                  {diplomaFolio && (
+                    <p className="text-xs text-muted-foreground mt-1">Folio {diplomaFolio}</p>
+                  )}
+                  {emitiendoDiploma && (
+                    <p className="text-xs text-muted-foreground mt-1">Generando diploma…</p>
+                  )}
+                </div>
+                <Button onClick={() => navigate("/mis-diplomas")} className="w-full gap-2">
+                  <Award className="h-4 w-4" /> Ver en Mis Diplomas
+                </Button>
+                <p className="text-xs text-center text-muted-foreground">
+                  También enviamos el diploma a tu correo.
                 </p>
-                {emitiendoDiploma && <p className="text-xs text-muted-foreground">Generando diploma…</p>}
-                {diplomaUrl && (
-                  <Button asChild className="w-full gap-2">
-                    <a href={diplomaUrl} target="_blank" rel="noopener noreferrer">
-                      <Download className="h-4 w-4" /> Descargar diploma
-                    </a>
-                  </Button>
-                )}
               </div>
             ) : (
               <div className="space-y-2">
@@ -279,6 +412,46 @@ export default function ExamenFinal() {
                     <RefreshCw className="h-4 w-4" /> Reintentar
                   </Button>
                 )}
+                {/* Revisión pregunta a pregunta del intento recién terminado */}
+                <details className="mt-4 rounded border bg-muted/30">
+                  <summary className="cursor-pointer px-3 py-2 text-sm font-medium flex items-center gap-2">
+                    <Eye className="h-4 w-4" /> Revisar mis respuestas
+                  </summary>
+                  <div className="p-3 space-y-3">
+                    {preguntas.map((p, i) => {
+                      const r = respuestas[p.id];
+                      const ok = r === p.respuesta_correcta;
+                      return (
+                        <div key={p.id} className="rounded border bg-background p-3 text-sm">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="font-medium">Pregunta {i + 1}</span>
+                            {ok ? (
+                              <Badge className="bg-emerald-500 text-white">Correcta</Badge>
+                            ) : (
+                              <Badge variant="destructive">Incorrecta</Badge>
+                            )}
+                          </div>
+                          <p className="mb-2">{p.pregunta}</p>
+                          <p className="text-xs">
+                            <strong>Tu respuesta:</strong>{" "}
+                            {r ? `${r}. ${(p as any)[`opcion_${r.toLowerCase()}`]}` : "Sin responder"}
+                          </p>
+                          {!ok && (
+                            <p className="text-xs text-emerald-700 dark:text-emerald-400">
+                              <strong>Correcta:</strong>{" "}
+                              {p.respuesta_correcta}. {(p as any)[`opcion_${p.respuesta_correcta.toLowerCase()}`]}
+                            </p>
+                          )}
+                          {p.justificacion && (
+                            <p className="mt-1 text-xs text-muted-foreground italic">
+                              {p.justificacion}
+                            </p>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </details>
               </div>
             )}
           </CardContent>
@@ -290,34 +463,80 @@ export default function ExamenFinal() {
   // ─── Examen ────────────────────────────────────────────────────────────
   if (step === "exam") {
     const p = preguntas[idx];
-    const sel = respuestas[p.id];
+    const selOriginal = respuestas[p.id];
+    // letra MOSTRADA que corresponde al original guardado
+    const selMostrada = p.opciones.find((o) => o.original === selOriginal)?.letra;
+    const respondidas = Object.keys(respuestas).length;
+    const tiempoBajo = tiempoRestante <= 60;
     return (
       <div className="max-w-3xl mx-auto p-6 space-y-4">
         <div className="flex items-center justify-between text-sm">
           <span className="text-muted-foreground">Pregunta {idx + 1} de {TOTAL_PREGUNTAS}</span>
-          <Badge variant="secondary">Correctas hasta ahora: {correctasHasta}</Badge>
+          <div className="flex items-center gap-2">
+            <Badge
+              variant={tiempoBajo ? "destructive" : "secondary"}
+              className="gap-1 font-mono"
+            >
+              <Clock className="h-3 w-3" /> {fmtMMSS(tiempoRestante)}
+            </Badge>
+            <Badge variant="outline">{respondidas} / {TOTAL_PREGUNTAS} respondidas</Badge>
+          </div>
         </div>
         <Progress value={((idx + 1) / TOTAL_PREGUNTAS) * 100} className="h-2" />
+
+        {/* Navegador de preguntas */}
+        <div className="grid grid-cols-10 gap-1">
+          {preguntas.map((pp, i) => {
+            const respondida = respuestas[pp.id] !== undefined;
+            const marcada = !!marcadas[pp.id];
+            const actual = i === idx;
+            return (
+              <button
+                key={pp.id}
+                onClick={() => setIdx(i)}
+                className={`h-7 text-[11px] rounded border transition relative ${
+                  actual
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : respondida
+                      ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
+                      : "border-border bg-muted/30 hover:bg-muted"
+                }`}
+              >
+                {i + 1}
+                {marcada && <Flag className="h-2.5 w-2.5 absolute top-0.5 right-0.5 text-amber-500" />}
+              </button>
+            );
+          })}
+        </div>
+
         <Card>
           <CardHeader>
-            <Badge variant="outline" className="w-fit text-[10px]">{BLOQUE_LABEL[p.bloque] ?? p.bloque}</Badge>
+            <div className="flex items-center justify-between">
+              <Badge variant="outline" className="text-[10px]">{BLOQUE_LABEL[p.bloque] ?? p.bloque}</Badge>
+              <Button
+                size="sm"
+                variant={marcadas[p.id] ? "default" : "ghost"}
+                className="h-7 text-xs gap-1"
+                onClick={() => toggleMarcar(p.id)}
+              >
+                <Flag className="h-3.5 w-3.5" />
+                {marcadas[p.id] ? "Marcada" : "Marcar para revisar"}
+              </Button>
+            </div>
             <CardTitle className="text-base mt-2">{p.pregunta}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
-            {(["A", "B", "C", "D"] as const).map((op) => {
-              const txt = (p as any)[`opcion_${op.toLowerCase()}`];
-              return (
-                <button
-                  key={op}
-                  onClick={() => responder(op)}
-                  className={`w-full text-left p-3 rounded border text-sm transition ${
-                    sel === op ? "border-primary bg-primary/5 font-medium" : "hover:bg-muted/50"
-                  }`}
-                >
-                  <span className="font-bold mr-2">{op}.</span>{txt}
-                </button>
-              );
-            })}
+            {p.opciones.map((op) => (
+              <button
+                key={op.letra}
+                onClick={() => responder(op.letra)}
+                className={`w-full text-left p-3 rounded border text-sm transition ${
+                  selMostrada === op.letra ? "border-primary bg-primary/5 font-medium" : "hover:bg-muted/50"
+                }`}
+              >
+                <span className="font-bold mr-2">{op.letra}.</span>{op.texto}
+              </button>
+            ))}
           </CardContent>
         </Card>
         <div className="flex justify-between">
@@ -325,13 +544,34 @@ export default function ExamenFinal() {
             Anterior
           </Button>
           {idx < TOTAL_PREGUNTAS - 1 ? (
-            <Button disabled={!sel} onClick={() => setIdx((i) => i + 1)}>Siguiente</Button>
+            <Button onClick={() => setIdx((i) => i + 1)}>Siguiente</Button>
           ) : (
-            <Button disabled={Object.keys(respuestas).length < TOTAL_PREGUNTAS} onClick={enviar}>
+            <Button onClick={() => setConfirmarEnviar(true)}>
               Enviar examen
             </Button>
           )}
         </div>
+
+        <AlertDialog open={confirmarEnviar} onOpenChange={setConfirmarEnviar}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>¿Enviar examen?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Has respondido <strong>{respondidas}</strong> de {TOTAL_PREGUNTAS} preguntas.
+                {respondidas < TOTAL_PREGUNTAS && (
+                  <> Las preguntas sin responder se contarán como incorrectas.</>
+                )}{" "}
+                Una vez enviado no podrás modificar tus respuestas.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction onClick={() => { setConfirmarEnviar(false); enviar(false); }}>
+                Sí, enviar
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     );
   }
@@ -357,35 +597,34 @@ export default function ExamenFinal() {
             <div className="rounded border border-emerald-500/40 bg-emerald-500/5 p-4">
               <p className="font-semibold text-emerald-700">Ya aprobaste esta evaluación.</p>
               <p className="text-xs text-muted-foreground mt-1">
-                Puedes volver a descargar tu diploma desde la plataforma.
+                Puedes descargar tu diploma en cualquier momento desde la plataforma.
               </p>
               <Button
                 className="mt-3 gap-2"
-                disabled={emitiendoDiploma}
-                onClick={() => emitirDiploma(yaAprobo)}
+                onClick={() => navigate("/mis-diplomas")}
               >
-                <Download className="h-4 w-4" />
-                {emitiendoDiploma ? "Generando…" : "Obtener diploma"}
+                <Award className="h-4 w-4" /> Ver en Mis Diplomas
               </Button>
-              {diplomaUrl && (
-                <Button asChild variant="outline" className="ml-2 gap-2">
-                  <a href={diplomaUrl} target="_blank" rel="noopener noreferrer">
-                    <Download className="h-4 w-4" /> Descargar PDF
-                  </a>
-                </Button>
-              )}
             </div>
           ) : (
             <>
+              {!bancoOk.ok && (
+                <div className="rounded border border-yellow-500/40 bg-yellow-500/5 p-3 text-xs text-yellow-800 dark:text-yellow-400">
+                  Esta evaluación todavía no está disponible: faltan preguntas activas en{" "}
+                  <strong>{bancoOk.faltantes.join(", ")}</strong>.
+                </div>
+              )}
               <ul className="space-y-1 list-disc list-inside text-muted-foreground">
-                <li>{TOTAL_PREGUNTAS} preguntas (5 por bloque temático)</li>
+                <li>{TOTAL_PREGUNTAS} preguntas ({POR_BLOQUE} por bloque temático, sorteadas en cada intento)</li>
+                <li>Tiempo límite: <strong>{Math.floor(TIEMPO_LIMITE_SEG / 60)} minutos</strong> (auto-envío al expirar)</li>
                 <li>Se requiere {UMBRAL_APROBACION} % para aprobar y recibir el diploma</li>
                 <li>Máximo {MAX_INTENTOS} intentos por curso</li>
                 <li>Te quedan <strong>{intentosRestantes}</strong> intento(s)</li>
+                <li>Las preguntas y el orden de las opciones se mezclan en cada intento</li>
               </ul>
               <Button
                 className="w-full gap-2"
-                disabled={intentosRestantes <= 0}
+                disabled={intentosRestantes <= 0 || !bancoOk.ok}
                 onClick={iniciarExamen}
               >
                 <Award className="h-4 w-4" />

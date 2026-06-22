@@ -542,6 +542,7 @@ export type Database = {
           correctas: number
           created_at: string
           curso_id: string
+          duracion_seg: number | null
           finished_at: string | null
           id: string
           num_intento: number
@@ -549,6 +550,8 @@ export type Database = {
           preguntas_ids: string[]
           respuestas: Json
           started_at: string
+          tab_blur_count: number
+          tiempo_limite_seg: number
           total: number
           updated_at: string
           user_id: string
@@ -560,6 +563,7 @@ export type Database = {
           correctas?: number
           created_at?: string
           curso_id: string
+          duracion_seg?: number | null
           finished_at?: string | null
           id?: string
           num_intento?: number
@@ -567,6 +571,8 @@ export type Database = {
           preguntas_ids?: string[]
           respuestas?: Json
           started_at?: string
+          tab_blur_count?: number
+          tiempo_limite_seg?: number
           total?: number
           updated_at?: string
           user_id: string
@@ -578,6 +584,7 @@ export type Database = {
           correctas?: number
           created_at?: string
           curso_id?: string
+          duracion_seg?: number | null
           finished_at?: string | null
           id?: string
           num_intento?: number
@@ -585,6 +592,8 @@ export type Database = {
           preguntas_ids?: string[]
           respuestas?: Json
           started_at?: string
+          tab_blur_count?: number
+          tiempo_limite_seg?: number
           total?: number
           updated_at?: string
           user_id?: string
