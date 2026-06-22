@@ -10,16 +10,31 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Plus, Trash2, Save } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Save, Upload } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "sonner";
 
-const META = 20;
+// Banco mínimo por bloque (anti-trampa por sorteo): se cargan 7-8 por bloque
+// y el examen sortea 5 por bloque en cada intento.
+const MIN_POR_BLOQUE = 7;
+const POR_BLOQUE_EXAMEN = 5;
+const META = MIN_POR_BLOQUE * 4; // 28
 const BLOQUES = [
   { v: "marco_regulatorio", l: "Marco regulatorio" },
   { v: "metodologia", l: "Metodología" },
   { v: "casos_practicos", l: "Casos prácticos" },
   { v: "flujo_aprobacion", l: "Flujo de aprobación" },
 ];
+const BLOQUES_SET = new Set(BLOQUES.map((b) => b.v));
 
 type Pregunta = {
   id: string;
