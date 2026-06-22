@@ -251,21 +251,19 @@ Deno.serve(async (req) => {
     if (!intento) return json({ error: "Intento no encontrado" }, 404);
     if (!intento.aprobado) return json({ error: "El intento no está aprobado" }, 400);
 
-    // ¿Ya hay diploma para este intento?
+    // Idempotencia: ¿ya existe diploma para este intento o para (user, curso)?
     const { data: yaExiste } = await admin
       .from("curso_diplomas")
       .select("id, folio, hash_verificacion, pdf_path")
-      .eq("intento_id", intento_id)
+      .or(`intento_id.eq.${intento_id},and(user_id.eq.${user.id},curso_id.eq.${intento.curso_id})`)
+      .limit(1)
       .maybeSingle();
     if (yaExiste) {
-      const { data: signed } = await admin.storage
-        .from("diplomas")
-        .createSignedUrl(yaExiste.pdf_path!, 3600);
       return json({
         already_existed: true,
         folio: yaExiste.folio,
         hash: yaExiste.hash_verificacion,
-        download_url: signed?.signedUrl ?? null,
+        verificacion_url: `${APP_URL}/diploma/verificar/${yaExiste.hash_verificacion}`,
       });
     }
 
@@ -348,11 +346,6 @@ Deno.serve(async (req) => {
     });
     if (insErr) return json({ error: insErr.message }, 500);
 
-    // Signed URL para descarga
-    const { data: signed } = await admin.storage
-      .from("diplomas")
-      .createSignedUrl(pdfPath, 3600);
-
     // Email con PDF adjunto
     try {
       await admin.functions.invoke("send-transactional-email", {
@@ -381,7 +374,6 @@ Deno.serve(async (req) => {
       folio,
       hash,
       verificacion_url: verificacionUrl,
-      download_url: signed?.signedUrl ?? null,
     });
   } catch (err) {
     console.error("emitir-diploma error", err);
