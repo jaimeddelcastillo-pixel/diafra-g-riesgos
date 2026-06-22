@@ -1902,6 +1902,17 @@ export type Database = {
       }
       restaurar_documento: { Args: { p_doc_id: string }; Returns: boolean }
       todos_firmaron: { Args: { p_folio_id: string }; Returns: boolean }
+      verificar_diploma: {
+        Args: { p_hash: string }
+        Returns: {
+          alumno_nombre: string
+          calificacion: number
+          curso_norma: string
+          curso_titulo: string
+          fecha_emision: string
+          folio: string
+        }[]
+      }
     }
     Enums: {
       app_role:
