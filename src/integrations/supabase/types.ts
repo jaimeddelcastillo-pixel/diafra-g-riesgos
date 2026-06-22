@@ -1861,6 +1861,17 @@ export type Database = {
         Args: { payload: Json; queue_name: string }
         Returns: number
       }
+      examen_calificar: {
+        Args: {
+          p_duracion_seg?: number
+          p_intento_id: string
+          p_respuestas: Json
+          p_tab_blur_count?: number
+        }
+        Returns: Json
+      }
+      examen_iniciar: { Args: { p_curso_id: string }; Returns: Json }
+      examen_validar_banco: { Args: { p_curso_id: string }; Returns: Json }
       get_user_org_id: { Args: never; Returns: string }
       has_role: {
         Args: {
