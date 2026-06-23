@@ -242,22 +242,45 @@ Deno.serve(async (req) => {
     if (!intento_id) return json({ error: "intento_id requerido" }, 400);
 
     // Validar intento
-    const { data: intento } = await admin
+    const { data: intento, error: intentoErr } = await admin
       .from("curso_examen_intentos")
       .select("*")
       .eq("id", intento_id)
       .eq("user_id", user.id)
-      .single();
+      .maybeSingle();
+    if (intentoErr) {
+      console.error("[emitir-diploma] lookup intento error", intentoErr);
+      return json({ error: `Lookup intento: ${intentoErr.message}` }, 500);
+    }
     if (!intento) return json({ error: "Intento no encontrado" }, 404);
     if (!intento.aprobado) return json({ error: "El intento no está aprobado" }, 400);
 
-    // Idempotencia: ¿ya existe diploma para este intento o para (user, curso)?
-    const { data: yaExiste } = await admin
-      .from("curso_diplomas")
-      .select("id, folio, hash_verificacion, pdf_path")
-      .or(`intento_id.eq.${intento_id},and(user_id.eq.${user.id},curso_id.eq.${intento.curso_id})`)
-      .limit(1)
-      .maybeSingle();
+    // Idempotencia: dos lookups simples (evita parseo .or con and anidado).
+    let yaExiste: any = null;
+    {
+      const { data, error } = await admin
+        .from("curso_diplomas")
+        .select("id, folio, hash_verificacion, pdf_path")
+        .eq("intento_id", intento_id)
+        .maybeSingle();
+      if (error) {
+        console.error("[emitir-diploma] idempot intento_id error", error);
+      }
+      yaExiste = data ?? null;
+    }
+    if (!yaExiste) {
+      const { data, error } = await admin
+        .from("curso_diplomas")
+        .select("id, folio, hash_verificacion, pdf_path")
+        .eq("user_id", user.id)
+        .eq("curso_id", intento.curso_id)
+        .limit(1)
+        .maybeSingle();
+      if (error) {
+        console.error("[emitir-diploma] idempot user/curso error", error);
+      }
+      yaExiste = data ?? null;
+    }
     if (yaExiste) {
       return json({
         already_existed: true,
@@ -268,11 +291,15 @@ Deno.serve(async (req) => {
     }
 
     // Curso
-    const { data: curso } = await admin
+    const { data: curso, error: cursoErr } = await admin
       .from("cursos")
       .select("id, titulo, norma, duracion_horas")
       .eq("id", intento.curso_id)
-      .single();
+      .maybeSingle();
+    if (cursoErr) {
+      console.error("[emitir-diploma] curso error", cursoErr);
+      return json({ error: `Curso: ${cursoErr.message}` }, 500);
+    }
     if (!curso) return json({ error: "Curso no encontrado" }, 404);
 
     // Módulos
@@ -300,7 +327,10 @@ Deno.serve(async (req) => {
 
     // Folio + hash
     const { data: folioData, error: folioErr } = await admin.rpc("next_diploma_folio");
-    if (folioErr) return json({ error: folioErr.message }, 500);
+    if (folioErr) {
+      console.error("[emitir-diploma] folio error", folioErr);
+      return json({ error: `Folio: ${folioErr.message}` }, 500);
+    }
     const folio = folioData as unknown as string;
 
     const hash = (await sha256Hex(`${folio}|${user.id}|${curso.id}|${Date.now()}`)).slice(0, 40);
@@ -309,23 +339,32 @@ Deno.serve(async (req) => {
     const fecha = new Date();
     const calificacion = Number(intento.calificacion) || 0;
 
-    const pdfBytes = await generarDiplomaPDF({
-      folio,
-      alumnoNombre,
-      cursoTitulo: curso.titulo,
-      norma: (curso as any).norma === "NOM-059" ? "NOM-059-SSA1-2015" : "NOM-241-SSA1-2025",
-      fecha,
-      calificacion,
-      duracionHoras: (curso as any).duracion_horas ?? null,
-      modulosAprobados: (modulos ?? []).map((m: any) => m.titulo),
-      verificacionUrl,
-    });
+    let pdfBytes: Uint8Array;
+    try {
+      pdfBytes = await generarDiplomaPDF({
+        folio,
+        alumnoNombre,
+        cursoTitulo: curso.titulo,
+        norma: (curso as any).norma === "NOM-059" ? "NOM-059-SSA1-2015" : "NOM-241-SSA1-2025",
+        fecha,
+        calificacion,
+        duracionHoras: (curso as any).duracion_horas ?? null,
+        modulosAprobados: (modulos ?? []).map((m: any) => m.titulo),
+        verificacionUrl,
+      });
+    } catch (pdfErr) {
+      console.error("[emitir-diploma] PDF render error", pdfErr);
+      return json({ error: `PDF: ${(pdfErr as Error).message}` }, 500);
+    }
 
     const pdfPath = `${user.id}/${folio}.pdf`;
     const { error: upErr } = await admin.storage
       .from("diplomas")
       .upload(pdfPath, pdfBytes, { contentType: "application/pdf", upsert: true });
-    if (upErr) return json({ error: `Storage: ${upErr.message}` }, 500);
+    if (upErr) {
+      console.error("[emitir-diploma] storage error", upErr);
+      return json({ error: `Storage: ${upErr.message}` }, 500);
+    }
 
     const { error: insErr } = await admin.from("curso_diplomas").insert({
       folio,
@@ -344,7 +383,10 @@ Deno.serve(async (req) => {
       duracion_horas: (curso as any).duracion_horas ?? null,
       modulos_aprobados: (modulos ?? []).map((m: any) => m.titulo),
     });
-    if (insErr) return json({ error: insErr.message }, 500);
+    if (insErr) {
+      console.error("[emitir-diploma] insert error", insErr);
+      return json({ error: `Insert: ${insErr.message}` }, 500);
+    }
 
     // Email con PDF adjunto
     try {
