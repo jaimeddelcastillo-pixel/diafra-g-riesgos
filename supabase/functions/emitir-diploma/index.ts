@@ -10,6 +10,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { jsPDF } from "https://esm.sh/jspdf@2.5.2";
 import QRCode from "https://esm.sh/qrcode@1.5.4";
 import { FIRMA_JDC_PNG_BASE64, FIRMA_JDC_WIDTH_MM, FIRMA_JDC_HEIGHT_MM } from "./firma.ts";
+import { LOGO_TRACEA_PNG_BASE64, LOGO_W, LOGO_H } from "./logo.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -17,7 +18,10 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-const APP_URL = Deno.env.get("APP_URL") ?? "https://tracea.com.mx";
+// URL pública canónica para verificación del diploma (QR). Forzamos dominio
+// productivo para que el QR siempre lleve a una página pública estable.
+const VERIFY_BASE_URL = "https://tracea.com.mx";
+const APP_URL = Deno.env.get("APP_URL") ?? VERIFY_BASE_URL;
 
 // Paleta industrial médico
 const NAVY = "#0B2545";
@@ -76,19 +80,30 @@ async function generarDiplomaPDF(opts: {
   doc.setLineWidth(0.4);
   doc.rect(11, 11, W - 22, H - 22);
 
-  // Banda superior navy
+  // Banda superior navy con logo TRACEA Academy
   doc.setFillColor(nr, ng, nb);
-  doc.rect(11, 11, W - 22, 26, "F");
-
-  // Encabezado TRACEA Academy
-  doc.setTextColor(255, 255, 255);
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(22);
-  doc.text("TRACEA ACADEMY", W / 2, 24, { align: "center" });
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(10);
-  doc.setTextColor(tr, tg, tb);
-  doc.text("Follow the quality.", W / 2, 31, { align: "center" });
+  doc.rect(11, 11, W - 22, 32, "F");
+  try {
+    const logoH = 22;
+    const logoW = logoH * (LOGO_W / LOGO_H);
+    doc.addImage(
+      LOGO_TRACEA_PNG_BASE64,
+      "PNG",
+      W / 2 - logoW / 2,
+      14,
+      logoW,
+      logoH,
+    );
+  } catch (_) {
+    doc.setTextColor(255, 255, 255);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(22);
+    doc.text("TRACEA ACADEMY", W / 2, 24, { align: "center" });
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    doc.setTextColor(tr, tg, tb);
+    doc.text("Follow the quality. Sigue el rastro de la calidad.", W / 2, 31, { align: "center" });
+  }
 
   // Título
   doc.setTextColor(nr, ng, nb);
@@ -146,11 +161,8 @@ async function generarDiplomaPDF(opts: {
   doc.text("Folio único:", 50, colY + 18);
   doc.setFont("helvetica", "normal");
   doc.text(`${opts.calificacion.toFixed(0)} / 100`, 85, colY);
-  doc.text(
-    opts.duracionHoras ? `${opts.duracionHoras} horas` : "—",
-    85,
-    colY + 6,
-  );
+  const horas = opts.duracionHoras && opts.duracionHoras > 0 ? opts.duracionHoras : 8;
+  doc.text(`${horas} hrs`, 85, colY + 6);
   doc.text(fmtFechaLarga(opts.fecha), 85, colY + 12);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(nr, ng, nb);
@@ -180,26 +192,27 @@ async function generarDiplomaPDF(opts: {
   doc.setTextColor(80, 80, 80);
   doc.text("Verificación en línea", W - 36, H - 30, { align: "center" });
 
-  // Firma del instructor (líneas + nombre)
-  // Firma manuscrita escaneada (PNG transparente) sobre la línea
+  // Firma del instructor — imagen manuscrita centrada sobre la línea
+  const firmaCx = 72.5;
+  const lineY = H - 38;
   try {
     const firmaW = FIRMA_JDC_WIDTH_MM;
     const firmaH = FIRMA_JDC_HEIGHT_MM;
-    const firmaX = 72.5 - firmaW / 2;
-    const firmaY = H - 40 - firmaH + 2; // base justo encima de la línea
+    const firmaX = firmaCx - firmaW / 2;
+    const firmaY = lineY - firmaH + 1; // base apoyada sobre la línea
     doc.addImage(FIRMA_JDC_PNG_BASE64, "PNG", firmaX, firmaY, firmaW, firmaH);
-  } catch (_) { /* fallback silencioso a línea + nombre */ }
+  } catch (_) { /* fallback silencioso */ }
   doc.setDrawColor(40, 40, 40);
   doc.setLineWidth(0.3);
-  doc.line(35, H - 40, 110, H - 40);
+  doc.line(firmaCx - 38, lineY, firmaCx + 38, lineY);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(10);
   doc.setTextColor(nr, ng, nb);
-  doc.text("Ing. Jaime David Del Castillo Couret", 72.5, H - 35, { align: "center" });
+  doc.text("Ing. Jaime David Del Castillo Couret", firmaCx, lineY + 5, { align: "center" });
   doc.setFont("helvetica", "italic");
   doc.setFontSize(8);
   doc.setTextColor(80, 80, 80);
-  doc.text("Instructor — TRACEA Academy", 72.5, H - 30, { align: "center" });
+  doc.text("Instructor — TRACEA Academy", firmaCx, lineY + 10, { align: "center" });
 
   // Pie legal (banda inferior)
   doc.setFont("helvetica", "normal");
