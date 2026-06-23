@@ -714,6 +714,7 @@ export type Database = {
           activo: boolean
           created_at: string
           descripcion: string
+          duracion_horas: number | null
           id: string
           norma: string
           orden: number
@@ -724,6 +725,7 @@ export type Database = {
           activo?: boolean
           created_at?: string
           descripcion?: string
+          duracion_horas?: number | null
           id?: string
           norma: string
           orden?: number
@@ -734,6 +736,7 @@ export type Database = {
           activo?: boolean
           created_at?: string
           descripcion?: string
+          duracion_horas?: number | null
           id?: string
           norma?: string
           orden?: number
@@ -1850,7 +1853,7 @@ export type Database = {
         }
       }
       cumplimiento_curso: {
-        Args: { p_curso_id: string }
+        Args: { p_curso_id: string; p_org_id?: string }
         Returns: {
           aprobado: boolean
           diploma_folio: string
