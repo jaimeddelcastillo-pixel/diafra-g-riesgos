@@ -80,15 +80,15 @@ async function generarDiplomaPDF(opts: {
   doc.setLineWidth(0.4);
   doc.rect(11, 11, W - 22, H - 22);
 
-  // Banda superior navy con logo TRACEA Academy (blanco)
+  // Banda superior navy con logo TRACEA Academy (PNG original)
   doc.setFillColor(nr, ng, nb);
   doc.rect(11, 11, W - 22, 34, "F");
   try {
-    // Logo apaisado (ícono + texto + tagline) insertado con su proporción
-    // original. No se recolorea ni se estira; solo se ajusta a la banda.
+    // Logo original, sin recolorear, sin recortar y sin deformar; solo se escala
+    // manteniendo su proporción completa dentro de la banda.
     const bandaH = 34;
-    const maxH = 23;
-    const maxW = 74;
+    const maxH = 19;
+    const maxW = 86;
     let logoH = maxH;
     let logoW = logoH * (LOGO_W / LOGO_H);
     if (logoW > maxW) {
@@ -117,7 +117,8 @@ async function generarDiplomaPDF(opts: {
   // Título
   doc.setTextColor(nr, ng, nb);
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(28);
+  doc.setCharSpace(0);
+  doc.setFontSize(26);
   doc.text("Diploma de Aprovechamiento", W / 2, 58, { align: "center" });
 
   // Línea decorativa teal
@@ -135,7 +136,8 @@ async function generarDiplomaPDF(opts: {
   const [dr, dg, db] = hexToRgb(NAVY_DARK);
   doc.setTextColor(dr, dg, db);
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(24);
+  doc.setCharSpace(0);
+  doc.setFontSize(22);
   doc.text(opts.alumnoNombre.toUpperCase(), W / 2, 87, { align: "center" });
 
   // Subrayado bajo nombre
@@ -153,6 +155,7 @@ async function generarDiplomaPDF(opts: {
   doc.setFont("helvetica", "bold");
   doc.setFontSize(14);
   doc.setTextColor(nr, ng, nb);
+  doc.setCharSpace(0);
   doc.text(opts.cursoTitulo, W / 2, 110, { align: "center" });
   doc.setFont("helvetica", "normal");
   doc.setFontSize(11);
@@ -210,8 +213,9 @@ async function generarDiplomaPDF(opts: {
     const firmaW = FIRMA_JDC_WIDTH_MM;
     const firmaH = FIRMA_JDC_HEIGHT_MM;
     const firmaX = firmaCx - firmaW / 2;
-    // Firma manuscrita con proporción original, centrada sobre la línea.
-    const firmaY = lineY - firmaH + 3;
+    // Firma manuscrita con proporción original de lienzo 70x50mm; se coloca
+    // amplia y proporcionada sobre la línea sin aplastarla ni estirarla.
+    const firmaY = lineY - firmaH + 2;
     doc.addImage(FIRMA_JDC_PNG_BASE64, "PNG", firmaX, firmaY, firmaW, firmaH);
   } catch (_) { /* fallback silencioso */ }
   doc.setDrawColor(40, 40, 40);
