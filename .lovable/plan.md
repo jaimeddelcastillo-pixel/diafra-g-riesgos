@@ -1,31 +1,24 @@
-## Cambios al diploma y a la página de verificación
+## Problema
 
-### 1. Logo blanco en la banda azul del diploma
-- Tomar el logo `TRACEA Academy` (ícono + texto + tagline) que adjuntaste y recolorearlo a blanco con fondo transparente.
-- Subirlo como asset (`tracea-academy-blanco.png`) y reemplazar el logo actual de la cabecera navy en la edge function `emitir-diploma` (`supabase/functions/emitir-diploma/logo.ts` + uso en `index.ts`).
-- Ajustar tamaño para que respire dentro de la banda (sin tocar bordes).
+El Dashboard sigue mostrando riesgos "capturados" después de cancelar los folios que los contenían. La auditoría NOM-241 / NOM-059 exige que un folio cancelado deje de aportar a las métricas operativas, y hoy un riesgo huérfano (cuyo folio está en estado `Cancelado`) sigue sumando en críticos, acciones pendientes, sin responsable, etc.
 
-### 2. Firma desplazada hacia abajo
-- En `emitir-diploma/index.ts` bajar la firma ~10–12 mm para que cubra parcialmente el nombre del instructor ("Jaime Del Castillo"), dejando legible el título "Instructor" y la línea.
-- Mantener el tamaño actual (28×32 mm) y el centrado horizontal.
+## Causa raíz
 
-### 3. QR apuntando a `https://tracea.com.mx/diploma/verificar/{hash}`
-- Forzar esa URL en la generación del QR (ya está así, pero se valida explícitamente).
-- Eliminar cualquier fallback a `*.lovable.app`.
+En `src/pages/Index.tsx`, los folios sí se filtran (`foliosVigentes = fols.filter(f => f.estado !== "Cancelado")`), pero los **riesgos** (`risks = allRisks || []`) se usan directos. `useAllRiesgos` trae todos los riesgos de la organización sin importar el estado del folio padre, así que un folio cancelado conserva sus riesgos en todos los conteos del dashboard.
 
-### 4. Eliminar leyenda "Verificación en línea: …"
-- Quitar la línea de texto del pie del diploma; el QR queda como único mecanismo de verificación visual.
+## Cambio propuesto (solo frontend, una sola página)
 
-### 5. Logo limpio en la página de verificación
-- Usar el mismo logo `TRACEA Academy` con letras azules en PNG transparente (sin recuadro blanco). Procesar el adjunto para asegurar transparencia real.
-- Subir como asset y reemplazar la importación de `tracea-official.png` en `src/pages/DiplomaVerificar.tsx`.
-- Eliminar el ícono `GraduationCap` decorativo y dejar solo el logo centrado.
+En `src/pages/Index.tsx`:
 
-### 6. Botón "Regenerar" en `/mis-diplomas`
-- Ya existe. No se toca, pero sirve para que vuelvas a emitir el PDF con el diseño nuevo conservando el mismo folio y QR.
+1. Crear un derivado `risksVigentes` que excluya cualquier riesgo cuyo `folio_id` pertenezca a un folio cancelado:
+   ```ts
+   const idsCancelados = new Set(cancelados.map(f => f.id));
+   const risksVigentes = risks.filter(r => !idsCancelados.has(r.folio_id));
+   ```
+2. Reemplazar todos los usos de `risks` por `risksVigentes` en los cálculos KPI: `critical`, `accionesPendientes`, `sinResponsable`, `criticosSinEvidencia`, `criticalResidual`, `riesgosMejoraron`, `riesgosSinMitigacionEfectiva`, `foliosConRiesgo`, `puntosAMEF` y el Top‑5 NPR / HeatMap / NPRControlTable.
+3. Mantener `risks` original sólo si hace falta para mostrar un sub-total histórico (no se requiere ahora; los cancelados ya tienen su propio KPI separado).
 
-### Detalles técnicos
-- Procesado de imágenes con `imagegen--edit_image` (versión blanca) y verificación de transparencia (versión azul).
-- Assets vía `lovable-assets` CLI para que las edge functions y el front consuman URLs CDN estables.
-- Despliegue de `emitir-diploma` al terminar.
-- Sin cambios a tablas, RPCs, ni lógica de calificaciones/cumplimiento.
+## Fuera de alcance
+
+- No se tocan `Folios.tsx`, `Auditoria.tsx` ni la edge function. La auditoría de cambios (audit_trail) sigue conservando el historial completo del riesgo y del folio cancelado, así que no hay pérdida regulatoria.
+- No se borran riesgos de la base de datos: quedan ligados al folio cancelado para trazabilidad NOM-241.

@@ -89,7 +89,7 @@ export default function Dashboard() {
 
   if (!loading && isSuperAdmin() && !isImpersonating) return <Navigate to="/admin" replace />;
 
-  const risks = allRisks || [];
+  const allRisksData = allRisks || [];
   const fols = folios || [];
   const isLoading = loadingFolios || loadingRisks;
 
@@ -98,6 +98,9 @@ export default function Dashboard() {
   const cancelados = fols.filter((f) => f.estado === "Cancelado");
   const foliosVigentes = fols.filter((f) => f.estado !== "Cancelado");
   const foliosActivos = foliosVigentes.filter((f) => f.estado !== "Cerrado");
+  // Riesgos vigentes: excluir los pertenecientes a folios cancelados (se conservan en BD para trazabilidad)
+  const idsCancelados = new Set(cancelados.map((f) => f.id));
+  const risks = allRisksData.filter((r) => !idsCancelados.has(r.folio_id));
   const critical = risks.filter((r) => (r.npr ?? 0) > 150 || r.severidad >= 9);
   // "Aprobado" regulatorio = firmado por Responsable Sanitario (estado del workflow),
   // NO la conclusión técnica del análisis AMEF.
