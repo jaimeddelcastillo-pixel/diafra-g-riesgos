@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
-import { GraduationCap, Download, ShieldCheck, FileText } from "lucide-react";
+import { GraduationCap, Download, ShieldCheck, FileText, Award, Loader2 } from "lucide-react";
 
 type DiplomaRow = {
   id: string;
@@ -19,31 +19,81 @@ type DiplomaRow = {
   pdf_path: string;
 };
 
+type IntentoPendiente = {
+  id: string;
+  curso_id: string;
+  calificacion: number;
+  finished_at: string | null;
+  curso_titulo?: string;
+};
+
 export default function MisDiplomas() {
   const [loading, setLoading] = useState(true);
   const [diplomas, setDiplomas] = useState<DiplomaRow[]>([]);
   const [descargando, setDescargando] = useState<string | null>(null);
+  const [pendientes, setPendientes] = useState<IntentoPendiente[]>([]);
+  const [emitiendo, setEmitiendo] = useState<string | null>(null);
 
-  useEffect(() => {
-    (async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        setLoading(false);
-        return;
-      }
-      const { data, error } = await supabase
-        .from("curso_diplomas")
-        .select("id, folio, curso_titulo, curso_norma, fecha_emision, calificacion, hash_verificacion, pdf_path")
-        .eq("user_id", user.id)
-        .order("fecha_emision", { ascending: false });
-      if (error) {
-        toast.error("No se pudieron cargar tus diplomas");
-      } else {
-        setDiplomas((data ?? []) as DiplomaRow[]);
-      }
+  const cargar = async () => {
+    setLoading(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
       setLoading(false);
-    })();
-  }, []);
+      return;
+    }
+    const [dipRes, intRes] = await Promise.all([
+      supabase
+        .from("curso_diplomas")
+        .select("id, folio, curso_titulo, curso_norma, fecha_emision, calificacion, hash_verificacion, pdf_path, curso_id")
+        .eq("user_id", user.id)
+        .order("fecha_emision", { ascending: false }),
+      supabase
+        .from("curso_examen_intentos")
+        .select("id, curso_id, calificacion, finished_at")
+        .eq("user_id", user.id)
+        .eq("aprobado", true)
+        .order("finished_at", { ascending: false }),
+    ]);
+    if (dipRes.error) toast.error("No se pudieron cargar tus diplomas");
+    const dips = (dipRes.data ?? []) as Array<DiplomaRow & { curso_id: string }>;
+    setDiplomas(dips);
+
+    // intentos aprobados sin diploma emitido para ese curso
+    const cursosConDip = new Set(dips.map((d) => d.curso_id));
+    const intentos = (intRes.data ?? []) as IntentoPendiente[];
+    const pend = intentos.filter((i) => !cursosConDip.has(i.curso_id));
+    if (pend.length > 0) {
+      const cursoIds = Array.from(new Set(pend.map((p) => p.curso_id)));
+      const { data: cursos } = await supabase
+        .from("cursos")
+        .select("id, titulo")
+        .in("id", cursoIds);
+      const titulos = new Map((cursos ?? []).map((c: any) => [c.id, c.titulo]));
+      setPendientes(pend.map((p) => ({ ...p, curso_titulo: titulos.get(p.curso_id) })));
+    } else {
+      setPendientes([]);
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => { void cargar(); }, []);
+
+  const emitir = async (intentoId: string) => {
+    setEmitiendo(intentoId);
+    try {
+      const { data, error } = await supabase.functions.invoke("emitir-diploma", {
+        body: { intento_id: intentoId },
+      });
+      if (error) throw new Error(error.message);
+      if (data?.error) throw new Error(data.error);
+      toast.success(`Diploma emitido: ${data?.folio ?? ""}`);
+      await cargar();
+    } catch (e: any) {
+      toast.error(e?.message ?? "No se pudo emitir el diploma");
+    } finally {
+      setEmitiendo(null);
+    }
+  };
 
   const descargar = async (d: DiplomaRow) => {
     setDescargando(d.id);
@@ -72,12 +122,41 @@ export default function MisDiplomas() {
         </div>
       </div>
 
+      {pendientes.length > 0 && (
+        <Card className="border-amber-400/50 bg-amber-50/40 dark:bg-amber-950/20">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2 text-amber-900 dark:text-amber-300">
+              <Award className="h-5 w-5" /> Tienes diplomas pendientes de emisión
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {pendientes.map((p) => (
+              <div key={p.id} className="flex items-center justify-between gap-3 flex-wrap rounded border bg-background p-3">
+                <div className="text-sm">
+                  <div className="font-medium">{p.curso_titulo ?? "Curso"}</div>
+                  <div className="text-xs text-muted-foreground">
+                    Aprobado con {Number(p.calificacion).toFixed(0)} / 100
+                  </div>
+                </div>
+                <Button size="sm" onClick={() => emitir(p.id)} disabled={emitiendo === p.id}>
+                  {emitiendo === p.id ? (
+                    <><Loader2 className="h-4 w-4 mr-1 animate-spin" /> Emitiendo…</>
+                  ) : (
+                    <><Award className="h-4 w-4 mr-1" /> Emitir mi diploma</>
+                  )}
+                </Button>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
       {loading ? (
         <div className="space-y-3">
           <Skeleton className="h-28 w-full" />
           <Skeleton className="h-28 w-full" />
         </div>
-      ) : diplomas.length === 0 ? (
+      ) : diplomas.length === 0 && pendientes.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center text-muted-foreground space-y-3">
             <FileText className="h-10 w-10 mx-auto opacity-50" />

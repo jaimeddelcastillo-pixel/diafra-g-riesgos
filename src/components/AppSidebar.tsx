@@ -1,4 +1,4 @@
-import { LayoutDashboard, FolderOpen, Settings, BookOpen, ShieldCheck, LogOut, LifeBuoy, Ticket, Library, Sparkles, GraduationCap, FileBadge, FileText, Search } from "lucide-react";
+import { LayoutDashboard, FolderOpen, Settings, BookOpen, ShieldCheck, LogOut, LifeBuoy, Ticket, Library, Sparkles, GraduationCap, FileBadge, FileText, Search, Award, BarChart3 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -33,6 +33,7 @@ const orgNavItems = [
   { title: "Recursos", url: "/recursos", icon: Library, onboarding: "recursos" },
   { title: "Mis Protocolos", url: "/mis-protocolos", icon: FileBadge, onboarding: undefined },
   { title: "Capacitación", url: "/capacitacion", icon: GraduationCap, onboarding: "capacitacion" },
+  { title: "Mis Diplomas", url: "/mis-diplomas", icon: Award, onboarding: undefined },
   { title: "Auditoría", url: "/auditoria", icon: Search, onboarding: undefined },
   { title: "Configuración", url: "/configuracion", icon: Settings, onboarding: undefined },
 ];
@@ -49,9 +50,11 @@ export function AppSidebar() {
 
   // Solo admin y responsable_sanitario ven "Ayuda"
   const puedeAyuda = hasRole("admin") || hasRole("responsable_sanitario");
+  const puedeCumplimiento = hasRole("admin") || hasRole("responsable_sanitario") || isSuperAdmin();
   const navItems = showOrgNav
     ? [
         ...orgNavItems,
+        ...(puedeCumplimiento ? [{ title: "Cumplimiento", url: "/cumplimiento", icon: BarChart3, onboarding: undefined }] : []),
         ...(puedeAyuda ? [{ title: "Ayuda", url: "/soporte", icon: LifeBuoy, onboarding: undefined }] : []),
       ]
     : adminNavItems;

@@ -1849,6 +1849,21 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      cumplimiento_curso: {
+        Args: { p_curso_id: string }
+        Returns: {
+          aprobado: boolean
+          diploma_folio: string
+          diploma_hash: string
+          email: string
+          fecha_aprobacion: string
+          intentos: number
+          mejor_calificacion: number
+          nombre: string
+          rol: string
+          user_id: string
+        }[]
+      }
       delete_email: {
         Args: { message_id: number; queue_name: string }
         Returns: boolean
