@@ -19,7 +19,10 @@ function json(data: unknown, status = 200) {
   });
 }
 
-const APP_URL = Deno.env.get("APP_URL") ?? "https://tracea.com.mx";
+// Forzamos el dominio productivo para que los correos siempre apunten a
+// tracea.com.mx, sin importar lo que tenga la variable APP_URL heredada de
+// despliegues anteriores (p.ej. *.lovable.app).
+const APP_URL = "https://tracea.com.mx";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
