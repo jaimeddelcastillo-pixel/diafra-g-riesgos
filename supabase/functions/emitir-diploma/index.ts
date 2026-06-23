@@ -159,10 +159,10 @@ async function generarDiplomaPDF(opts: {
   doc.setTextColor(40, 40, 40);
   doc.text(`conforme a la norma ${opts.norma}`, W / 2, 116, { align: "center" });
 
-  // Datos: 2 columnas
+  // Datos: 2 columnas (subimos el bloque para dejar aire a la firma)
   doc.setFontSize(10);
   doc.setTextColor(60, 60, 60);
-  const colY = 134;
+  const colY = 128;
   doc.setFont("helvetica", "bold");
   doc.text("Calificación:", 50, colY);
   doc.text("Duración:", 50, colY + 6);
@@ -202,16 +202,16 @@ async function generarDiplomaPDF(opts: {
   doc.setTextColor(80, 80, 80);
   doc.text("Escanea para verificar", W - 36, H - 30, { align: "center" });
 
-  // Firma del instructor — imagen manuscrita desplazada hacia abajo para que
-  // medie sobre el nombre del instructor (sin tapar título ni línea).
+  // Firma del instructor — imagen manuscrita centrada sobre la línea de firma,
+  // entre el cuerpo del diploma y el nombre/título del instructor.
   const firmaCx = 72.5;
   const lineY = H - 38;
   try {
     const firmaW = FIRMA_JDC_WIDTH_MM;
     const firmaH = FIRMA_JDC_HEIGHT_MM;
     const firmaX = firmaCx - firmaW / 2;
-    // Bajamos ~12 mm: la firma cae sobre el nombre del instructor.
-    const firmaY = lineY - firmaH / 2 + 6;
+    // Apoyamos la firma justo encima de la línea (sin tapar nombre ni título).
+    const firmaY = lineY - firmaH - 1;
     doc.addImage(FIRMA_JDC_PNG_BASE64, "PNG", firmaX, firmaY, firmaW, firmaH);
   } catch (_) { /* fallback silencioso */ }
   doc.setDrawColor(40, 40, 40);
