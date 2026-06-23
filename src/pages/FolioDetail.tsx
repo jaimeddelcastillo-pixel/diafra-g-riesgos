@@ -101,13 +101,16 @@ function evaluarChecklistNOM241(folio: Folio, riesgos: Riesgo[], comite: FolioCo
     if (esCritico && r.requiere_accion && !tieneEvidencia) criticoSinEvidencia++;
   }
 
-  items.push({ id: "peligro", label: `Peligro (fuente) capturado en todos los riesgos${sinPeligro > 0 ? ` (${sinPeligro} pendiente${sinPeligro > 1 ? "s" : ""})` : ""}`, ok: sinPeligro === 0, critico: true });
-  items.push({ id: "situacion", label: `Situación peligrosa capturada en todos los riesgos${sinSituacion > 0 ? ` (${sinSituacion} pendiente${sinSituacion > 1 ? "s" : ""})` : ""}`, ok: sinSituacion === 0, critico: true });
-  items.push({ id: "responsable", label: `Acciones con responsable asignado${sinAccionResp > 0 ? ` (${sinAccionResp} sin asignar)` : ""}`, ok: sinAccionResp === 0, critico: true });
-  items.push({ id: "fecha", label: `Acciones con fecha de compromiso${sinFecha > 0 ? ` (${sinFecha} sin fecha)` : ""}`, ok: sinFecha === 0, critico: true });
-  items.push({ id: "evidencia_criticos", label: `Riesgos críticos con evidencia adjunta${criticoSinEvidencia > 0 ? ` (${criticoSinEvidencia} sin PDF)` : ""}`, ok: criticoSinEvidencia === 0, critico: true });
-  items.push({ id: "verificacion", label: `Acciones implementadas con verificación${sinVerif > 0 ? ` (${sinVerif} sin verificar)` : ""}`, ok: sinVerif === 0, critico: false });
-  items.push({ id: "alarp", label: `Riesgos en zona de reducción al mínimo posible con justificación de aceptabilidad${alarpSinJust > 0 ? ` (${alarpSinJust} sin justificar)` : ""}`, ok: alarpSinJust === 0, critico: false });
+  // Si no hay riesgos capturados, los checks por-riesgo no pueden darse por cumplidos (evita "vacuous truth")
+  const hayRiesgos = riesgos.length > 0;
+  const sufijoSinRiesgos = " (sin riesgos capturados)";
+  items.push({ id: "peligro", label: `Peligro (fuente) capturado en todos los riesgos${!hayRiesgos ? sufijoSinRiesgos : sinPeligro > 0 ? ` (${sinPeligro} pendiente${sinPeligro > 1 ? "s" : ""})` : ""}`, ok: hayRiesgos && sinPeligro === 0, critico: true });
+  items.push({ id: "situacion", label: `Situación peligrosa capturada en todos los riesgos${!hayRiesgos ? sufijoSinRiesgos : sinSituacion > 0 ? ` (${sinSituacion} pendiente${sinSituacion > 1 ? "s" : ""})` : ""}`, ok: hayRiesgos && sinSituacion === 0, critico: true });
+  items.push({ id: "responsable", label: `Acciones con responsable asignado${!hayRiesgos ? sufijoSinRiesgos : sinAccionResp > 0 ? ` (${sinAccionResp} sin asignar)` : ""}`, ok: hayRiesgos && sinAccionResp === 0, critico: true });
+  items.push({ id: "fecha", label: `Acciones con fecha de compromiso${!hayRiesgos ? sufijoSinRiesgos : sinFecha > 0 ? ` (${sinFecha} sin fecha)` : ""}`, ok: hayRiesgos && sinFecha === 0, critico: true });
+  items.push({ id: "evidencia_criticos", label: `Riesgos críticos con evidencia adjunta${!hayRiesgos ? sufijoSinRiesgos : criticoSinEvidencia > 0 ? ` (${criticoSinEvidencia} sin PDF)` : ""}`, ok: hayRiesgos && criticoSinEvidencia === 0, critico: true });
+  items.push({ id: "verificacion", label: `Acciones implementadas con verificación${!hayRiesgos ? sufijoSinRiesgos : sinVerif > 0 ? ` (${sinVerif} sin verificar)` : ""}`, ok: hayRiesgos && sinVerif === 0, critico: false });
+  items.push({ id: "alarp", label: `Riesgos en zona de reducción al mínimo posible con justificación de aceptabilidad${!hayRiesgos ? sufijoSinRiesgos : alarpSinJust > 0 ? ` (${alarpSinJust} sin justificar)` : ""}`, ok: hayRiesgos && alarpSinJust === 0, critico: false });
 
   // ── Informativos: clasificación según norma ──
   const modo = getClasificacionMode(folio.norma_folio, folio.clasificacion_categoria);
