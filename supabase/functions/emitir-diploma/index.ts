@@ -80,17 +80,26 @@ async function generarDiplomaPDF(opts: {
   doc.setLineWidth(0.4);
   doc.rect(11, 11, W - 22, H - 22);
 
-  // Banda superior navy con logo TRACEA Academy
+  // Banda superior navy con logo TRACEA Academy (blanco)
   doc.setFillColor(nr, ng, nb);
-  doc.rect(11, 11, W - 22, 32, "F");
+  doc.rect(11, 11, W - 22, 34, "F");
   try {
-    const logoH = 22;
-    const logoW = logoH * (LOGO_W / LOGO_H);
+    // Logo apaisado (ícono + texto + tagline). Limitamos por alto y verificamos
+    // que no se desborde a lo ancho de la banda.
+    const bandaH = 34;
+    const maxH = bandaH - 8;
+    const maxW = (W - 22) - 24;
+    let logoH = maxH;
+    let logoW = logoH * (LOGO_W / LOGO_H);
+    if (logoW > maxW) {
+      logoW = maxW;
+      logoH = logoW * (LOGO_H / LOGO_W);
+    }
     doc.addImage(
       LOGO_TRACEA_PNG_BASE64,
       "PNG",
       W / 2 - logoW / 2,
-      14,
+      11 + (bandaH - logoH) / 2,
       logoW,
       logoH,
     );
@@ -181,25 +190,28 @@ async function generarDiplomaPDF(opts: {
     doc.text(`• ${m}`, 155, colY + 6 + i * 5);
   });
 
-  // QR de verificación (esquina inferior derecha)
+  // QR de verificación (esquina inferior derecha) — el QR es el único
+  // mecanismo de verificación visual; no se imprime la URL en texto.
   const qrDataUrl = await QRCode.toDataURL(opts.verificacionUrl, {
-    width: 200,
+    width: 240,
     margin: 1,
     color: { dark: NAVY, light: "#ffffff" },
   });
   doc.addImage(qrDataUrl, "PNG", W - 50, H - 60, 28, 28);
   doc.setFontSize(7);
   doc.setTextColor(80, 80, 80);
-  doc.text("Verificación en línea", W - 36, H - 30, { align: "center" });
+  doc.text("Escanea para verificar", W - 36, H - 30, { align: "center" });
 
-  // Firma del instructor — imagen manuscrita centrada sobre la línea
+  // Firma del instructor — imagen manuscrita desplazada hacia abajo para que
+  // medie sobre el nombre del instructor (sin tapar título ni línea).
   const firmaCx = 72.5;
   const lineY = H - 38;
   try {
     const firmaW = FIRMA_JDC_WIDTH_MM;
     const firmaH = FIRMA_JDC_HEIGHT_MM;
     const firmaX = firmaCx - firmaW / 2;
-    const firmaY = lineY - firmaH + 1; // base apoyada sobre la línea
+    // Bajamos ~12 mm: la firma cae sobre el nombre del instructor.
+    const firmaY = lineY - firmaH / 2 + 6;
     doc.addImage(FIRMA_JDC_PNG_BASE64, "PNG", firmaX, firmaY, firmaW, firmaH);
   } catch (_) { /* fallback silencioso */ }
   doc.setDrawColor(40, 40, 40);
@@ -214,20 +226,13 @@ async function generarDiplomaPDF(opts: {
   doc.setTextColor(80, 80, 80);
   doc.text("Instructor — TRACEA Academy", firmaCx, lineY + 10, { align: "center" });
 
-  // Pie legal (banda inferior)
+  // Pie legal (banda inferior). La URL de verificación NO se imprime: el
+  // QR de arriba es el mecanismo de validación.
   doc.setFont("helvetica", "normal");
   doc.setFontSize(7);
   doc.setTextColor(90, 90, 90);
-  const pie = doc.splitTextToSize(PIE_LEGAL, W - 50);
-  doc.text(pie, W / 2, H - 18, { align: "center" });
-  doc.setFontSize(6.5);
-  doc.setTextColor(tr, tg, tb);
-  doc.text(
-    `Verificación en línea: ${opts.verificacionUrl}`,
-    W / 2,
-    H - 13,
-    { align: "center" },
-  );
+  const pie = doc.splitTextToSize(PIE_LEGAL, W - 60);
+  doc.text(pie, W / 2, H - 16, { align: "center" });
 
   const out = doc.output("arraybuffer");
   return new Uint8Array(out);
