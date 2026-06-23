@@ -18,10 +18,12 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-// URL pública canónica para verificación del diploma (QR). Forzamos dominio
-// productivo para que el QR siempre lleve a una página pública estable.
+// URL pública canónica para verificación del diploma (QR) y links del correo.
+// Forzamos el dominio productivo (tracea.com.mx) ignorando cualquier APP_URL
+// heredado de despliegues anteriores (p.ej. *.lovable.app) para que el QR
+// siempre lleve a una página pública estable.
 const VERIFY_BASE_URL = "https://tracea.com.mx";
-const APP_URL = Deno.env.get("APP_URL") ?? VERIFY_BASE_URL;
+const APP_URL = VERIFY_BASE_URL;
 
 // Paleta industrial médico
 const NAVY = "#0B2545";
