@@ -3,9 +3,9 @@ import { useParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, XCircle, GraduationCap } from "lucide-react";
+import { CheckCircle2, XCircle } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import traceaLogo from "@/assets/tracea-official.png.asset.json";
+import traceaLogo from "@/assets/tracea-academy-azul.png.asset.json";
 
 type Diploma = {
   folio: string;
@@ -38,14 +38,10 @@ export default function DiplomaVerificar() {
           <img
             src={traceaLogo.url}
             alt="TRACEA Academy"
-            className="h-24 sm:h-28 w-auto object-contain mx-auto"
+            className="h-28 sm:h-32 w-auto object-contain mx-auto"
           />
-          <div className="flex items-center justify-center gap-2 mt-3 text-[#0B2545]">
-            <GraduationCap className="h-5 w-5" />
-            <span className="text-xs uppercase tracking-wider font-semibold">TRACEA Academy</span>
-          </div>
-          <h1 className="text-2xl font-bold mt-1" style={{ color: "#0B2545" }}>
-            Verificación de diploma — TRACEA Academy
+          <h1 className="text-2xl font-bold mt-4" style={{ color: "#0B2545" }}>
+            Verificación de diploma
           </h1>
         </div>
         {loading ? (
