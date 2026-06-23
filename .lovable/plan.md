@@ -1,101 +1,31 @@
+## Cambios al diploma y a la página de verificación
 
-## Objetivo
+### 1. Logo blanco en la banda azul del diploma
+- Tomar el logo `TRACEA Academy` (ícono + texto + tagline) que adjuntaste y recolorearlo a blanco con fondo transparente.
+- Subirlo como asset (`tracea-academy-blanco.png`) y reemplazar el logo actual de la cabecera navy en la edge function `emitir-diploma` (`supabase/functions/emitir-diploma/logo.ts` + uso en `index.ts`).
+- Ajustar tamaño para que respire dentro de la banda (sin tocar bordes).
 
-1. Arreglar la emisión del diploma (no se generó en tu intento aprobado).
-2. Mostrar correctamente aciertos/errores por pregunta y resumen por bloque tras enviar el examen.
-3. Dar calificación visual clara al alumno (durante y al final).
-4. Dashboard de cumplimiento del curso para la empresa (admin/RS).
+### 2. Firma desplazada hacia abajo
+- En `emitir-diploma/index.ts` bajar la firma ~10–12 mm para que cubra parcialmente el nombre del instructor ("Jaime Del Castillo"), dejando legible el título "Instructor" y la línea.
+- Mantener el tamaño actual (28×32 mm) y el centrado horizontal.
 
----
+### 3. QR apuntando a `https://tracea.com.mx/diploma/verificar/{hash}`
+- Forzar esa URL en la generación del QR (ya está así, pero se valida explícitamente).
+- Eliminar cualquier fallback a `*.lovable.app`.
 
-## 1. Fix de emisión de diploma
+### 4. Eliminar leyenda "Verificación en línea: …"
+- Quitar la línea de texto del pie del diploma; el QR queda como único mecanismo de verificación visual.
 
-**Edge function `emitir-diploma`**
-- Reemplazar el `.or(and(...),and(...))` que está fallando por dos lookups simples (por `intento_id` y por `(user_id, curso_id)`).
-- Agregar `console.error` etiquetado en cada paso: lookup, folio, PDF, storage, insert. Hoy solo loguea en el catch general → por eso no quedó traza.
-- Envolver `generarDiplomaPDF` en try/catch propio para distinguir error de render vs storage.
+### 5. Logo limpio en la página de verificación
+- Usar el mismo logo `TRACEA Academy` con letras azules en PNG transparente (sin recuadro blanco). Procesar el adjunto para asegurar transparencia real.
+- Subir como asset y reemplazar la importación de `tracea-official.png` en `src/pages/DiplomaVerificar.tsx`.
+- Eliminar el ícono `GraduationCap` decorativo y dejar solo el logo centrado.
 
-**`src/pages/MisDiplomas.tsx` — auto-recuperación**
-- Si el usuario aprobó un examen pero no tiene diploma, mostrar botón **"Emitir mi diploma"** que invoca `emitir-diploma` con ese `intento_id`. Así emites el tuyo sin volver a presentar.
+### 6. Botón "Regenerar" en `/mis-diplomas`
+- Ya existe. No se toca, pero sirve para que vuelvas a emitir el PDF con el diseño nuevo conservando el mismo folio y QR.
 
-**`src/components/AppSidebar.tsx`**
-- Añadir entrada **"Mis Diplomas"** (`/mis-diplomas`, ícono `Award`) en `orgNavItems`.
-
----
-
-## 2. Revisión del examen con errores visibles y bloques
-
-**Problema actual:** `ExamenFinal.tsx` está pintando todas las preguntas en verde porque en la pantalla de revisión compara contra una variable equivocada (todas terminan marcadas como correctas).
-
-**Cambios en `src/pages/ExamenFinal.tsx`:**
-- Usar `detalles[i].correcta` (que ya viene del RPC `examen_calificar`) para colorear cada pregunta:
-  - Verde con ✓ si acertó.
-  - Rojo con ✗ si falló — marcando claramente la opción del usuario y la opción correcta.
-  - Mostrar `justificacion` debajo solo en preguntas falladas.
-- Mostrar etiqueta de **bloque** en cada pregunta (Marco regulatorio / Metodología / Casos prácticos / Flujo de aprobación).
-
-**Resumen por bloque (nuevo panel arriba de la revisión):**
-- Tarjetas con: bloque, X / 5 aciertos, % del bloque, badge "Dominado" (≥80%) o **"Revisar este bloque"** (<80%) con recomendación textual.
-- Usa `bloque_resumen` que ya devuelve el RPC.
-
----
-
-## 3. Calificación visual para el alumno
-
-**Durante el examen (`ExamenFinal.tsx`):**
-- Barra de progreso de preguntas respondidas (X/20) ya existente — reforzar con contador visible.
-- Temporizador con color: verde > 15 min, ámbar 5–15 min, rojo < 5 min.
-
-**Al finalizar:**
-- Hero result card con:
-  - Círculo grande con la calificación (90 / 100), color por umbral (verde ≥80, ámbar 60–79, rojo <60).
-  - Badge **"Aprobado"** / **"No aprobado"**.
-  - X de 20 correctas, tiempo usado, intento N/3.
-- Debajo, las 4 tarjetas por bloque del punto 2.
-- Botón principal: si aprobó → "Ver mi diploma" → `/mis-diplomas`; si no → "Reintentar examen" (si quedan intentos).
-
----
-
-## 4. Dashboard de cumplimiento (empresa)
-
-**Nueva página `src/pages/AdminCumplimientoCurso.tsx`** (ruta `/admin/cumplimiento`, visible para `admin`, `responsable_sanitario` y `super_admin`).
-
-Vista por curso (selector arriba, default NOM-241):
-- KPIs: # miembros de la org, # aprobados, # en curso, # sin iniciar, % cumplimiento.
-- Tabla de usuarios de la organización con columnas:
-  - Nombre · Email · Rol
-  - Estado curso: Sin iniciar / En curso / **Aprobado**
-  - Mejor calificación
-  - Intentos usados (n/3)
-  - Fecha de aprobación
-  - Folio de diploma (si emitido) + link descarga
-- Filtros: estado, búsqueda por nombre.
-- Botón **Exportar CSV**.
-
-**RPC nueva `cumplimiento_curso(p_curso_id uuid)`** (SECURITY DEFINER):
-- Verifica que `auth.uid()` es admin/RS/super_admin de la org.
-- Devuelve filas con: user_id, nombre, email, rol, mejor_calificacion, intentos, aprobado, fecha_aprobacion, diploma_folio.
-- Une `org_members` ⨝ `profiles` ⨝ `curso_examen_intentos` (best by user) ⨝ `curso_diplomas`.
-
-**Sidebar:**
-- Añadir entrada **"Cumplimiento"** en sección admin con ícono `GraduationCap`.
-
----
-
-## Detalles técnicos
-
-- No se toca el esquema de `curso_examen_intentos` ni `curso_evaluacion_preguntas` — todo el feedback viene del RPC existente `examen_calificar`.
-- Sólo se añade la RPC `cumplimiento_curso` (lectura) en una migración.
-- Todo el código nuevo de UI usa tokens del design system (Navy/Teal), sin hex hardcodeados.
-
----
-
-## Archivos afectados
-
-- `supabase/functions/emitir-diploma/index.ts` (fix + logs)
-- `src/pages/MisDiplomas.tsx` (botón emitir)
-- `src/pages/ExamenFinal.tsx` (revisión correcta + hero + bloques)
-- `src/pages/AdminCumplimientoCurso.tsx` (nuevo)
-- `src/App.tsx` (ruta nueva)
-- `src/components/AppSidebar.tsx` (Mis Diplomas + Cumplimiento)
-- Migración: RPC `cumplimiento_curso` + GRANT execute a authenticated.
+### Detalles técnicos
+- Procesado de imágenes con `imagegen--edit_image` (versión blanca) y verificación de transparencia (versión azul).
+- Assets vía `lovable-assets` CLI para que las edge functions y el front consuman URLs CDN estables.
+- Despliegue de `emitir-diploma` al terminar.
+- Sin cambios a tablas, RPCs, ni lógica de calificaciones/cumplimiento.
