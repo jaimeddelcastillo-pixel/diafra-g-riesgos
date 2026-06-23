@@ -16,6 +16,7 @@ import ExamenFinal from "./pages/ExamenFinal";
 import DiplomaVerificar from "./pages/DiplomaVerificar";
 import Confianza from "./pages/Confianza";
 import MisDiplomas from "./pages/MisDiplomas";
+import Cumplimiento from "./pages/Cumplimiento";
 import Configuracion from "./pages/Configuracion";
 import Admin from "./pages/Admin";
 import AdminOrg from "./pages/AdminOrg";
@@ -74,6 +75,7 @@ const App = () => (
               <Route path="/capacitacion" element={<Capacitacion />} />
               <Route path="/capacitacion/:cursoId/examen" element={<ExamenFinal />} />
               <Route path="/mis-diplomas" element={<MisDiplomas />} />
+              <Route path="/cumplimiento" element={<Cumplimiento />} />
               <Route path="/configuracion" element={<Configuracion />} />
               <Route path="/admin" element={<Admin />} />
               <Route path="/admin/org/:id" element={<AdminOrg />} />
