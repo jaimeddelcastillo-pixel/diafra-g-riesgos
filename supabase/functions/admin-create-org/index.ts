@@ -101,7 +101,9 @@ Deno.serve(async (req) => {
       .single();
     if (orgErr) return json({ error: orgErr.message }, 500);
 
-    // Crear usuario admin
+    // Crear o reutilizar usuario admin
+    let userId: string | null = null;
+    let reused = false;
     const { data: newUser, error: createError } = await admin.auth.admin.createUser({
       email: admin_email,
       password: admin_password,
@@ -109,21 +111,48 @@ Deno.serve(async (req) => {
       user_metadata: { nombre: admin_nombre },
     });
     if (createError) {
-      await admin.from("organizations").delete().eq("id", org.id);
-      return json({ error: createError.message }, 400);
+      const msg = (createError.message || "").toLowerCase();
+      const alreadyExists =
+        msg.includes("already been registered") ||
+        msg.includes("already registered") ||
+        msg.includes("already exists") ||
+        (createError as any).code === "email_exists";
+      if (!alreadyExists) {
+        await admin.from("organizations").delete().eq("id", org.id);
+        return json({ error: createError.message }, 400);
+      }
+      // Buscar usuario existente por email
+      const { data: existing, error: lookupErr } = await admin
+        .from("profiles")
+        .select("id")
+        .ilike("email", admin_email)
+        .maybeSingle();
+      if (lookupErr || !existing) {
+        await admin.from("organizations").delete().eq("id", org.id);
+        return json({
+          error:
+            "Ese correo ya existe en el sistema pero no se pudo localizar el perfil. Pide al usuario que inicie sesión una vez para crear su perfil, o usa otro correo.",
+        }, 409);
+      }
+      userId = existing.id;
+      reused = true;
+    } else {
+      userId = newUser!.user.id;
     }
-    const userId = newUser.user.id;
 
     await admin
       .from("profiles")
       .update({ nombre: admin_nombre, cargo: admin_cargo })
-      .eq("id", userId);
+      .eq("id", userId!);
 
     const { error: memberErr } = await admin
       .from("org_members")
-      .insert({ org_id: org.id, user_id: userId, role: "admin" });
+      .upsert(
+        { org_id: org.id, user_id: userId!, role: "admin" },
+        { onConflict: "org_id,user_id" },
+      );
     if (memberErr) {
-      await admin.auth.admin.deleteUser(userId);
+      if (!reused) await admin.auth.admin.deleteUser(userId!);
       await admin.from("organizations").delete().eq("id", org.id);
       return json({ error: memberErr.message }, 500);
     }
@@ -131,10 +160,10 @@ Deno.serve(async (req) => {
     // Promover a admin en user_roles y quitar el 'operador' del trigger
     await admin
       .from("user_roles")
-      .upsert({ user_id: userId, role: "admin" }, { onConflict: "user_id,role", ignoreDuplicates: true });
-    await admin.from("user_roles").delete().eq("user_id", userId).eq("role", "operador");
+      .upsert({ user_id: userId!, role: "admin" }, { onConflict: "user_id,role", ignoreDuplicates: true });
+    await admin.from("user_roles").delete().eq("user_id", userId!).eq("role", "operador");
 
-    return json({ success: true, org_id: org.id, user_id: userId });
+    return json({ success: true, org_id: org.id, user_id: userId, reused });
   } catch (err: any) {
     return json({ error: err.message }, 500);
   }
