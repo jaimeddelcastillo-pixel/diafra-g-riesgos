@@ -205,7 +205,7 @@ async function generarDiplomaPDF(opts: {
   // Firma del instructor — imagen manuscrita centrada sobre la línea de firma,
   // entre el cuerpo del diploma y el nombre/título del instructor.
   const firmaCx = 72.5;
-  const lineY = H - 41;
+  const lineY = H - 34;
   try {
     const firmaW = FIRMA_JDC_WIDTH_MM;
     const firmaH = FIRMA_JDC_HEIGHT_MM;
