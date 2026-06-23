@@ -714,6 +714,7 @@ export type Database = {
           activo: boolean
           created_at: string
           descripcion: string
+          duracion_horas: number | null
           id: string
           norma: string
           orden: number
@@ -724,6 +725,7 @@ export type Database = {
           activo?: boolean
           created_at?: string
           descripcion?: string
+          duracion_horas?: number | null
           id?: string
           norma: string
           orden?: number
@@ -734,6 +736,7 @@ export type Database = {
           activo?: boolean
           created_at?: string
           descripcion?: string
+          duracion_horas?: number | null
           id?: string
           norma?: string
           orden?: number
