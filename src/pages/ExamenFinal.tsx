@@ -310,49 +310,140 @@ export default function ExamenFinal() {
 
   // ─── Resultado ─────────────────────────────────────────────────────────
   if (step === "result" && resultado) {
+    const calif = resultado.calificacion;
+    const colorCalif =
+      calif >= 80 ? "text-emerald-600 border-emerald-500/40 bg-emerald-500/5"
+      : calif >= 60 ? "text-amber-600 border-amber-500/40 bg-amber-500/5"
+      : "text-destructive border-destructive/40 bg-destructive/5";
+    // Ordenamos los detalles para mostrar primero los errores
+    const detalles = (resultado.detalles ?? []).slice().sort((a, b) => {
+      if (a.correcta === b.correcta) return 0;
+      return a.correcta ? 1 : -1;
+    });
+    const incorrectas = detalles.filter((d) => !d.correcta).length;
     return (
       <div className="max-w-3xl mx-auto p-6 space-y-6">
         <Button variant="ghost" size="sm" onClick={() => navigate("/capacitacion")} className="gap-1">
           <ArrowLeft className="h-4 w-4" /> Volver
         </Button>
-        <Card>
-          <CardHeader className="text-center">
+
+        {/* Hero con calificación */}
+        <Card className={`border-2 ${colorCalif.split(" ").filter(c => c.startsWith("border-") || c.startsWith("bg-")).join(" ")}`}>
+          <CardHeader className="text-center pb-2">
             {resultado.aprobado ? (
-              <CheckCircle2 className="h-16 w-16 text-emerald-500 mx-auto" />
+              <CheckCircle2 className="h-12 w-12 text-emerald-500 mx-auto" />
             ) : (
-              <XCircle className="h-16 w-16 text-destructive mx-auto" />
+              <XCircle className="h-12 w-12 text-destructive mx-auto" />
             )}
             <CardTitle className="text-2xl mt-2">
               {resultado.aprobado ? "¡Aprobaste!" : "No aprobaste"}
             </CardTitle>
             <CardDescription>
-              {resultado.correctas} de {TOTAL_PREGUNTAS} correctas — {resultado.calificacion.toFixed(0)} / 100
+              Necesitas {UMBRAL_APROBACION}% para aprobar
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <p className="text-sm font-semibold">Resumen por bloque</p>
-              {Object.entries(resultado.bloque_resumen).map(([b, r]) => (
-                <div key={b} className="flex items-center justify-between text-sm border rounded p-2">
-                  <span>{BLOQUE_LABEL[b] ?? b}</span>
-                  <Badge variant={r.correctas / r.total >= 0.8 ? "default" : "destructive"}>
-                    {r.correctas} / {r.total}
-                  </Badge>
+          <CardContent>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
+              <div className={`relative h-36 w-36 rounded-full border-8 flex flex-col items-center justify-center ${colorCalif}`}>
+                <span className="text-4xl font-bold leading-none">{calif.toFixed(0)}</span>
+                <span className="text-xs text-muted-foreground mt-1">/ 100</span>
+              </div>
+              <div className="text-sm space-y-1">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                  <span><strong>{resultado.correctas}</strong> correctas de {TOTAL_PREGUNTAS}</span>
                 </div>
-              ))}
+                <div className="flex items-center gap-2">
+                  <XCircle className="h-4 w-4 text-destructive" />
+                  <span><strong>{TOTAL_PREGUNTAS - resultado.correctas}</strong> incorrectas</span>
+                </div>
+                <div className="text-xs text-muted-foreground pt-1">
+                  Intento {numIntentoPrevio + 1} de {MAX_INTENTOS}
+                </div>
+              </div>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Resumen por bloque */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Resultado por bloque</CardTitle>
+            <CardDescription>
+              Los bloques en rojo requieren repaso antes del siguiente intento.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid sm:grid-cols-2 gap-3">
+              {Object.entries(resultado.bloque_resumen).map(([b, r]) => {
+                const pct = r.total > 0 ? (r.correctas / r.total) * 100 : 0;
+                const dominado = pct >= 80;
+                return (
+                  <div
+                    key={b}
+                    className={`rounded-lg border p-3 ${
+                      dominado
+                        ? "border-emerald-500/40 bg-emerald-500/5"
+                        : "border-destructive/40 bg-destructive/5"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-medium">{BLOQUE_LABEL[b] ?? b}</span>
+                      <Badge variant={dominado ? "default" : "destructive"}>
+                        {r.correctas} / {r.total}
+                      </Badge>
+                    </div>
+                    <Progress value={pct} className="h-2 mb-2" />
+                    <p className="text-xs">
+                      {dominado ? (
+                        <span className="text-emerald-700 dark:text-emerald-400">
+                          ✓ Dominado ({pct.toFixed(0)}%)
+                        </span>
+                      ) : (
+                        <span className="text-destructive">
+                          ⚠ Revisar este bloque ({pct.toFixed(0)}%)
+                        </span>
+                      )}
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Acciones principales */}
+        <Card>
+          <CardContent className="pt-6 space-y-3">
 
             {resultado.aprobado ? (
               <div className="space-y-2">
                 <div className="rounded border border-emerald-500/40 bg-emerald-500/5 p-4 text-center">
-                  <p className="text-sm font-semibold text-emerald-700">
-                    🎓 Diploma emitido
-                  </p>
-                  {diplomaFolio && (
-                    <p className="text-xs text-muted-foreground mt-1">Folio {diplomaFolio}</p>
-                  )}
-                  {emitiendoDiploma && (
-                    <p className="text-xs text-muted-foreground mt-1">Generando diploma…</p>
+                  {emitiendoDiploma ? (
+                    <p className="text-sm font-semibold text-emerald-700">
+                      🎓 Generando tu diploma…
+                    </p>
+                  ) : diplomaFolio ? (
+                    <>
+                      <p className="text-sm font-semibold text-emerald-700">
+                        🎓 Diploma emitido
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">Folio {diplomaFolio}</p>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-sm font-semibold text-amber-700">
+                        Tu diploma aún no se generó automáticamente.
+                      </p>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="mt-2"
+                        onClick={() => intentoId && emitirDiploma(intentoId)}
+                      >
+                        <RefreshCw className="h-4 w-4 mr-1" /> Reintentar emisión
+                      </Button>
+                    </>
                   )}
                 </div>
                 <Button onClick={() => navigate("/mis-diplomas")} className="w-full gap-2">
@@ -381,48 +472,99 @@ export default function ExamenFinal() {
                     <RefreshCw className="h-4 w-4" /> Reintentar
                   </Button>
                 )}
-                {/* Revisión pregunta a pregunta del intento recién terminado */}
-                <details className="mt-4 rounded border bg-muted/30">
-                  <summary className="cursor-pointer px-3 py-2 text-sm font-medium flex items-center gap-2">
-                    <Eye className="h-4 w-4" /> Revisar mis respuestas
-                  </summary>
-                  <div className="p-3 space-y-3">
-                    {(resultado.detalles ?? []).map((p, i) => {
-                      const r = p.respuesta_usuario;
-                      const ok = p.correcta;
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Revisión pregunta a pregunta — siempre disponible */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Eye className="h-4 w-4" /> Revisar mis respuestas
+            </CardTitle>
+            <CardDescription>
+              {incorrectas > 0
+                ? `${incorrectas} incorrecta(s) marcada(s) primero. Lee la justificación para reforzar el tema.`
+                : "¡Todas correctas! Repasa las justificaciones si quieres."}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {detalles.map((p, i) => {
+              const r = p.respuesta_usuario;
+              const ok = p.correcta;
+              const opciones: Array<{ letra: "A"|"B"|"C"|"D"; texto: string }> = [
+                { letra: "A", texto: p.opcion_a },
+                { letra: "B", texto: p.opcion_b },
+                { letra: "C", texto: p.opcion_c },
+                { letra: "D", texto: p.opcion_d },
+              ];
+              return (
+                <div
+                  key={p.id}
+                  className={`rounded border-l-4 border bg-background p-3 text-sm ${
+                    ok
+                      ? "border-l-emerald-500"
+                      : "border-l-destructive"
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-1 gap-2 flex-wrap">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">Pregunta {i + 1}</span>
+                      <Badge variant="outline" className="text-[10px]">
+                        {BLOQUE_LABEL[p.bloque] ?? p.bloque}
+                      </Badge>
+                    </div>
+                    {ok ? (
+                      <Badge className="bg-emerald-500 text-white hover:bg-emerald-500">
+                        <CheckCircle2 className="h-3 w-3 mr-1" /> Correcta
+                      </Badge>
+                    ) : (
+                      <Badge variant="destructive">
+                        <XCircle className="h-3 w-3 mr-1" /> Incorrecta
+                      </Badge>
+                    )}
+                  </div>
+                  <p className="mb-2 font-medium">{p.pregunta}</p>
+                  <div className="space-y-1">
+                    {opciones.map((op) => {
+                      const esCorrecta = op.letra === p.respuesta_correcta;
+                      const esTuya = r === op.letra;
+                      let cls = "border-border bg-muted/30";
+                      let prefijo: string | null = null;
+                      if (esCorrecta) {
+                        cls = "border-emerald-500/50 bg-emerald-500/10 text-emerald-900 dark:text-emerald-300";
+                        prefijo = "✓ Correcta";
+                      } else if (esTuya && !ok) {
+                        cls = "border-destructive/50 bg-destructive/10 text-destructive";
+                        prefijo = "✗ Tu respuesta";
+                      } else if (esTuya && ok) {
+                        prefijo = "Tu respuesta";
+                      }
                       return (
-                        <div key={p.id} className="rounded border bg-background p-3 text-sm">
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="font-medium">Pregunta {i + 1}</span>
-                            {ok ? (
-                              <Badge className="bg-emerald-500 text-white">Correcta</Badge>
-                            ) : (
-                              <Badge variant="destructive">Incorrecta</Badge>
-                            )}
-                          </div>
-                          <p className="mb-2">{p.pregunta}</p>
-                          <p className="text-xs">
-                            <strong>Tu respuesta:</strong>{" "}
-                            {r ? `${r}. ${(p as any)[`opcion_${r.toLowerCase()}`]}` : "Sin responder"}
-                          </p>
-                          {!ok && (
-                            <p className="text-xs text-emerald-700 dark:text-emerald-400">
-                              <strong>Correcta:</strong>{" "}
-                              {p.respuesta_correcta}. {(p as any)[`opcion_${p.respuesta_correcta.toLowerCase()}`]}
-                            </p>
-                          )}
-                          {p.justificacion && (
-                            <p className="mt-1 text-xs text-muted-foreground italic">
-                              {p.justificacion}
-                            </p>
+                        <div key={op.letra} className={`text-xs rounded border p-2 ${cls}`}>
+                          <span className="font-bold mr-2">{op.letra}.</span>
+                          {op.texto}
+                          {prefijo && (
+                            <span className="ml-2 text-[10px] font-semibold uppercase">
+                              · {prefijo}
+                            </span>
                           )}
                         </div>
                       );
                     })}
+                    {!r && (
+                      <p className="text-xs text-muted-foreground italic">Sin responder.</p>
+                    )}
                   </div>
-                </details>
-              </div>
-            )}
+                  {p.justificacion && (
+                    <div className="mt-2 rounded bg-muted/40 p-2 text-xs">
+                      <strong>¿Por qué?</strong> {p.justificacion}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </CardContent>
         </Card>
       </div>
