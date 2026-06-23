@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
-import { GraduationCap, Download, ShieldCheck, FileText, Award, Loader2 } from "lucide-react";
+import { GraduationCap, Download, ShieldCheck, FileText, Award, Loader2, RefreshCw } from "lucide-react";
 
 type DiplomaRow = {
   id: string;
@@ -17,6 +17,7 @@ type DiplomaRow = {
   calificacion: number;
   hash_verificacion: string;
   pdf_path: string;
+  intento_id: string | null;
 };
 
 type IntentoPendiente = {
@@ -33,6 +34,7 @@ export default function MisDiplomas() {
   const [descargando, setDescargando] = useState<string | null>(null);
   const [pendientes, setPendientes] = useState<IntentoPendiente[]>([]);
   const [emitiendo, setEmitiendo] = useState<string | null>(null);
+  const [regenerando, setRegenerando] = useState<string | null>(null);
 
   const cargar = async () => {
     setLoading(true);
@@ -44,7 +46,7 @@ export default function MisDiplomas() {
     const [dipRes, intRes] = await Promise.all([
       supabase
         .from("curso_diplomas")
-        .select("id, folio, curso_titulo, curso_norma, fecha_emision, calificacion, hash_verificacion, pdf_path, curso_id")
+        .select("id, folio, curso_titulo, curso_norma, fecha_emision, calificacion, hash_verificacion, pdf_path, curso_id, intento_id")
         .eq("user_id", user.id)
         .order("fecha_emision", { ascending: false }),
       supabase
@@ -92,6 +94,27 @@ export default function MisDiplomas() {
       toast.error(e?.message ?? "No se pudo emitir el diploma");
     } finally {
       setEmitiendo(null);
+    }
+  };
+
+  const regenerar = async (d: DiplomaRow) => {
+    if (!d.intento_id) {
+      toast.error("No se puede regenerar: falta intento asociado.");
+      return;
+    }
+    setRegenerando(d.id);
+    try {
+      const { data, error } = await supabase.functions.invoke("emitir-diploma", {
+        body: { intento_id: d.intento_id, force_regenerate: true },
+      });
+      if (error) throw new Error(error.message);
+      if (data?.error) throw new Error(data.error);
+      toast.success("Diploma regenerado con el diseño actualizado");
+      await cargar();
+    } catch (e: any) {
+      toast.error(e?.message ?? "No se pudo regenerar el diploma");
+    } finally {
+      setRegenerando(null);
     }
   };
 
@@ -196,6 +219,19 @@ export default function MisDiplomas() {
                     <Link to={`/diploma/verificar/${d.hash_verificacion}`} target="_blank">
                       <ShieldCheck className="h-4 w-4 mr-1" /> Verificar
                     </Link>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => regenerar(d)}
+                    disabled={regenerando === d.id || !d.intento_id}
+                    title="Regenera el PDF con el diseño más reciente (conserva folio y QR)"
+                  >
+                    {regenerando === d.id ? (
+                      <><Loader2 className="h-4 w-4 mr-1 animate-spin" /> Regenerando…</>
+                    ) : (
+                      <><RefreshCw className="h-4 w-4 mr-1" /> Regenerar</>
+                    )}
                   </Button>
                   <Button
                     size="sm"

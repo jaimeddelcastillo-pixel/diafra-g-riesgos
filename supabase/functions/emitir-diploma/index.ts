@@ -251,7 +251,8 @@ Deno.serve(async (req) => {
     if (!user) return json({ error: "No autorizado" }, 401);
 
     const admin = createClient(supabaseUrl, serviceKey);
-    const { intento_id } = await req.json();
+    const body = await req.json();
+    const { intento_id, force_regenerate } = body ?? {};
     if (!intento_id) return json({ error: "intento_id requerido" }, 400);
 
     // Validar intento
@@ -294,7 +295,7 @@ Deno.serve(async (req) => {
       }
       yaExiste = data ?? null;
     }
-    if (yaExiste) {
+    if (yaExiste && !force_regenerate) {
       return json({
         already_existed: true,
         folio: yaExiste.folio,
@@ -338,15 +339,22 @@ Deno.serve(async (req) => {
       .eq("user_id", user.id)
       .maybeSingle();
 
-    // Folio + hash
-    const { data: folioData, error: folioErr } = await admin.rpc("next_diploma_folio");
-    if (folioErr) {
-      console.error("[emitir-diploma] folio error", folioErr);
-      return json({ error: `Folio: ${folioErr.message}` }, 500);
+    // Folio + hash: si es regeneración, conservamos folio/hash existentes para que
+    // QR y verificación previa sigan siendo válidos. Si no, generamos nuevos.
+    let folio: string;
+    let hash: string;
+    if (yaExiste && force_regenerate) {
+      folio = yaExiste.folio as string;
+      hash = yaExiste.hash_verificacion as string;
+    } else {
+      const { data: folioData, error: folioErr } = await admin.rpc("next_diploma_folio");
+      if (folioErr) {
+        console.error("[emitir-diploma] folio error", folioErr);
+        return json({ error: `Folio: ${folioErr.message}` }, 500);
+      }
+      folio = folioData as unknown as string;
+      hash = (await sha256Hex(`${folio}|${user.id}|${curso.id}|${Date.now()}`)).slice(0, 40);
     }
-    const folio = folioData as unknown as string;
-
-    const hash = (await sha256Hex(`${folio}|${user.id}|${curso.id}|${Date.now()}`)).slice(0, 40);
     const verificacionUrl = `${APP_URL}/diploma/verificar/${hash}`;
 
     const fecha = new Date();
@@ -379,26 +387,45 @@ Deno.serve(async (req) => {
       return json({ error: `Storage: ${upErr.message}` }, 500);
     }
 
-    const { error: insErr } = await admin.from("curso_diplomas").insert({
-      folio,
-      user_id: user.id,
-      org_id: orgMember?.org_id ?? null,
-      curso_id: curso.id,
-      intento_id,
-      fecha_emision: fecha.toISOString(),
-      calificacion,
-      hash_verificacion: hash,
-      pdf_path: pdfPath,
-      alumno_nombre: alumnoNombre,
-      alumno_email: alumnoEmail,
-      curso_titulo: curso.titulo,
-      curso_norma: (curso as any).norma,
-      duracion_horas: (curso as any).duracion_horas ?? null,
-      modulos_aprobados: (modulos ?? []).map((m: any) => m.titulo),
-    });
-    if (insErr) {
-      console.error("[emitir-diploma] insert error", insErr);
-      return json({ error: `Insert: ${insErr.message}` }, 500);
+    if (yaExiste && force_regenerate) {
+      const { error: updErr } = await admin
+        .from("curso_diplomas")
+        .update({
+          pdf_path: pdfPath,
+          alumno_nombre: alumnoNombre,
+          alumno_email: alumnoEmail,
+          curso_titulo: curso.titulo,
+          curso_norma: (curso as any).norma,
+          duracion_horas: (curso as any).duracion_horas ?? null,
+          modulos_aprobados: (modulos ?? []).map((m: any) => m.titulo),
+        })
+        .eq("id", yaExiste.id);
+      if (updErr) {
+        console.error("[emitir-diploma] update error", updErr);
+        return json({ error: `Update: ${updErr.message}` }, 500);
+      }
+    } else {
+      const { error: insErr } = await admin.from("curso_diplomas").insert({
+        folio,
+        user_id: user.id,
+        org_id: orgMember?.org_id ?? null,
+        curso_id: curso.id,
+        intento_id,
+        fecha_emision: fecha.toISOString(),
+        calificacion,
+        hash_verificacion: hash,
+        pdf_path: pdfPath,
+        alumno_nombre: alumnoNombre,
+        alumno_email: alumnoEmail,
+        curso_titulo: curso.titulo,
+        curso_norma: (curso as any).norma,
+        duracion_horas: (curso as any).duracion_horas ?? null,
+        modulos_aprobados: (modulos ?? []).map((m: any) => m.titulo),
+      });
+      if (insErr) {
+        console.error("[emitir-diploma] insert error", insErr);
+        return json({ error: `Insert: ${insErr.message}` }, 500);
+      }
     }
 
     // Email con PDF adjunto
@@ -429,6 +456,7 @@ Deno.serve(async (req) => {
       folio,
       hash,
       verificacion_url: verificacionUrl,
+      regenerated: !!(yaExiste && force_regenerate),
     });
   } catch (err) {
     console.error("emitir-diploma error", err);
