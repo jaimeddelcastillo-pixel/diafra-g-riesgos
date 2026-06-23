@@ -36,7 +36,7 @@ const FILTROS = [
 ];
 
 export default function Cumplimiento() {
-  const { hasRole, isSuperAdmin } = useAuth();
+  const { hasRole, isSuperAdmin, orgId } = useAuth();
   const autorizado = hasRole("admin") || hasRole("responsable_sanitario") || isSuperAdmin();
 
   const [cursos, setCursos] = useState<Curso[]>([]);
@@ -70,6 +70,7 @@ export default function Cumplimiento() {
       setLoading(true);
       const { data, error } = await (supabase as any).rpc("cumplimiento_curso", {
         p_curso_id: cursoId,
+        p_org_id: orgId,
       });
       if (error) {
         toast.error(error.message ?? "No se pudo cargar el cumplimiento");
@@ -79,7 +80,7 @@ export default function Cumplimiento() {
       }
       setLoading(false);
     })();
-  }, [cursoId]);
+  }, [cursoId, orgId]);
 
   const kpis = useMemo(() => {
     const total = filas.length;
