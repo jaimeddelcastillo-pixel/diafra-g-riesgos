@@ -84,11 +84,11 @@ async function generarDiplomaPDF(opts: {
   doc.setFillColor(nr, ng, nb);
   doc.rect(11, 11, W - 22, 34, "F");
   try {
-    // Logo apaisado (ícono + texto + tagline). Limitamos por alto y verificamos
-    // que no se desborde a lo ancho de la banda.
+    // Logo apaisado (ícono + texto + tagline) insertado con su proporción
+    // original. No se recolorea ni se estira; solo se ajusta a la banda.
     const bandaH = 34;
-    const maxH = bandaH - 8;
-    const maxW = (W - 22) - 24;
+    const maxH = 23;
+    const maxW = 74;
     let logoH = maxH;
     let logoW = logoH * (LOGO_W / LOGO_H);
     if (logoW > maxW) {
@@ -118,30 +118,30 @@ async function generarDiplomaPDF(opts: {
   doc.setTextColor(nr, ng, nb);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(28);
-  doc.text("Diploma de Aprovechamiento", W / 2, 56, { align: "center" });
+  doc.text("Diploma de Aprovechamiento", W / 2, 58, { align: "center" });
 
   // Línea decorativa teal
   doc.setDrawColor(tr, tg, tb);
   doc.setLineWidth(0.8);
-  doc.line(W / 2 - 40, 60, W / 2 + 40, 60);
+  doc.line(W / 2 - 40, 62, W / 2 + 40, 62);
 
   // Texto "Se otorga a"
   doc.setFont("helvetica", "normal");
   doc.setFontSize(12);
   doc.setTextColor(50, 50, 50);
-  doc.text("Se otorga el presente diploma a", W / 2, 72, { align: "center" });
+  doc.text("Se otorga el presente diploma a", W / 2, 74, { align: "center" });
 
   // Nombre del alumno (grande)
   const [dr, dg, db] = hexToRgb(NAVY_DARK);
   doc.setTextColor(dr, dg, db);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(24);
-  doc.text(opts.alumnoNombre.toUpperCase(), W / 2, 85, { align: "center" });
+  doc.text(opts.alumnoNombre.toUpperCase(), W / 2, 87, { align: "center" });
 
   // Subrayado bajo nombre
   doc.setDrawColor(nr, ng, nb);
   doc.setLineWidth(0.3);
-  doc.line(W / 2 - 90, 89, W / 2 + 90, 89);
+  doc.line(W / 2 - 90, 91, W / 2 + 90, 91);
 
   // Cuerpo
   doc.setFont("helvetica", "normal");
@@ -149,15 +149,15 @@ async function generarDiplomaPDF(opts: {
   doc.setTextColor(40, 40, 40);
   const cuerpo =
     `por haber acreditado satisfactoriamente el programa de capacitación`;
-  doc.text(cuerpo, W / 2, 100, { align: "center" });
+  doc.text(cuerpo, W / 2, 101, { align: "center" });
   doc.setFont("helvetica", "bold");
   doc.setFontSize(14);
   doc.setTextColor(nr, ng, nb);
-  doc.text(opts.cursoTitulo, W / 2, 109, { align: "center" });
+  doc.text(opts.cursoTitulo, W / 2, 110, { align: "center" });
   doc.setFont("helvetica", "normal");
   doc.setFontSize(11);
   doc.setTextColor(40, 40, 40);
-  doc.text(`conforme a la norma ${opts.norma}`, W / 2, 116, { align: "center" });
+  doc.text(`conforme a la norma ${opts.norma}`, W / 2, 117, { align: "center" });
 
   // Datos: 2 columnas (subimos el bloque para dejar aire a la firma)
   doc.setFontSize(10);
@@ -205,13 +205,13 @@ async function generarDiplomaPDF(opts: {
   // Firma del instructor — imagen manuscrita centrada sobre la línea de firma,
   // entre el cuerpo del diploma y el nombre/título del instructor.
   const firmaCx = 72.5;
-  const lineY = H - 38;
+  const lineY = H - 34;
   try {
     const firmaW = FIRMA_JDC_WIDTH_MM;
     const firmaH = FIRMA_JDC_HEIGHT_MM;
     const firmaX = firmaCx - firmaW / 2;
-    // Apoyamos la firma justo encima de la línea (sin tapar nombre ni título).
-    const firmaY = lineY - firmaH - 1;
+    // Firma manuscrita con proporción original, centrada sobre la línea.
+    const firmaY = lineY - firmaH + 3;
     doc.addImage(FIRMA_JDC_PNG_BASE64, "PNG", firmaX, firmaY, firmaW, firmaH);
   } catch (_) { /* fallback silencioso */ }
   doc.setDrawColor(40, 40, 40);
