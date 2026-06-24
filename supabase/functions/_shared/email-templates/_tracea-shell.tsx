@@ -5,7 +5,7 @@ import {
 } from 'npm:@react-email/components@0.0.22'
 
 export const LOGO_URL =
-  'https://zcaebecdcpyqdzfqipiq.supabase.co/storage/v1/object/public/tracea-recursos/email%2Ftracea-logo-white.png'
+  'https://zcaebecdcpyqdzfqipiq.supabase.co/storage/v1/object/public/tracea-recursos/email%2Ftracea-logo-email.png'
 
 interface ShellProps {
   preview: string
@@ -22,9 +22,9 @@ export const TraceaShell: React.FC<ShellProps> = ({ preview, children }) => (
           <Img
             src={LOGO_URL}
             alt="TRACEA"
-            width="160"
-            height="40"
-            style={{ display: 'block', margin: '0 auto', maxWidth: '160px' }}
+            width="220"
+            height="37"
+            style={{ display: 'block', margin: '0 auto', width: '220px', height: '37px' }}
           />
           <Text style={brandTagline}>Follow the quality.</Text>
         </Section>
