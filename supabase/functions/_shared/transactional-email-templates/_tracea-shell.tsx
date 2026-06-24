@@ -5,7 +5,7 @@ import {
 } from 'npm:@react-email/components@0.0.22'
 
 export const LOGO_URL =
-  'https://zcaebecdcpyqdzfqipiq.supabase.co/storage/v1/object/public/tracea-recursos/email%2Ftracea-logo-email.png'
+  'https://zcaebecdcpyqdzfqipiq.supabase.co/storage/v1/object/public/tracea-recursos/email%2Ftracea-logo-login.png'
 
 interface ShellProps {
   preview: string
@@ -22,11 +22,10 @@ export const TraceaShell: React.FC<ShellProps> = ({ preview, children }) => (
           <Img
             src={LOGO_URL}
             alt="TRACEA"
-            width="220"
-            height="37"
-            style={{ display: 'block', margin: '0 auto', width: '220px', height: '37px' }}
+            width="180"
+            height="145"
+            style={{ display: 'block', margin: '0 auto', width: '180px', height: '145px' }}
           />
-          <Text style={brandTagline}>Follow the quality.</Text>
         </Section>
 
         <Section style={card}>{children}</Section>
@@ -127,17 +126,13 @@ const container: React.CSSProperties = {
   padding: '24px 16px',
 }
 const brandBar: React.CSSProperties = {
-  backgroundColor: '#042C53',
+  backgroundColor: '#ffffff',
   padding: '28px 24px',
   borderRadius: '8px 8px 0 0',
+  borderTop: '1px solid #e6ebf1',
+  borderLeft: '1px solid #e6ebf1',
+  borderRight: '1px solid #e6ebf1',
   textAlign: 'center',
-}
-const brandTagline: React.CSSProperties = {
-  color: '#8aa9d6',
-  fontSize: '12px',
-  margin: '10px 0 0',
-  letterSpacing: '1px',
-  textTransform: 'uppercase',
 }
 const card: React.CSSProperties = {
   backgroundColor: '#ffffff',
