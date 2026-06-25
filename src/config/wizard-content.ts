@@ -165,7 +165,11 @@ const DETECTABILIDAD_TXT: Record<number, string> = {
   1: "Prevención automática por diseño",
 };
 
-export const getOcurrenciaTxt = (v: number) => OCURRENCIA_TXT[v] ?? "";
+export const getOcurrenciaTxt = (v: number, norma?: string | null) => {
+  const n = normalizaNorma(norma);
+  const tbl = n === "NOM-059" ? OCURRENCIA_TXT_NOM059 : OCURRENCIA_TXT_NOM241;
+  return tbl[v] ?? "";
+};
 export const getDetectabilidadTxt = (v: number) => DETECTABILIDAD_TXT[v] ?? "";
 
 // ── Ayudas de controles (Paso 4) ─────────────────────────────────────────────
