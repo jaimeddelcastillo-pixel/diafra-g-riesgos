@@ -1451,7 +1451,7 @@ export function RiesgoWizardDialog({
                     label="Ocurrencia (O)"
                     value={s.ocurrencia}
                     onChange={(v) => setS({ ...s, ocurrencia: v })}
-                    description={getOcurrenciaTxt(s.ocurrencia)}
+                    description={getOcurrenciaTxt(s.ocurrencia, normaKey)}
                   />
                   {usaDet && (
                     <SliderField
@@ -1563,7 +1563,7 @@ export function RiesgoWizardDialog({
                       setResidualesEditados(true);
                       setS({ ...s, ocu_residual: v });
                     }}
-                    description={getOcurrenciaTxt(s.ocu_residual)}
+                    description={getOcurrenciaTxt(s.ocu_residual, normaKey)}
                   />
                   {usaDet && (
                     <SliderField
