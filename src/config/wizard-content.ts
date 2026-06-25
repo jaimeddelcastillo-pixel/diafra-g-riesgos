@@ -125,18 +125,31 @@ export function getSeveridadTxt(norma: string | null | undefined, v: number): st
   return SEVERIDAD_TXT[normalizaNorma(norma)][v] ?? "";
 }
 
-// ── Descripciones de Ocurrencia y Detectabilidad (comunes) ───────────────────
-const OCURRENCIA_TXT: Record<number, string> = {
-  10: "Muy frecuente — más del 50% de lotes",
-  9: "Casi siempre — 1 de cada 3 lotes",
-  8: "Recurrente — ocurre semanalmente",
-  7: "Frecuente — ocurre mensualmente",
+// ── Descripciones de Ocurrencia y Detectabilidad por norma ───────────────────
+const OCURRENCIA_TXT_NOM241: Record<number, string> = {
+  10: "Casi seguro — >50% de los lotes o eventos",
+  9: "Muy frecuente — 1 de cada 3 lotes",
+  8: "Frecuente — semanal",
+  7: "Moderado — mensual",
   6: "Ocasional — cada 6 meses",
   5: "Ocasional — cada 6 meses",
-  4: "Aislada — aproximadamente 1 vez al año",
-  3: "Aislada — aproximadamente 1 vez al año",
-  2: "Rara vez — históricamente no presentado",
-  1: "Rara vez — históricamente no presentado",
+  4: "Raro — anual",
+  3: "Raro — anual",
+  2: "Muy raro — históricamente no presentado / solo teórico",
+  1: "Muy raro — históricamente no presentado / solo teórico",
+};
+
+const OCURRENCIA_TXT_NOM059: Record<number, string> = {
+  10: "Casi cierta — evento sistemático en cada lote",
+  9: "Muy alta — múltiples eventos por lote",
+  8: "Alta — 1 evento por lote",
+  7: "Frecuente — 1 evento en 2–5 lotes",
+  6: "Moderada — 1 evento en 5–10 lotes",
+  5: "Ocasional — 1 evento en 10–20 lotes",
+  4: "Baja — 1 evento en 20–50 lotes",
+  3: "Muy baja — 1 evento en 50–100 lotes",
+  2: "Remota — 1 evento en >100 lotes",
+  1: "Improbable — sin antecedentes históricos",
 };
 
 const DETECTABILIDAD_TXT: Record<number, string> = {
