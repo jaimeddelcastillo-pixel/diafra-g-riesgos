@@ -79,16 +79,16 @@ const SEVERIDAD_NOM241: CatalogoItem[] = [
 ];
 
 const OCURRENCIA_NOM241: CatalogoItem[] = [
-  { valor: 1, etiqueta: "Improbable", descripcion: "< 1 en 1,000,000" },
-  { valor: 2, etiqueta: "Remota", descripcion: "1 en 500,000" },
-  { valor: 3, etiqueta: "Muy baja", descripcion: "1 en 100,000" },
-  { valor: 4, etiqueta: "Baja", descripcion: "1 en 50,000" },
-  { valor: 5, etiqueta: "Ocasional", descripcion: "1 en 10,000" },
-  { valor: 6, etiqueta: "Moderada", descripcion: "1 en 1,000" },
-  { valor: 7, etiqueta: "Frecuente", descripcion: "1 en 500" },
-  { valor: 8, etiqueta: "Alta", descripcion: "1 en 100" },
-  { valor: 9, etiqueta: "Muy alta", descripcion: "1 en 50" },
-  { valor: 10, etiqueta: "Casi cierta", descripcion: "≥ 1 en 10" },
+  { valor: 1, etiqueta: "Muy raro", descripcion: "Históricamente no presentado / Solo teórico" },
+  { valor: 2, etiqueta: "Muy raro", descripcion: "Históricamente no presentado / Solo teórico" },
+  { valor: 3, etiqueta: "Raro", descripcion: "Anual" },
+  { valor: 4, etiqueta: "Raro", descripcion: "Anual" },
+  { valor: 5, etiqueta: "Ocasional", descripcion: "Cada 6 meses" },
+  { valor: 6, etiqueta: "Ocasional", descripcion: "Cada 6 meses" },
+  { valor: 7, etiqueta: "Moderado", descripcion: "Mensual" },
+  { valor: 8, etiqueta: "Frecuente", descripcion: "Semanal" },
+  { valor: 9, etiqueta: "Muy frecuente", descripcion: "1 de cada 3 lotes" },
+  { valor: 10, etiqueta: "Casi seguro", descripcion: ">50% de los lotes o eventos" },
 ];
 
 const DETECTABILIDAD_NOM241: CatalogoItem[] = [
