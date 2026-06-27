@@ -88,7 +88,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             // Org membership (sistema multi-tenant)
             const { data: memberData } = await supabase
               .from("org_members")
-              .select("role, org_id, organizations(id, nombre, slug, plan, activo, max_users, trial_expires_at, logo_url, codigo_formato, version_formato, descripcion, estado, pending_price_id, norma_aplicable, metodologia, usar_detectabilidad, umbral_npr_alto, umbral_npr_medio, onboarding_completado, onboarding_saltado, tiene_curso_pagado, curso_expira_en, dc3_emitidos, dc3_adicionales_disponibles)")
+              .select("role, org_id, organizations(id, nombre, slug, plan, activo, max_users, trial_expires_at, logo_url, codigo_formato, version_formato, descripcion, estado, pending_price_id, norma_aplicable, metodologia, usar_detectabilidad, umbral_npr_alto, umbral_npr_medio, onboarding_completado, onboarding_saltado, tiene_curso_pagado, curso_expira_en, dc3_emitidos, dc3_adicionales_disponibles, subscription_status)")
               .eq("user_id", session.user.id)
               .single();
 
@@ -149,7 +149,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!user || !_orgId) return;
     const { data } = await supabase
       .from("organizations")
-      .select("id, nombre, slug, plan, activo, max_users, trial_expires_at, logo_url, codigo_formato, version_formato, descripcion, estado, pending_price_id, norma_aplicable, metodologia, usar_detectabilidad, umbral_npr_alto, umbral_npr_medio, onboarding_completado, onboarding_saltado, tiene_curso_pagado, curso_expira_en, dc3_emitidos, dc3_adicionales_disponibles")
+      .select("id, nombre, slug, plan, activo, max_users, trial_expires_at, logo_url, codigo_formato, version_formato, descripcion, estado, pending_price_id, norma_aplicable, metodologia, usar_detectabilidad, umbral_npr_alto, umbral_npr_medio, onboarding_completado, onboarding_saltado, tiene_curso_pagado, curso_expira_en, dc3_emitidos, dc3_adicionales_disponibles, subscription_status")
       .eq("id", _orgId)
       .maybeSingle();
     if (data) setOrg(data as any);
@@ -182,7 +182,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // mientras se impersona (los headers y vistas dependen de esto).
     const { data: fullOrg } = await supabase
       .from("organizations")
-      .select("id, nombre, slug, plan, activo, max_users, trial_expires_at, logo_url, codigo_formato, version_formato, descripcion, estado, pending_price_id, norma_aplicable, metodologia, usar_detectabilidad, umbral_npr_alto, umbral_npr_medio, onboarding_completado, onboarding_saltado, tiene_curso_pagado, curso_expira_en, dc3_emitidos, dc3_adicionales_disponibles")
+      .select("id, nombre, slug, plan, activo, max_users, trial_expires_at, logo_url, codigo_formato, version_formato, descripcion, estado, pending_price_id, norma_aplicable, metodologia, usar_detectabilidad, umbral_npr_alto, umbral_npr_medio, onboarding_completado, onboarding_saltado, tiene_curso_pagado, curso_expira_en, dc3_emitidos, dc3_adicionales_disponibles, subscription_status")
       .eq("id", org.id)
       .maybeSingle();
     setImpersonatedOrg((fullOrg as any) ?? org);
