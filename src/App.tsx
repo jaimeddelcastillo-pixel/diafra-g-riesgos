@@ -24,6 +24,7 @@ import AdminTickets from "./pages/AdminTickets";
 import AdminAgentes from "./pages/AdminAgentes";
 import AdminProtocolos from "./pages/AdminProtocolos";
 import AdminRecursos from "./pages/AdminRecursos";
+import AdminDC3 from "./pages/AdminDC3";
 import AdminCursos from "./pages/AdminCursos";
 import AdminCursoEditor from "./pages/AdminCursoEditor";
 import AdminCursoEvaluacion from "./pages/AdminCursoEvaluacion";
@@ -83,6 +84,7 @@ const App = () => (
               <Route path="/admin/agentes-ia" element={<AdminAgentes />} />
               <Route path="/admin/protocolos" element={<AdminProtocolos />} />
               <Route path="/admin/recursos" element={<AdminRecursos />} />
+              <Route path="/admin/dc3" element={<AdminDC3 />} />
               <Route path="/admin/cursos" element={<AdminCursos />} />
               <Route path="/admin/cursos/:id" element={<AdminCursoEditor />} />
               <Route path="/admin/cursos/:id/evaluacion" element={<AdminCursoEvaluacion />} />
