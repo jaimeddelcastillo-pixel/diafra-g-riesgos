@@ -24,6 +24,9 @@ import { template as consultasIaAcreditadas } from './consultas-ia-acreditadas.t
 import { template as consultasIaAviso80 } from './consultas-ia-aviso-80.tsx'
 import { template as folioRevisionPendiente } from './folio-revision-pendiente.tsx'
 import { template as diplomaEmitido } from './diploma-emitido.tsx'
+import { template as dc3SolicitudRecibida } from './dc3-solicitud-recibida.tsx'
+import { template as dc3SolicitudInterna } from './dc3-solicitud-interna.tsx'
+import { template as dc3Enviado } from './dc3-enviado.tsx'
 
 export const TEMPLATES: Record<string, TemplateEntry> = {
   'bienvenida-usuario': bienvenidaUsuario,
@@ -41,4 +44,7 @@ export const TEMPLATES: Record<string, TemplateEntry> = {
   'consultas-ia-aviso-80': consultasIaAviso80,
   'folio-revision-pendiente': folioRevisionPendiente,
   'diploma-emitido': diplomaEmitido,
+  'dc3-solicitud-recibida': dc3SolicitudRecibida,
+  'dc3-solicitud-interna': dc3SolicitudInterna,
+  'dc3-enviado': dc3Enviado,
 }

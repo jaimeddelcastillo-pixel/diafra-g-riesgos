@@ -1,4 +1,4 @@
-import { LayoutDashboard, FolderOpen, Settings, BookOpen, ShieldCheck, LogOut, LifeBuoy, Ticket, Library, Sparkles, GraduationCap, FileBadge, FileText, Search, Award, BarChart3 } from "lucide-react";
+import { LayoutDashboard, FolderOpen, Settings, BookOpen, ShieldCheck, LogOut, LifeBuoy, Ticket, Library, Sparkles, GraduationCap, FileBadge, FileText, Search, Award, BarChart3, ClipboardCheck } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -23,6 +23,7 @@ const adminNavItems = [
   { title: "Protocolos (addon)", url: "/admin/protocolos", icon: FileBadge },
   { title: "Recursos públicos", url: "/admin/recursos", icon: Library },
   { title: "Cursos", url: "/admin/cursos", icon: GraduationCap },
+  { title: "DC-3 pendientes", url: "/admin/dc3", icon: ClipboardCheck },
   { title: "Gestión de Folios", url: "/admin/folios", icon: FileText },
 ];
 

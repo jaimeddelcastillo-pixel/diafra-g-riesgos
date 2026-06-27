@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { GraduationCap, Download, ShieldCheck, FileText, Award, Loader2, RefreshCw } from "lucide-react";
+import SolicitarDC3Card from "@/components/SolicitarDC3Card";
 
 type DiplomaRow = {
   id: string;
@@ -243,6 +244,9 @@ export default function MisDiplomas() {
                     {descargando === d.id ? "Generando…" : "Descargar"}
                   </Button>
                 </div>
+              </CardContent>
+              <CardContent className="pt-0">
+                <SolicitarDC3Card diplomaId={d.id} cursoTitulo={d.curso_titulo} />
               </CardContent>
             </Card>
           ))}

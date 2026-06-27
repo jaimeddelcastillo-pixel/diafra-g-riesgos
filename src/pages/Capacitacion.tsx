@@ -211,8 +211,12 @@ export default function Capacitacion() {
   const [dc3Qty, setDc3Qty] = useState(1);
 
   const planLower = org?.plan?.toLowerCase() ?? "";
-  const tieneCurso =
-    (org as any)?.tiene_curso_pagado === true || planLower === "enterprise";
+  const subStatus = ((org as any)?.subscription_status as string | null | undefined)?.toLowerCase() ?? "";
+  const PLANES_CON_CURSO = ["starter", "professional", "enterprise", "trial"];
+  const planActivo =
+    PLANES_CON_CURSO.includes(planLower) &&
+    (subStatus === "" || ["active", "trialing", "past_due"].includes(subStatus));
+  const tieneCurso = planActivo || (org as any)?.tiene_curso_pagado === true;
   const cursoExpira = (org as any)?.curso_expira_en as string | null | undefined;
   const dc3Emitidos = ((org as any)?.dc3_emitidos as number | null | undefined) ?? 0;
   const dc3Saldo =
@@ -742,6 +746,11 @@ export default function Capacitacion() {
                   title={!isAdmin ? "Solo el Administrador puede comprar DC-3" : undefined}
                 >
                   {DC3_EXTRA_LABEL}
+                </Button>
+              </div>
+              <div className="pt-2">
+                <Button asChild size="sm" variant="ghost">
+                  <Link to="/precios">¿Prefieres un plan recurrente? Contrata desde $85 USD/mes →</Link>
                 </Button>
               </div>
               <p className="text-xs text-orange-600 dark:text-orange-400 font-medium">

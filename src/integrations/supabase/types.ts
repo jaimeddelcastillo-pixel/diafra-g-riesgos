@@ -745,6 +745,96 @@ export type Database = {
         }
         Relationships: []
       }
+      dc3_solicitudes: {
+        Row: {
+          alumno_nombre: string | null
+          calificacion: number | null
+          created_at: string
+          curso_id: string | null
+          curso_norma: string | null
+          curso_titulo: string | null
+          dc3_url: string | null
+          diploma_id: string | null
+          email_destino: string
+          enviado_en: string | null
+          enviado_por: string | null
+          estado: string
+          fuente: string
+          id: string
+          intento_id: string | null
+          notas_admin: string | null
+          org_id: string | null
+          org_nombre: string | null
+          plan_org: string | null
+          solicitado_en: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          alumno_nombre?: string | null
+          calificacion?: number | null
+          created_at?: string
+          curso_id?: string | null
+          curso_norma?: string | null
+          curso_titulo?: string | null
+          dc3_url?: string | null
+          diploma_id?: string | null
+          email_destino: string
+          enviado_en?: string | null
+          enviado_por?: string | null
+          estado?: string
+          fuente: string
+          id?: string
+          intento_id?: string | null
+          notas_admin?: string | null
+          org_id?: string | null
+          org_nombre?: string | null
+          plan_org?: string | null
+          solicitado_en?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          alumno_nombre?: string | null
+          calificacion?: number | null
+          created_at?: string
+          curso_id?: string | null
+          curso_norma?: string | null
+          curso_titulo?: string | null
+          dc3_url?: string | null
+          diploma_id?: string | null
+          email_destino?: string
+          enviado_en?: string | null
+          enviado_por?: string | null
+          estado?: string
+          fuente?: string
+          id?: string
+          intento_id?: string | null
+          notas_admin?: string | null
+          org_id?: string | null
+          org_nombre?: string | null
+          plan_org?: string | null
+          solicitado_en?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dc3_solicitudes_diploma_id_fkey"
+            columns: ["diploma_id"]
+            isOneToOne: false
+            referencedRelation: "curso_diplomas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dc3_solicitudes_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       diploma_sequence: {
         Row: {
           last_number: number

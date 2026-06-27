@@ -9,6 +9,7 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Award, ArrowLeft, RefreshCw, CheckCircle2, XCircle, Clock, Flag, Eye } from "lucide-react";
+import SolicitarDC3Card from "@/components/SolicitarDC3Card";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -125,6 +126,7 @@ export default function ExamenFinal() {
     }>;
   } | null>(null);
   const [diplomaFolio, setDiplomaFolio] = useState<string | null>(null);
+  const [diplomaId, setDiplomaId] = useState<string | null>(null);
   const [emitiendoDiploma, setEmitiendoDiploma] = useState(false);
 
   useEffect(() => {
@@ -296,6 +298,16 @@ export default function ExamenFinal() {
       if (data?.error) throw new Error(data.error);
       setDiplomaFolio(data?.folio ?? null);
       toast({ title: "🎓 Diploma emitido", description: `Folio ${data?.folio}` });
+      // Recuperar id del diploma para el flujo DC-3
+      if (user) {
+        const { data: dip } = await supabase
+          .from("curso_diplomas")
+          .select("id")
+          .eq("intento_id", idIntento)
+          .eq("user_id", user.id)
+          .maybeSingle();
+        if (dip?.id) setDiplomaId(dip.id);
+      }
     } catch (err: any) {
       toast({ title: "Error al emitir diploma", description: err.message, variant: "destructive" });
     } finally {
@@ -452,6 +464,11 @@ export default function ExamenFinal() {
                 <p className="text-xs text-center text-muted-foreground">
                   También enviamos el diploma a tu correo.
                 </p>
+                {diplomaId && (
+                  <div className="pt-2">
+                    <SolicitarDC3Card diplomaId={diplomaId} cursoTitulo={curso?.titulo} />
+                  </div>
+                )}
               </div>
             ) : (
               <div className="space-y-2">
