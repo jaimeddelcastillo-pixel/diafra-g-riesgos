@@ -748,6 +748,11 @@ export default function Capacitacion() {
                   {DC3_EXTRA_LABEL}
                 </Button>
               </div>
+              <div className="pt-2">
+                <Button asChild size="sm" variant="ghost">
+                  <Link to="/precios">¿Prefieres un plan recurrente? Contrata desde $85 USD/mes →</Link>
+                </Button>
+              </div>
               <p className="text-xs text-orange-600 dark:text-orange-400 font-medium">
                 Precio de lanzamiento — primeros 20 clientes
               </p>
