@@ -464,6 +464,11 @@ export default function ExamenFinal() {
                 <p className="text-xs text-center text-muted-foreground">
                   También enviamos el diploma a tu correo.
                 </p>
+                {diplomaId && (
+                  <div className="pt-2">
+                    <SolicitarDC3Card diplomaId={diplomaId} cursoTitulo={curso?.titulo} />
+                  </div>
+                )}
               </div>
             ) : (
               <div className="space-y-2">
