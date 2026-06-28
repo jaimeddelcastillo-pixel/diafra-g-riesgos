@@ -439,6 +439,8 @@ export function AssistantPanel({ open, onOpenChange, folioId = null, folioCodigo
               <span>
                 {limit === -1
                   ? "Ilimitado"
+                  : isTrialPlan
+                  ? `${used} / ${limit} consultas de prueba`
                   : `${used}/${limit} consultas${usage.extras > 0 ? ` (+${usage.extras} extras)` : ""}`}
               </span>
             )}
@@ -463,7 +465,35 @@ export function AssistantPanel({ open, onOpenChange, folioId = null, folioCodigo
             Has usado el {Math.floor(pct)}% de tus consultas IA. Se renuevan el {fechaRenovacion}.
           </div>
         )}
-        {agotado && (
+        {agotado && isTrialPlan && (
+          <div className="bg-destructive/10 text-foreground border-b border-destructive/30 px-4 py-3 text-sm flex flex-col gap-3">
+            <div className="flex items-start gap-2">
+              <AlertTriangle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
+              <div className="space-y-1">
+                <div className="font-medium">
+                  Agotaste tus consultas de prueba.
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  Activa tu plan para continuar con el Asistente IA.
+                </div>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button asChild size="sm" variant="default" className="h-8 text-xs">
+                <Link to="/precios?from=trial-ia">Ver planes desde $85 USD/mes</Link>
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-8 text-xs"
+                onClick={() => onOpenChange(false)}
+              >
+                Continuar con wizard
+              </Button>
+            </div>
+          </div>
+        )}
+        {agotado && !isTrialPlan && (
           <div className="bg-destructive/10 text-foreground border-b border-destructive/30 px-4 py-3 text-sm flex flex-col gap-3">
             <div className="flex items-start gap-2">
               <AlertTriangle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
