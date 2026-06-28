@@ -624,7 +624,13 @@ export function AssistantPanel({ open, onOpenChange, folioId = null, folioCodigo
             <Textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder={agotado ? "Sin consultas IA este mes — amplía tu plan para continuar" : "Escribe tu pregunta o pega texto largo..."}
+              placeholder={
+                agotado
+                  ? isTrialPlan
+                    ? "Agotaste tus 10 consultas de prueba — activa un plan para continuar"
+                    : "Sin consultas IA este mes — amplía tu plan para continuar"
+                  : "Escribe tu pregunta o pega texto largo..."
+              }
               disabled={agotado}
               className={`resize-y ${composerExpanded ? "min-h-[55vh] max-h-[70vh]" : "min-h-[72px] max-h-[40vh]"}`}
               onKeyDown={(e) => {
