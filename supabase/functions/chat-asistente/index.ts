@@ -23,7 +23,7 @@ const HINT_SENTINEL = "[HINT_LARGA]";
 const HINT_TEXT = "_💡 Conversación larga detectada — escribe `/estado` para que el Asistente recupere el contexto del análisis._\n\n";
 
 const PLAN_LIMITS: Record<string, number> = {
-  trial: 30,
+  trial: 10,
   starter: 30,
   pro: 300,
   professional: 300,

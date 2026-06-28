@@ -451,10 +451,36 @@ export default function Capacitacion() {
             defaultValue={defaultOpen && firstModuloId ? [firstModuloId] : []}
             className="w-full"
           >
-            {curso.modulos.map((m) => (
+            {curso.modulos.map((m, mIdx) => {
+              const bloqueadoTrial = isTrial && mIdx >= 2;
+              return (
               <AccordionItem key={m.id} value={m.id}>
-                <AccordionTrigger className="text-sm font-medium">{m.titulo}</AccordionTrigger>
+                <AccordionTrigger className="text-sm font-medium">
+                  <span className="flex items-center gap-2">
+                    {bloqueadoTrial && <Lock className="h-3.5 w-3.5 text-muted-foreground" />}
+                    {m.titulo}
+                    {bloqueadoTrial && (
+                      <Badge variant="outline" className="text-[10px] border-orange-500/30 text-orange-600 bg-orange-500/10">
+                        Disponible con plan activo
+                      </Badge>
+                    )}
+                  </span>
+                </AccordionTrigger>
                 <AccordionContent>
+                  {bloqueadoTrial ? (
+                    <div className="rounded-md border border-dashed bg-muted/30 p-4 text-center space-y-3">
+                      <Lock className="h-6 w-6 text-muted-foreground mx-auto" />
+                      <p className="text-sm text-muted-foreground max-w-md mx-auto">
+                        Este módulo está disponible en planes activos. Tu prueba gratuita
+                        incluye acceso completo a la plataforma de gestión de riesgos y a
+                        la <strong>Introducción + Módulo 1</strong> del curso — el curso
+                        completo se activa con cualquier plan desde $85 USD/mes.
+                      </p>
+                      <Button size="sm" onClick={() => navigate("/precios")}>
+                        Ver planes
+                      </Button>
+                    </div>
+                  ) : (
                   <div className="space-y-2">
                     {m.lecciones.map((l) => {
                       const completada = progreso[progresoKey(cursoLegacy, l.leccion_id)];
@@ -506,13 +532,15 @@ export default function Capacitacion() {
                       );
                     })}
                   </div>
+                  )}
                 </AccordionContent>
               </AccordionItem>
-            ))}
+              );
+            })}
           </Accordion>
 
           {/* Evaluación final + diploma cuando se completaron todas las lecciones */}
-          {total > 0 && completadas === total && (
+          {!isTrial && total > 0 && completadas === total && (
             <div className="mt-6 rounded-md border border-[hsl(var(--primary))] bg-[hsl(var(--primary))]/5 p-4 flex items-center justify-between gap-3">
               <div>
                 <p className="text-sm font-semibold flex items-center gap-2">

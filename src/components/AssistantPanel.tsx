@@ -41,7 +41,7 @@ interface Props {
 }
 
 const PLAN_LIMITS: Record<string, number> = {
-  trial: 30, starter: 30, pro: 300, professional: 300, enterprise: -1,
+  trial: 10, starter: 30, pro: 300, professional: 300, enterprise: -1,
 };
 
 export function AssistantPanel({ open, onOpenChange, folioId = null, folioCodigo = null, mensajeInicial = null }: Props) {
@@ -385,6 +385,7 @@ export function AssistantPanel({ open, onOpenChange, folioId = null, folioCodigo
   const pct = limit === -1 ? 0 : limit === 0 ? 0 : (used / limit) * 100;
   const extras = usage?.extras ?? 0;
   const agotado = limit !== -1 && used >= limit && extras === 0;
+  const isTrialPlan = (org?.plan ?? "").toLowerCase() === "trial";
   const fechaRenovacion = useMemo(() => {
     const now = new Date();
     const next = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
@@ -438,6 +439,8 @@ export function AssistantPanel({ open, onOpenChange, folioId = null, folioCodigo
               <span>
                 {limit === -1
                   ? "Ilimitado"
+                  : isTrialPlan
+                  ? `${used} / ${limit} consultas de prueba`
                   : `${used}/${limit} consultas${usage.extras > 0 ? ` (+${usage.extras} extras)` : ""}`}
               </span>
             )}
@@ -462,7 +465,35 @@ export function AssistantPanel({ open, onOpenChange, folioId = null, folioCodigo
             Has usado el {Math.floor(pct)}% de tus consultas IA. Se renuevan el {fechaRenovacion}.
           </div>
         )}
-        {agotado && (
+        {agotado && isTrialPlan && (
+          <div className="bg-destructive/10 text-foreground border-b border-destructive/30 px-4 py-3 text-sm flex flex-col gap-3">
+            <div className="flex items-start gap-2">
+              <AlertTriangle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
+              <div className="space-y-1">
+                <div className="font-medium">
+                  Agotaste tus consultas de prueba.
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  Activa tu plan para continuar con el Asistente IA.
+                </div>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button asChild size="sm" variant="default" className="h-8 text-xs">
+                <Link to="/precios?from=trial-ia">Ver planes desde $85 USD/mes</Link>
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-8 text-xs"
+                onClick={() => onOpenChange(false)}
+              >
+                Continuar con wizard
+              </Button>
+            </div>
+          </div>
+        )}
+        {agotado && !isTrialPlan && (
           <div className="bg-destructive/10 text-foreground border-b border-destructive/30 px-4 py-3 text-sm flex flex-col gap-3">
             <div className="flex items-start gap-2">
               <AlertTriangle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
@@ -593,7 +624,13 @@ export function AssistantPanel({ open, onOpenChange, folioId = null, folioCodigo
             <Textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder={agotado ? "Sin consultas IA este mes — amplía tu plan para continuar" : "Escribe tu pregunta o pega texto largo..."}
+              placeholder={
+                agotado
+                  ? isTrialPlan
+                    ? "Agotaste tus 10 consultas de prueba — activa un plan para continuar"
+                    : "Sin consultas IA este mes — amplía tu plan para continuar"
+                  : "Escribe tu pregunta o pega texto largo..."
+              }
               disabled={agotado}
               className={`resize-y ${composerExpanded ? "min-h-[55vh] max-h-[70vh]" : "min-h-[72px] max-h-[40vh]"}`}
               onKeyDown={(e) => {
