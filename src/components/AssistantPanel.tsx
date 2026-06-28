@@ -385,6 +385,7 @@ export function AssistantPanel({ open, onOpenChange, folioId = null, folioCodigo
   const pct = limit === -1 ? 0 : limit === 0 ? 0 : (used / limit) * 100;
   const extras = usage?.extras ?? 0;
   const agotado = limit !== -1 && used >= limit && extras === 0;
+  const isTrialPlan = (org?.plan ?? "").toLowerCase() === "trial";
   const fechaRenovacion = useMemo(() => {
     const now = new Date();
     const next = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
