@@ -487,13 +487,27 @@ Deno.serve(async (req) => {
     }
     const org = member.organizations as any;
 
-    // Determinar agente
-    let agente: "dm" | "farma" = "dm";
-    if (agente_override) agente = agente_override;
-    else if (org.norma_aplicable === "NOM-059") agente = "farma";
-    else if (org.norma_aplicable === "MULTI") {
-      // Si MULTI y no se especifica, default DM
+    // Determinar agente — SELECCIÓN ESTRICTA por norma de la organización.
+    // El override solo se respeta cuando la org es MULTI.
+    let agente: "dm" | "farma";
+    if (org.norma_aplicable === "NOM-059") {
+      agente = "farma";
+      if (agente_override && agente_override !== "farma") {
+        console.warn(
+          `[agente] override="${agente_override}" ignorado para org ${org.id} (norma=NOM-059); se fuerza "farma"`,
+        );
+      }
+    } else if (org.norma_aplicable === "NOM-241") {
       agente = "dm";
+      if (agente_override && agente_override !== "dm") {
+        console.warn(
+          `[agente] override="${agente_override}" ignorado para org ${org.id} (norma=NOM-241); se fuerza "dm"`,
+        );
+      }
+    } else if (org.norma_aplicable === "MULTI") {
+      agente = agente_override ?? "dm";
+    } else {
+      agente = agente_override ?? "dm";
     }
 
     // Verificar límite
@@ -528,7 +542,14 @@ Deno.serve(async (req) => {
         .eq("org_id", org.id)
         .maybeSingle();
       if (!conv) conversacion_id = null;
-      else {
+      else if (conv.agente && conv.agente !== agente) {
+        // Mismatch de norma/agente: no reanudar — se crea conversación nueva
+        // para evitar contaminación cruzada de citas regulatorias.
+        console.warn(
+          `[agente] conversación ${conv.id} tiene agente="${conv.agente}" pero la org requiere "${agente}". Se crea nueva conversación.`,
+        );
+        conversacion_id = null;
+      } else {
         const fecha = new Date(conv.ultimo_mensaje_en).toLocaleDateString("es-MX", { day: "numeric", month: "long" });
         resumeNote = `\n\n## CONTINUACIÓN DE CONVERSACIÓN\nRetomando nuestra conversación del ${fecha} sobre "${conv.titulo}". Mantén la coherencia con el historial previo.`;
         if (!folio_id && conv.folio_id) {
