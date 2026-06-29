@@ -1,42 +1,45 @@
-# Restricciones de plan Trial
+## Diagnóstico
 
-## Objetivo
-Durante los 14 días de prueba, el cliente prueba la plataforma (AMEF + Asistente IA). En el curso solo accede a **Introducción + Módulo 1 completo**; el resto bloqueado.
+**1. Capacitación no aparece en orgs trial**
+En la BD las orgs trial tienen `subscription_status = 'trial'` (no `'trialing'`).
+En `src/pages/Capacitacion.tsx` (línea 218) el chequeo solo acepta `["active","trialing","past_due"]`, así que `planActivo = false` y `tieneCurso = false` → al usuario trial se le muestra el bloque de "comprar curso" en lugar del curso.
 
-## 1. Capacitación — solo Introducción + Módulo 1
+**2. Faltan bloqueos de descarga en trial**
+- Guías técnicas y lecciones tipo descarga → ya bloqueadas (tooltip + guard en `handleLeccionClick`).
+- **Manual de Usuario** y **Glosario** (RECURSOS_TRACEA, líneas 634-651) → NO tienen guard `isTrial`, se pueden descargar libremente.
+- Otras páginas con descargas: `Recursos.tsx`, `MisProtocolos.tsx`, `MisDiplomas.tsx`, `AdminRecursos.tsx`. Confirmar alcance antes de tocar.
 
-**Archivo:** `src/pages/Capacitacion.tsx`
+## Cambios propuestos
 
-- `tieneCurso` se mantiene `true` para trial (entran al curso).
-- `isTrial` ya existe (`useIsTrial`).
-- Regla de desbloqueo: en trial, solo desbloquear los **dos primeros módulos** por orden (Introducción = orden 0/1, Módulo 1 = siguiente). Implementación:
-  ```ts
-  const moduloDesbloqueado = (idx: number) => !isTrial || idx < 2;
-  ```
-  *(Se basa en el índice ordenado del array `curso.modulos`, que ya viene ordenado por `orden` desde `useCurso`.)*
-- En `renderCurso`, al mapear módulos:
-  - Si el módulo está bloqueado: render del `AccordionItem` con ícono candado en el trigger, badge "Disponible con plan activo" y al expandir mostrar un mensaje + CTA en lugar de las lecciones.
-  - Si está desbloqueado: comportamiento actual.
-- Mensaje del bloqueo (componente reutilizable dentro del archivo):
-  > "Este módulo está disponible en planes activos. Tu prueba gratuita incluye acceso completo a la plataforma de gestión de riesgos y a la Introducción + Módulo 1 del curso — el curso completo se activa con cualquier plan desde $85 USD/mes."
-  - Botón "Ver planes" → `navigate("/precios")`.
-- Ocultar el bloque "Evaluación final + diploma" cuando `isTrial` (no completaron el curso real).
+### A. `src/pages/Capacitacion.tsx` — corregir acceso trial
 
-## 2. Asistente IA — límite trial = 10
+Ampliar el set de status válidos para incluir `'trial'`:
 
-**Backend** (`supabase/functions/chat-asistente/index.ts`):
-- Cambiar `PLAN_LIMITS.trial` de `30` a `10`.
-- Deploy de la edge function.
+```ts
+const SUB_STATUS_ACTIVOS = ["", "active", "trialing", "trial", "past_due"];
+const planActivo =
+  PLANES_CON_CURSO.includes(planLower) &&
+  SUB_STATUS_ACTIVOS.includes(subStatus);
+```
 
-**Frontend** (`src/components/AssistantPanel.tsx`):
-- `PLAN_LIMITS.trial = 10` (espejo para el contador del header).
-- Cuando `org.plan === 'trial'`:
-  - Header: `${used}/10 consultas de prueba`.
-  - Si `agotado` (used ≥ 10): reemplazar el CTA "comprar pack" por:
-    > "Agotaste tus consultas de prueba. Activa tu plan para continuar con el Asistente IA."
-    Botón "Ver planes desde $85 USD/mes" → `/precios`.
-- No tocar packs ni lógica de planes pagados.
+Con esto, orgs `plan=trial` + `subscription_status=trial` verán el curso (con Módulo 1 desbloqueado y resto con candado, como ya está implementado).
+
+### B. `src/pages/Capacitacion.tsx` — bloquear Manual y Glosario en trial
+
+Aplicar el mismo patrón de `renderGuiaCard` (botón deshabilitado + tooltip `TRIAL_DOWNLOAD_TOOLTIP` + link a `/precios`) al bloque "Manual y Glosario" (líneas 634-651).
+
+### C. Confirmar alcance del bloqueo de descargas
+
+Antes de tocar más archivos, necesito saber si "ningún documento" incluye también:
+- **Recursos** (`/recursos`): PNOs, formatos oficiales (ya tienen guard parcial — verificar).
+- **Mis Protocolos** (`/mis-protocolos`): solo accesible si la org compró el addon — el trial no debería tenerlo, pero por defensa se puede bloquear igual.
+- **Mis Diplomas**: descarga del diploma propio del usuario.
+
+Mi recomendación: bloquear PNOs/formatos/manuales/glosarios/protocolos en trial, **pero permitir descargar el diploma propio** si el usuario trial llegara a obtenerlo (no aplica hoy porque trial no tiene acceso a evaluación, pero conviene no romperlo).
 
 ## Fuera de alcance
 - Sin migraciones ni cambios en BD.
-- Sin tocar `useCurso`, checkout, ni packs IA de planes pagados.
+- Sin tocar `useCurso`, checkout, ni el bloqueo por módulos ya existente.
+- Sin cambios en el límite de 10 consultas IA del trial (ya implementado).
+
+¿Confirmas que aplique A+B y extienda C a Recursos.tsx también?
