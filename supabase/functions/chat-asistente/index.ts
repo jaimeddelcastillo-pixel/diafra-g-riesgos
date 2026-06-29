@@ -605,7 +605,21 @@ Deno.serve(async (req) => {
 
     const orgCtx = `\n\n## CONTEXTO DE LA ORGANIZACIÓN\nNombre: ${org.nombre}\nNorma aplicable: ${org.norma_aplicable}\nMetodología: ${org.metodologia}\nUsa detectabilidad: ${org.usar_detectabilidad}\nUmbral NPR Alto: ${org.umbral_npr_alto}\nUmbral NPR Medio: ${org.umbral_npr_medio}`;
 
-    const systemPrompt = (promptRow as any).system_prompt + orgCtx + folioCtx + resumeNote + TOOL_RULES_ADDENDUM;
+    // Ancla de norma — debe ir AL INICIO del system prompt para tener máximo peso.
+    let normaAncla = "";
+    if (org.norma_aplicable === "NOM-241") {
+      normaAncla =
+        "## NORMA APLICABLE FIJA\n" +
+        "Esta organización opera exclusivamente bajo NOM-241-SSA1-2025 y FEUM.\n" +
+        "NUNCA cites, sugieras ni mezcles NOM-059-SSA1-2015 salvo que el usuario pregunte explícitamente por comparación regulatoria.\n\n";
+    } else if (org.norma_aplicable === "NOM-059") {
+      normaAncla =
+        "## NORMA APLICABLE FIJA\n" +
+        "Esta organización opera exclusivamente bajo NOM-059-SSA1-2015 y FEUM.\n" +
+        "NUNCA cites, sugieras ni mezcles NOM-241-SSA1-2025 salvo que el usuario pregunte explícitamente por comparación regulatoria.\n\n";
+    }
+
+    const systemPrompt = normaAncla + (promptRow as any).system_prompt + orgCtx + folioCtx + resumeNote + TOOL_RULES_ADDENDUM;
 
     // Persistir el último mensaje user + bump
     const lastUser = [...messages].reverse().find((m) => m.role === "user");
