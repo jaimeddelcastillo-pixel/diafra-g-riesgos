@@ -277,6 +277,14 @@ export default function Recursos() {
   }, [org?.id, puedeEliminar]);
 
   const handleDescargarReferencia = async (ref: ReferenciaDoc) => {
+    if (isTrial) {
+      toast({
+        title: "Descarga restringida en prueba gratuita",
+        description: TRIAL_DOWNLOAD_TOOLTIP,
+        variant: "destructive",
+      });
+      return;
+    }
     const ok = await descargarArchivoStorage("tracea-recursos", ref.storagePath);
     if (!ok) {
       toast({
@@ -362,6 +370,14 @@ export default function Recursos() {
   };
 
   const handleDescargarDoc = async (doc: OrgDocumento) => {
+    if (isTrial) {
+      toast({
+        title: "Descarga restringida en prueba gratuita",
+        description: TRIAL_DOWNLOAD_TOOLTIP,
+        variant: "destructive",
+      });
+      return;
+    }
     const { data, error } = await supabase.storage
       .from("org-documentos")
       .createSignedUrl(doc.storage_path, 120);

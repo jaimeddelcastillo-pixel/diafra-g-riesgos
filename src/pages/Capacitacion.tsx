@@ -213,9 +213,10 @@ export default function Capacitacion() {
   const planLower = org?.plan?.toLowerCase() ?? "";
   const subStatus = ((org as any)?.subscription_status as string | null | undefined)?.toLowerCase() ?? "";
   const PLANES_CON_CURSO = ["starter", "professional", "enterprise", "trial"];
+  const SUB_STATUS_ACTIVOS = ["", "active", "trialing", "trial", "past_due"];
   const planActivo =
     PLANES_CON_CURSO.includes(planLower) &&
-    (subStatus === "" || ["active", "trialing", "past_due"].includes(subStatus));
+    SUB_STATUS_ACTIVOS.includes(subStatus);
   const tieneCurso = planActivo || (org as any)?.tiene_curso_pagado === true;
   const cursoExpira = (org as any)?.curso_expira_en as string | null | undefined;
   const dc3Emitidos = ((org as any)?.dc3_emitidos as number | null | undefined) ?? 0;
@@ -642,10 +643,31 @@ export default function Capacitacion() {
                   <CardDescription className="text-sm">{r.descripcion}</CardDescription>
                 </CardHeader>
                 <CardContent className="mt-auto">
-                  <Button onClick={() => descargarRecurso(r)} className="w-full" variant="outline">
-                    <Download className="h-4 w-4 mr-2" />
-                    Descargar PDF
-                  </Button>
+                  {isTrial ? (
+                    <TooltipProvider delayDuration={150}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span tabIndex={0} className="w-full inline-block">
+                            <Button disabled variant="outline" className="w-full" aria-disabled>
+                              <Lock className="h-4 w-4 mr-2" />
+                              Descargar PDF
+                            </Button>
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="max-w-xs text-xs">
+                          {TRIAL_DOWNLOAD_TOOLTIP}{" "}
+                          <Link to="/precios" className="underline font-medium">
+                            Ver planes
+                          </Link>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  ) : (
+                    <Button onClick={() => descargarRecurso(r)} className="w-full" variant="outline">
+                      <Download className="h-4 w-4 mr-2" />
+                      Descargar PDF
+                    </Button>
+                  )}
                 </CardContent>
               </Card>
             ))}
