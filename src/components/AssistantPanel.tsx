@@ -75,6 +75,10 @@ export function AssistantPanel({ open, onOpenChange, folioId = null, folioCodigo
     if (!org) return;
     if (org.norma_aplicable === "NOM-059") setAgente("farma");
     else setAgente("dm");
+    // Si la norma de la organización cambia, descartar la conversación activa
+    // para evitar continuar con citas regulatorias del agente anterior.
+    setConversacionId(null);
+    setMessages([]);
   }, [org?.norma_aplicable]);
 
   useEffect(() => {
