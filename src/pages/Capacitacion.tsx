@@ -212,11 +212,14 @@ export default function Capacitacion() {
 
   const planLower = org?.plan?.toLowerCase() ?? "";
   const subStatus = ((org as any)?.subscription_status as string | null | undefined)?.toLowerCase() ?? "";
-  const PLANES_CON_CURSO = ["starter", "professional", "enterprise", "trial"];
-  const SUB_STATUS_ACTIVOS = ["", "active", "trialing", "trial", "past_due"];
+  // Planes de pago: acceso siempre disponible al curso, sin importar el subscription_status
+  // (los flujos de cobro/cancelación se manejan en otras pantallas; aquí no bloqueamos capacitación).
+  const PLANES_PAGADOS = ["starter", "professional", "enterprise"];
+  // Trial: acceso parcial (Introducción + Módulo 1) gestionado más abajo con `isTrial` / `bloqueadoTrial`.
+  const SUB_STATUS_TRIAL_OK = ["", "active", "trialing", "trial", "past_due"];
   const planActivo =
-    PLANES_CON_CURSO.includes(planLower) &&
-    SUB_STATUS_ACTIVOS.includes(subStatus);
+    PLANES_PAGADOS.includes(planLower) ||
+    (planLower === "trial" && SUB_STATUS_TRIAL_OK.includes(subStatus));
   const tieneCurso = planActivo || (org as any)?.tiene_curso_pagado === true;
   const cursoExpira = (org as any)?.curso_expira_en as string | null | undefined;
   const dc3Emitidos = ((org as any)?.dc3_emitidos as number | null | undefined) ?? 0;
