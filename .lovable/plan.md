@@ -1,45 +1,43 @@
-## Diagnóstico
+# Asegurar coherencia Agente IA ↔ Norma de la empresa
 
-**1. Capacitación no aparece en orgs trial**
-En la BD las orgs trial tienen `subscription_status = 'trial'` (no `'trialing'`).
-En `src/pages/Capacitacion.tsx` (línea 218) el chequeo solo acepta `["active","trialing","past_due"]`, así que `planActivo = false` y `tieneCurso = false` → al usuario trial se le muestra el bloque de "comprar curso" en lugar del curso.
+## Cambios
 
-**2. Faltan bloqueos de descarga en trial**
-- Guías técnicas y lecciones tipo descarga → ya bloqueadas (tooltip + guard en `handleLeccionClick`).
-- **Manual de Usuario** y **Glosario** (RECURSOS_TRACEA, líneas 634-651) → NO tienen guard `isTrial`, se pueden descargar libremente.
-- Otras páginas con descargas: `Recursos.tsx`, `MisProtocolos.tsx`, `MisDiplomas.tsx`, `AdminRecursos.tsx`. Confirmar alcance antes de tocar.
+### 1. `supabase/functions/chat-asistente/index.ts`
 
-## Cambios propuestos
+**a) Selección estricta del agente** (sustituye líneas 490-497):
+- `NOM-241` → fuerza `dm`. Si llega `agente_override` distinto, `console.warn` y se descarta.
+- `NOM-059` → fuerza `farma`. Mismo manejo de override.
+- `MULTI` → respeta `agente_override`; default `dm`.
 
-### A. `src/pages/Capacitacion.tsx` — corregir acceso trial
+**b) Conversación nueva ante mismatch de norma** (en el bloque de reanudación, líneas 520-544):
+- Si `conv.agente !== agente` calculado, `console.warn` y `conversacion_id = null` para que se cree una conversación fresca. El histórico se conserva en el sidebar pero no se reusa.
 
-Ampliar el set de status válidos para incluir `'trial'`:
-
-```ts
-const SUB_STATUS_ACTIVOS = ["", "active", "trialing", "trial", "past_due"];
-const planActivo =
-  PLANES_CON_CURSO.includes(planLower) &&
-  SUB_STATUS_ACTIVOS.includes(subStatus);
+**c) Bloque "NORMA APLICABLE FIJA" AL INICIO del system prompt** (línea 587):
 ```
+## NORMA APLICABLE FIJA
+Esta organización opera exclusivamente bajo [NOM-241-SSA1-2025 | NOM-059-SSA1-2015] y FEUM.
+NUNCA cites, sugieras ni mezcles [la otra norma] salvo que el usuario pregunte
+explícitamente por comparación regulatoria.
+```
+Se calcula según `org.norma_aplicable`. Para `MULTI` el bloque queda vacío (libre).
+Orden final: `normaAncla + system_prompt + orgCtx + folioCtx + resumeNote + TOOL_RULES_ADDENDUM`.
 
-Con esto, orgs `plan=trial` + `subscription_status=trial` verán el curso (con Módulo 1 desbloqueado y resto con candado, como ya está implementado).
+### 2. `src/components/AssistantPanel.tsx`
 
-### B. `src/pages/Capacitacion.tsx` — bloquear Manual y Glosario en trial
+**a)** Confirmar que `agente` solo se envía cuando `org.norma_aplicable === "MULTI"` (línea 241, ya está correcto — añadir comentario).
 
-Aplicar el mismo patrón de `renderGuiaCard` (botón deshabilitado + tooltip `TRIAL_DOWNLOAD_TOOLTIP` + link a `/precios`) al bloque "Manual y Glosario" (líneas 634-651).
+**b)** Header (línea 426): derivar la etiqueta del agente directamente desde `org.norma_aplicable` para orgs no-MULTI, en lugar de leer del estado local que puede quedar obsoleto.
 
-### C. Confirmar alcance del bloqueo de descargas
+**c)** Al cambiar `org.norma_aplicable`, resetear `conversacionId` a `null` para forzar conversación nueva (extender el `useEffect` de líneas 74-78).
 
-Antes de tocar más archivos, necesito saber si "ningún documento" incluye también:
-- **Recursos** (`/recursos`): PNOs, formatos oficiales (ya tienen guard parcial — verificar).
-- **Mis Protocolos** (`/mis-protocolos`): solo accesible si la org compró el addon — el trial no debería tenerlo, pero por defensa se puede bloquear igual.
-- **Mis Diplomas**: descarga del diploma propio del usuario.
-
-Mi recomendación: bloquear PNOs/formatos/manuales/glosarios/protocolos en trial, **pero permitir descargar el diploma propio** si el usuario trial llegara a obtenerlo (no aplica hoy porque trial no tiene acceso a evaluación, pero conviene no romperlo).
+### 3. Verificación
+- Build pasa.
+- Deploy de `chat-asistente`.
+- Validación con org NOM-059: el saludo del wizard y el chat flotante deben citar NOM-059/FEUM.
+- Validación con org NOM-241: no aparece NOM-059.
+- Validación con org MULTI: el selector funciona como hoy.
 
 ## Fuera de alcance
-- Sin migraciones ni cambios en BD.
-- Sin tocar `useCurso`, checkout, ni el bloqueo por módulos ya existente.
-- Sin cambios en el límite de 10 consultas IA del trial (ya implementado).
-
-¿Confirmas que aplique A+B y extienda C a Recursos.tsx también?
+- No se modifican los prompts DM/Farma en BD (ya están limpios: 0 referencias cruzadas).
+- No se borran conversaciones históricas.
+- No se altera el cálculo de límites, tools ni persistencia de mensajes.
