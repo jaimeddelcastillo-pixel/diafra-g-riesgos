@@ -213,9 +213,10 @@ export default function Capacitacion() {
   const planLower = org?.plan?.toLowerCase() ?? "";
   const subStatus = ((org as any)?.subscription_status as string | null | undefined)?.toLowerCase() ?? "";
   const PLANES_CON_CURSO = ["starter", "professional", "enterprise", "trial"];
+  const SUB_STATUS_ACTIVOS = ["", "active", "trialing", "trial", "past_due"];
   const planActivo =
     PLANES_CON_CURSO.includes(planLower) &&
-    (subStatus === "" || ["active", "trialing", "past_due"].includes(subStatus));
+    SUB_STATUS_ACTIVOS.includes(subStatus);
   const tieneCurso = planActivo || (org as any)?.tiene_curso_pagado === true;
   const cursoExpira = (org as any)?.curso_expira_en as string | null | undefined;
   const dc3Emitidos = ((org as any)?.dc3_emitidos as number | null | undefined) ?? 0;
