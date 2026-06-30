@@ -1965,6 +1965,7 @@ export type Database = {
         Args: { p_doc_id: string }
         Returns: string
       }
+      email_queue_dispatch: { Args: never; Returns: undefined }
       enqueue_email: {
         Args: { payload: Json; queue_name: string }
         Returns: number
