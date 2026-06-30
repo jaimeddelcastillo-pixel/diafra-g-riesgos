@@ -1,43 +1,47 @@
-# Asegurar coherencia Agente IA ↔ Norma de la empresa
+## Objetivo
+
+Cambiar el folio de diploma de `DIP-YYYY-NNN` (global TRACEA) a `DIP-YYYY-{SLUG_EMPRESA}-NNN`, con numeración independiente por empresa y año.
+
+Ejemplos:
+- QA NOM-059 Sandbox (slug `qa-nom059`) → `DIP-2026-QA-NOM059-001`
+- Diafra (slug `diafra`) → `DIP-2026-DIAFRA-001`
+
+Cada empresa tendrá su propio contador desde 001, igual que ya hacemos con los tickets (`TKT-{SLUG}-YYYY-NNN`).
 
 ## Cambios
 
-### 1. `supabase/functions/chat-asistente/index.ts`
+**1. Base de datos**
 
-**a) Selección estricta del agente** (sustituye líneas 490-497):
-- `NOM-241` → fuerza `dm`. Si llega `agente_override` distinto, `console.warn` y se descarta.
-- `NOM-059` → fuerza `farma`. Mismo manejo de override.
-- `MULTI` → respeta `agente_override`; default `dm`.
+- Ampliar `diploma_sequence` para llevar contador por `(org_id, year)` en lugar de solo `year`.
+  - Migrar la fila actual (`2026 → 2`) como contador histórico de TRACEA para no perder consistencia.
+- Reescribir la función `next_diploma_folio(p_org_id uuid)`:
+  - Toma el slug de la organización (UPPER, sin espacios).
+  - Inserta/incrementa el contador para `(org_id, year)`.
+  - Devuelve `DIP-YYYY-{SLUG}-NNN`.
+- Mantener compatibilidad: los diplomas ya emitidos (`DIP-2026-001`, `DIP-2026-002`) conservan su folio actual — solo cambian los nuevos.
 
-**b) Conversación nueva ante mismatch de norma** (en el bloque de reanudación, líneas 520-544):
-- Si `conv.agente !== agente` calculado, `console.warn` y `conversacion_id = null` para que se cree una conversación fresca. El histórico se conserva en el sidebar pero no se reusa.
+**2. Edge Function `emitir-diploma`**
 
-**c) Bloque "NORMA APLICABLE FIJA" AL INICIO del system prompt** (línea 587):
+- Pasar `org_id` al llamar `next_diploma_folio`.
+- Actualizar el comentario de cabecera con el nuevo formato.
+
+**3. Verificación**
+
+El QR y la página `/diploma/verificar/:hash` usan `hash_verificacion`, no el folio, así que no requieren cambios.
+
+## Detalle técnico
+
+```sql
+ALTER TABLE public.diploma_sequence ADD COLUMN org_id uuid;
+-- nueva PK compuesta (org_id, year); NULL = histórico TRACEA
 ```
-## NORMA APLICABLE FIJA
-Esta organización opera exclusivamente bajo [NOM-241-SSA1-2025 | NOM-059-SSA1-2015] y FEUM.
-NUNCA cites, sugieras ni mezcles [la otra norma] salvo que el usuario pregunte
-explícitamente por comparación regulatoria.
+
+`next_diploma_folio(p_org_id uuid)` arma el folio con:
 ```
-Se calcula según `org.norma_aplicable`. Para `MULTI` el bloque queda vacío (libre).
-Orden final: `normaAncla + system_prompt + orgCtx + folioCtx + resumeNote + TOOL_RULES_ADDENDUM`.
-
-### 2. `src/components/AssistantPanel.tsx`
-
-**a)** Confirmar que `agente` solo se envía cuando `org.norma_aplicable === "MULTI"` (línea 241, ya está correcto — añadir comentario).
-
-**b)** Header (línea 426): derivar la etiqueta del agente directamente desde `org.norma_aplicable` para orgs no-MULTI, en lugar de leer del estado local que puede quedar obsoleto.
-
-**c)** Al cambiar `org.norma_aplicable`, resetear `conversacionId` a `null` para forzar conversación nueva (extender el `useEffect` de líneas 74-78).
-
-### 3. Verificación
-- Build pasa.
-- Deploy de `chat-asistente`.
-- Validación con org NOM-059: el saludo del wizard y el chat flotante deben citar NOM-059/FEUM.
-- Validación con org NOM-241: no aparece NOM-059.
-- Validación con org MULTI: el selector funciona como hoy.
+'DIP-' || year || '-' || UPPER(REPLACE(slug,'-','')) || '-' || LPAD(num,3,'0')
+```
 
 ## Fuera de alcance
-- No se modifican los prompts DM/Farma en BD (ya están limpios: 0 referencias cruzadas).
-- No se borran conversaciones históricas.
-- No se altera el cálculo de límites, tools ni persistencia de mensajes.
+
+- No se renumeran ni renombran diplomas ya emitidos.
+- No se cambia el diseño del PDF ni el flujo de aprobación del examen.
