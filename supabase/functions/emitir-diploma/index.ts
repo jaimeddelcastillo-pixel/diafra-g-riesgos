@@ -349,6 +349,7 @@ Deno.serve(async (req) => {
       .select("org_id")
       .eq("user_id", user.id)
       .maybeSingle();
+    const orgIdAlumno = orgMember?.org_id ?? null;
 
     // Folio + hash: si es regeneración, conservamos folio/hash existentes para que
     // QR y verificación previa sigan siendo válidos. Si no, generamos nuevos.
@@ -358,7 +359,10 @@ Deno.serve(async (req) => {
       folio = yaExiste.folio as string;
       hash = yaExiste.hash_verificacion as string;
     } else {
-      const { data: folioData, error: folioErr } = await admin.rpc("next_diploma_folio");
+      if (!orgIdAlumno) {
+        return json({ error: "El alumno no pertenece a ninguna organización; no se puede emitir el folio." }, 400);
+      }
+      const { data: folioData, error: folioErr } = await admin.rpc("next_diploma_folio", { p_org_id: orgIdAlumno });
       if (folioErr) {
         console.error("[emitir-diploma] folio error", folioErr);
         return json({ error: `Folio: ${folioErr.message}` }, 500);
