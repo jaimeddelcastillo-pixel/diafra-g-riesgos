@@ -838,14 +838,17 @@ export type Database = {
       diploma_sequence: {
         Row: {
           last_number: number
+          org_id: string | null
           year: number
         }
         Insert: {
           last_number?: number
+          org_id?: string | null
           year: number
         }
         Update: {
           last_number?: number
+          org_id?: string | null
           year?: number
         }
         Relationships: []
@@ -1999,7 +2002,7 @@ export type Database = {
         }
         Returns: number
       }
-      next_diploma_folio: { Args: never; Returns: string }
+      next_diploma_folio: { Args: { p_org_id: string }; Returns: string }
       next_folio_code:
         | { Args: never; Returns: string }
         | { Args: { p_tipo: string }; Returns: string }
