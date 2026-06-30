@@ -48,6 +48,16 @@ export default function Cumplimiento() {
 
   useEffect(() => {
     (async () => {
+      // Determinar la norma de la org actual para preseleccionar el curso correcto
+      let normaOrg: string | null = null;
+      if (orgId) {
+        const { data: org } = await supabase
+          .from("organizations")
+          .select("norma_aplicable")
+          .eq("id", orgId)
+          .maybeSingle();
+        normaOrg = (org as any)?.norma_aplicable ?? null;
+      }
       const { data } = await supabase
         .from("cursos")
         .select("id, titulo, norma")
@@ -56,13 +66,16 @@ export default function Cumplimiento() {
       const cs = (data ?? []) as Curso[];
       setCursos(cs);
       if (cs.length) {
-        const nom241 = cs.find((c) => c.norma === "NOM-241");
-        setCursoId(nom241?.id ?? cs[0].id);
+        const preferido =
+          (normaOrg && cs.find((c) => c.norma === normaOrg)) ||
+          cs.find((c) => c.norma === "NOM-241") ||
+          cs[0];
+        setCursoId(preferido.id);
       } else {
         setLoading(false);
       }
     })();
-  }, []);
+  }, [orgId]);
 
   useEffect(() => {
     if (!cursoId) return;
