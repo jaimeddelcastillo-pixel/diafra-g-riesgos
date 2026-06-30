@@ -1,7 +1,7 @@
 // supabase/functions/emitir-diploma/index.ts
 // Emite el diploma cuando el alumno aprueba el examen final:
 //   1. Valida intento aprobado del usuario
-//   2. Genera folio único (DIP-YYYY-NNN) y hash de verificación
+//   2. Genera folio único por empresa (DIP-YYYY-{SLUG}-NNN) y hash de verificación
 //   3. Genera PDF "Industrial médico" (navy + teal) con QR
 //   4. Sube al bucket privado "diplomas" y registra curso_diplomas
 //   5. Dispara correo diploma-emitido con PDF adjunto
