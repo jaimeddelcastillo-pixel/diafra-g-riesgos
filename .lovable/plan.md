@@ -1,47 +1,46 @@
 ## Objetivo
+Añadir opción de facturación **Anual** (además de Mensual) para los 3 planes, con la misma UX de la landing: toggle, equivalente mensual grande y leyenda "Facturado $X/año · Ahorras 2 meses".
 
-Cambiar el folio de diploma de `DIP-YYYY-NNN` (global TRACEA) a `DIP-YYYY-{SLUG_EMPRESA}-NNN`, con numeración independiente por empresa y año.
+## Price IDs anuales confirmados
+- Starter Anual: `price_1TomoLKfwzAg4OKvmI0g6yJ4` — $850 USD/año ($70.83/mes)
+- Professional Anual: `price_1TomrAKfwzAg4OKvbEgQq9f3` — $2,250 USD/año ($187.50/mes)
+- Enterprise Anual: `price_1TompOKfwzAg4OKvr8GGv5XJ` — $4,750 USD/año ($395.83/mes)
 
-Ejemplos:
-- QA NOM-059 Sandbox (slug `qa-nom059`) → `DIP-2026-QA-NOM059-001`
-- Diafra (slug `diafra`) → `DIP-2026-DIAFRA-001`
-
-Cada empresa tendrá su propio contador desde 001, igual que ya hacemos con los tickets (`TKT-{SLUG}-YYYY-NNN`).
+Los mensuales existentes (`price_1TQ7jK...`, `price_1TQ7jF...`, `price_1TQ7jK...jXcDjzgn`) se conservan intactos.
 
 ## Cambios
 
-**1. Base de datos**
+### 1. Catálogo de planes (`src/config/plans.ts`)
+Ampliar `Plan` con `priceIdAnnual`, `precioAnual` (total facturado) y `precioMensualEquivalente`. Poblar los 3 planes con los IDs y montos anuales. `findPriceConfig` reconocerá también los anuales.
 
-- Ampliar `diploma_sequence` para llevar contador por `(org_id, year)` en lugar de solo `year`.
-  - Migrar la fila actual (`2026 → 2`) como contador histórico de TRACEA para no perder consistencia.
-- Reescribir la función `next_diploma_folio(p_org_id uuid)`:
-  - Toma el slug de la organización (UPPER, sin espacios).
-  - Inserta/incrementa el contador para `(org_id, year)`.
-  - Devuelve `DIP-YYYY-{SLUG}-NNN`.
-- Mantener compatibilidad: los diplomas ya emitidos (`DIP-2026-001`, `DIP-2026-002`) conservan su folio actual — solo cambian los nuevos.
+### 2. UI de precios (`src/pages/Precios.tsx` y `src/components/PlanSubscriptionCard.tsx`)
+- Toggle **Mensual / Anual** (ToggleGroup) arriba de las tarjetas.
+- En modo Anual: mostrar precio grande = equivalente mensual, subtexto "Facturado $X USD/año · Ahorras 2 meses".
+- El botón "Contratar" envía al checkout el `priceId` correspondiente al intervalo activo.
+- Badge "Ahorra 2 meses" visible cuando el toggle está en Anual.
 
-**2. Edge Function `emitir-diploma`**
+### 3. Checkout (`supabase/functions/create-checkout/index.ts`)
+Registrar los 3 nuevos Price IDs en `PRICE_CATALOG` con `mode: "subscription"` y producto `starter|professional|enterprise` (mismo producto lógico; el intervalo lo determina Stripe). Sin cambios de lógica: ya recibe `priceId` desde el cliente.
 
-- Pasar `org_id` al llamar `next_diploma_folio`.
-- Actualizar el comentario de cabecera con el nuevo formato.
+### 4. Guardar intervalo en BD (migración)
+- Añadir columna `billing_interval TEXT` en `public.organizations` (valores `'month' | 'year'`, default NULL).
+- Actualizar desde `stripe-webhook` (`customer.subscription.created` y `.updated`) leyendo `subscription.items.data[0].price.recurring.interval`. Guardar también en `checkout.session.completed` cuando aplique.
 
-**3. Verificación**
+### 5. Webhook (`supabase/functions/stripe-webhook/index.ts`)
+En los handlers de suscripción, extraer `interval` y persistir en `organizations.billing_interval`. Además, mapear `price.id` → `plan` usando lookup por producto (permite ignorar cuál ID específico fue).
 
-El QR y la página `/diploma/verificar/:hash` usan `hash_verificacion`, no el folio, así que no requieren cambios.
+### 6. Mostrar ciclo al cliente (`src/components/PlanSubscriptionCard.tsx` / panel de suscripción)
+Renderizar "Plan Pro · Anual · Renueva el DD/MM/AAAA" usando `billing_interval` + `current_period_end` ya disponible.
 
-## Detalle técnico
-
-```sql
-ALTER TABLE public.diploma_sequence ADD COLUMN org_id uuid;
--- nueva PK compuesta (org_id, year); NULL = histórico TRACEA
-```
-
-`next_diploma_folio(p_org_id uuid)` arma el folio con:
-```
-'DIP-' || year || '-' || UPPER(REPLACE(slug,'-','')) || '-' || LPAD(num,3,'0')
-```
+### 7. Cambio de plan (upgrade/downgrade/switch anual↔mensual)
+La lógica `action: "change_plan"` en `create-checkout` ya soporta cualquier `priceId` de suscripción; funciona sin cambios para migrar entre intervalos con proration automática.
 
 ## Fuera de alcance
+- No se migran suscripciones existentes en mensual (siguen igual hasta que el cliente pida cambio).
+- No se tocan addons ni el pack de consultas IA.
 
-- No se renumeran ni renombran diplomas ya emitidos.
-- No se cambia el diseño del PDF ni el flujo de aprobación del examen.
+## Verificación
+- Toggle cambia precio mostrado y `priceId` enviado.
+- Checkout test con `4242 4242 4242 4242` para los 3 planes anuales.
+- Webhook guarda `billing_interval='year'` en `organizations`.
+- Panel del cliente muestra "· Anual · Renueva el …".
