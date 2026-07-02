@@ -10,8 +10,12 @@ export interface Plan {
   id: PlanId;
   nombre: string;
   priceId: string;
+  priceIdAnnual?: string;
   precio: string;
   periodo: string;
+  precioAnual?: string;
+  precioMensualEquivalente?: string;
+  ahorroAnual?: string;
   descripcion: string;
   features: string[];
   destacado?: boolean;
@@ -34,8 +38,12 @@ export const PLANS: Plan[] = [
     id: "starter",
     nombre: "Starter",
     priceId: "price_1TQ7jKKfwzAg4OKvxoc4fDOi",
+    priceIdAnnual: "price_1TomoLKfwzAg4OKvmI0g6yJ4",
     precio: "$85 USD",
     periodo: "/mes",
+    precioAnual: "$850 USD",
+    precioMensualEquivalente: "$70.83 USD",
+    ahorroAnual: "$170 USD",
     descripcion: "Para equipos pequeños que inician su Sistema de Gestión de Riesgos conforme a NOM-241 y FEUM (dispositivos médicos) o NOM-059 y FEUM (medicamentos).",
     features: [
       "Hasta 3 usuarios",
@@ -53,8 +61,12 @@ export const PLANS: Plan[] = [
     id: "professional",
     nombre: "Professional",
     priceId: "price_1TQ7jFKfwzAg4OKv51yn1CmC",
+    priceIdAnnual: "price_1TomrAKfwzAg4OKvbEgQq9f3",
     precio: "$225 USD",
     periodo: "/mes",
+    precioAnual: "$2,250 USD",
+    precioMensualEquivalente: "$187.50 USD",
+    ahorroAnual: "$450 USD",
     descripcion: "Para organizaciones que requieren mayor capacidad de usuarios y soporte prioritario.",
     features: [
       "Hasta 10 usuarios",
@@ -71,8 +83,12 @@ export const PLANS: Plan[] = [
     id: "enterprise",
     nombre: "Enterprise",
     priceId: "price_1TQ7jKKfwzAg4OKvjXcDjzgn",
+    priceIdAnnual: "price_1TompOKfwzAg4OKvr8GGv5XJ",
     precio: "$475 USD",
     periodo: "/mes",
+    precioAnual: "$4,750 USD",
+    precioMensualEquivalente: "$395.83 USD",
+    ahorroAnual: "$950 USD",
     descripcion: "Para empresas con múltiples sitios, líneas de producto o que operan bajo NOM-241 y NOM-059 simultáneamente.",
     features: [
       "Usuarios ilimitados",
@@ -151,7 +167,7 @@ export function findPriceConfig(priceId: string):
   | { tipo: "plan"; item: Plan }
   | { tipo: "addon"; item: Addon }
   | null {
-  const plan = PLANS.find((p) => p.priceId === priceId);
+  const plan = PLANS.find((p) => p.priceId === priceId || p.priceIdAnnual === priceId);
   if (plan) return { tipo: "plan", item: plan };
   const addon = ADDONS.find((a) => a.priceId === priceId);
   if (addon) return { tipo: "addon", item: addon };
