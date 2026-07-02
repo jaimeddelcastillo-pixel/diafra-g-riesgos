@@ -20,6 +20,7 @@ interface OrgSubscription {
   subscription_status: string | null;
   stripe_customer_id: string | null;
   stripe_subscription_id: string | null;
+  billing_interval: string | null;
 }
 
 const PLAN_LABEL: Record<string, string> = {
@@ -73,7 +74,7 @@ export function PlanSubscriptionCard() {
       const { data, error } = await supabase
         .from("organizations")
         .select(
-          "id, nombre, plan, estado, trial_expires_at, subscription_current_period_end, subscription_status, stripe_customer_id, stripe_subscription_id"
+          "id, nombre, plan, estado, trial_expires_at, subscription_current_period_end, subscription_status, stripe_customer_id, stripe_subscription_id, billing_interval"
         )
         .eq("id", member.org_id)
         .maybeSingle();
@@ -137,6 +138,12 @@ export function PlanSubscriptionCard() {
   const isPaid = planId === "starter" || planId === "professional" || planId === "pro";
   const trialDias = isTrial ? diasRestantes(org.trial_expires_at) : null;
   const trialVencido = isTrial && trialDias !== null && trialDias <= 0;
+  const intervaloLabel =
+    org.billing_interval === "year"
+      ? "Anual"
+      : org.billing_interval === "month"
+      ? "Mensual"
+      : null;
 
   return (
     <Card>
@@ -149,6 +156,9 @@ export function PlanSubscriptionCard() {
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-sm text-muted-foreground">Plan actual:</span>
           <Badge className="text-xs">{planLabel}</Badge>
+          {(isPaid || isEnterprise) && intervaloLabel && (
+            <Badge variant="outline" className="text-[10px]">{intervaloLabel}</Badge>
+          )}
           {isPaid && PLAN_PRICE[planId] && (
             <span className="text-xs text-muted-foreground">{PLAN_PRICE[planId]}</span>
           )}
