@@ -6,6 +6,10 @@ const PRICE_TO_PRODUCT: Record<string, string> = {
   price_1TQ7jKKfwzAg4OKvxoc4fDOi: "starter",
   price_1TQ7jFKfwzAg4OKv51yn1CmC: "professional",
   price_1TQ7jKKfwzAg4OKvjXcDjzgn: "enterprise",
+  // Anuales
+  price_1TomoLKfwzAg4OKvmI0g6yJ4: "starter",
+  price_1TomrAKfwzAg4OKvbEgQq9f3: "professional",
+  price_1TompOKfwzAg4OKvr8GGv5XJ: "enterprise",
   price_1TQ7kVKfwzAg4OKvjU9mVaun: "curso",
   price_1TQ7lbKfwzAg4OKvwQwizz4f: "protocolos",
   price_1TbRUHKfwzAg4OKvWE8uMR6y: "dc3_extra",
@@ -403,6 +407,7 @@ Deno.serve(async (req) => {
         const customerId = typeof sub.customer === "string" ? sub.customer : sub.customer.id;
         const priceId = sub.items.data[0]?.price.id;
         const producto = priceId ? PRICE_TO_PRODUCT[priceId] : null;
+        const interval = sub.items.data[0]?.price.recurring?.interval ?? null;
 
         const updates: Record<string, unknown> = {
           stripe_subscription_id: sub.id,
@@ -411,6 +416,9 @@ Deno.serve(async (req) => {
             ? new Date(sub.current_period_end * 1000).toISOString()
             : null,
         };
+        if (interval === "month" || interval === "year") {
+          updates.billing_interval = interval;
+        }
         if (producto && PLAN_LIMITS[producto]) {
           updates.plan = producto;
           updates.max_users = PLAN_LIMITS[producto];
