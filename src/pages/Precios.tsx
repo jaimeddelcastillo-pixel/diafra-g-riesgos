@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Badge } from "@/components/ui/badge";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -111,6 +112,7 @@ const FAQ: FaqEntry[] = [
 
 export default function Precios() {
   const [loadingId, setLoadingId] = useState<string | null>(null);
+  const [billingInterval, setBillingInterval] = useState<"month" | "year">("month");
   const { toast } = useToast();
   const navigate = useNavigate();
   const { user, loading, org } = useAuth();
@@ -237,8 +239,33 @@ export default function Precios() {
               soporte@tracea.com.mx
             </a>
           </p>
+          <div className="flex justify-center mb-8">
+            <ToggleGroup
+              type="single"
+              value={billingInterval}
+              onValueChange={(v) => v && setBillingInterval(v as "month" | "year")}
+              variant="outline"
+              className="bg-muted/40 p-1 rounded-lg"
+            >
+              <ToggleGroupItem value="month" className="px-4 data-[state=on]:bg-background data-[state=on]:shadow-sm">
+                Mensual
+              </ToggleGroupItem>
+              <ToggleGroupItem value="year" className="px-4 data-[state=on]:bg-background data-[state=on]:shadow-sm gap-2">
+                Anual
+                <Badge variant="secondary" className="bg-accent/20 text-accent-foreground text-[10px]">
+                  Ahorra 2 meses
+                </Badge>
+              </ToggleGroupItem>
+            </ToggleGroup>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {PLANS.map((plan) => (
+          {PLANS.map((plan) => {
+            const esAnual = billingInterval === "year" && !!plan.priceIdAnnual;
+            const priceIdActivo = esAnual ? plan.priceIdAnnual! : plan.priceId;
+            const precioMostrado = esAnual
+              ? plan.precioMensualEquivalente ?? plan.precio
+              : plan.precio;
+            return (
             <Card
               key={plan.id}
               className={
@@ -262,8 +289,16 @@ export default function Precios() {
                 <CardTitle className="text-2xl">{plan.nombre}</CardTitle>
                 <CardDescription>{plan.descripcion}</CardDescription>
                 <div className="pt-4">
-                  <span className="text-4xl font-bold text-foreground">{plan.precio}</span>
-                  <span className="text-muted-foreground">{plan.periodo}</span>
+                  <span className="text-4xl font-bold text-foreground">{precioMostrado}</span>
+                  <span className="text-muted-foreground">/mes</span>
+                  {esAnual && plan.precioAnual && (
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Facturado <strong className="text-foreground">{plan.precioAnual}/año</strong>
+                      {plan.ahorroAnual && (
+                        <> · Ahorras {plan.ahorroAnual} <span className="text-accent">(2 meses gratis)</span></>
+                      )}
+                    </p>
+                  )}
                 </div>
               </CardHeader>
               <CardContent>
@@ -299,7 +334,7 @@ export default function Precios() {
                   <Button
                     className="w-full"
                     variant={plan.destacado ? "default" : "outline"}
-                    onClick={() => startCheckout(plan.priceId, plan.id, "change_plan")}
+                    onClick={() => startCheckout(priceIdActivo, plan.id, "change_plan")}
                     disabled={loadingId !== null}
                   >
                     {loadingId === plan.id ? (
@@ -312,7 +347,7 @@ export default function Precios() {
                   <Button
                     className="w-full"
                     variant={plan.destacado ? "default" : "outline"}
-                    onClick={() => startCheckout(plan.priceId, plan.id)}
+                    onClick={() => startCheckout(priceIdActivo, plan.id)}
                     disabled={loadingId !== null}
                   >
                     {loadingId === plan.id ? (
@@ -326,7 +361,8 @@ export default function Precios() {
                 )}
               </CardFooter>
             </Card>
-          ))}
+            );
+          })}
           </div>
           <p className="text-center text-xs text-muted-foreground mt-6">
             DC-3 adicionales disponibles para cualquier plan — $35 USD por usuario. Contáctanos:{" "}
