@@ -13,6 +13,10 @@ const PRICE_CATALOG: Record<string, { mode: "subscription" | "payment"; producto
   price_1TQ7jKKfwzAg4OKvxoc4fDOi: { mode: "subscription", producto: "starter" },
   price_1TQ7jFKfwzAg4OKv51yn1CmC: { mode: "subscription", producto: "professional" },
   price_1TQ7jKKfwzAg4OKvjXcDjzgn: { mode: "subscription", producto: "enterprise" },
+  // Planes (suscripciones anuales)
+  price_1TomoLKfwzAg4OKvmI0g6yJ4: { mode: "subscription", producto: "starter" },
+  price_1TomrAKfwzAg4OKvbEgQq9f3: { mode: "subscription", producto: "professional" },
+  price_1TompOKfwzAg4OKvr8GGv5XJ: { mode: "subscription", producto: "enterprise" },
   // Addons (pago único)
   price_1TQ7kVKfwzAg4OKvjU9mVaun: { mode: "payment", producto: "curso" },
   price_1TQ7lbKfwzAg4OKvwQwizz4f: { mode: "payment", producto: "protocolos" },
