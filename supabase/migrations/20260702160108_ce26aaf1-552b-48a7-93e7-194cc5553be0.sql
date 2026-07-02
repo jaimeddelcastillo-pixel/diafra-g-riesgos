@@ -1,0 +1,1 @@
+ALTER TABLE public.organizations ADD COLUMN IF NOT EXISTS billing_interval TEXT CHECK (billing_interval IN ('month','year'));
