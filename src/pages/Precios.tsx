@@ -247,10 +247,10 @@ export default function Precios() {
               variant="outline"
               className="bg-muted/40 p-1 rounded-lg"
             >
-              <ToggleGroupItem value="month" className="px-4 data-[state=on]:bg-background data-[state=on]:shadow-sm">
+              <ToggleGroupItem value="month" className="px-4 data-[state=on]:bg-background data-[state=on]:text-foreground data-[state=on]:shadow-sm">
                 Mensual
               </ToggleGroupItem>
-              <ToggleGroupItem value="year" className="px-4 data-[state=on]:bg-background data-[state=on]:shadow-sm gap-2">
+              <ToggleGroupItem value="year" className="px-4 data-[state=on]:bg-background data-[state=on]:text-foreground data-[state=on]:shadow-sm gap-2">
                 Anual
                 <Badge variant="secondary" className="bg-accent/20 text-accent-foreground text-[10px]">
                   Ahorra 2 meses
