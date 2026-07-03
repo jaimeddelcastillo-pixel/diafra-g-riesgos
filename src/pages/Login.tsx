@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { useNavigate, useSearchParams, Navigate, Link } from "react-router-dom";
+import { Eye, EyeOff } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -190,6 +191,7 @@ export default function Login() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   if (loading) return null;
@@ -381,21 +383,32 @@ export default function Login() {
                 >
                   Contraseña
                 </label>
-                <input
-                  id="password"
-                  type="password"
-                  required
-                  minLength={6}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••••"
-                  className="w-full h-10 px-3 text-sm bg-white outline-none transition-colors"
-                  style={{
-                    border: "1px solid #e5e7eb",
-                    borderRadius: "7px",
-                    color: "#042C53",
-                  }}
-                />
+                <div className="relative">
+                  <input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    required
+                    minLength={6}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••••"
+                    className="w-full h-10 pl-3 pr-10 text-sm bg-white outline-none transition-colors"
+                    style={{
+                      border: "1px solid #e5e7eb",
+                      borderRadius: "7px",
+                      color: "#042C53",
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((v) => !v)}
+                    aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                    className="absolute inset-y-0 right-0 flex items-center px-3 text-muted-foreground hover:text-foreground"
+                    tabIndex={-1}
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
                 <div className="mt-1.5 text-center">
                   <Link
                     to="/recuperar"
