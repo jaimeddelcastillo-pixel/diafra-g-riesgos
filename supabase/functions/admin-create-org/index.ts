@@ -149,7 +149,7 @@ Deno.serve(async (req) => {
       .from("org_members")
       .upsert(
         { org_id: org.id, user_id: userId!, role: "admin" },
-        { onConflict: "org_id,user_id" },
+        { onConflict: "user_id" },
       );
     if (memberErr) {
       if (!reused) await admin.auth.admin.deleteUser(userId!);
