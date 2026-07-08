@@ -132,6 +132,57 @@ async function sendTplEmail(
   }
 }
 
+// ─── Helper: notificar al aprobador final (RS) con fallback a admins ────────
+async function notificarAprobadorFinal(
+  admin: ReturnType<typeof createClient>,
+  org_id: string,
+  opts: {
+    templateName: string;
+    idempotencyPrefix: string;
+    templateData: Record<string, unknown>;
+    aprobadorLabel: string;
+  },
+) {
+  // 1) intentar con usuarios con rol responsable_sanitario
+  let { data: destinatarios } = await admin
+    .from("org_members")
+    .select("user_id")
+    .eq("org_id", org_id)
+    .eq("role", "responsable_sanitario");
+
+  // 2) fallback: admins de la org (para orgs sin RS asignado)
+  if (!destinatarios || destinatarios.length === 0) {
+    const { data: admins } = await admin
+      .from("org_members")
+      .select("user_id")
+      .eq("org_id", org_id)
+      .eq("role", "admin");
+    destinatarios = admins ?? [];
+    if (destinatarios.length > 0) {
+      console.warn(
+        `folio-workflow: org ${org_id} sin responsable_sanitario — notificando a ${destinatarios.length} admin(s) como fallback`,
+      );
+    }
+  }
+
+  for (const d of destinatarios) {
+    if (!d.user_id) continue;
+    const { data: perfil } = await admin
+      .from("profiles")
+      .select("email, nombre")
+      .eq("id", d.user_id)
+      .single();
+    if (!perfil?.email) continue;
+    await sendTplEmail(
+      admin,
+      opts.templateName,
+      perfil.email,
+      { nombre: perfil.nombre || opts.aprobadorLabel, ...opts.templateData },
+      `${opts.idempotencyPrefix}-${d.user_id}`,
+    );
+  }
+}
+
 // ─── Validación de completitud (multi-norma) ─────────────────────────────────
 interface ValidacionResult {
   valido: boolean;
