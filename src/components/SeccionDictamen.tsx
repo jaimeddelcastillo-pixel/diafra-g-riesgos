@@ -40,6 +40,9 @@ export function SeccionDictamen({ folio, riesgos, locked, onSaved }: Props) {
 
   const esRS = hasRole("responsable_sanitario");
   const esAdmin = hasRole("admin");
+  // Admin (y super_admin implícito vía hasRole) puede dictaminar como fallback
+  // cuando la org no tiene RS asignado o el RS no está disponible.
+  const puedeDictaminar = esRS || esAdmin;
   // Admin y RS pueden editar la conclusión siempre, salvo cuando el folio
   // ya está cerrado (estado "Cerrado") — durante "Aprobado" siguen pudiendo
   // corregirla porque el sistema permite reabrir/rectificar.
@@ -231,18 +234,20 @@ export function SeccionDictamen({ folio, riesgos, locked, onSaved }: Props) {
           )}
         </div>
 
-        {/* ── ZONA EXCLUSIVA RESPONSABLE SANITARIO ── */}
+        {/* ── ZONA DICTAMEN — RS (o Admin como fallback) ── */}
         {folio.estado === "En Firma" && (
           <div
             className={`border-2 rounded-lg p-4 space-y-3 ${
-              esRS ? "border-primary bg-primary/5" : "border-muted bg-muted/30"
+              puedeDictaminar ? "border-primary bg-primary/5" : "border-muted bg-muted/30"
             }`}
           >
             <div className="flex items-center gap-2">
-              {esRS ? (
+              {puedeDictaminar ? (
                 <>
                   <CheckCircle className="h-4 w-4 text-primary" />
-                  <span className="text-sm font-bold text-primary">Zona de dictamen — {t.aprobadorFinal}</span>
+                  <span className="text-sm font-bold text-primary">
+                    Zona de dictamen — {esRS ? t.aprobadorFinal : `Administrador (fallback de ${t.aprobadorFinal})`}
+                  </span>
                 </>
               ) : (
                 <>
@@ -254,11 +259,11 @@ export function SeccionDictamen({ folio, riesgos, locked, onSaved }: Props) {
               )}
             </div>
 
-            {esRS ? (
+            {puedeDictaminar ? (
               <>
                 <p className="text-xs text-muted-foreground">
-                  Todos los miembros del comité han firmado. Como {t.aprobadorFinal}, emite el dictamen final del
-                  folio <strong>{folio.codigo}</strong>.
+                  Como {esRS ? t.aprobadorFinal : "Administrador"}, emite el dictamen final del folio{" "}
+                  <strong>{folio.codigo}</strong>.
                 </p>
 
                 {/* Formulario de rechazo */}
