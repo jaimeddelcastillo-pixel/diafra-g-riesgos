@@ -360,6 +360,24 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Notificar también al aprobador final (RS). Fallback: admins de la org.
+    await notificarAprobadorFinal(admin, folio.org_id, {
+      templateName: "folio-enviado-firma",
+      idempotencyPrefix: `folio-firma-aprobador-${folio_id}`,
+      templateData: {
+        folio_codigo: folio.codigo,
+        proceso: folio.proceso_equipo,
+        organizacion: orgInfo.org_nombre,
+        norma_nombre: norma.nombre,
+        norma_largo: norma.nombreLargo,
+        metodologia: norma.metodologia,
+        documento: norma.terminologia.documento,
+        proceso_label: norma.terminologia.procesoEquipo,
+        link: `${APP_URL}/folios/${folio_id}`,
+      },
+      aprobadorLabel: norma.terminologia.aprobadorFinal,
+    });
+
     return json({ success: true, mensaje: `Folio ${folio.codigo} enviado a firma` });
   }
 
@@ -414,38 +432,21 @@ Deno.serve(async (req) => {
 
     if (todosOk) {
       const orgInfo = await getOrgInfo(admin, folio?.org_id);
-      // Notificar al aprobador final (Responsable Sanitario / Director Técnico)
-      const { data: rsRoles } = await admin
-        .from("org_members")
-        .select("user_id")
-        .eq("org_id", folio?.org_id)
-        .eq("role", "responsable_sanitario");
-
-      for (const rs of rsRoles || []) {
-        const { data: rsPerfil } = await admin
-          .from("profiles")
-          .select("email, nombre")
-          .eq("id", rs.user_id)
-          .single();
-
-        if (!rsPerfil?.email) continue;
-        await sendTplEmail(
-          admin,
-          "folio-firmado",
-          rsPerfil.email,
-          {
-            nombre: rsPerfil.nombre,
-            folio_codigo: folio.codigo,
-            proceso: folio.proceso_equipo,
-            organizacion: orgInfo.org_nombre,
-            aprobador: norma.terminologia.aprobadorFinal,
-            norma_nombre: norma.nombre,
-            metodologia: norma.metodologia,
-            link: `${APP_URL}/folios/${folio_id}`,
-          },
-          `folio-firmado-${folio_id}-${rs.user_id}`,
-        );
-      }
+      // Notificar al aprobador final (RS). Fallback: admins de la org.
+      await notificarAprobadorFinal(admin, folio!.org_id, {
+        templateName: "folio-firmado",
+        idempotencyPrefix: `folio-firmado-${folio_id}`,
+        templateData: {
+          folio_codigo: folio!.codigo,
+          proceso: folio!.proceso_equipo,
+          organizacion: orgInfo.org_nombre,
+          aprobador: norma.terminologia.aprobadorFinal,
+          norma_nombre: norma.nombre,
+          metodologia: norma.metodologia,
+          link: `${APP_URL}/folios/${folio_id}`,
+        },
+        aprobadorLabel: norma.terminologia.aprobadorFinal,
+      });
     }
 
     return json({
@@ -462,8 +463,14 @@ Deno.serve(async (req) => {
   if (accion === "dictamen") {
     const { conclusion } = body;
 
-    if (callerRole !== "responsable_sanitario") {
-      return json({ error: "Solo el Responsable Sanitario puede emitir dictamen" }, 403);
+    // RS es el aprobador natural; admin/super_admin pueden dictaminar como
+    // fallback (queda auditado en audit_trail + hash de firma del comité).
+    const puedeDictar =
+      callerRole === "responsable_sanitario" ||
+      callerRole === "admin" ||
+      callerRole === "super_admin";
+    if (!puedeDictar) {
+      return json({ error: "Solo el Responsable Sanitario o Administrador pueden emitir dictamen" }, 403);
     }
 
     const { data: folio } = await admin
