@@ -380,23 +380,48 @@ export function RiesgoFormDialog({ open, onClose, folioId, riesgo, nextNumeroId,
       sev_residual: form.sev_residual,
       ocu_residual: form.ocu_residual,
       det_residual: form.det_residual,
+      npr: npr,
+      npr_residual: nprResidual,
       dictamen: form.dictamen,
       anexos: form.anexos,
+      updated_at: new Date().toISOString(),
     };
 
     let error;
+    let savedRow: { id: string } | null = null;
     if (isEdit && riesgo) {
-      ({ error } = await supabase.from("riesgos").update(payload).eq("id", riesgo.id));
+      const result = await supabase
+        .from("riesgos")
+        .update(payload)
+        .eq("id", riesgo.id)
+        .select("id")
+        .maybeSingle();
+      error = result.error;
+      savedRow = result.data;
     } else {
-      ({ error } = await supabase.from("riesgos").insert({ ...payload, numero_id: nextNumeroId }));
+      const result = await supabase
+        .from("riesgos")
+        .insert({ ...payload, numero_id: nextNumeroId })
+        .select("id")
+        .maybeSingle();
+      error = result.error;
+      savedRow = result.data;
     }
 
     if (error) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
+    } else if (!savedRow) {
+      toast({
+        title: "No se pudo guardar",
+        description: "El backend no confirmó la actualización. Revisa permisos del rol o vuelve a iniciar sesión.",
+        variant: "destructive",
+      });
     } else {
       toast({ title: isEdit ? "Riesgo actualizado" : "Riesgo agregado" });
-      queryClient.invalidateQueries({ queryKey: ["folio", folioId] });
-      queryClient.invalidateQueries({ queryKey: ["all-riesgos"] });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["folio", folioId] }),
+        queryClient.invalidateQueries({ queryKey: ["all-riesgos"] }),
+      ]);
       onClose();
     }
     setSaving(false);
