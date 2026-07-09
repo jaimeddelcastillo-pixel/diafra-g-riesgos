@@ -1583,10 +1583,10 @@ export function RiesgoWizardDialog({
                   <div className="rounded-md border border-amber-400 bg-amber-50 dark:bg-amber-950/30 p-3 space-y-2">
                     <div className="flex items-center gap-2 text-xs font-semibold text-amber-700 dark:text-amber-300">
                       <AlertTriangle className="h-4 w-4" />
-                      El NPR residual sigue siendo MEDIO o ALTO — agrega una justificación AFAP
+                      {getEtiquetasControles(normaKey).afapAviso}
                     </div>
                     <Label className="text-xs">
-                      Justificación AFAP — ¿por qué este NPR residual es aceptable?
+                      {getEtiquetasControles(normaKey).afapLabel}
                     </Label>
                     <Textarea
                       rows={2}
@@ -1888,6 +1888,7 @@ function ControlesPaso7({
   normaKey: NormaKey;
 }) {
   const chips = getChipsControles(normaKey);
+  const etq = getEtiquetasControles(normaKey);
   const chipBtn =
     "text-[11px] rounded-full border border-input bg-muted/40 hover:bg-accent hover:text-accent-foreground px-2.5 py-1 transition-colors";
 
@@ -1921,7 +1922,7 @@ function ControlesPaso7({
       {/* SECCIÓN A — Prevención */}
       <div className="rounded-lg border bg-card p-4 space-y-4">
         <div className="flex items-center gap-2">
-          <ElemBadge num="O↓" label="Reducen la Ocurrencia (O)" tone="blue" />
+          <ElemBadge num="O↓" label={etq.tituloAzul} tone="blue" />
         </div>
         <div>
           <Label>¿Qué controles reducen la probabilidad de que el riesgo ocurra?</Label>
@@ -1935,7 +1936,7 @@ function ControlesPaso7({
         <div className="space-y-2 rounded-md border-l-2 border-primary pl-3">
           <div>
             <div className="text-[11px] uppercase tracking-wide font-bold text-primary">
-              Nivel A — Diseño / Ingeniería
+              {etq.nivelA}
             </div>
             <Label className="text-sm">
               ¿Puedes eliminar o reducir el peligro desde el diseño?
@@ -1964,7 +1965,7 @@ function ControlesPaso7({
         <div className="space-y-2 rounded-md border-l-2 border-blue-500 pl-3">
           <div>
             <div className="text-[11px] uppercase tracking-wide font-bold text-blue-600 dark:text-blue-400">
-              Nivel B — Barreras y validación
+              {etq.nivelB}
             </div>
             <Label className="text-sm">¿Qué barreras o validaciones controlan el riesgo?</Label>
           </div>
@@ -1991,7 +1992,7 @@ function ControlesPaso7({
         <div className="space-y-2 rounded-md border-l-2 border-muted-foreground/40 pl-3">
           <div>
             <div className="text-[11px] uppercase tracking-wide font-bold text-muted-foreground">
-              Nivel C — Administrativos
+              {etq.nivelC}
             </div>
             <Label className="text-sm">
               ¿Qué controles documentales o de capacitación aplican?
@@ -2020,7 +2021,7 @@ function ControlesPaso7({
       {/* SECCIÓN B — Detección */}
       <div className="rounded-lg border bg-card p-4 space-y-3">
         <div className="flex items-center gap-2">
-          <ElemBadge num="D↑" label="Mejoran la Detectabilidad (D)" tone="orange" />
+          <ElemBadge num="D↑" label={etq.tituloNaranja} tone="orange" />
         </div>
         <div>
           <Label>¿Cómo detectas que el riesgo ocurrió antes de llegar al paciente?</Label>
