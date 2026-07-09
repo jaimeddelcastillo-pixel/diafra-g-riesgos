@@ -1470,6 +1470,7 @@ function SeccionRiesgos({ riesgos, locked, folioId, folioCodigo, procesoEquipo, 
         onClose={() => setDetalle({ open: false, riesgo: null })}
         onEdit={handleEditFromDetail}
         canEdit={!locked}
+        norma={normaFolio}
       />
     </>
   );
