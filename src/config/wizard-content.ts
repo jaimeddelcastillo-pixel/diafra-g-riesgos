@@ -412,3 +412,58 @@ export function getEjemplos6M(
 export function getNormaLabel(norma: string | null | undefined): string {
   return normalizaNorma(norma);
 }
+
+// ── Etiquetas de controles (Paso 7 / PDF / Detail Sheet) ─────────────────────
+// NOM-241 mantiene la terminología jerárquica clásica (Nivel A/B/C).
+// NOM-059 usa terminología ICH Q9(R1) / Design Space.
+export interface EtiquetasControles {
+  tituloAzul: string;
+  tituloNaranja: string;
+  nivelA: string;
+  nivelB: string;
+  nivelC: string;
+  deteccion: string;
+  afapLabel: string;
+  afapAviso: string;
+  labelControlesPrevPDF: string;
+  labelControlesDetPDF: string;
+  labelJustificacionPDF: string;
+}
+
+const ETIQUETAS_CONTROLES: Record<NormaWizardKey, EtiquetasControles> = {
+  "NOM-241": {
+    tituloAzul: "Reducen la Ocurrencia (O)",
+    tituloNaranja: "Mejoran la Detectabilidad (D)",
+    nivelA: "Nivel A — Diseño / Ingeniería",
+    nivelB: "Nivel B — Barreras y validación",
+    nivelC: "Nivel C — Administrativos",
+    deteccion: "Controles de Detección",
+    afapLabel: "Justificación AFAP — ¿por qué este NPR residual es aceptable?",
+    afapAviso:
+      "El NPR residual sigue siendo MEDIO o ALTO — agrega una justificación AFAP",
+    labelControlesPrevPDF: "Controles de Prevención",
+    labelControlesDetPDF: "Controles de Detección",
+    labelJustificacionPDF: "Justificación de Aceptabilidad",
+  },
+  "NOM-059": {
+    tituloAzul: "Controles que mantienen el CPP en el Design Space",
+    tituloNaranja: "Controles analíticos de detección del desvío",
+    nivelA: "Control del Design Space",
+    nivelB: "Control de Proceso Validado",
+    nivelC: "Control Documental y de Capacitación",
+    deteccion: "Control Analítico de Detección",
+    afapLabel:
+      "Justificación de proporcionalidad al riesgo — ICH Q9(R1) — ¿por qué este NPR residual es aceptable?",
+    afapAviso:
+      "El NPR residual sigue siendo MEDIO o ALTO — agrega una Justificación de proporcionalidad al riesgo — ICH Q9(R1)",
+    labelControlesPrevPDF: "Controles que mantienen el CPP en el Design Space",
+    labelControlesDetPDF: "Control Analítico de Detección",
+    labelJustificacionPDF: "Justificación de proporcionalidad al riesgo — ICH Q9(R1)",
+  },
+};
+
+export function getEtiquetasControles(
+  norma: string | null | undefined,
+): EtiquetasControles {
+  return ETIQUETAS_CONTROLES[normalizaNorma(norma)];
+}

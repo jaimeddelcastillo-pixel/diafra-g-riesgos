@@ -5,6 +5,7 @@ import type { Folio, Riesgo, FolioComite } from "@/hooks/useFolios";
 import { fetchOrgLogoDataUrl } from "@/lib/orgLogo";
 import { getNormaConfig, calcularNPR, getNPRLevelByNorma, getClasificacionMode } from "@/config/normas";
 import { getMotivoLabel } from "@/config/motivos-cancelacion";
+import { getEtiquetasControles } from "@/config/wizard-content";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -215,6 +216,7 @@ export async function generateFolioPDF(
   // ── Configuración por norma del folio (congelada al crear) ────────────────
   const normaConfig = getNormaConfig(folio.norma_folio);
   const usaDeteccion = normaConfig.usarDetectabilidad;
+  const etqControles = getEtiquetasControles(folio.norma_folio);
   const t = normaConfig.terminologia;
   const nprFormula = usaDeteccion ? "S x O x D" : "S x O";
   const nprResFormula = usaDeteccion ? "S' x O' x D'" : "S' x O'";
@@ -681,7 +683,7 @@ export async function generateFolioPDF(
           `Peligro (fuente):\n${r.peligro || "—"}`,
           { content: "O:", styles: { fontStyle: "bold", halign: "right", valign: "middle" } },
           { content: String(r.ocurrencia), styles: { halign: "center", valign: "middle", fontSize: 11 } },
-          `Controles de Prevención:\n${r.controles_prevencion || "—"}`,
+          `${etqControles.labelControlesPrevPDF}:\n${r.controles_prevencion || "—"}`,
           { content: `Fecha y Evidencia:\n${r.fecha_evidencia || "—"}`, colSpan: 2 },
         ],
         [
@@ -693,7 +695,7 @@ export async function generateFolioPDF(
           usaDeteccion
             ? { content: String(r.deteccion), styles: { halign: "center", valign: "middle", fontSize: 11 } as any }
             : { content: "n/a", styles: { halign: "center", valign: "middle", fontSize: 9, textColor: [160, 160, 160] } as any },
-          `Controles de Detección:\n${r.controles_deteccion || (usaDeteccion ? "—" : "No aplica para esta norma")}`,
+          `${etqControles.labelControlesDetPDF}:\n${r.controles_deteccion || (usaDeteccion ? "—" : "No aplica para esta norma")}`,
           {
             content: usaDeteccion
               ? `S': ${r.sev_residual}\nO': ${r.ocu_residual}\nD': ${r.det_residual}`
@@ -817,7 +819,7 @@ export async function generateFolioPDF(
           },
           `¿Requiere Acción?  ${chk(r.requiere_accion)} Sí   ${chk(!r.requiere_accion)} No`,
           {
-            content: `Justificación de Aceptabilidad:\n${normalizarTexto(r.justificacion_aceptabilidad)}`,
+            content: `${etqControles.labelJustificacionPDF}:\n${normalizarTexto(r.justificacion_aceptabilidad)}`,
             colSpan: 5,
           },
         ],

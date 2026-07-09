@@ -6,6 +6,7 @@ import { Pencil, AlertTriangle, Clock, CheckCircle2 } from "lucide-react";
 import type { Riesgo } from "@/hooks/useFolios";
 import { getNPRLevel } from "@/hooks/useFolios";
 import { getDescripcionSeveridad, getNormaConfig, type TipoEscalaSeveridad } from "@/config/normas";
+import { getEtiquetasControles } from "@/config/wizard-content";
 
 function Field({ label, value, mono = false }: { label: string; value: React.ReactNode; mono?: boolean }) {
   const empty = value === null || value === undefined || value === "";
@@ -43,15 +44,18 @@ export function RiesgoDetailSheet({
   onClose,
   onEdit,
   canEdit,
+  norma,
 }: {
   riesgo: Riesgo | null;
   open: boolean;
   onClose: () => void;
   onEdit?: (r: Riesgo) => void;
   canEdit: boolean;
+  norma?: string | null;
 }) {
   if (!riesgo) return null;
   const r = riesgo;
+  const etq = getEtiquetasControles(norma);
   const npr = r.npr ?? r.severidad * r.ocurrencia * r.deteccion;
   const nprRes = r.npr_residual ?? r.sev_residual * r.ocu_residual * r.det_residual;
   const level = getNPRLevel(npr, r.severidad);
@@ -161,7 +165,7 @@ export function RiesgoDetailSheet({
             <Field label="Ocurrencia" value={`O = ${r.ocurrencia}`} mono />
             <Field label="Detectabilidad" value={r.detectabilidad_aplicable ? `D = ${r.deteccion}` : "No aplica"} mono />
             <div className="sm:col-span-2">
-              <Field label="Justificación de aceptabilidad / AFAP" value={r.justificacion_aceptabilidad} />
+              <Field label={etq.labelJustificacionPDF} value={r.justificacion_aceptabilidad} />
             </div>
           </Group>
 
