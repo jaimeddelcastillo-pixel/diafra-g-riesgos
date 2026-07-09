@@ -52,6 +52,7 @@ import {
   getFundamentoNormativo,
   POBLACIONES_VULNERABLES,
   getChipsControles,
+  getEtiquetasControles,
 } from "@/config/wizard-content";
 import { WizardAsistente, type WizardApplyField } from "@/components/wizard/WizardAsistente";
 import {
