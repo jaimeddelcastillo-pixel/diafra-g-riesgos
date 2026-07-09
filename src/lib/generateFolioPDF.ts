@@ -5,6 +5,7 @@ import type { Folio, Riesgo, FolioComite } from "@/hooks/useFolios";
 import { fetchOrgLogoDataUrl } from "@/lib/orgLogo";
 import { getNormaConfig, calcularNPR, getNPRLevelByNorma, getClasificacionMode } from "@/config/normas";
 import { getMotivoLabel } from "@/config/motivos-cancelacion";
+import { getEtiquetasControles } from "@/config/wizard-content";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -215,6 +216,7 @@ export async function generateFolioPDF(
   // ── Configuración por norma del folio (congelada al crear) ────────────────
   const normaConfig = getNormaConfig(folio.norma_folio);
   const usaDeteccion = normaConfig.usarDetectabilidad;
+  const etqControles = getEtiquetasControles(folio.norma_folio);
   const t = normaConfig.terminologia;
   const nprFormula = usaDeteccion ? "S x O x D" : "S x O";
   const nprResFormula = usaDeteccion ? "S' x O' x D'" : "S' x O'";
