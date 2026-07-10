@@ -433,6 +433,16 @@ export default function Login() {
               >
                 {submitting ? "Procesando..." : "Iniciar sesión"}
               </button>
+
+              <div className="text-center pt-1">
+                <Link
+                  to="/register"
+                  className="inline-block hover:underline font-medium"
+                  style={{ color: "#E8671A", fontSize: "12px" }}
+                >
+                  ¿Quieres probar TRACEA gratis? → Prueba 14 días sin tarjeta
+                </Link>
+              </div>
             </form>
 
             <div className="my-6 h-px" style={{ background: "#e5e7eb" }} />
