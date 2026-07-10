@@ -201,6 +201,18 @@ export default function Register() {
         }
         if (trialData?.error) throw new Error(trialData.error);
 
+        // Si el correo ya existe, el backend envía magic link en vez de crear cuenta.
+        if (trialData?.existing_user) {
+          toast({
+            title: "Ya tienes cuenta TRACEA",
+            description:
+              trialData?.message ||
+              "Te enviamos un enlace de acceso directo a tu correo.",
+          });
+          navigate("/login");
+          return;
+        }
+
         const { error: signInErr } = await supabase.auth.signInWithPassword({ email, password });
         if (signInErr) throw signInErr;
 

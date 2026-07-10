@@ -43,6 +43,7 @@ import PagoPendiente from "./pages/PagoPendiente";
 import Terminos from "./pages/Terminos";
 import Privacidad from "./pages/Privacidad";
 import NotFound from "./pages/NotFound";
+import GuiaLanding from "./pages/GuiaLanding";
 
 const queryClient = new QueryClient();
 
@@ -66,6 +67,7 @@ const App = () => (
             <Route path="/privacidad" element={<Privacidad />} />
             <Route path="/confianza" element={<Confianza />} />
             <Route path="/diploma/verificar/:hash" element={<DiplomaVerificar />} />
+            <Route path="/guia-:tipo" element={<GuiaLanding />} />
             <Route element={<AppLayout />}>
               <Route path="/" element={<Index />} />
               <Route path="/folios" element={<Folios />} />
