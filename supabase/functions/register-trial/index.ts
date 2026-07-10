@@ -121,10 +121,47 @@ Deno.serve(async (req) => {
     .eq("email", email)
     .maybeSingle();
   if (existingProfile) {
-    return json(
-      { error: "Ya existe una cuenta con este correo. Inicia sesión en tracea.com.mx" },
-      409,
-    );
+    // En vez de bloquear, enviamos magic link para que el usuario entre sin fricción.
+    let magicLinkSent = false;
+    try {
+      const { data: linkData, error: linkErr } = await supabase.auth.admin.generateLink({
+        type: "magiclink",
+        email,
+        options: { redirectTo: "https://tracea.com.mx/" },
+      });
+      if (linkErr) throw linkErr;
+      const actionLink = linkData?.properties?.action_link;
+      if (actionLink) {
+        // Reutilizamos la plantilla bienvenida-demo con el link.
+        supabase.functions
+          .invoke("send-transactional-email", {
+            body: {
+              templateName: "bienvenida-demo",
+              recipientEmail: email,
+              idempotencyKey: `magic-existing-${email}-${Date.now()}`,
+              templateData: {
+                nombre,
+                empresa: empresa || "TRACEA",
+                norma: norma === "NOM-059" ? "NOM-059 y FEUM" : norma === "MULTI" ? "NOM-241, NOM-059 y FEUM" : "NOM-241 y FEUM",
+                trial_days: TRIAL_DAYS,
+                link: actionLink,
+              },
+            },
+          })
+          .catch((e) => console.error("send-transactional-email magic-link error:", e));
+        magicLinkSent = true;
+      }
+    } catch (e) {
+      console.error("magic link (existing user) failed:", e);
+    }
+    return json({
+      success: true,
+      existing_user: true,
+      magic_link_sent: magicLinkSent,
+      message: magicLinkSent
+        ? "Ya tienes cuenta TRACEA con este correo. Te enviamos un enlace de acceso directo a tu bandeja."
+        : "Ya tienes cuenta TRACEA con este correo. Inicia sesión desde /login.",
+    });
   }
 
   // Slug único

@@ -25,3 +25,5 @@ project_id = "zcaebecdcpyqdzfqipiq"
     verify_jwt = false
   [functions.register-trial]
     verify_jwt = false
+  [functions.lead-magnet-signup]
+    verify_jwt = false
