@@ -597,6 +597,18 @@ export default function Register() {
                 />
               </div>
               <div className="space-y-2">
+                <Label htmlFor="cargo">
+                  Cargo{" "}
+                  <span className="text-muted-foreground font-normal">(opcional)</span>
+                </Label>
+                <Input
+                  id="cargo"
+                  value={cargo}
+                  onChange={(e) => setCargo(e.target.value)}
+                  placeholder="Responsable Sanitario"
+                />
+              </div>
+              <div className="space-y-2">
                 <Label htmlFor="email">Correo electrónico</Label>
                 <Input
                   id="email"
