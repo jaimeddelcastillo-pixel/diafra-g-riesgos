@@ -27,6 +27,7 @@ import { template as diplomaEmitido } from './diploma-emitido.tsx'
 import { template as dc3SolicitudRecibida } from './dc3-solicitud-recibida.tsx'
 import { template as dc3SolicitudInterna } from './dc3-solicitud-interna.tsx'
 import { template as dc3Enviado } from './dc3-enviado.tsx'
+import { template as ebookDescarga } from './ebook-descarga.tsx'
 
 export const TEMPLATES: Record<string, TemplateEntry> = {
   'bienvenida-usuario': bienvenidaUsuario,
@@ -47,4 +48,5 @@ export const TEMPLATES: Record<string, TemplateEntry> = {
   'dc3-solicitud-recibida': dc3SolicitudRecibida,
   'dc3-solicitud-interna': dc3SolicitudInterna,
   'dc3-enviado': dc3Enviado,
+  'ebook-descarga': ebookDescarga,
 }
