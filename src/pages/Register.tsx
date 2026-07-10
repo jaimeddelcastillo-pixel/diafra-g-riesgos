@@ -170,6 +170,7 @@ export default function Register() {
     try {
       // --- Flujo Trial: cuenta activa, sin pago, auto sign-in ---
       if (seleccion.tipo === "trial") {
+        const { FunctionsHttpError } = await import("@supabase/supabase-js");
         const { data: trialData, error: trialErr } = await supabase.functions.invoke(
           "register-trial",
           {
@@ -186,7 +187,18 @@ export default function Register() {
             },
           },
         );
-        if (trialErr) throw trialErr;
+        if (trialErr) {
+          let msg = trialErr.message;
+          if (trialErr instanceof FunctionsHttpError) {
+            try {
+              const body = await trialErr.context.json();
+              if (body?.error) msg = body.error;
+            } catch {
+              try { msg = await trialErr.context.text(); } catch {}
+            }
+          }
+          throw new Error(msg);
+        }
         if (trialData?.error) throw new Error(trialData.error);
 
         const { error: signInErr } = await supabase.auth.signInWithPassword({ email, password });
