@@ -58,20 +58,25 @@ Deno.serve(async (req) => {
     })
   }
 
-  const callerClient = createClient(
-    supabaseUrl,
-    Deno.env.get('SUPABASE_ANON_KEY')!,
-    { global: { headers: { Authorization: authHeader } } }
-  )
-
   const token = authHeader.replace('Bearer ', '')
-  const { data: claimsData, error: claimsError } = await callerClient.auth.getClaims(token)
-  if (claimsError || !claimsData?.claims?.sub) {
-    console.error('Invalid caller token for send-transactional-email', claimsError)
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-      status: 401,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    })
+
+  // Allow server-to-server calls from other edge functions using the service-role JWT.
+  const isServiceRoleCall = token === supabaseServiceKey
+
+  if (!isServiceRoleCall) {
+    const callerClient = createClient(
+      supabaseUrl,
+      Deno.env.get('SUPABASE_ANON_KEY')!,
+      { global: { headers: { Authorization: authHeader } } }
+    )
+    const { data: claimsData, error: claimsError } = await callerClient.auth.getClaims(token)
+    if (claimsError || !claimsData?.claims?.sub) {
+      console.error('Invalid caller token for send-transactional-email', claimsError)
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
   }
 
   // Parse request body
