@@ -2010,6 +2010,7 @@ export type Database = {
         | { Args: never; Returns: string }
         | { Args: { p_tipo: string }; Returns: string }
       next_ticket_code: { Args: { p_org_id: string }; Returns: string }
+      org_has_curso_access: { Args: { _org_id: string }; Returns: boolean }
       purgar_documentos_eliminados: { Args: never; Returns: number }
       purgar_documentos_expirados: {
         Args: never
