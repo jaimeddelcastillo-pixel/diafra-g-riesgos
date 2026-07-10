@@ -384,6 +384,43 @@ export default function Register() {
                 </p>
               </div>
 
+              {/* Prueba gratuita — destacada */}
+              <button
+                type="button"
+                onClick={() =>
+                  elegirPlan({
+                    tipo: "trial",
+                    id: "trial",
+                    nombre: "Prueba gratuita",
+                    precio: "$0",
+                    periodo: "14 días",
+                    priceId: null,
+                  })
+                }
+                className="w-full text-left rounded-lg border-2 p-4 space-y-1.5 relative transition-colors hover:opacity-95"
+                style={{ borderColor: "#E8671A", backgroundColor: "rgba(232,103,26,0.06)" }}
+              >
+                <Badge
+                  className="absolute -top-2 right-3 text-[10px] text-white"
+                  style={{ backgroundColor: "#E8671A" }}
+                >
+                  MÁS POPULAR
+                </Badge>
+                <span className="font-semibold text-sm">Prueba gratuita</span>
+                <p className="text-2xl font-bold text-foreground">
+                  $0 <span className="text-sm font-normal text-muted-foreground">— 14 días</span>
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Sin tarjeta de crédito · Acceso completo · 10 consultas IA
+                </p>
+                <span
+                  className="inline-flex items-center justify-center mt-2 h-9 px-4 rounded-md text-white text-sm font-semibold"
+                  style={{ backgroundColor: "#E8671A" }}
+                >
+                  Iniciar prueba gratis <ArrowRight className="ml-2 h-4 w-4" />
+                </span>
+              </button>
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {/* Curso */}
                 {(() => {
