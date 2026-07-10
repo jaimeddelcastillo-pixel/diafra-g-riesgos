@@ -2,6 +2,8 @@
 // Asistencia IA para análisis de causa raíz (Ishikawa 6M y 5 Porqués).
 // Devuelve JSON estructurado (no streaming).
 
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
@@ -66,6 +68,37 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
+    const authHeader = req.headers.get("Authorization") ?? "";
+    if (!authHeader.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "no autorizado" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+    const userClient = createClient(supabaseUrl, anonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const { data: userData, error: userErr } = await userClient.auth.getUser();
+    if (userErr || !userData?.user) {
+      return new Response(JSON.stringify({ error: "no autorizado" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const { data: memberRow } = await userClient
+      .from("org_members")
+      .select("org_id")
+      .eq("user_id", userData.user.id)
+      .maybeSingle();
+    if (!memberRow) {
+      return new Response(JSON.stringify({ error: "sin organización" }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const body = (await req.json()) as IshikawaReq | PorquesReq;
 
     if (body.mode === "ishikawa") {
