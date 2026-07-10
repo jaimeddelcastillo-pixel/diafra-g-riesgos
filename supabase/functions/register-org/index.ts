@@ -23,6 +23,7 @@ Deno.serve(async (req) => {
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
 
   // Opciones requeridas para que service_role bypasee RLS en Edge Functions
   const admin = createClient(supabaseUrl, serviceKey, {
@@ -51,6 +52,19 @@ Deno.serve(async (req) => {
 
   if (!user_id || !org_nombre?.trim() || !org_slug?.trim()) {
     return json({ error: "Faltan campos: user_id, org_nombre, org_slug" }, 400);
+  }
+
+  // Verificar que el caller esté autenticado y sea el mismo user_id.
+  const authHeader = req.headers.get("Authorization") ?? "";
+  if (!authHeader.startsWith("Bearer ")) {
+    return json({ error: "No autorizado" }, 401);
+  }
+  const callerClient = createClient(supabaseUrl, anonKey, {
+    global: { headers: { Authorization: authHeader } },
+  });
+  const { data: callerData, error: callerErr } = await callerClient.auth.getUser();
+  if (callerErr || !callerData?.user || callerData.user.id !== user_id) {
+    return json({ error: "No autorizado" }, 401);
   }
 
   // Validar aceptación de documentos legales (obligatorio)
