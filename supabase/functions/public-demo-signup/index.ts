@@ -201,7 +201,11 @@ Deno.serve(async (req) => {
 
   if (orgErr) {
     console.error("org insert error:", orgErr);
-    return json({ error: "No se pudo crear la organización demo" }, 500);
+    return json({
+      error: "No se pudo crear la organización demo",
+      detail: orgErr.message,
+      code: orgErr.code,
+    }, 500);
   }
 
   // --- 6. Crear auth user (password aleatoria; entra con magic link) ---
@@ -216,6 +220,18 @@ Deno.serve(async (req) => {
   if (userErr || !newUser?.user) {
     console.error("createUser error:", userErr);
     await supabase.from("organizations").delete().eq("id", org.id);
+    const msg = (userErr?.message || "").toLowerCase();
+    const dup =
+      msg.includes("already been registered") ||
+      msg.includes("already registered") ||
+      msg.includes("already exists") ||
+      (userErr as any)?.code === "email_exists";
+    if (dup) {
+      return json(
+        { error: "Ya existe una cuenta con este correo. Inicia sesión en tracea.com.mx" },
+        409,
+      );
+    }
     return json({ error: userErr?.message || "No se pudo crear el usuario" }, 500);
   }
 
