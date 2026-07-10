@@ -31,11 +31,22 @@ import traceaLogo from "@/assets/tracea-official.png.asset.json";
 type Step = 1 | 2 | 3 | 4;
 
 type Seleccion =
+  | { tipo: "trial"; id: "trial"; nombre: string; precio: string; periodo: string; priceId: null }
   | { tipo: "plan"; id: PlanId; nombre: string; precio: string; periodo: string; priceId: string }
   | { tipo: "addon"; id: AddonId; nombre: string; precio: string; priceId: string };
 
 function resolverSeleccion(planParam: string | null): Seleccion | null {
   if (!planParam) return null;
+  if (planParam === "trial") {
+    return {
+      tipo: "trial",
+      id: "trial",
+      nombre: "Prueba gratuita",
+      precio: "$0",
+      periodo: "14 días",
+      priceId: null,
+    };
+  }
   const plan = PLANS.find((p) => p.id === planParam);
   if (plan) {
     return {
@@ -84,6 +95,7 @@ export default function Register() {
 
   // Paso 3 — Administrador
   const [nombre, setNombre] = useState("");
+  const [cargo, setCargo] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [passwordConfirm, setPasswordConfirm] = useState("");
@@ -156,6 +168,38 @@ export default function Register() {
     }
     setSubmitting(true);
     try {
+      // --- Flujo Trial: cuenta activa, sin pago, auto sign-in ---
+      if (seleccion.tipo === "trial") {
+        const { data: trialData, error: trialErr } = await supabase.functions.invoke(
+          "register-trial",
+          {
+            body: {
+              nombre,
+              email,
+              password,
+              empresa: orgNombre.trim(),
+              org_slug: orgSlug.trim(),
+              cargo,
+              norma,
+              acepta_terminos: aceptaTerminos,
+              acepta_privacidad: aceptaPrivacidad,
+            },
+          },
+        );
+        if (trialErr) throw trialErr;
+        if (trialData?.error) throw new Error(trialData.error);
+
+        const { error: signInErr } = await supabase.auth.signInWithPassword({ email, password });
+        if (signInErr) throw signInErr;
+
+        toast({
+          title: "¡Bienvenido a TRACEA!",
+          description: "Tu prueba de 14 días está activa.",
+        });
+        navigate("/");
+        return;
+      }
+
       // 1. Crear usuario en auth (Supabase enviará el correo de confirmación)
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
