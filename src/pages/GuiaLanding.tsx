@@ -52,6 +52,7 @@ export default function GuiaLanding() {
   const [nombre, setNombre] = useState("");
   const [email, setEmail] = useState("");
   const [empresa, setEmpresa] = useState("");
+  const [cargo, setCargo] = useState("");
   const [telefono, setTelefono] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [sent, setSent] = useState<null | { existing: boolean }>(null);
@@ -81,6 +82,7 @@ export default function GuiaLanding() {
           nombre: nombre.trim(),
           email: email.trim().toLowerCase(),
           empresa: empresa.trim(),
+          cargo: cargo.trim(),
           telefono: telefono.trim(),
           ebook_slug: guia.slug,
         },
@@ -189,6 +191,10 @@ export default function GuiaLanding() {
                   <div className="space-y-1.5">
                     <Label htmlFor="empresa">Empresa</Label>
                     <Input id="empresa" value={empresa} onChange={(e) => setEmpresa(e.target.value)} placeholder="(opcional)" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="cargo">Cargo</Label>
+                    <Input id="cargo" value={cargo} onChange={(e) => setCargo(e.target.value)} placeholder="Ej: Responsable Sanitario, Director de Calidad" />
                   </div>
                   <div className="space-y-1.5">
                     <Label htmlFor="telefono">Teléfono</Label>

@@ -8,7 +8,7 @@
 // Contrato:
 //   POST /lead-magnet-signup
 //   Body:
-//     { nombre, email, empresa?, telefono?, ebook_slug: 'dm'|'farma',
+//     { nombre, email, empresa?, cargo?, telefono?, ebook_slug: 'dm'|'farma',
 //       titulo_ebook, url_descarga }
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
@@ -83,6 +83,7 @@ async function addToBrevo(payload: {
   norma: string;
   origen: string;
   cargo?: string;
+  telefono?: string;
 }) {
   const lovableKey = Deno.env.get("LOVABLE_API_KEY");
   const brevoKey = Deno.env.get("BREVO_API_KEY");
@@ -108,6 +109,7 @@ async function addToBrevo(payload: {
           NORMA: payload.norma,
           ORIGEN: payload.origen,
           CARGO: payload.cargo || "",
+          TELEFONO: payload.telefono || "",
         },
       }),
     });
@@ -134,6 +136,7 @@ Deno.serve(async (req) => {
   const nombre = String(body?.nombre ?? "").trim();
   const email = String(body?.email ?? "").trim().toLowerCase();
   const empresaRaw = String(body?.empresa ?? "").trim();
+  const cargoRaw = String(body?.cargo ?? "").trim();
   const telefono = String(body?.telefono ?? "").trim();
   const ebookSlug = String(body?.ebook_slug ?? "").trim().toLowerCase();
 
@@ -204,7 +207,8 @@ Deno.serve(async (req) => {
       empresa: empresaRaw,
       norma: ebook.norma,
       origen: ebook.origen,
-      cargo: telefono ? `Tel: ${telefono}` : "",
+      cargo: cargoRaw,
+      telefono,
     }).catch(() => {});
 
     supabase.functions
@@ -231,7 +235,7 @@ Deno.serve(async (req) => {
       accion: "lead_magnet_signup",
       ip: clientIp,
       valor_nuevo: {
-        nombre, email, empresa: empresaRaw, telefono, ebook_slug: ebookSlug,
+        nombre, email, empresa: empresaRaw, cargo: cargoRaw, telefono, ebook_slug: ebookSlug,
         user_agent: userAgent, existing_user: true, magic_link_sent: true,
       },
     });
@@ -290,7 +294,7 @@ Deno.serve(async (req) => {
 
   await supabase
     .from("profiles")
-    .update({ nombre, cargo: telefono ? `Tel: ${telefono}` : "" })
+    .update({ nombre, cargo: cargoRaw })
     .eq("id", userId);
 
   const { error: memberErr } = await supabase
@@ -316,7 +320,7 @@ Deno.serve(async (req) => {
     accion: "lead_magnet_signup",
     ip: clientIp,
     valor_nuevo: {
-      nombre, email, empresa, telefono, ebook_slug: ebookSlug,
+      nombre, email, empresa, cargo: cargoRaw, telefono, ebook_slug: ebookSlug,
       user_agent: userAgent, trial_days: TRIAL_DAYS,
     },
   });
@@ -327,7 +331,8 @@ Deno.serve(async (req) => {
     empresa,
     norma: ebook.norma,
     origen: ebook.origen,
-    cargo: telefono ? `Tel: ${telefono}` : "",
+    cargo: cargoRaw,
+    telefono,
   }).catch(() => {});
 
   supabase.functions
