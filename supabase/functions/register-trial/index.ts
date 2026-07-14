@@ -31,6 +31,7 @@ async function addToBrevo(payload: {
   empresa: string;
   norma: string;
   cargo: string;
+  telefono?: string;
 }) {
   const lovableKey = Deno.env.get("LOVABLE_API_KEY");
   const brevoKey = Deno.env.get("BREVO_API_KEY");
@@ -56,6 +57,7 @@ async function addToBrevo(payload: {
           NORMA: payload.norma,
           ORIGEN: "Trial tracea.com.mx",
           CARGO: payload.cargo,
+          TELEFONO: payload.telefono || "",
         },
       }),
     });
