@@ -39,7 +39,7 @@ async function addToBrevo(payload: {
     return;
   }
   try {
-    const res = await fetch("https://connector-gateway.lovable.dev/brevo/v3/contacts", {
+    const res = await fetch("https://connector-gateway.lovable.dev/brevo/contacts", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
