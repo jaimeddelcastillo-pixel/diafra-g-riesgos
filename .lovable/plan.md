@@ -25,8 +25,9 @@ El sistema no tiene el estado "Rechazado". Los estados reales son: Borrador, En 
 ## Paso 3 — Confirmación
 
 - Botón "Aplicar cambios" abre un diálogo con el resumen: "Se modificarán N folios. Esta acción queda registrada." y la lista viejo → nuevo.
+- Campo obligatorio **"Motivo de la corrección"** (texto libre, mínimo 10 caracteres). Ejemplo: "Corrección de codificación — cliente piloto en pruebas". Este motivo se guarda en la bitácora junto con cada cambio, para que cualquier auditor entienda después por qué se modificó el código.
 - Se exige escribir **CONFIRMAR** para habilitar el botón definitivo.
-- Si alguna fila tiene error de validación, el botón queda bloqueado.
+- Si alguna fila tiene error de validación o falta el motivo, el botón queda bloqueado.
 
 ## Qué ocurre al confirmar
 
@@ -34,7 +35,7 @@ Se ejecuta una única función de servidor que, por cada folio:
 
 1. Verifica que quien llama es super_admin y que el folio sigue en Borrador y pertenece a la organización indicada.
 2. Actualiza `codigo` y recalcula `codigo_periodo` / `codigo_consecutivo` a partir del nuevo código.
-3. Escribe un registro en `audit_trail` con `accion: "codigo_corregido_super_admin"`, `valor_anterior` (código viejo) y `valor_nuevo` (código nuevo), con el usuario super_admin y la organización.
+3. Escribe un registro en `audit_trail` con `accion: "codigo_corregido_super_admin"`, `valor_anterior` (código viejo) y `valor_nuevo` (código nuevo + motivo de la corrección), con el usuario super_admin y la organización.
 4. Al terminar, ajusta `folio_sequence` de cada combinación tipo/período afectada para que el consecutivo quede en el número más alto en uso; así los folios nuevos siguen la numeración correcta.
 
 Todo el lote se procesa en una sola operación transaccional: si una fila falla, no se aplica nada y se devuelve el detalle del error.
@@ -49,6 +50,6 @@ Todo el lote se procesa en una sola operación transaccional: si una fila falla,
 
 - Nueva página `src/pages/AdminReeditarCodigos.tsx` + ruta en `src/App.tsx` + ítem en `src/components/AppSidebar.tsx` (lista `adminNavItems`).
 - Nueva Edge Function `admin-reeditar-codigos` (verifica JWT y rol `super_admin` en `user_roles`, igual que `admin-asignar-tipo-folio`), que ejecuta una nueva función de base de datos `SECURITY DEFINER` para aplicar el lote de forma atómica.
-- Migración: función `reeditar_codigos_folios(p_org_id uuid, p_cambios jsonb, p_actor uuid)` con las validaciones descritas y la actualización de `folio_sequence`. No se modifican tablas ni políticas existentes.
+- Migración: función `reeditar_codigos_folios(p_org_id uuid, p_cambios jsonb, p_motivo text, p_actor uuid)` con las validaciones descritas (incluido el motivo obligatorio) y la actualización de `folio_sequence`. No se modifican tablas ni políticas existentes.
 - La restricción existente `folios_org_codigo_unique (org_id, codigo)` respalda la validación de duplicados a nivel de base de datos.
 - Reutiliza `useOrgTiposFolio` y el helper de preview de código ya usados en Configuración.
