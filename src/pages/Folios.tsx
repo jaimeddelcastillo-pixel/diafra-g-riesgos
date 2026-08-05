@@ -640,23 +640,25 @@ export default function Folios() {
           >
             Todos ({todos.length})
           </button>
-          {tiposDisponibles.map((t) => {
-            const count = todos.filter((f) => f.tipo_folio === t.key).length;
-            return (
-              <button
-                key={t.key}
-                onClick={() => setTipoFiltro(t.key)}
-                className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
-                  tipoFiltro === t.key
-                    ? "bg-primary text-primary-foreground border-primary"
-                    : "bg-background text-muted-foreground border-border hover:bg-muted"
-                }`}
-                title={t.descripcion}
-              >
-                {t.short} ({count})
-              </button>
-            );
-          })}
+          {tiposDisponibles
+            .filter((t) => t.activo || todos.some((f) => f.tipo_folio === t.codigo))
+            .map((t) => {
+              const count = todos.filter((f) => f.tipo_folio === t.codigo).length;
+              return (
+                <button
+                  key={t.codigo}
+                  onClick={() => setTipoFiltro(t.codigo)}
+                  className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
+                    tipoFiltro === t.codigo
+                      ? "bg-primary text-primary-foreground border-primary"
+                      : "bg-background text-muted-foreground border-border hover:bg-muted"
+                  }`}
+                  title={t.nombre}
+                >
+                  {t.codigo} ({count})
+                </button>
+              );
+            })}
           {hayHistorico && (
             <button
               onClick={() => setTipoFiltro("_historico")}
