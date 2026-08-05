@@ -19,12 +19,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { getMotivoLabel } from "@/config/motivos-cancelacion";
-import {
-  getTiposDisponibles,
-  getTipoLabel,
-  formatTipoFolio,
-  type TipoFolioKey,
-} from "@/config/tipos-folio";
+import { getTipoLabel } from "@/config/tipos-folio";
+import { useOrgTiposFolio } from "@/hooks/useOrgTiposFolio";
+import { previewCodigo } from "@/components/OrgFolioCodigoCard";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
@@ -341,7 +338,7 @@ function NuevoFolioDialog({ open, onClose }: { open: boolean; onClose: () => voi
   const [saving, setSaving] = useState(false);
 
   const [form, setForm] = useState({
-    tipo: "" as TipoFolioKey | "",
+    tipo: "",
     proceso_equipo: "",
     origen: "Diseño y Desarrollo" as string,
     desviacion_id: "",
@@ -353,7 +350,7 @@ function NuevoFolioDialog({ open, onClose }: { open: boolean; onClose: () => voi
 
   const update = (field: string, value: string) => setForm((f) => ({ ...f, [field]: value }));
 
-  const tiposDisponibles = getTiposDisponibles((org as any)?.norma_aplicable);
+  const { data: tiposDisponibles = [] } = useOrgTiposFolio(true);
 
   const handleGuardar = async () => {
     if (!form.tipo) {
@@ -432,15 +429,20 @@ function NuevoFolioDialog({ open, onClose }: { open: boolean; onClose: () => voi
               </SelectTrigger>
               <SelectContent>
                 {tiposDisponibles.map((t) => (
-                  <SelectItem key={t.key} value={t.key}>
-                    {formatTipoFolio(t.key)}
+                  <SelectItem key={t.codigo} value={t.codigo}>
+                    {t.codigo} — {t.nombre}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">
               {form.tipo
-                ? `Tu folio será: GR-${form.tipo}-${new Date().getFullYear()}-XXX (el número se asigna al guardar)`
+                ? `Tu folio será: ${previewCodigo(
+                    (org as any)?.folio_prefijo ?? "GR",
+                    form.tipo,
+                    ((org as any)?.folio_formato_periodo ?? "anio_completo") as any,
+                    (org as any)?.folio_digitos_consecutivo ?? 3,
+                  ).replace(/\d+$/, "XXX")} (el número se asigna al guardar)`
                 : "El código se genera automáticamente al guardar."}
             </p>
           </div>
@@ -550,7 +552,7 @@ export default function Folios() {
   const { org, hasRole, isSuperAdmin } = useAuth();
   const puedeVerCancelados =
     hasRole("admin") || hasRole("responsable_sanitario") || isSuperAdmin();
-  const tiposDisponibles = getTiposDisponibles((org as any)?.norma_aplicable);
+  const { data: tiposDisponibles = [] } = useOrgTiposFolio(false);
 
   const lista =
     tipoFiltro === "todos"
@@ -638,23 +640,25 @@ export default function Folios() {
           >
             Todos ({todos.length})
           </button>
-          {tiposDisponibles.map((t) => {
-            const count = todos.filter((f) => f.tipo_folio === t.key).length;
-            return (
-              <button
-                key={t.key}
-                onClick={() => setTipoFiltro(t.key)}
-                className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
-                  tipoFiltro === t.key
-                    ? "bg-primary text-primary-foreground border-primary"
-                    : "bg-background text-muted-foreground border-border hover:bg-muted"
-                }`}
-                title={t.descripcion}
-              >
-                {t.short} ({count})
-              </button>
-            );
-          })}
+          {tiposDisponibles
+            .filter((t) => t.activo || todos.some((f) => f.tipo_folio === t.codigo))
+            .map((t) => {
+              const count = todos.filter((f) => f.tipo_folio === t.codigo).length;
+              return (
+                <button
+                  key={t.codigo}
+                  onClick={() => setTipoFiltro(t.codigo)}
+                  className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
+                    tipoFiltro === t.codigo
+                      ? "bg-primary text-primary-foreground border-primary"
+                      : "bg-background text-muted-foreground border-border hover:bg-muted"
+                  }`}
+                  title={t.nombre}
+                >
+                  {t.codigo} ({count})
+                </button>
+              );
+            })}
           {hayHistorico && (
             <button
               onClick={() => setTipoFiltro("_historico")}
