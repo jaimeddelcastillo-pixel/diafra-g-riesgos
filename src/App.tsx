@@ -30,6 +30,7 @@ import AdminCursoEditor from "./pages/AdminCursoEditor";
 import AdminCursoEvaluacion from "./pages/AdminCursoEvaluacion";
 import AdminFolios from "./pages/AdminFolios";
 import AdminFoliosCancelados from "./pages/AdminFoliosCancelados";
+import AdminReeditarCodigos from "./pages/AdminReeditarCodigos";
 import MisProtocolos from "./pages/MisProtocolos";
 import Soporte from "./pages/Soporte";
 import Login from "./pages/Login";
@@ -92,6 +93,7 @@ const App = () => (
               <Route path="/admin/cursos/:id/evaluacion" element={<AdminCursoEvaluacion />} />
               <Route path="/admin/folios" element={<AdminFolios />} />
               <Route path="/admin/folios-cancelados" element={<AdminFoliosCancelados />} />
+              <Route path="/admin/super/reeditar-codigos" element={<AdminReeditarCodigos />} />
               <Route path="/mis-protocolos" element={<MisProtocolos />} />
               <Route path="/soporte" element={<Soporte />} />
               <Route path="/soporte/:id" element={<Soporte />} />
