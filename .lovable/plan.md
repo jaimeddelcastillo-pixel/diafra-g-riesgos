@@ -33,8 +33,8 @@ Separador siempre `-`.
 
 - `src/config/tipos-folio.ts` queda como catálogo de semillas; los selectores pasan a leer `org_folio_tipos` mediante un hook nuevo `useOrgTiposFolio()`.
 - Selector de tipo al crear folio (`src/pages/Folios.tsx`) y filtros por tipo: solo grupos activos de la organización, con etiquetas desde la base de datos.
-- Tarjeta **Formato de folio**: campos de prefijo, período y dígitos, con preview en vivo "Tu próximo folio se verá así: `AR-FAB-Q1-26-001`" y guardado solo para admin.
-- Tarjeta **Tipos de folio**: tabla con código, nombre, origen (TRACEA / personalizado), interruptor de activo, y alta de grupo personalizado validando código de 2–4 caracteres único por organización.
+- Tarjeta **Formato de folio**: campos de prefijo, período y dígitos, con preview en vivo "Tu próximo folio se verá así: `AR-FAB-Q1-26-001`" y guardado solo para admin. Al modificar prefijo o formato se muestra un banner informativo: "Este cambio aplica solo a folios nuevos. Los folios ya creados conservan su código original. Esto protege la trazabilidad regulatoria de tu expediente."
+- Tarjeta **Tipos de folio**: tabla con código, nombre, origen (TRACEA / personalizado), interruptor de activo, y alta de grupo personalizado validando código de 2–4 caracteres único por organización. Al desactivar un grupo con folios asociados, se pide confirmación mostrando el conteo: "Este grupo tiene N folios asociados. Al desactivarlo no podrás crear nuevos folios de este tipo, pero los folios existentes se conservan intactos."
 - `src/pages/FolioDetail.tsx`: el chequeo de "es el último folio" para el borrado físico usa los campos nuevos en lugar del regex.
 - `getTipoLabel` acepta códigos personalizados (ya cae al código como respaldo).
 - `supabase/functions/chat-asistente`: su respaldo manual arma `GR-...` a mano; se cambia para depender del RPC y fallar limpio si este falla.
