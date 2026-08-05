@@ -21,6 +21,7 @@ import { Switch } from "@/components/ui/switch";
 import { getMotivoLabel } from "@/config/motivos-cancelacion";
 import { getTipoLabel } from "@/config/tipos-folio";
 import { useOrgTiposFolio } from "@/hooks/useOrgTiposFolio";
+import { previewCodigo } from "@/components/OrgFolioCodigoCard";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
@@ -551,7 +552,7 @@ export default function Folios() {
   const { org, hasRole, isSuperAdmin } = useAuth();
   const puedeVerCancelados =
     hasRole("admin") || hasRole("responsable_sanitario") || isSuperAdmin();
-  const tiposDisponibles = getTiposDisponibles((org as any)?.norma_aplicable);
+  const { data: tiposDisponibles = [] } = useOrgTiposFolio(false);
 
   const lista =
     tipoFiltro === "todos"
