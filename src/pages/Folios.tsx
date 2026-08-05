@@ -19,12 +19,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { getMotivoLabel } from "@/config/motivos-cancelacion";
-import {
-  getTiposDisponibles,
-  getTipoLabel,
-  formatTipoFolio,
-  type TipoFolioKey,
-} from "@/config/tipos-folio";
+import { getTipoLabel } from "@/config/tipos-folio";
+import { useOrgTiposFolio } from "@/hooks/useOrgTiposFolio";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
