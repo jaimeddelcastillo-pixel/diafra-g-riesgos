@@ -337,7 +337,7 @@ function NuevoFolioDialog({ open, onClose }: { open: boolean; onClose: () => voi
   const [saving, setSaving] = useState(false);
 
   const [form, setForm] = useState({
-    tipo: "" as TipoFolioKey | "",
+    tipo: "",
     proceso_equipo: "",
     origen: "Diseño y Desarrollo" as string,
     desviacion_id: "",
@@ -349,7 +349,7 @@ function NuevoFolioDialog({ open, onClose }: { open: boolean; onClose: () => voi
 
   const update = (field: string, value: string) => setForm((f) => ({ ...f, [field]: value }));
 
-  const tiposDisponibles = getTiposDisponibles((org as any)?.norma_aplicable);
+  const { data: tiposDisponibles = [] } = useOrgTiposFolio(true);
 
   const handleGuardar = async () => {
     if (!form.tipo) {
@@ -428,15 +428,20 @@ function NuevoFolioDialog({ open, onClose }: { open: boolean; onClose: () => voi
               </SelectTrigger>
               <SelectContent>
                 {tiposDisponibles.map((t) => (
-                  <SelectItem key={t.key} value={t.key}>
-                    {formatTipoFolio(t.key)}
+                  <SelectItem key={t.codigo} value={t.codigo}>
+                    {t.codigo} — {t.nombre}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">
               {form.tipo
-                ? `Tu folio será: GR-${form.tipo}-${new Date().getFullYear()}-XXX (el número se asigna al guardar)`
+                ? `Tu folio será: ${previewCodigo(
+                    (org as any)?.folio_prefijo ?? "GR",
+                    form.tipo,
+                    ((org as any)?.folio_formato_periodo ?? "anio_completo") as any,
+                    (org as any)?.folio_digitos_consecutivo ?? 3,
+                  ).replace(/\d+$/, "XXX")} (el número se asigna al guardar)`
                 : "El código se genera automáticamente al guardar."}
             </p>
           </div>
