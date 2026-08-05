@@ -1000,18 +1000,21 @@ export type Database = {
         Row: {
           last_number: number
           org_id: string
+          periodo_key: string
           tipo: string
           year: number
         }
         Insert: {
           last_number?: number
           org_id: string
+          periodo_key: string
           tipo?: string
           year: number
         }
         Update: {
           last_number?: number
           org_id?: string
+          periodo_key?: string
           tipo?: string
           year?: number
         }
@@ -1078,6 +1081,8 @@ export type Database = {
           clasificacion_riesgo_sanitario: string
           clasificacion_tipo: string
           codigo: string
+          codigo_consecutivo: number | null
+          codigo_periodo: string | null
           conclusion: string | null
           control_cambios_id: string | null
           created_at: string
@@ -1114,6 +1119,8 @@ export type Database = {
           clasificacion_riesgo_sanitario?: string
           clasificacion_tipo?: string
           codigo: string
+          codigo_consecutivo?: number | null
+          codigo_periodo?: string | null
           conclusion?: string | null
           control_cambios_id?: string | null
           created_at?: string
@@ -1150,6 +1157,8 @@ export type Database = {
           clasificacion_riesgo_sanitario?: string
           clasificacion_tipo?: string
           codigo?: string
+          codigo_consecutivo?: number | null
+          codigo_periodo?: string | null
           conclusion?: string | null
           control_cambios_id?: string | null
           created_at?: string
@@ -1316,6 +1325,50 @@ export type Database = {
           },
         ]
       }
+      org_folio_tipos: {
+        Row: {
+          activo: boolean
+          codigo: string
+          created_at: string
+          es_personalizado: boolean
+          id: string
+          nombre: string
+          orden: number
+          org_id: string
+          updated_at: string
+        }
+        Insert: {
+          activo?: boolean
+          codigo: string
+          created_at?: string
+          es_personalizado?: boolean
+          id?: string
+          nombre: string
+          orden?: number
+          org_id: string
+          updated_at?: string
+        }
+        Update: {
+          activo?: boolean
+          codigo?: string
+          created_at?: string
+          es_personalizado?: boolean
+          id?: string
+          nombre?: string
+          orden?: number
+          org_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "org_folio_tipos_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       org_members: {
         Row: {
           created_at: string
@@ -1363,6 +1416,9 @@ export type Database = {
           dc3_emitidos: number
           descripcion: string
           estado: Database["public"]["Enums"]["org_estado"]
+          folio_digitos_consecutivo: number
+          folio_formato_periodo: string
+          folio_prefijo: string
           id: string
           ip_aceptacion: string | null
           logo_url: string
@@ -1407,6 +1463,9 @@ export type Database = {
           dc3_emitidos?: number
           descripcion?: string
           estado?: Database["public"]["Enums"]["org_estado"]
+          folio_digitos_consecutivo?: number
+          folio_formato_periodo?: string
+          folio_prefijo?: string
           id?: string
           ip_aceptacion?: string | null
           logo_url?: string
@@ -1451,6 +1510,9 @@ export type Database = {
           dc3_emitidos?: number
           descripcion?: string
           estado?: Database["public"]["Enums"]["org_estado"]
+          folio_digitos_consecutivo?: number
+          folio_formato_periodo?: string
+          folio_prefijo?: string
           id?: string
           ip_aceptacion?: string | null
           logo_url?: string
@@ -1916,6 +1978,8 @@ export type Database = {
           clasificacion_riesgo_sanitario: string
           clasificacion_tipo: string
           codigo: string
+          codigo_consecutivo: number | null
+          codigo_periodo: string | null
           conclusion: string | null
           control_cambios_id: string | null
           created_at: string
@@ -2028,6 +2092,10 @@ export type Database = {
         }[]
       }
       restaurar_documento: { Args: { p_doc_id: string }; Returns: boolean }
+      seed_org_folio_tipos: {
+        Args: { _norma: string; _org_id: string }
+        Returns: undefined
+      }
       todos_firmaron: { Args: { p_folio_id: string }; Returns: boolean }
       verificar_diploma: {
         Args: { p_hash: string }
