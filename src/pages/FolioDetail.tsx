@@ -1685,19 +1685,23 @@ export default function FolioDetail() {
     if (folio.estado === "Borrador") {
       // Detectar si es el último número emitido para esa org/año/tipo.
       // Si lo es → DELETE físico (recicla contador). Si no → CANCELADO.
-      const m = folio.codigo.match(/^GR-([A-Z]+)-(\d{4})-(\d+)$/);
+      const partes = folio.codigo.split("-");
+      const tipo = partes[1];
+      const num =
+        (folio as any).codigo_consecutivo ??
+        (partes.length >= 3 ? parseInt(partes[partes.length - 1], 10) : NaN);
+      const periodoKey =
+        (folio as any).codigo_periodo ??
+        (partes.length > 3 ? partes.slice(2, partes.length - 1).join("-") : "ALL");
       let esUltimo = false;
-      if (m && folio.org_id) {
-        const tipo = m[1];
-        const year = parseInt(m[2], 10);
-        const num = parseInt(m[3], 10);
+      if (tipo && Number.isFinite(num) && folio.org_id) {
         try {
           const { data: seq } = await supabase
             .from("folio_sequence")
             .select("last_number")
             .eq("org_id", folio.org_id)
-            .eq("year", year)
             .eq("tipo", tipo)
+            .eq("periodo_key", periodoKey)
             .maybeSingle();
           esUltimo = !!seq && (seq as any).last_number === num;
         } catch {
