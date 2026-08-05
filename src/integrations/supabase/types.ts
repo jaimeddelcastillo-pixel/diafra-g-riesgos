@@ -2092,6 +2092,15 @@ export type Database = {
           read_ct: number
         }[]
       }
+      reeditar_codigos_folios: {
+        Args: {
+          p_actor: string
+          p_cambios: Json
+          p_motivo: string
+          p_org_id: string
+        }
+        Returns: Json
+      }
       restaurar_documento: { Args: { p_doc_id: string }; Returns: boolean }
       seed_org_folio_tipos: {
         Args: { _norma: string; _org_id: string }
