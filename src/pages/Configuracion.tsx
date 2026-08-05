@@ -12,6 +12,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { OrgLogoCard } from "@/components/OrgLogoCard";
 import { OrgFormatoCard } from "@/components/OrgFormatoCard";
+import { OrgFolioCodigoCard } from "@/components/OrgFolioCodigoCard";
+import { OrgTiposFolioCard } from "@/components/OrgTiposFolioCard";
 import { PlanSubscriptionCard } from "@/components/PlanSubscriptionCard";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -461,6 +463,10 @@ export default function Configuracion() {
       <OrgLogoCard />
 
       <OrgFormatoCard />
+
+      <OrgFolioCodigoCard />
+
+      <OrgTiposFolioCard />
 
       {/* Edit User Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
