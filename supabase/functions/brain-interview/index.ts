@@ -771,7 +771,26 @@ async function execSugerirEntrevistado(
   if (!razon) return { ok: false, error: "razon no puede estar vacía." };
 
   const claveSesion = sessionId ?? "sin-sesion";
-  const usadas = sugerenciasPorSesion.get(claveSesion) ?? 0;
+  let usadas = sugerenciasPorSesion.get(claveSesion) ?? 0;
+  // Fallback persistente (el isolate puede reciclarse): contar sugerencias automáticas creadas desde el inicio de la sesión
+  if (sessionId) {
+    const { data: ses } = await admin
+      .from("brain_interview_sessions")
+      .select("iniciada_at, created_at")
+      .eq("id", sessionId)
+      .eq("org_id", orgId)
+      .maybeSingle();
+    const desde = (ses as any)?.iniciada_at ?? (ses as any)?.created_at;
+    if (desde) {
+      const { count } = await admin
+        .from("brain_interview_assignments")
+        .select("id", { count: "exact", head: true })
+        .eq("org_id", orgId)
+        .eq("asignado_automaticamente", true)
+        .gte("created_at", desde);
+      usadas = Math.max(usadas, count ?? 0);
+    }
+  }
   if (usadas >= MAX_SUGERENCIAS_POR_SESION) {
     return { ok: false, error: `Ya sugeriste ${MAX_SUGERENCIAS_POR_SESION} entrevistados en esta sesión. Continúa la entrevista con el conocimiento que sí posee el entrevistado actual.` };
   }
