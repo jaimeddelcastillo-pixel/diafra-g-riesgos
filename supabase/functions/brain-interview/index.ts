@@ -731,6 +731,135 @@ async function execGetNextInterviewObjective(
   };
 }
 
+// ─────────────────── sugerir_entrevistado ───────────────────
+TOOLS.push({
+  name: "sugerir_entrevistado",
+  description:
+    "Sugiere entrevistar a otro rol cuando existe un gap de tipo 'pendiente_otro_rol' confirmado: el entrevistado actual no posee ese conocimiento y otro rol sí. Crea una sugerencia de asignación (no un compromiso): el administrador la aprueba o descarta desde /cerebro/entrevistas. Máximo 3 llamadas por sesión. No llamar si ya existe una asignación pendiente para ese dominio. Después de llamarla, continúa la entrevista sin esperar aprobación.",
+  input_schema: {
+    type: "object",
+    properties: {
+      dominio_conocimiento: { type: "string", description: "Dominio de conocimiento faltante (ej. 'validacion_calificacion', 'mantenimiento de equipos')." },
+      proceso_id: { type: "string", description: "UUID del proceso asociado (opcional)." },
+      area_id: { type: "string", description: "UUID del área asociada (opcional)." },
+      razon: { type: "string", description: "Por qué se necesita a este entrevistado." },
+      urgencia: { type: "string", enum: ["alta", "media", "baja"], description: "Prioridad de la sugerencia." },
+      rol_sugerido: { type: "string", description: "Puesto o rol sugerido a entrevistar (opcional)." },
+    },
+    required: ["dominio_conocimiento", "razon"],
+  },
+});
+
+const MAX_SUGERENCIAS_POR_SESION = 3;
+const MAX_ASIGNACIONES_AUTO_PENDIENTES = 10;
+const sugerenciasPorSesion = new Map<string, number>();
+
+async function execSugerirEntrevistado(
+  admin: any,
+  orgId: string,
+  sessionId: string | null,
+  input: any,
+) {
+  const dominio = String(input?.dominio_conocimiento ?? "").trim();
+  const razon = String(input?.razon ?? "").trim();
+  const rolSugerido = String(input?.rol_sugerido ?? "").trim() || null;
+  const urgencia = ["alta", "media", "baja"].includes(input?.urgencia) ? input.urgencia : "media";
+  const procesoId = String(input?.proceso_id ?? "").trim() || null;
+  const areaId = String(input?.area_id ?? "").trim() || null;
+
+  if (!dominio) return { ok: false, error: "dominio_conocimiento no puede estar vacío." };
+  if (!razon) return { ok: false, error: "razon no puede estar vacía." };
+
+  const claveSesion = sessionId ?? "sin-sesion";
+  const usadas = sugerenciasPorSesion.get(claveSesion) ?? 0;
+  if (usadas >= MAX_SUGERENCIAS_POR_SESION) {
+    return { ok: false, error: `Ya sugeriste ${MAX_SUGERENCIAS_POR_SESION} entrevistados en esta sesión. Continúa la entrevista con el conocimiento que sí posee el entrevistado actual.` };
+  }
+
+  // Validar referencias de la organización
+  if (procesoId) {
+    const { data } = await admin.from("brain_processes").select("id, nombre").eq("id", procesoId).eq("org_id", orgId).maybeSingle();
+    if (!data) return { ok: false, error: "proceso_id no existe en esta organización." };
+    input.__proceso_nombre = data.nombre;
+  }
+  if (areaId) {
+    const { data } = await admin.from("brain_areas").select("id, nombre").eq("id", areaId).eq("org_id", orgId).maybeSingle();
+    if (!data) return { ok: false, error: "area_id no existe en esta organización." };
+    input.__area_nombre = data.nombre;
+  }
+
+  // PASO 2 — duplicados
+  const { data: activas } = await admin
+    .from("brain_interview_assignments")
+    .select("id, puesto, dominios_conocimiento, estado, prioridad, razon_asignacion, asignado_automaticamente")
+    .eq("org_id", orgId)
+    .in("estado", ["pendiente", "en_proceso"]);
+
+  const norm = (s: string) => s.toLowerCase().trim();
+  const existente = (activas ?? []).find((a: any) =>
+    (a.dominios_conocimiento ?? []).some((d: string) => norm(d) === norm(dominio)),
+  );
+  if (existente) {
+    return {
+      ok: true,
+      duplicado: true,
+      assignment_id: existente.id,
+      mensaje: "Ya existe una asignación pendiente para este dominio",
+      accion_requerida: "aprobacion_admin",
+      nota: "No se creó una nueva sugerencia. Continúa la entrevista.",
+    };
+  }
+
+  // Límite de asignaciones automáticas pendientes
+  const autoPendientes = (activas ?? []).filter((a: any) => a.asignado_automaticamente && a.estado === "pendiente").length;
+  if (autoPendientes >= MAX_ASIGNACIONES_AUTO_PENDIENTES) {
+    return {
+      ok: false,
+      error: "Hay muchas asignaciones pendientes de aprobar. El administrador debe revisar /cerebro/entrevistas antes de generar nuevas sugerencias",
+    };
+  }
+
+  // PASO 3 — crear
+  const { data: nueva, error } = await admin
+    .from("brain_interview_assignments")
+    .insert({
+      org_id: orgId,
+      puesto: rolSugerido,
+      area_id: areaId,
+      dominios_conocimiento: [dominio],
+      estado: "pendiente",
+      prioridad: urgencia,
+      razon_asignacion: razon.slice(0, 1000),
+      asignado_automaticamente: true,
+    })
+    .select("id")
+    .single();
+
+  if (error || !nueva) {
+    console.error("sugerir_entrevistado insert error", error);
+    return { ok: false, error: "No se pudo crear la sugerencia de entrevista." };
+  }
+
+  if (procesoId) {
+    const { error: pErr } = await admin
+      .from("brain_assignment_processes")
+      .insert({ org_id: orgId, assignment_id: nueva.id, process_id: procesoId });
+    if (pErr) console.error("sugerir_entrevistado proceso link error", pErr);
+  }
+
+  sugerenciasPorSesion.set(claveSesion, usadas + 1);
+
+  const destino = input.__proceso_nombre ?? input.__area_nombre ?? "la organización";
+  return {
+    ok: true,
+    assignment_id: nueva.id,
+    mensaje: `Se sugirió entrevistar a ${rolSugerido ?? dominio} para cubrir el gap en ${destino}. El administrador puede aprobar o descartar esta sugerencia desde /cerebro/entrevistas`,
+    accion_requerida: "aprobacion_admin",
+    sugerencias_restantes: MAX_SUGERENCIAS_POR_SESION - (usadas + 1),
+    nota: "Esta es una sugerencia, no un compromiso. Continúa la entrevista sin esperar aprobación.",
+  };
+}
+
 // ──────────────────────────── Contexto de sesión ────────────────────────
 async function construirContextoSesion(admin: any, orgId: string, sessionId: string | null, org: any) {
   const ctx = await execObtenerContextoCerebro(admin, orgId, sessionId, true);
@@ -931,6 +1060,8 @@ Deno.serve(async (req) => {
                 result = await execRegistrarContradiccion(admin, org.id, sessionId, tb.input ?? {});
               } else if (tb.name === "get_next_interview_objective") {
                 result = await execGetNextInterviewObjective(admin, org.id, sessionId, tb.input ?? {});
+              } else if (tb.name === "sugerir_entrevistado") {
+                result = await execSugerirEntrevistado(admin, org.id, sessionId, tb.input ?? {});
               } else {
                 result = { ok: false, error: "Herramienta no disponible todavía." };
               }
