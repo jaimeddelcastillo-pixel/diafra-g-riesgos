@@ -60,7 +60,7 @@ export function ImportarListadoDialog({ open, onOpenChange }: Props) {
     setFile(f); setFallo(null); setTabla(null); setProcesando(true);
     const res = await parseArchivo(f);
     setProcesando(false);
-    if (!res.ok) { setFallo(res); setPaso(2); return; }
+    if (!res.ok) { setFallo(res as ParseFail); setPaso(2); return; }
     setFormato(res.formato);
     setTabla(res.tabla);
     setMapeo(proponerMapeo(res.tabla));
