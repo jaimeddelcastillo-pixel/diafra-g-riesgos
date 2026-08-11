@@ -397,6 +397,143 @@ async function execRegistrarBrecha(
   };
 }
 
+// ─────────────────── registrar_contradiccion ───────────────────
+TOOLS.push({
+  name: "registrar_contradiccion",
+  description:
+    "Registra en brain_contradictions una contradicción detectada entre dos versiones del mismo conocimiento (entre personas, entre persona y documento, o entre documentos). Registra AMBAS versiones sin juzgar cuál es correcta, continúa la entrevista sin resolverla y nunca la marques como resuelta: la resolución es exclusivamente humana desde /cerebro/contradicciones. Si la contradicción implica una posible brecha regulatoria, llama además a registrar_brecha con tipo_brecha 'brecha_institucional'. Máximo 1 llamada por turno con todas las contradicciones del turno.",
+  input_schema: {
+    type: "object",
+    properties: {
+      contradicciones: {
+        type: "array",
+        description: "Contradicciones detectadas en este turno (1 a 3).",
+        items: {
+          type: "object",
+          properties: {
+            tema: { type: "string", description: "Qué se está contradiciendo (enunciado corto y específico)." },
+            version_a: { type: "string", description: "Primera versión del conocimiento, textual y autocontenida." },
+            fuente_a: { type: "string", description: "Quién o qué respalda la versión A (persona, puesto, documento, registro)." },
+            version_b: { type: "string", description: "Segunda versión, contradictoria con la A." },
+            fuente_b: { type: "string", description: "Quién o qué respalda la versión B." },
+            riesgo_potencial: { type: "string", description: "Qué implica la contradicción (operativo, regulatorio, de calidad)." },
+            autoridad_requerida: { type: "string", description: "Rol o puesto que puede resolverla." },
+            afecta_cumplimiento: { type: "boolean", description: "true si tiene impacto regulatorio." },
+            document_id: { type: "string", description: "UUID del documento relacionado, si aplica." },
+            proceso_id: { type: "string", description: "UUID del proceso relacionado, si aplica." },
+            area_id: { type: "string", description: "UUID del área relacionada, si aplica." },
+          },
+          required: ["tema", "version_a", "fuente_a", "version_b", "fuente_b"],
+        },
+      },
+    },
+    required: ["contradicciones"],
+  },
+});
+
+async function execRegistrarContradiccion(
+  admin: any,
+  orgId: string,
+  sessionId: string | null,
+  input: any,
+) {
+  const raw: any[] = Array.isArray(input?.contradicciones) ? input.contradicciones : [];
+  if (!raw.length) return { ok: false, error: "No se recibieron contradicciones para registrar." };
+  if (raw.length > 3) raw.length = 3;
+
+  const [{ data: procs }, { data: areas }, { data: docs }, { data: abiertas }] = await Promise.all([
+    admin.from("brain_processes").select("id").eq("org_id", orgId),
+    admin.from("brain_areas").select("id").eq("org_id", orgId),
+    admin.from("brain_documents").select("id").eq("org_id", orgId),
+    admin
+      .from("brain_contradictions")
+      .select("id, tema, afirmacion_a, afirmacion_b")
+      .eq("org_id", orgId)
+      .in("estado", ["abierta", "en_analisis"]),
+  ]);
+  const procIds = new Set((procs ?? []).map((p: any) => p.id));
+  const areaIds = new Set((areas ?? []).map((a: any) => a.id));
+  const docIds = new Set((docs ?? []).map((d: any) => d.id));
+  const temasAbiertos = new Map<string, string>(
+    (abiertas ?? []).map((c: any) => [normalizarTexto(String(c.tema ?? c.afirmacion_a ?? "")), c.id]),
+  );
+
+  const registradas: any[] = [];
+  const rechazadas: any[] = [];
+
+  for (const c of raw) {
+    const tema = String(c?.tema ?? "").trim();
+    const versionA = String(c?.version_a ?? "").trim();
+    const versionB = String(c?.version_b ?? "").trim();
+    const fuenteA = String(c?.fuente_a ?? "").trim();
+    const fuenteB = String(c?.fuente_b ?? "").trim();
+
+    if (tema.length < 5) {
+      rechazadas.push({ tema, motivo: "tema obligatorio: describe qué se está contradiciendo" });
+      continue;
+    }
+    if (versionA.length < 10 || versionB.length < 10) {
+      rechazadas.push({ tema, motivo: "version_a y version_b son obligatorias y deben ser enunciados completos" });
+      continue;
+    }
+    if (normalizarTexto(versionA) === normalizarTexto(versionB)) {
+      rechazadas.push({ tema, motivo: "version_a y version_b son idénticas — no hay contradicción" });
+      continue;
+    }
+    if (!fuenteA || !fuenteB) {
+      rechazadas.push({ tema, motivo: "fuente_a y fuente_b son obligatorias — identifica quién o qué respalda cada versión" });
+      continue;
+    }
+
+    const clave = normalizarTexto(tema);
+    if (temasAbiertos.has(clave)) {
+      rechazadas.push({ tema, motivo: "duplicada — ya existe una contradicción abierta sobre el mismo tema", id: temasAbiertos.get(clave) });
+      continue;
+    }
+
+    const procesoId = UUID_RE.test(c?.proceso_id ?? "") && procIds.has(c.proceso_id) ? c.proceso_id : null;
+    const areaId = UUID_RE.test(c?.area_id ?? "") && areaIds.has(c.area_id) ? c.area_id : null;
+    const documentId = UUID_RE.test(c?.document_id ?? "") && docIds.has(c.document_id) ? c.document_id : null;
+
+    const { data: row, error } = await admin
+      .from("brain_contradictions")
+      .insert({
+        org_id: orgId,
+        tema,
+        afirmacion_a: versionA,
+        afirmacion_b: versionB,
+        fuente_a: fuenteA,
+        fuente_b: fuenteB,
+        riesgo_potencial: c?.riesgo_potencial ? String(c.riesgo_potencial).trim() : null,
+        autoridad_requerida: c?.autoridad_requerida ? String(c.autoridad_requerida).trim().slice(0, 160) : null,
+        afecta_cumplimiento: c?.afecta_cumplimiento === true,
+        document_id: documentId,
+        proceso_id: procesoId,
+        area_id: areaId,
+        session_id: sessionId,
+        estado: "abierta",
+      })
+      .select("id, tema, estado, afecta_cumplimiento")
+      .single();
+
+    if (error || !row) {
+      rechazadas.push({ tema, motivo: error?.message ?? "error al insertar" });
+      continue;
+    }
+    temasAbiertos.set(clave, row.id);
+    registradas.push(row);
+  }
+
+  return {
+    ok: registradas.length > 0,
+    registradas_count: registradas.length,
+    registradas,
+    rechazadas,
+    nota:
+      "Estado inicial siempre 'abierta'. No resuelvas la contradicción ni elijas versión correcta: continúa la entrevista. Si implica una posible brecha regulatoria, registra también una brecha_institucional. La resolución es humana desde /cerebro/contradicciones.",
+  };
+}
+
 // ──────────────────────── Ejecución de herramientas ────────────────────
 async function execObtenerContextoCerebro(
   admin: any,
@@ -419,7 +556,7 @@ async function execObtenerContextoCerebro(
       .order("prioridad"),
     admin
       .from("brain_contradictions")
-      .select("id, afirmacion_a, afirmacion_b, fuente_a, fuente_b, estado, afecta_cumplimiento")
+      .select("id, tema, afirmacion_a, afirmacion_b, fuente_a, fuente_b, estado, afecta_cumplimiento, riesgo_potencial, autoridad_requerida")
       .eq("org_id", orgId)
       .in("estado", ["abierta", "en_analisis"]),
     admin.from("brain_processes").select("id, nombre, owner_area_id, activo").eq("org_id", orgId).eq("activo", true),
@@ -522,6 +659,7 @@ ${ctx.conocimientos.slice(0, 25).map((i: any) => `- (${i.tipo}/${i.estado}) ${i.
 [GAPS ACTIVOS PARA ESTE ENTREVISTADO]: ${gapsFiltrados.length}
 ${gapsFiltrados.slice(0, 20).map((g: any) => `- [${g.prioridad}/${g.tipo_brecha}] ${g.descripcion} (id: ${g.id})`).join("\n") || "- (sin brechas registradas)"}
 [CONTRADICCIONES ABIERTAS]: ${ctx.resumen.contradicciones_abiertas}
+${ctx.contradicciones.slice(0, 15).map((c: any) => `- [${c.tema ?? "sin tema"}] A: ${c.afirmacion_a} (${c.fuente_a ?? "—"}) | B: ${c.afirmacion_b} (${c.fuente_b ?? "—"}) (id: ${c.id})`).join("\n") || "- (sin contradicciones abiertas)"}
 [PROCESOS ASIGNADOS]: ${procesosAsignados.join(" | ") || "ninguno"}
 [AREAS REGISTRADAS]: ${ctx.areas.map((a: any) => `${a.nombre} (${a.id})`).join(" | ") || "ninguna"}
 [SESSION_ID]: ${sessionId ?? "—"}
@@ -661,6 +799,8 @@ Deno.serve(async (req) => {
                 result = await execGuardarConocimiento(admin, org.id, sessionId, user.id, tb.input ?? {});
               } else if (tb.name === "registrar_brecha") {
                 result = await execRegistrarBrecha(admin, org.id, sessionId, tb.input ?? {});
+              } else if (tb.name === "registrar_contradiccion") {
+                result = await execRegistrarContradiccion(admin, org.id, sessionId, tb.input ?? {});
               } else {
                 result = { ok: false, error: "Herramienta no disponible todavía." };
               }
