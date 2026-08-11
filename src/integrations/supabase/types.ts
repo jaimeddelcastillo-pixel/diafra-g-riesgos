@@ -228,6 +228,70 @@ export type Database = {
           },
         ]
       }
+      brain_processes: {
+        Row: {
+          activo: boolean
+          created_at: string
+          descripcion: string | null
+          folio_id: string | null
+          id: string
+          marco_regulatorio: string | null
+          nombre: string
+          org_id: string
+          owner_area_id: string | null
+          tiene_folio: boolean
+          updated_at: string
+        }
+        Insert: {
+          activo?: boolean
+          created_at?: string
+          descripcion?: string | null
+          folio_id?: string | null
+          id?: string
+          marco_regulatorio?: string | null
+          nombre: string
+          org_id: string
+          owner_area_id?: string | null
+          tiene_folio?: boolean
+          updated_at?: string
+        }
+        Update: {
+          activo?: boolean
+          created_at?: string
+          descripcion?: string | null
+          folio_id?: string | null
+          id?: string
+          marco_regulatorio?: string | null
+          nombre?: string
+          org_id?: string
+          owner_area_id?: string | null
+          tiene_folio?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brain_processes_folio_id_fkey"
+            columns: ["folio_id"]
+            isOneToOne: false
+            referencedRelation: "folios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brain_processes_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brain_processes_owner_area_id_fkey"
+            columns: ["owner_area_id"]
+            isOneToOne: false
+            referencedRelation: "brain_areas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       capacitacion_progreso: {
         Row: {
           completado: boolean
