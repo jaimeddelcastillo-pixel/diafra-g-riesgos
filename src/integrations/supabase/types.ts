@@ -714,6 +714,61 @@ export type Database = {
           },
         ]
       }
+      brain_interview_messages: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          metadata: Json | null
+          org_id: string
+          role: string
+          session_id: string
+          turn_id: string | null
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          org_id: string
+          role: string
+          session_id: string
+          turn_id?: string | null
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          org_id?: string
+          role?: string
+          session_id?: string
+          turn_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brain_interview_messages_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brain_interview_messages_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "brain_interview_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brain_interview_messages_turn_id_fkey"
+            columns: ["turn_id"]
+            isOneToOne: false
+            referencedRelation: "brain_interview_turns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       brain_interview_sessions: {
         Row: {
           assignment_id: string | null
