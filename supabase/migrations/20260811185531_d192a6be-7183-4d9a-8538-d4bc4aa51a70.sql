@@ -1,0 +1,2 @@
+ALTER TABLE public.agent_prompts DROP CONSTRAINT IF EXISTS agent_prompts_nombre_check;
+ALTER TABLE public.agent_prompts ADD CONSTRAINT agent_prompts_nombre_check CHECK (nombre IN ('dm','farma','cerebro_institucional'));
