@@ -19,7 +19,8 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const MODEL = "claude-sonnet-4-6";
 const MAX_HISTORY = 24;
-const MAX_TOOL_CALLS_PER_TURN = 6;
+const MAX_TOOL_CALLS_PER_TURN = 12; // safeguard anti-loop (no es diseño metodológico)
+const SESSION_TRANSCRIPT_WINDOW = 5;
 
 const TIPOS_CONOCIMIENTO = [
   "identidad_organizacional",
@@ -944,7 +945,38 @@ ${ctx.contradicciones.slice(0, 15).map((c: any) => `- [${c.tema ?? "sin tema"}] 
   return { bloque, ctx };
 }
 
+// ─────────────────── Idempotencia por operación ───────────────────
+function canonical(v: any): string {
+  if (v === null || typeof v !== "object") return JSON.stringify(v ?? null);
+  if (Array.isArray(v)) return `[${v.map(canonical).join(",")}]`;
+  const keys = Object.keys(v).sort();
+  return `{${keys.map((k) => `${JSON.stringify(k)}:${canonical(v[k])}`).join(",")}}`;
+}
+
+async function sha256hex(text: string): Promise<string> {
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
+  return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+type TurnMetrics = {
+  knowledge_created: number;
+  gaps_created: number;
+  contradictions_created: number;
+  interviewees_suggested: number;
+  persisted: boolean;
+};
+
+async function stampTurn(admin: any, table: string, ids: string[], orgId: string, turnId: string) {
+  if (!ids.length) return;
+  try {
+    await admin.from(table).update({ turn_id: turnId }).in("id", ids).eq("org_id", orgId);
+  } catch (e) { console.error("stampTurn", table, e); }
+}
+
 // ──────────────────────────────── Handler ───────────────────────────────
+const ACCIONES = ["iniciar", "mensaje", "pausar", "reanudar", "cerrar"];
+const RAZONES_CIERRE = ["user_closed", "objectives_complete", "admin_closed"];
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
@@ -955,6 +987,7 @@ Deno.serve(async (req) => {
     });
 
   try {
+    // ── 1. JWT
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) return json({ error: "No autenticado" }, 401);
 
@@ -966,6 +999,7 @@ Deno.serve(async (req) => {
 
     const admin = createClient(SUPABASE_URL, SERVICE_KEY);
 
+    // ── 2. org_id resuelto server-side (nunca del frontend ni del modelo)
     const { data: member } = await admin
       .from("org_members")
       .select("org_id, role, organizations(id, nombre, norma_aplicable, plan)")
@@ -973,47 +1007,266 @@ Deno.serve(async (req) => {
       .maybeSingle();
     const org: any = (member as any)?.organizations;
     if (!org) return json({ error: "Usuario sin organización" }, 403);
+    const orgId: string = org.id;
 
-    const body = await req.json();
-    const messages: any[] = Array.isArray(body?.messages) ? body.messages : [];
-    let sessionId: string | null = body?.session_id ?? null;
+    // ── 3. Feature institutional_brain + restricciones de plan
+    const { data: superRole } = await admin
+      .from("user_roles").select("role").eq("user_id", user.id).eq("role", "super_admin").maybeSingle();
+    const esSuperAdmin = !!superRole;
+    const plan = String(org.plan ?? "").toLowerCase();
+    const planIncluye = ["professional", "enterprise"].includes(plan);
+    const { data: feat } = await admin
+      .from("organization_features")
+      .select("activo, expira_en")
+      .eq("org_id", orgId)
+      .eq("feature_key", "institutional_brain")
+      .maybeSingle();
+    const featActiva = !!feat?.activo && (!feat.expira_en || new Date(feat.expira_en) > new Date());
+    if (!esSuperAdmin && !planIncluye && !featActiva) {
+      return json({ error: "El módulo Cerebro Institucional no está activo para esta organización" }, 403);
+    }
+    const esTrial = plan.startsWith("trial");
 
-    if (sessionId) {
-      const { data: s } = await admin
-        .from("brain_interview_sessions")
-        .select("id")
-        .eq("id", sessionId)
-        .eq("org_id", org.id)
+    // ── 4. GET /brain-interview/turn/{turn_id}
+    const url = new URL(req.url);
+    const partes = url.pathname.split("/").filter(Boolean);
+    if (req.method === "GET" && partes.length >= 2 && partes[partes.length - 2] === "turn") {
+      const turnId = partes[partes.length - 1];
+      const { data: turno } = await admin
+        .from("brain_interview_turns")
+        .select("id, session_id, estado, operations, knowledge_created, gaps_created, contradictions_created, interviewees_suggested, current_objective, error, created_at, completed_at")
+        .eq("id", turnId)
+        .eq("org_id", orgId)
         .maybeSingle();
-      if (!s) sessionId = null;
+      if (!turno) return json({ error: "Turno no encontrado" }, 404);
+      const { data: ses } = await admin
+        .from("brain_interview_sessions").select("estado").eq("id", turno.session_id).eq("org_id", orgId).maybeSingle();
+      const { data: msgs } = await admin
+        .from("brain_interview_messages")
+        .select("role, content, created_at")
+        .eq("turn_id", turnId)
+        .eq("org_id", orgId)
+        .order("created_at", { ascending: true });
+      return json({ ...turno, session_status: ses?.estado ?? null, messages: msgs ?? [] });
     }
 
-    const promptRow = await admin
-      .from("agent_prompts")
-      .select("system_prompt, version")
-      .eq("nombre", "cerebro_institucional")
-      .eq("activo", true)
+    if (req.method !== "POST") return json({ error: "Método no permitido" }, 405);
+
+    const body = await req.json().catch(() => ({}));
+    const action: string = ACCIONES.includes(body?.action) ? body.action : "mensaje";
+    const turnId: string | null = typeof body?.turn_id === "string" && UUID_RE.test(body.turn_id) ? body.turn_id : null;
+    const content: string = String(body?.content ?? "").trim();
+
+    // ── 5. sesión pertenece a la org resuelta
+    const sessionId: string | null = typeof body?.session_id === "string" ? body.session_id : null;
+    if (!sessionId) return json({ error: "session_id requerido" }, 400);
+    const { data: sesion } = await admin
+      .from("brain_interview_sessions")
+      .select("id, estado, iniciada_en, metadata")
+      .eq("id", sessionId)
+      .eq("org_id", orgId)
       .maybeSingle();
-    if (!promptRow.data) return json({ error: "Agente Cerebro no configurado" }, 500);
+    if (!sesion) return json({ error: "Sesión no encontrada para esta organización" }, 403);
 
-    const { bloque } = await construirContextoSesion(admin, org.id, sessionId, org);
-    const systemPrompt = (promptRow.data as any).system_prompt + bloque;
-
-    const trimmed = messages.length > MAX_HISTORY ? messages.slice(-MAX_HISTORY) : messages;
-    const turnMessages: any[] = trimmed.length ? [...trimmed] : [{ role: "user", content: "Inicia la sesión." }];
+    // Trial: una sola sesión de entrevista por organización
+    if (esTrial && !esSuperAdmin && action === "iniciar") {
+      const { count } = await admin
+        .from("brain_interview_sessions")
+        .select("id", { count: "exact", head: true })
+        .eq("org_id", orgId)
+        .neq("id", sessionId);
+      if ((count ?? 0) >= 1) {
+        return json({ error: "El plan de prueba permite una sola sesión de entrevista" }, 403);
+      }
+    }
 
     const encoder = new TextEncoder();
+    const sse = (controller: ReadableStreamDefaultController, event: string, data: unknown) =>
+      controller.enqueue(encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`));
+    const streamResponse = (fn: (c: ReadableStreamDefaultController) => Promise<void>) =>
+      new Response(
+        new ReadableStream({
+          async start(controller) {
+            try { await fn(controller); } finally { controller.close(); }
+          },
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "text/event-stream", "Cache-Control": "no-cache", "Connection": "keep-alive" } },
+      );
+
+    // ── Acción pausar (no requiere turno del modelo)
+    if (action === "pausar") {
+      await admin.from("brain_interview_sessions").update({ estado: "pausada" }).eq("id", sessionId).eq("org_id", orgId);
+      return streamResponse(async (c) => {
+        sse(c, "turn_complete", {
+          session_id: sessionId,
+          turn_id: turnId,
+          knowledge_created: 0,
+          gaps_created: 0,
+          contradictions_created: 0,
+          interviewees_suggested: 0,
+          current_objective: null,
+          session_status: "pausada",
+        });
+      });
+    }
+
+    if (!turnId) return json({ error: "turn_id requerido (UUID generado por el frontend)" }, 400);
+
+    // ── 6. Idempotencia de turno
+    const { data: turnoPrev } = await admin
+      .from("brain_interview_turns")
+      .select("id, estado, knowledge_created, gaps_created, contradictions_created, interviewees_suggested, current_objective")
+      .eq("id", turnId)
+      .eq("org_id", orgId)
+      .maybeSingle();
+
+    if (turnoPrev?.estado === "procesando") {
+      return json({ error: "Turno en proceso", code: "conflict", turn_id: turnId }, 409);
+    }
+    if (turnoPrev?.estado === "completado") {
+      const { data: msgs } = await admin
+        .from("brain_interview_messages").select("role, content").eq("turn_id", turnId).eq("org_id", orgId)
+        .order("created_at", { ascending: true });
+      const asistente = (msgs ?? []).filter((m: any) => m.role === "assistant").map((m: any) => m.content).join("\n");
+      return streamResponse(async (c) => {
+        if (asistente) sse(c, "message_delta", { turn_id: turnId, delta: asistente });
+        sse(c, "turn_complete", {
+          session_id: sessionId,
+          turn_id: turnId,
+          knowledge_created: turnoPrev.knowledge_created,
+          gaps_created: turnoPrev.gaps_created,
+          contradictions_created: turnoPrev.contradictions_created,
+          interviewees_suggested: turnoPrev.interviewees_suggested,
+          current_objective: turnoPrev.current_objective,
+          session_status: sesion.estado,
+          replay: true,
+        });
+      });
+    }
+
+    if (!turnoPrev) {
+      const { error: insErr } = await admin.from("brain_interview_turns").insert({
+        id: turnId, org_id: orgId, session_id: sessionId, estado: "procesando",
+      });
+      if (insErr) return json({ error: insErr.message }, 500);
+    } else {
+      await admin.from("brain_interview_turns").update({ estado: "procesando", error: null }).eq("id", turnId).eq("org_id", orgId);
+    }
+
+    // ── Prompt maestro
+    const promptRow = await admin
+      .from("agent_prompts").select("system_prompt, version").eq("nombre", "cerebro_institucional").eq("activo", true).maybeSingle();
+    if (!promptRow.data) {
+      await admin.from("brain_interview_turns").update({ estado: "fallido", error: "database: agente no configurado" }).eq("id", turnId);
+      return json({ error: "Agente Cerebro no configurado" }, 500);
+    }
+
+    const { bloque } = await construirContextoSesion(admin, orgId, sessionId, org);
+
+    // Transcript server-side (nunca el historial que envíe el frontend)
+    const { data: transcript } = await admin
+      .from("brain_interview_messages")
+      .select("role, content, created_at")
+      .eq("session_id", sessionId)
+      .eq("org_id", orgId)
+      .order("created_at", { ascending: false })
+      .limit(action === "reanudar" ? SESSION_TRANSCRIPT_WINDOW * 2 : MAX_HISTORY);
+    const historial = (transcript ?? []).slice().reverse().map((m: any) => ({ role: m.role, content: m.content }));
+
+    let bloqueAccion = "";
+    if (action === "iniciar") {
+      await admin.from("brain_interview_sessions").update({ estado: "en_proceso", iniciada_en: new Date().toISOString() }).eq("id", sessionId).eq("org_id", orgId);
+      bloqueAccion = "\n\n[INICIO DE SESIÓN] Abre la entrevista según el Prompt Maestro: preséntate, encuadra el objetivo y formula UNA sola primera pregunta.";
+    } else if (action === "reanudar") {
+      await admin.from("brain_interview_sessions").update({ estado: "en_proceso" }).eq("id", sessionId).eq("org_id", orgId);
+      const ultimas = historial.slice(-SESSION_TRANSCRIPT_WINDOW);
+      const ultima = ultimas.length ? ultimas[ultimas.length - 1] : null;
+      bloqueAccion = `\n\n[SESIÓN REANUDADA]\n[ÚLTIMA INTERACCIÓN]: ${ultima ? `${ultima.role}: ${String(ultima.content).slice(0, 600)}` : "(sin interacciones previas)"}\nRetoma la entrevista con coherencia. Tú decides cómo retomar: no repitas preguntas ya respondidas.`;
+    } else if (action === "cerrar") {
+      bloqueAccion = "\n\n[CIERRE DE SESIÓN] Genera el mensaje de cierre según el Prompt Maestro: resume lo capturado, lo pendiente y agradece. No hagas preguntas nuevas ni llames herramientas de persistencia.";
+    }
+
+    const systemPromptBase = (promptRow.data as any).system_prompt + bloque + bloqueAccion;
+
+    // Mensaje del entrevistado
+    if (action === "mensaje") {
+      if (!content) {
+        await admin.from("brain_interview_turns").update({ estado: "fallido", error: "tool_error: contenido vacío" }).eq("id", turnId);
+        return json({ error: "content requerido" }, 400);
+      }
+      await admin.from("brain_interview_messages").insert({
+        org_id: orgId, session_id: sessionId, turn_id: turnId, role: "user", content,
+      });
+      historial.push({ role: "user", content });
+    }
+
+    const turnMessages: any[] = historial.length
+      ? historial.slice(-MAX_HISTORY)
+      : [{ role: "user", content: "Inicia la sesión." }];
+    if (turnMessages[turnMessages.length - 1].role !== "user") {
+      turnMessages.push({
+        role: "user",
+        content: action === "cerrar" ? "Cierra la sesión de entrevista." : "Continúa la entrevista.",
+      });
+    }
+
+    const metrics: TurnMetrics = {
+      knowledge_created: 0, gaps_created: 0, contradictions_created: 0, interviewees_suggested: 0, persisted: false,
+    };
+    let currentObjective: any = null;
     let executedToolCalls = 0;
     let fullText = "";
 
-    const stream = new ReadableStream({
-      async start(controller) {
-        const send = (o: unknown) => controller.enqueue(encoder.encode(`data: ${JSON.stringify(o)}\n\n`));
-        send({ type: "sesion", session_id: sessionId });
-        try {
-          for (let round = 0; round < 6; round++) {
-            const limitReached = executedToolCalls >= MAX_TOOL_CALLS_PER_TURN;
-            const res = await fetch("https://api.anthropic.com/v1/messages", {
+    const idem = async (toolName: string, payload: any, fn: () => Promise<any>) => {
+      const clave = `${toolName}:${await sha256hex(canonical(payload ?? {}))}`;
+      const { data: claim } = await admin.rpc("brain_turn_claim_operation", {
+        p_turn_id: turnId, p_org_id: orgId, p_clave: clave,
+      });
+      if (!claim?.claimed) {
+        const prev = claim?.resultado;
+        if (prev && prev !== null && prev.status !== "in_progress") return { ...prev, idempotente: true };
+        return { ok: true, idempotente: true, nota: "Operación idéntica ya ejecutada en este turno." };
+      }
+      metrics.persisted = true;
+      const result = await fn();
+      await admin.rpc("brain_turn_set_operation", {
+        p_turn_id: turnId, p_org_id: orgId, p_clave: clave, p_resultado: result,
+      });
+      return result;
+    };
+
+    return streamResponse(async (controller) => {
+      const fallar = async (causa: string, mensaje: string) => {
+        const code = metrics.persisted ? "post_persist" : "pre_persist";
+        await admin.from("brain_interview_turns")
+          .update({ estado: "fallido", error: `${causa}: ${mensaje}`.slice(0, 1000) })
+          .eq("id", turnId).eq("org_id", orgId);
+        sse(controller, "error", {
+          turn_id: turnId,
+          code,
+          message: code === "post_persist"
+            ? "El turno ya produjo cambios persistidos. Recupera el resultado del turno."
+            : "No se pudo procesar el turno. Puedes reintentar con el mismo turn_id.",
+          retryable: code === "pre_persist",
+        });
+      };
+
+      try {
+        for (let round = 0; round < 8; round++) {
+          if (executedToolCalls >= MAX_TOOL_CALLS_PER_TURN) {
+            await admin.from("brain_interview_turns")
+              .update({ error: "tool_error: MAX_TOOL_CALLS_PER_TURN alcanzado" }).eq("id", turnId).eq("org_id", orgId);
+            sse(controller, "error", {
+              turn_id: turnId, code: "tool_error",
+              message: "Se alcanzó el límite técnico de herramientas en este turno.",
+              retryable: false,
+            });
+            break;
+          }
+
+          let res: Response;
+          try {
+            res = await fetch("https://api.anthropic.com/v1/messages", {
               method: "POST",
               headers: {
                 "Content-Type": "application/json",
@@ -1023,96 +1276,213 @@ Deno.serve(async (req) => {
               body: JSON.stringify({
                 model: MODEL,
                 max_tokens: 3000,
-                system: [
-                  {
-                    type: "text",
-                    text: limitReached
-                      ? systemPrompt + "\n\n[AVISO INTERNO] Límite de herramientas alcanzado en este turno. Formula UNA pregunta con la información disponible."
-                      : systemPrompt,
-                    cache_control: { type: "ephemeral" },
-                  },
-                ],
-                tools: limitReached ? [] : TOOLS,
+                system: [{ type: "text", text: systemPromptBase, cache_control: { type: "ephemeral" } }],
+                tools: action === "cerrar" ? [] : TOOLS,
                 messages: turnMessages,
               }),
             });
-
-            if (!res.ok) {
-              const errText = await res.text();
-              console.error("Anthropic error", res.status, errText);
-              send({ type: "error", message: errText.slice(0, 300) });
-              break;
-            }
-
-            const data = await res.json();
-            const blocks = data.content ?? [];
-            const toolUses: any[] = [];
-
-            for (const b of blocks) {
-              if (b.type === "text") {
-                fullText += b.text;
-                send({ type: "content_block_delta", delta: { type: "text_delta", text: b.text } });
-              } else if (b.type === "tool_use") {
-                toolUses.push(b);
-                send({ type: "tool_use", name: b.name, input: b.input ?? {} });
-              }
-            }
-
-            if (data.stop_reason !== "tool_use" || toolUses.length === 0) break;
-
-            turnMessages.push({ role: "assistant", content: blocks });
-            const toolResults: any[] = [];
-            for (const tb of toolUses) {
-              if (executedToolCalls >= MAX_TOOL_CALLS_PER_TURN) {
-                toolResults.push({ type: "tool_result", tool_use_id: tb.id, content: "Límite de herramientas alcanzado en este turno.", is_error: true });
-                continue;
-              }
-              executedToolCalls++;
-              let result: unknown;
-              if (tb.name === "obtener_contexto_cerebro") {
-                result = await execObtenerContextoCerebro(admin, org.id, sessionId, tb.input?.incluir_items !== false);
-              } else if (tb.name === "guardar_conocimiento") {
-                result = await execGuardarConocimiento(admin, org.id, sessionId, user.id, tb.input ?? {});
-              } else if (tb.name === "registrar_brecha") {
-                result = await execRegistrarBrecha(admin, org.id, sessionId, tb.input ?? {});
-              } else if (tb.name === "registrar_contradiccion") {
-                result = await execRegistrarContradiccion(admin, org.id, sessionId, tb.input ?? {});
-              } else if (tb.name === "get_next_interview_objective") {
-                result = await execGetNextInterviewObjective(admin, org.id, sessionId, tb.input ?? {});
-              } else if (tb.name === "sugerir_entrevistado") {
-                result = await execSugerirEntrevistado(admin, org.id, sessionId, tb.input ?? {});
-              } else {
-                result = { ok: false, error: "Herramienta no disponible todavía." };
-              }
-              toolResults.push({ type: "tool_result", tool_use_id: tb.id, content: JSON.stringify(result) });
-            }
-            turnMessages.push({ role: "user", content: toolResults });
+          } catch (e) {
+            await fallar("network", String(e));
+            return;
           }
-        } catch (e) {
-          console.error("brain-interview loop error", e);
-          send({ type: "error", message: String(e) });
-        } finally {
-          try {
-            if (sessionId && fullText) {
-              const { data: s } = await admin
-                .from("brain_interview_sessions")
-                .select("preguntas_realizadas")
-                .eq("id", sessionId)
-                .maybeSingle();
-              await admin
-                .from("brain_interview_sessions")
-                .update({ preguntas_realizadas: ((s as any)?.preguntas_realizadas ?? 0) + 1 })
-                .eq("id", sessionId)
-                .eq("org_id", org.id);
-            }
-          } catch (e) { console.error("persist session fail", e); }
-          controller.close();
-        }
-      },
-    });
 
-    return new Response(stream, {
-      headers: { ...corsHeaders, "Content-Type": "text/event-stream", "Cache-Control": "no-cache", "Connection": "keep-alive" },
+          if (!res.ok) {
+            const errText = await res.text();
+            console.error("Anthropic error", res.status, errText);
+            await fallar("model_api", `${res.status} ${errText.slice(0, 300)}`);
+            return;
+          }
+
+          const data = await res.json();
+          const blocks = data.content ?? [];
+          const toolUses: any[] = [];
+
+          for (const b of blocks) {
+            if (b.type === "text") {
+              fullText += b.text;
+              sse(controller, "message_delta", { turn_id: turnId, delta: b.text });
+            } else if (b.type === "tool_use") {
+              toolUses.push(b);
+            }
+          }
+
+          if (data.stop_reason !== "tool_use" || toolUses.length === 0) break;
+
+          sse(controller, "tool_status", { status: "procesando" });
+          turnMessages.push({ role: "assistant", content: blocks });
+          const toolResults: any[] = [];
+
+          for (const tb of toolUses) {
+            if (executedToolCalls >= MAX_TOOL_CALLS_PER_TURN) {
+              toolResults.push({ type: "tool_result", tool_use_id: tb.id, content: "Límite técnico de herramientas alcanzado.", is_error: true });
+              continue;
+            }
+            executedToolCalls++;
+            let result: any;
+            try {
+              if (tb.name === "obtener_contexto_cerebro") {
+                result = await execObtenerContextoCerebro(admin, orgId, sessionId, tb.input?.incluir_items !== false);
+              } else if (tb.name === "get_next_interview_objective") {
+                result = await execGetNextInterviewObjective(admin, orgId, sessionId, tb.input ?? {});
+                currentObjective = { objetivo: result?.objetivo, origen: result?.origen, razon: result?.razon };
+              } else if (tb.name === "guardar_conocimiento") {
+                result = await idem("guardar_conocimiento", tb.input ?? {}, () =>
+                  execGuardarConocimiento(admin, orgId, sessionId, user.id, tb.input ?? {}));
+                if (!result?.idempotente) {
+                  const ids = (result?.guardados ?? []).map((g: any) => g.id);
+                  metrics.knowledge_created += ids.length;
+                  await stampTurn(admin, "brain_knowledge_items", ids, orgId, turnId);
+                }
+              } else if (tb.name === "registrar_brecha") {
+                result = await idem("registrar_brecha", tb.input ?? {}, () =>
+                  execRegistrarBrecha(admin, orgId, sessionId, tb.input ?? {}));
+                if (!result?.idempotente) {
+                  const ids = (result?.registradas ?? []).map((g: any) => g.id);
+                  metrics.gaps_created += ids.length;
+                  await stampTurn(admin, "brain_gaps", ids, orgId, turnId);
+                }
+              } else if (tb.name === "registrar_contradiccion") {
+                result = await idem("registrar_contradiccion", tb.input ?? {}, () =>
+                  execRegistrarContradiccion(admin, orgId, sessionId, tb.input ?? {}));
+                if (!result?.idempotente) {
+                  const ids = (result?.registradas ?? []).map((c: any) => c.id);
+                  metrics.contradictions_created += ids.length;
+                  await stampTurn(admin, "brain_contradictions", ids, orgId, turnId);
+                }
+              } else if (tb.name === "sugerir_entrevistado") {
+                result = await idem("sugerir_entrevistado", tb.input ?? {}, () =>
+                  execSugerirEntrevistado(admin, orgId, sessionId, tb.input ?? {}));
+                if (!result?.idempotente && result?.assignment_id && result?.ok !== false) {
+                  metrics.interviewees_suggested += 1;
+                }
+              } else {
+                result = { ok: false, error: "Herramienta no disponible." };
+              }
+            } catch (e) {
+              console.error("tool error", tb.name, e);
+              result = { ok: false, error: String(e) };
+            }
+            toolResults.push({ type: "tool_result", tool_use_id: tb.id, content: JSON.stringify(result) });
+          }
+          turnMessages.push({ role: "user", content: toolResults });
+        }
+
+        // ── Persistir mensaje del asistente
+        if (fullText.trim()) {
+          metrics.persisted = true;
+          await admin.from("brain_interview_messages").insert({
+            org_id: orgId, session_id: sessionId, turn_id: turnId, role: "assistant", content: fullText,
+            metadata: { action },
+          });
+        }
+
+        let sessionStatus = action === "cerrar" ? "completada" : "en_proceso";
+
+        // ── Cierre: métricas reales desde BD
+        if (action === "cerrar") {
+          const { data: turnosSesion } = await admin
+            .from("brain_interview_turns").select("id").eq("session_id", sessionId).eq("org_id", orgId);
+          const turnIds = (turnosSesion ?? []).map((t: any) => t.id);
+
+          const [{ count: kCount }, { data: gapsRows }, { count: cCount }, { data: asgRows }] = await Promise.all([
+            admin.from("brain_knowledge_items").select("id", { count: "exact", head: true }).eq("org_id", orgId).in("turn_id", turnIds.length ? turnIds : [turnId]),
+            admin.from("brain_gaps").select("tipo_brecha").eq("org_id", orgId).eq("session_id", sessionId),
+            admin.from("brain_contradictions").select("id", { count: "exact", head: true }).eq("org_id", orgId).eq("session_id", sessionId),
+            admin.from("brain_interview_assignments").select("id").eq("org_id", orgId).eq("asignado_automaticamente", true).gte("created_at", sesion.iniciada_en),
+          ]);
+
+          const gapsPorTipo: Record<string, number> = {
+            pendiente_entrevista: 0, pendiente_otro_rol: 0, por_validar: 0, brecha_institucional: 0,
+          };
+          for (const g of gapsRows ?? []) {
+            const t = String((g as any).tipo_brecha ?? "");
+            if (t in gapsPorTipo) gapsPorTipo[t] += 1;
+          }
+
+          let completionReason = RAZONES_CIERRE.includes(body?.completion_reason) ? body.completion_reason : null;
+          if (!completionReason) {
+            const obj = await execGetNextInterviewObjective(admin, orgId, sessionId, {});
+            completionReason = (obj?.bloques_pendientes ?? []).length === 0 && (obj?.brechas_prioritarias ?? []).length === 0
+              ? "objectives_complete"
+              : "user_closed";
+          }
+
+          const finalizadaEn = new Date();
+          const duracionMin = Math.max(
+            0, Math.round((finalizadaEn.getTime() - new Date(sesion.iniciada_en).getTime()) / 60000),
+          );
+          const cierre = {
+            knowledge_created: kCount ?? 0,
+            gaps_created: gapsPorTipo,
+            contradictions_created: cCount ?? 0,
+            interviewees_suggested: (asgRows ?? []).length,
+            duracion_minutos: duracionMin,
+            completion_reason: completionReason,
+          };
+
+          await admin.from("brain_interview_sessions").update({
+            estado: "completada",
+            finalizada_en: finalizadaEn.toISOString(),
+            metadata: { ...(sesion.metadata ?? {}), cierre },
+          }).eq("id", sessionId).eq("org_id", orgId);
+
+          sessionStatus = "completada";
+
+          await admin.from("brain_interview_turns").update({
+            estado: "completado",
+            knowledge_created: metrics.knowledge_created,
+            gaps_created: metrics.gaps_created,
+            contradictions_created: metrics.contradictions_created,
+            interviewees_suggested: metrics.interviewees_suggested,
+            current_objective: currentObjective,
+            completed_at: finalizadaEn.toISOString(),
+          }).eq("id", turnId).eq("org_id", orgId);
+
+          sse(controller, "turn_complete", {
+            session_id: sessionId, turn_id: turnId,
+            knowledge_created: metrics.knowledge_created,
+            gaps_created: metrics.gaps_created,
+            contradictions_created: metrics.contradictions_created,
+            interviewees_suggested: metrics.interviewees_suggested,
+            current_objective: currentObjective,
+            session_status: sessionStatus,
+            resumen_cierre: cierre,
+          });
+          return;
+        }
+
+        // ── Turno normal completado
+        if (fullText.trim()) {
+          const { data: s } = await admin
+            .from("brain_interview_sessions").select("preguntas_realizadas").eq("id", sessionId).maybeSingle();
+          await admin.from("brain_interview_sessions")
+            .update({ preguntas_realizadas: ((s as any)?.preguntas_realizadas ?? 0) + 1 })
+            .eq("id", sessionId).eq("org_id", orgId);
+        }
+
+        await admin.from("brain_interview_turns").update({
+          estado: "completado",
+          knowledge_created: metrics.knowledge_created,
+          gaps_created: metrics.gaps_created,
+          contradictions_created: metrics.contradictions_created,
+          interviewees_suggested: metrics.interviewees_suggested,
+          current_objective: currentObjective,
+          completed_at: new Date().toISOString(),
+        }).eq("id", turnId).eq("org_id", orgId);
+
+        sse(controller, "turn_complete", {
+          session_id: sessionId, turn_id: turnId,
+          knowledge_created: metrics.knowledge_created,
+          gaps_created: metrics.gaps_created,
+          contradictions_created: metrics.contradictions_created,
+          interviewees_suggested: metrics.interviewees_suggested,
+          current_objective: currentObjective,
+          session_status: sessionStatus,
+        });
+      } catch (e) {
+        console.error("brain-interview loop error", e);
+        await fallar("tool_error", String(e));
+      }
     });
   } catch (e) {
     console.error("brain-interview error", e);
