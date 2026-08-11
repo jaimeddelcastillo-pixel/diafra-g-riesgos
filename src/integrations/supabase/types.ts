@@ -3192,6 +3192,19 @@ export type Database = {
         Args: { p_folio_id: string; p_motivo?: string }
         Returns: string
       }
+      brain_turn_claim_operation: {
+        Args: { p_clave: string; p_org_id: string; p_turn_id: string }
+        Returns: Json
+      }
+      brain_turn_set_operation: {
+        Args: {
+          p_clave: string
+          p_org_id: string
+          p_resultado: Json
+          p_turn_id: string
+        }
+        Returns: undefined
+      }
       cancelar_folio: {
         Args: {
           p_folio_id: string
