@@ -485,6 +485,8 @@ Deno.serve(async (req) => {
               let result: unknown;
               if (tb.name === "obtener_contexto_cerebro") {
                 result = await execObtenerContextoCerebro(admin, org.id, sessionId, tb.input?.incluir_items !== false);
+              } else if (tb.name === "guardar_conocimiento") {
+                result = await execGuardarConocimiento(admin, org.id, sessionId, user.id, tb.input ?? {});
               } else {
                 result = { ok: false, error: "Herramienta no disponible todavía." };
               }
