@@ -456,6 +456,66 @@ export type Database = {
           },
         ]
       }
+      brain_exports: {
+        Row: {
+          contradicciones_incluidas: number
+          created_at: string
+          filtros: Json | null
+          gaps_incluidos: number
+          generado_por: string | null
+          id: string
+          items_incluidos: number
+          memoria_viva_incluida: number
+          nombre_archivo: string
+          org_id: string
+          size_bytes: number | null
+          storage_path: string | null
+        }
+        Insert: {
+          contradicciones_incluidas?: number
+          created_at?: string
+          filtros?: Json | null
+          gaps_incluidos?: number
+          generado_por?: string | null
+          id?: string
+          items_incluidos?: number
+          memoria_viva_incluida?: number
+          nombre_archivo: string
+          org_id: string
+          size_bytes?: number | null
+          storage_path?: string | null
+        }
+        Update: {
+          contradicciones_incluidas?: number
+          created_at?: string
+          filtros?: Json | null
+          gaps_incluidos?: number
+          generado_por?: string | null
+          id?: string
+          items_incluidos?: number
+          memoria_viva_incluida?: number
+          nombre_archivo?: string
+          org_id?: string
+          size_bytes?: number | null
+          storage_path?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brain_exports_generado_por_fkey"
+            columns: ["generado_por"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brain_exports_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       brain_gaps: {
         Row: {
           area_id: string | null
