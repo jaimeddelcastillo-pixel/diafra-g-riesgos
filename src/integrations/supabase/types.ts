@@ -228,6 +228,55 @@ export type Database = {
           },
         ]
       }
+      brain_process_areas: {
+        Row: {
+          area_id: string
+          created_at: string
+          id: string
+          org_id: string
+          process_id: string
+          rol: string
+        }
+        Insert: {
+          area_id: string
+          created_at?: string
+          id?: string
+          org_id: string
+          process_id: string
+          rol?: string
+        }
+        Update: {
+          area_id?: string
+          created_at?: string
+          id?: string
+          org_id?: string
+          process_id?: string
+          rol?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brain_process_areas_area_id_fkey"
+            columns: ["area_id"]
+            isOneToOne: false
+            referencedRelation: "brain_areas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brain_process_areas_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brain_process_areas_process_id_fkey"
+            columns: ["process_id"]
+            isOneToOne: false
+            referencedRelation: "brain_processes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       brain_processes: {
         Row: {
           activo: boolean
