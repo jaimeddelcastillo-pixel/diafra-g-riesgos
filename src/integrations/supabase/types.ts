@@ -2359,6 +2359,50 @@ export type Database = {
           },
         ]
       }
+      organization_features: {
+        Row: {
+          activado_en: string
+          activo: boolean
+          created_at: string
+          expira_en: string | null
+          feature_key: string
+          id: string
+          notas: string | null
+          org_id: string
+          updated_at: string
+        }
+        Insert: {
+          activado_en?: string
+          activo?: boolean
+          created_at?: string
+          expira_en?: string | null
+          feature_key: string
+          id?: string
+          notas?: string | null
+          org_id: string
+          updated_at?: string
+        }
+        Update: {
+          activado_en?: string
+          activo?: boolean
+          created_at?: string
+          expira_en?: string | null
+          feature_key?: string
+          id?: string
+          notas?: string | null
+          org_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_features_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organizations: {
         Row: {
           activo: boolean
