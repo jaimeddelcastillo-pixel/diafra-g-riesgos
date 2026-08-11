@@ -502,6 +502,109 @@ export type Database = {
           },
         ]
       }
+      brain_knowledge_items: {
+        Row: {
+          afecta_cumplimiento: boolean | null
+          area_id: string | null
+          contenido: string
+          contexto: Json | null
+          created_at: string
+          estado: string
+          folio_id: string | null
+          id: string
+          marco_validado: boolean
+          motivo_invalidacion: string | null
+          org_id: string
+          proceso_id: string | null
+          riesgo_id: string | null
+          tipo: string
+          updated_at: string
+          validado_en: string | null
+          validado_por: string | null
+        }
+        Insert: {
+          afecta_cumplimiento?: boolean | null
+          area_id?: string | null
+          contenido: string
+          contexto?: Json | null
+          created_at?: string
+          estado?: string
+          folio_id?: string | null
+          id?: string
+          marco_validado?: boolean
+          motivo_invalidacion?: string | null
+          org_id: string
+          proceso_id?: string | null
+          riesgo_id?: string | null
+          tipo: string
+          updated_at?: string
+          validado_en?: string | null
+          validado_por?: string | null
+        }
+        Update: {
+          afecta_cumplimiento?: boolean | null
+          area_id?: string | null
+          contenido?: string
+          contexto?: Json | null
+          created_at?: string
+          estado?: string
+          folio_id?: string | null
+          id?: string
+          marco_validado?: boolean
+          motivo_invalidacion?: string | null
+          org_id?: string
+          proceso_id?: string | null
+          riesgo_id?: string | null
+          tipo?: string
+          updated_at?: string
+          validado_en?: string | null
+          validado_por?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brain_knowledge_items_area_id_fkey"
+            columns: ["area_id"]
+            isOneToOne: false
+            referencedRelation: "brain_areas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brain_knowledge_items_folio_id_fkey"
+            columns: ["folio_id"]
+            isOneToOne: false
+            referencedRelation: "folios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brain_knowledge_items_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brain_knowledge_items_proceso_id_fkey"
+            columns: ["proceso_id"]
+            isOneToOne: false
+            referencedRelation: "brain_processes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brain_knowledge_items_riesgo_id_fkey"
+            columns: ["riesgo_id"]
+            isOneToOne: false
+            referencedRelation: "riesgos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brain_knowledge_items_validado_por_fkey"
+            columns: ["validado_por"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       brain_process_areas: {
         Row: {
           area_id: string
