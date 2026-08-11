@@ -882,6 +882,86 @@ export type Database = {
           },
         ]
       }
+      brain_memoria_viva: {
+        Row: {
+          area_id: string | null
+          contenido: string
+          created_at: string
+          created_by: string | null
+          estado: string
+          id: string
+          notas: string | null
+          org_id: string
+          proceso_id: string | null
+          tipo: string
+          titulo: string
+          updated_at: string
+          vigente_desde: string
+          vigente_hasta: string | null
+        }
+        Insert: {
+          area_id?: string | null
+          contenido: string
+          created_at?: string
+          created_by?: string | null
+          estado?: string
+          id?: string
+          notas?: string | null
+          org_id: string
+          proceso_id?: string | null
+          tipo?: string
+          titulo: string
+          updated_at?: string
+          vigente_desde?: string
+          vigente_hasta?: string | null
+        }
+        Update: {
+          area_id?: string | null
+          contenido?: string
+          created_at?: string
+          created_by?: string | null
+          estado?: string
+          id?: string
+          notas?: string | null
+          org_id?: string
+          proceso_id?: string | null
+          tipo?: string
+          titulo?: string
+          updated_at?: string
+          vigente_desde?: string
+          vigente_hasta?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brain_memoria_viva_area_id_fkey"
+            columns: ["area_id"]
+            isOneToOne: false
+            referencedRelation: "brain_areas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brain_memoria_viva_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brain_memoria_viva_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brain_memoria_viva_proceso_id_fkey"
+            columns: ["proceso_id"]
+            isOneToOne: false
+            referencedRelation: "brain_processes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       brain_process_areas: {
         Row: {
           area_id: string
