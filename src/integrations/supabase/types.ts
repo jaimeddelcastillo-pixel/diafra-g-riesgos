@@ -456,6 +456,96 @@ export type Database = {
           },
         ]
       }
+      brain_gaps: {
+        Row: {
+          area_id: string | null
+          assignment_sugerido_id: string | null
+          cerrada_en: string | null
+          created_at: string
+          descripcion: string
+          estado: string
+          id: string
+          org_id: string
+          por_que_importa: string | null
+          prioridad: string
+          proceso_id: string | null
+          rol_sugerido: string | null
+          session_id: string | null
+          tipo_conocimiento: string | null
+          updated_at: string
+        }
+        Insert: {
+          area_id?: string | null
+          assignment_sugerido_id?: string | null
+          cerrada_en?: string | null
+          created_at?: string
+          descripcion: string
+          estado?: string
+          id?: string
+          org_id: string
+          por_que_importa?: string | null
+          prioridad?: string
+          proceso_id?: string | null
+          rol_sugerido?: string | null
+          session_id?: string | null
+          tipo_conocimiento?: string | null
+          updated_at?: string
+        }
+        Update: {
+          area_id?: string | null
+          assignment_sugerido_id?: string | null
+          cerrada_en?: string | null
+          created_at?: string
+          descripcion?: string
+          estado?: string
+          id?: string
+          org_id?: string
+          por_que_importa?: string | null
+          prioridad?: string
+          proceso_id?: string | null
+          rol_sugerido?: string | null
+          session_id?: string | null
+          tipo_conocimiento?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brain_gaps_area_id_fkey"
+            columns: ["area_id"]
+            isOneToOne: false
+            referencedRelation: "brain_areas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brain_gaps_assignment_sugerido_id_fkey"
+            columns: ["assignment_sugerido_id"]
+            isOneToOne: false
+            referencedRelation: "brain_interview_assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brain_gaps_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brain_gaps_proceso_id_fkey"
+            columns: ["proceso_id"]
+            isOneToOne: false
+            referencedRelation: "brain_processes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brain_gaps_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "brain_interview_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       brain_interview_assignments: {
         Row: {
           area_id: string | null
