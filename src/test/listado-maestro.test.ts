@@ -75,7 +75,7 @@ describe("parse", () => {
 
   it("sin encabezados detectables", () => {
     const r = construirTabla([["1", "2"], ["3", "4"]], "csv");
-    expect(!r.ok && r.reason).toBe("no_headers");
+    expect((r.ok ? null : r.reason)).toBe("no_headers");
   });
 
   it("2000 filas exactas se aceptan y 2001 se rechazan", () => {
@@ -83,13 +83,13 @@ describe("parse", () => {
     const ok = parseDesdeTexto([HEAD, ...Array.from({ length: LIMITES.MAX_FILAS }, (_, i) => fila(i))].join("\n"), "csv");
     expect(ok.ok).toBe(true);
     const ko = parseDesdeTexto([HEAD, ...Array.from({ length: LIMITES.MAX_FILAS + 1 }, (_, i) => fila(i))].join("\n"), "csv");
-    expect(!ko.ok && ko.reason).toBe("too_many_rows");
+    expect((ko.ok ? null : ko.reason)).toBe("too_many_rows");
   });
 
   it("más de 40 columnas se rechaza", () => {
     const cols = Array.from({ length: 41 }, (_, i) => `Columna${i}`);
     const r = construirTabla([cols, cols.map(() => "x")], "csv");
-    expect(!r.ok && r.reason).toBe("too_many_cols");
+    expect((r.ok ? null : r.reason)).toBe("too_many_cols");
   });
 
   it("más de 10MB se rechaza", () => {

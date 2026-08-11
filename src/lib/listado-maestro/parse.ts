@@ -3,7 +3,7 @@
  * Lógica pura: sin React ni Supabase. Recibe ArrayBuffer/texto y devuelve una TablaCruda.
  */
 import * as XLSX from "xlsx";
-import { LIMITES, MENSAJES, type FormatoImport, type MotivoFallo, type ParseResult, type TablaCruda } from "./tipos";
+import { LIMITES, MENSAJES, type FormatoImport, type MotivoFallo, type ParseFail, type ParseResult, type TablaCruda } from "./tipos";
 
 const TOKENS_ENCABEZADO = [
   "codigo", "clave", "documento", "nombre", "titulo", "procedimiento",
@@ -21,7 +21,7 @@ export function normalizar(s: string): string {
     .trim();
 }
 
-function fail(reason: MotivoFallo, diagnostico?: string): ParseResult {
+function fail(reason: MotivoFallo, diagnostico?: string): ParseFail {
   return { ok: false, reason, message: MENSAJES[reason], diagnostico };
 }
 
@@ -142,7 +142,7 @@ export function parseDesdeTexto(texto: string, formato: FormatoImport): ParseRes
 }
 
 /** Valida tamaño antes de leer el archivo. */
-export function validarTamano(bytes: number): ParseResult | null {
+export function validarTamano(bytes: number): ParseFail | null {
   if (bytes > LIMITES.MAX_BYTES) return fail("too_large");
   return null;
 }
