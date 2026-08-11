@@ -18,9 +18,17 @@ export default function CerebroContradicciones() {
           {items.map((c: any) => (
             <Card key={c.id}>
               <CardContent className="p-4 flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-sm font-medium">{c.descripcion ?? c.titulo}</p>
-                  <p className="text-xs text-muted-foreground">{c.tipo}</p>
+                <div className="space-y-1">
+                  <p className="text-sm font-medium">{c.tema ?? c.descripcion ?? "Contradicción"}</p>
+                  <p className="text-xs text-muted-foreground">
+                    A: {c.afirmacion_a} <span className="opacity-70">({c.fuente_a ?? "sin fuente"})</span>
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    B: {c.afirmacion_b} <span className="opacity-70">({c.fuente_b ?? "sin fuente"})</span>
+                  </p>
+                  {c.riesgo_potencial && (
+                    <p className="text-xs text-muted-foreground">Riesgo: {c.riesgo_potencial}</p>
+                  )}
                 </div>
                 <Badge variant="outline">{c.estado}</Badge>
               </CardContent>
