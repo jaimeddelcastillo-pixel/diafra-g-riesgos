@@ -792,10 +792,13 @@ export type Database = {
       brain_interview_sessions: {
         Row: {
           assignment_id: string | null
+          capa: string | null
           created_at: string
           created_by: string | null
+          entrevistado_area: string | null
           entrevistado_nombre: string | null
           entrevistado_profile_id: string | null
+          entrevistado_puesto: string | null
           estado: string
           finalizada_en: string | null
           id: string
@@ -803,6 +806,7 @@ export type Database = {
           interview_thread_id: string
           items_capturados: number
           metadata: Json
+          nivel_autoridad: string | null
           objetivo_actual: string | null
           org_id: string
           preguntas_realizadas: number
@@ -811,10 +815,13 @@ export type Database = {
         }
         Insert: {
           assignment_id?: string | null
+          capa?: string | null
           created_at?: string
           created_by?: string | null
+          entrevistado_area?: string | null
           entrevistado_nombre?: string | null
           entrevistado_profile_id?: string | null
+          entrevistado_puesto?: string | null
           estado?: string
           finalizada_en?: string | null
           id?: string
@@ -822,6 +829,7 @@ export type Database = {
           interview_thread_id?: string
           items_capturados?: number
           metadata?: Json
+          nivel_autoridad?: string | null
           objetivo_actual?: string | null
           org_id: string
           preguntas_realizadas?: number
@@ -830,10 +838,13 @@ export type Database = {
         }
         Update: {
           assignment_id?: string | null
+          capa?: string | null
           created_at?: string
           created_by?: string | null
+          entrevistado_area?: string | null
           entrevistado_nombre?: string | null
           entrevistado_profile_id?: string | null
+          entrevistado_puesto?: string | null
           estado?: string
           finalizada_en?: string | null
           id?: string
@@ -841,6 +852,7 @@ export type Database = {
           interview_thread_id?: string
           items_capturados?: number
           metadata?: Json
+          nivel_autoridad?: string | null
           objetivo_actual?: string | null
           org_id?: string
           preguntas_realizadas?: number
@@ -3278,6 +3290,19 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      crear_sesion_entrevista: {
+        Args: {
+          p_assignment_id?: string
+          p_capa?: string
+          p_entrevistado_area?: string
+          p_entrevistado_nombre?: string
+          p_entrevistado_profile_id?: string
+          p_entrevistado_puesto?: string
+          p_nivel_autoridad?: string
+          p_proceso_ids?: string[]
+        }
+        Returns: Json
       }
       cumplimiento_curso: {
         Args: { p_curso_id: string; p_org_id?: string }
