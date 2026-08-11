@@ -45,6 +45,9 @@ export interface ParseOk {
   ok: true;
   formato: FormatoImport;
   tabla: TablaCruda;
+  reason?: undefined;
+  message?: undefined;
+  diagnostico?: undefined;
 }
 
 export type ParseResult = ParseOk | ParseFail;
