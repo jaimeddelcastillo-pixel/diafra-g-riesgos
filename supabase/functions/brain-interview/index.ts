@@ -603,6 +603,134 @@ async function execObtenerContextoCerebro(
   };
 }
 
+// ─────────────────── get_next_interview_objective ───────────────────
+// Secuencia metodológica de bloques del Cerebro Institucional.
+const SECUENCIA_OBJETIVOS: { tipo: string; objetivo: string }[] = [
+  { tipo: "identidad_organizacional", objetivo: "Identidad organizacional: qué hace la empresa, para quién y bajo qué marco regulatorio." },
+  { tipo: "producto_proceso", objetivo: "Productos y procesos: qué se produce y cómo fluye el proceso de principio a fin." },
+  { tipo: "rol_responsabilidad", objetivo: "Roles y responsabilidades: quién decide, quién ejecuta y quién libera." },
+  { tipo: "requisito_regulatorio", objetivo: "Requisitos regulatorios aplicables y cómo se demuestran." },
+  { tipo: "arquitectura_sgc", objetivo: "Arquitectura del SGC: estructura documental y sistemas de calidad vigentes." },
+  { tipo: "criterio_documental", objetivo: "Criterios documentales: cómo se crea, revisa, aprueba y controla un documento." },
+  { tipo: "conocimiento_operativo", objetivo: "Conocimiento operativo: cómo se hace realmente el trabajo, incluyendo excepciones." },
+  { tipo: "riesgo_control", objetivo: "Riesgos y controles: qué puede fallar y cómo se controla." },
+  { tipo: "validacion_calificacion", objetivo: "Validación y calificación: qué está validado, con qué criterios y evidencia." },
+  { tipo: "desviacion_capa", objetivo: "Desviaciones y CAPA: cómo se detectan, investigan y cierran." },
+  { tipo: "auditoria_aprendizaje", objetivo: "Auditorías y aprendizaje: hallazgos previos y qué cambió a partir de ellos." },
+  { tipo: "regla_pno", objetivo: "Reglas y PNO: reglas duras no escritas y su relación con los procedimientos." },
+];
+
+TOOLS.push({
+  name: "get_next_interview_objective",
+  description:
+    "Calcula, desde la base de datos (no desde el historial del chat), cuál debe ser el siguiente objetivo de la entrevista: prioriza contradicciones abiertas que este entrevistado puede aclarar, brechas abiertas de su dominio y, si no hay nada pendiente, el siguiente bloque no cubierto de la secuencia metodológica. Llamar una vez por turno antes de formular la pregunta. Si envías objetivo_propuesto, la herramienta lo registra como objetivo_actual de la sesión cuando es coherente.",
+  input_schema: {
+    type: "object",
+    properties: {
+      objetivo_propuesto: {
+        type: "string",
+        description: "Objetivo que propones para el siguiente tramo de la entrevista (opcional).",
+      },
+      motivo: { type: "string", description: "Por qué propones ese objetivo (opcional)." },
+    },
+    required: [],
+  },
+});
+
+async function execGetNextInterviewObjective(
+  admin: any,
+  orgId: string,
+  sessionId: string | null,
+  input: any,
+) {
+  const ctx = await execObtenerContextoCerebro(admin, orgId, sessionId, false);
+
+  // Dominios del entrevistado (si la sesión tiene assignment)
+  let dominios: string[] = [];
+  let entrevistado = ctx.sesion?.entrevistado_nombre ?? null;
+  if (ctx.sesion?.assignment_id) {
+    const { data: asg } = await admin
+      .from("brain_interview_assignments")
+      .select("nombre_externo, puesto, dominios_conocimiento")
+      .eq("id", ctx.sesion.assignment_id)
+      .eq("org_id", orgId)
+      .maybeSingle();
+    if (asg) {
+      dominios = asg.dominios_conocimiento ?? [];
+      entrevistado = `${asg.nombre_externo ?? entrevistado ?? "—"} — ${asg.puesto ?? "—"}`;
+    }
+  }
+  const enDominio = (t?: string | null) => !dominios.length || !t || dominios.includes(t);
+
+  const porTipo: Record<string, number> = (ctx.resumen.por_tipo ?? {}) as any;
+  const cubiertos = SECUENCIA_OBJETIVOS.filter((b) => (porTipo[b.tipo] ?? 0) > 0).map((b) => b.tipo);
+  const pendientes = SECUENCIA_OBJETIVOS.filter((b) => (porTipo[b.tipo] ?? 0) === 0);
+
+  const contradicciones = (ctx.contradicciones ?? []).filter((c: any) => c.afecta_cumplimiento === true);
+  const gapsDominio = (ctx.brechas ?? [])
+    .filter((g: any) => g.estado === "abierta" && enDominio(g.tipo_conocimiento))
+    .filter((g: any) => g.tipo_brecha !== "pendiente_otro_rol")
+    .sort((a: any, b: any) => {
+      const p: Record<string, number> = { alta: 0, media: 1, baja: 2 };
+      return (p[a.prioridad] ?? 3) - (p[b.prioridad] ?? 3);
+    });
+
+  let objetivo: string;
+  let razon: string;
+  let origen: string;
+
+  if (contradicciones.length) {
+    const c = contradicciones[0];
+    origen = "contradiccion_abierta";
+    objetivo = `Aclarar la contradicción sobre "${c.tema ?? c.afirmacion_a}" sin anticipar cuál versión es correcta.`;
+    razon = "Existe una contradicción abierta con impacto en cumplimiento. Recoge evidencia adicional, no la resuelvas.";
+  } else if (gapsDominio.length) {
+    const g = gapsDominio[0];
+    origen = "brecha_abierta";
+    objetivo = `Cerrar la brecha: ${g.descripcion}`;
+    razon = `Brecha abierta de prioridad ${g.prioridad} (${g.tipo_brecha}) dentro del dominio del entrevistado.`;
+  } else if (pendientes.length) {
+    const b = pendientes.find((x) => enDominio(x.tipo)) ?? pendientes[0];
+    origen = "secuencia_metodologica";
+    objetivo = b.objetivo;
+    razon = `El bloque '${b.tipo}' aún no tiene conocimiento capturado en la organización.`;
+  } else {
+    const menos = SECUENCIA_OBJETIVOS.filter((b) => enDominio(b.tipo)).sort(
+      (a, b) => (porTipo[a.tipo] ?? 0) - (porTipo[b.tipo] ?? 0),
+    )[0] ?? SECUENCIA_OBJETIVOS[0];
+    origen = "profundizacion";
+    objetivo = `Profundizar en: ${menos.objetivo}`;
+    razon = `Todos los bloques tienen algo capturado; '${menos.tipo}' es el de menor cobertura.`;
+  }
+
+  // El objetivo propuesto por el modelo se respeta si es específico
+  const propuesto = String(input?.objetivo_propuesto ?? "").trim();
+  const objetivoFinal = propuesto.length >= 15 ? propuesto : objetivo;
+
+  if (sessionId) {
+    await admin
+      .from("brain_interview_sessions")
+      .update({ objetivo_actual: objetivoFinal.slice(0, 500) })
+      .eq("id", sessionId)
+      .eq("org_id", orgId);
+  }
+
+  return {
+    ok: true,
+    objetivo: objetivoFinal,
+    objetivo_calculado: objetivo,
+    origen,
+    razon,
+    entrevistado,
+    dominios_entrevistado: dominios,
+    bloques_cubiertos: cubiertos,
+    bloques_pendientes: pendientes.map((b) => b.tipo),
+    brechas_prioritarias: gapsDominio.slice(0, 5).map((g: any) => ({ id: g.id, tipo_brecha: g.tipo_brecha, prioridad: g.prioridad, descripcion: g.descripcion })),
+    contradicciones_criticas: contradicciones.slice(0, 3).map((c: any) => ({ id: c.id, tema: c.tema })),
+    nota: "Formula UNA sola pregunta alineada a este objetivo. El objetivo quedó registrado en la sesión.",
+  };
+}
+
 // ──────────────────────────── Contexto de sesión ────────────────────────
 async function construirContextoSesion(admin: any, orgId: string, sessionId: string | null, org: any) {
   const ctx = await execObtenerContextoCerebro(admin, orgId, sessionId, true);
@@ -801,6 +929,8 @@ Deno.serve(async (req) => {
                 result = await execRegistrarBrecha(admin, org.id, sessionId, tb.input ?? {});
               } else if (tb.name === "registrar_contradiccion") {
                 result = await execRegistrarContradiccion(admin, org.id, sessionId, tb.input ?? {});
+              } else if (tb.name === "get_next_interview_objective") {
+                result = await execGetNextInterviewObjective(admin, org.id, sessionId, tb.input ?? {});
               } else {
                 result = { ok: false, error: "Herramienta no disponible todavía." };
               }
