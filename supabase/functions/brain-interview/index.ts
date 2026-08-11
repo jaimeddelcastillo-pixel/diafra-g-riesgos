@@ -225,6 +225,178 @@ async function execGuardarConocimiento(
     nota: "Estado inicial capturado/por_validar. La validación es exclusivamente humana desde /cerebro/validacion.",
   };
 }
+// ─────────────────── registrar_brecha ───────────────────
+const TIPOS_BRECHA = [
+  "pendiente_entrevista",
+  "pendiente_otro_rol",
+  "por_validar",
+  "brecha_institucional",
+];
+
+TOOLS.push({
+  name: "registrar_brecha",
+  description:
+    "Registra en brain_gaps conocimiento que falta. Llamar ÚNICAMENTE cuando la brecha es real y clasificable en uno de los cuatro tipos — nunca por el simple hecho de no haber llegado todavía a esa pregunta si la vas a formular en este mismo turno. Estado inicial siempre 'abierta'. Máximo 1 llamada por turno, con todas las brechas del turno en el arreglo.\n\nTIPOS:\n- pendiente_entrevista: el dominio no se ha explorado en esta sesión, el entrevistado probablemente lo sabe y se abordará más adelante en la misma sesión.\n- pendiente_otro_rol: el entrevistado confirmó que no es su área. SIEMPRE debe acompañarse de sugerir_entrevistado; indica rol_sugerido.\n- por_validar: hay conocimiento capturado pero sin confirmar; requiere contraste documental o segunda fuente.\n- brecha_institucional: SOLO cuando hay evidencia de ausencia real (no existe el proceso, documento o control). Nunca por omisión de pregunta. Idealmente confirmada por más de una fuente.",
+  input_schema: {
+    type: "object",
+    properties: {
+      brechas: {
+        type: "array",
+        description: "Brechas detectadas en este turno (1 a 5).",
+        items: {
+          type: "object",
+          properties: {
+            tipo_brecha: { type: "string", enum: TIPOS_BRECHA },
+            descripcion: {
+              type: "string",
+              description: "Qué conocimiento falta, redactado de forma autocontenida (mínimo 15 caracteres).",
+            },
+            por_que_importa: { type: "string", description: "Impacto institucional o regulatorio de la brecha." },
+            evidencia: {
+              type: "string",
+              description:
+                "Obligatorio para brecha_institucional: evidencia de ausencia real (citas o fuentes que confirman que no existe).",
+            },
+            tipo_conocimiento: { type: "string", enum: TIPOS_CONOCIMIENTO },
+            rol_sugerido: {
+              type: "string",
+              description: "Rol o puesto que podría cubrir la brecha. Obligatorio para pendiente_otro_rol.",
+            },
+            prioridad: { type: "string", enum: ["alta", "media", "baja"] },
+            proceso_id: { type: "string", description: "UUID del proceso relacionado, si aplica." },
+            area_id: { type: "string", description: "UUID del área relacionada, si aplica." },
+          },
+          required: ["tipo_brecha", "descripcion"],
+        },
+      },
+    },
+    required: ["brechas"],
+  },
+});
+
+function normalizarTexto(s: string) {
+  return s
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9 ]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+async function execRegistrarBrecha(
+  admin: any,
+  orgId: string,
+  sessionId: string | null,
+  input: any,
+) {
+  const raw: any[] = Array.isArray(input?.brechas) ? input.brechas : [];
+  if (!raw.length) return { ok: false, error: "No se recibieron brechas para registrar." };
+  if (raw.length > 5) raw.length = 5;
+
+  const [{ data: procs }, { data: areas }, { data: abiertas }] = await Promise.all([
+    admin.from("brain_processes").select("id").eq("org_id", orgId),
+    admin.from("brain_areas").select("id").eq("org_id", orgId),
+    admin.from("brain_gaps").select("id, descripcion").eq("org_id", orgId).in("estado", ["abierta", "asignada"]),
+  ]);
+  const procIds = new Set((procs ?? []).map((p: any) => p.id));
+  const areaIds = new Set((areas ?? []).map((a: any) => a.id));
+  const existentes = new Map<string, string>(
+    (abiertas ?? []).map((g: any) => [normalizarTexto(String(g.descripcion ?? "")), g.id]),
+  );
+
+  const registradas: any[] = [];
+  const rechazadas: any[] = [];
+
+  for (const b of raw) {
+    const tipoBrecha = String(b?.tipo_brecha ?? "");
+    const descripcion = String(b?.descripcion ?? "").trim();
+
+    if (!TIPOS_BRECHA.includes(tipoBrecha)) {
+      rechazadas.push({ descripcion: descripcion.slice(0, 80), motivo: `tipo_brecha inválido: ${tipoBrecha}` });
+      continue;
+    }
+    if (descripcion.length < 15) {
+      rechazadas.push({ descripcion, motivo: "descripción demasiado breve — precisa qué conocimiento falta" });
+      continue;
+    }
+    // Reglas por tipo (corrección 2 del prompt maestro v2.1)
+    if (tipoBrecha === "pendiente_otro_rol" && !String(b?.rol_sugerido ?? "").trim()) {
+      rechazadas.push({
+        descripcion: descripcion.slice(0, 80),
+        motivo: "pendiente_otro_rol requiere rol_sugerido y debe acompañarse de sugerir_entrevistado",
+      });
+      continue;
+    }
+    if (tipoBrecha === "brecha_institucional" && String(b?.evidencia ?? "").trim().length < 15) {
+      rechazadas.push({
+        descripcion: descripcion.slice(0, 80),
+        motivo:
+          "brecha_institucional requiere evidencia de ausencia real. Si solo no se ha preguntado, usa pendiente_entrevista.",
+      });
+      continue;
+    }
+
+    const clave = normalizarTexto(descripcion);
+    if (existentes.has(clave)) {
+      rechazadas.push({ descripcion: descripcion.slice(0, 80), motivo: "duplicada — ya existe una brecha abierta equivalente", id: existentes.get(clave) });
+      continue;
+    }
+
+    const prioridad = ["alta", "media", "baja"].includes(b?.prioridad)
+      ? b.prioridad
+      : tipoBrecha === "brecha_institucional"
+        ? "alta"
+        : "media";
+    const procesoId = UUID_RE.test(b?.proceso_id ?? "") && procIds.has(b.proceso_id) ? b.proceso_id : null;
+    const areaId = UUID_RE.test(b?.area_id ?? "") && areaIds.has(b.area_id) ? b.area_id : null;
+    const tipoConocimiento = TIPOS_CONOCIMIENTO.includes(String(b?.tipo_conocimiento ?? ""))
+      ? b.tipo_conocimiento
+      : null;
+
+    const detalle = [
+      b?.por_que_importa ? String(b.por_que_importa).trim() : "",
+      b?.evidencia ? `Evidencia de ausencia: ${String(b.evidencia).trim()}` : "",
+    ]
+      .filter(Boolean)
+      .join("\n");
+
+    const { data: row, error } = await admin
+      .from("brain_gaps")
+      .insert({
+        org_id: orgId,
+        tipo_brecha: tipoBrecha,
+        descripcion,
+        por_que_importa: detalle || null,
+        tipo_conocimiento: tipoConocimiento,
+        rol_sugerido: b?.rol_sugerido ? String(b.rol_sugerido).trim().slice(0, 120) : null,
+        prioridad,
+        estado: "abierta",
+        proceso_id: procesoId,
+        area_id: areaId,
+        session_id: sessionId,
+      })
+      .select("id, tipo_brecha, prioridad, estado")
+      .single();
+
+    if (error || !row) {
+      rechazadas.push({ descripcion: descripcion.slice(0, 80), motivo: error?.message ?? "error al insertar" });
+      continue;
+    }
+    existentes.set(clave, row.id);
+    registradas.push(row);
+  }
+
+  return {
+    ok: registradas.length > 0,
+    registradas_count: registradas.length,
+    registradas,
+    rechazadas,
+    nota:
+      "Estado inicial siempre 'abierta'. Las brechas pendiente_otro_rol deben acompañarse de sugerir_entrevistado. El cierre de brechas es acción humana desde /cerebro/brechas.",
+  };
+}
+
 // ──────────────────────── Ejecución de herramientas ────────────────────
 async function execObtenerContextoCerebro(
   admin: any,
@@ -241,7 +413,7 @@ async function execObtenerContextoCerebro(
       .limit(120),
     admin
       .from("brain_gaps")
-      .select("id, descripcion, tipo_conocimiento, prioridad, estado, rol_sugerido, proceso_id, area_id")
+      .select("id, descripcion, tipo_brecha, tipo_conocimiento, prioridad, estado, rol_sugerido, proceso_id, area_id")
       .eq("org_id", orgId)
       .in("estado", ["abierta", "asignada"])
       .order("prioridad"),
@@ -348,7 +520,7 @@ async function construirContextoSesion(admin: any, orgId: string, sessionId: str
 [CONOCIMIENTO PREVIO]: ${ctx.resumen.conocimientos_totales} ítems — ${JSON.stringify(ctx.resumen.por_tipo)}
 ${ctx.conocimientos.slice(0, 25).map((i: any) => `- (${i.tipo}/${i.estado}) ${i.contenido}`).join("\n") || "- (sin conocimiento previo)"}
 [GAPS ACTIVOS PARA ESTE ENTREVISTADO]: ${gapsFiltrados.length}
-${gapsFiltrados.slice(0, 20).map((g: any) => `- [${g.prioridad}] ${g.descripcion} (id: ${g.id})`).join("\n") || "- (sin brechas registradas)"}
+${gapsFiltrados.slice(0, 20).map((g: any) => `- [${g.prioridad}/${g.tipo_brecha}] ${g.descripcion} (id: ${g.id})`).join("\n") || "- (sin brechas registradas)"}
 [CONTRADICCIONES ABIERTAS]: ${ctx.resumen.contradicciones_abiertas}
 [PROCESOS ASIGNADOS]: ${procesosAsignados.join(" | ") || "ninguno"}
 [AREAS REGISTRADAS]: ${ctx.areas.map((a: any) => `${a.nombre} (${a.id})`).join(" | ") || "ninguna"}
@@ -487,6 +659,8 @@ Deno.serve(async (req) => {
                 result = await execObtenerContextoCerebro(admin, org.id, sessionId, tb.input?.incluir_items !== false);
               } else if (tb.name === "guardar_conocimiento") {
                 result = await execGuardarConocimiento(admin, org.id, sessionId, user.id, tb.input ?? {});
+              } else if (tb.name === "registrar_brecha") {
+                result = await execRegistrarBrecha(admin, org.id, sessionId, tb.input ?? {});
               } else {
                 result = { ok: false, error: "Herramienta no disponible todavía." };
               }
