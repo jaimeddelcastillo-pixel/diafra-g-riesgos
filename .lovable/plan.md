@@ -1,72 +1,60 @@
-# Sidebar declarativo con navigationConfig
+# Cerebro Institucional — Fase A (4 migraciones)
 
-Un solo commit. Reemplaza la navegación hardcodeada por una configuración declarativa con grupos colapsables, sin tocar rutas, módulos, edge functions ni lógica de negocio.
+Solo base de datos. No se toca UI, edge functions ni módulos existentes. Un commit por migración, verificando cada una antes de la siguiente.
 
-## Qué cambia para el usuario
+## Hallazgos verificados en la base de datos real
 
-- Menú lateral reorganizado en tres secciones: **NÚCLEO**, **MÓDULOS**, **ADMINISTRACIÓN**.
-- Cerebro Institucional y Gestión de Riesgos / Capacitación pasan a ser grupos plegables; solo uno abierto a la vez y el que contiene la página actual se abre solo.
-- La preferencia de qué grupo está abierto se recuerda entre visitas.
-- Si la organización no tiene el módulo de Cerebro, ese grupo no aparece.
-- En móvil se sigue usando el panel deslizable existente (sin segundo sistema de navegación).
+- `brain_interview_sessions` está **vacía** (0 filas): ninguna migración de esta fase afecta datos existentes.
+- Los estados permitidos hoy NO son los del prompt. El CHECK vigente es `estado IN ('en_curso','pausada','finalizada','cancelada')` con `DEFAULT 'en_curso'`. La verificación pedida ("solo pendiente, en_proceso, completada") no puede cumplirse porque ese vocabulario nunca existió en esta tabla.
+- `assignment_id` **ya existe** en `brain_interview_sessions`, con FK a `brain_interview_assignments`, `ON DELETE SET NULL` e índice. La migración 3 no necesita crearla.
+- `metadata` no existe todavía en `brain_interview_sessions`: sí se agrega.
+- `brain_gaps` y `brain_contradictions` tienen `session_id` (FK `ON DELETE SET NULL`): se aplica verificación de tres dimensiones en ambas.
+- Ninguna parte del código escribe el estado de la sesión hoy, así que un cambio de vocabulario no rompe nada actualmente; solo condiciona la Fase B.
 
-## Archivos
+### Decisión pendiente sobre el vocabulario de estado
 
-### Nuevo: `src/config/navigation.ts`
-Exporta `navigationConfig: NavItem[]`, con:
+Propuesta por defecto (la que ejecuto salvo indicación contraria): **conservar el vocabulario actual y solo ampliarlo**, quedando `('en_curso','pausada','finalizada','cancelada','pendiente')`. Motivo: el CHECK propuesto elimina `cancelada`, y renombrar `en_curso→en_proceso` / `finalizada→completada` obliga a alinear la Fase B y las pantallas del Cerebro.
 
-```text
-NavItem = {
-  id, label, icon,
-  route?, children?,
-  section: "nucleo" | "modulos" | "admin",
-  feature?, roles?, plans?, status?
-}
-```
+Alternativa si prefieres el vocabulario nuevo: `('pendiente','en_proceso','pausada','completada','cancelada')` con `DEFAULT 'pendiente'`. La tabla está vacía, así que el cambio sería limpio.
 
-Contenido:
-- nucleo: `Cerebro Institucional` (feature `institutional_brain`) con Panorama, Entrevistas, Conocimiento, Validación, Documentos, Contradicciones, Brechas, Exportar.
-- modulos: `Gestión de Riesgos` (Dashboard `/`, Mis Folios, Catálogos, Mis Protocolos, Cumplimiento[roles admin/responsable_sanitario], Auditoría, Recursos) y `Capacitación` (Capacitación, Mis Diplomas).
-- admin: Configuración `/configuracion`, Ayuda `/soporte` (roles admin/responsable_sanitario).
-- Se mantiene aparte la lista de navegación de super admin (Panel TRACEA, Tickets, Agentes IA, etc.) como `adminNavigationConfig` en el mismo archivo, sección `admin`, sin cambios funcionales.
+## Migración 1 — `brain_interview_turns`
 
-### Nuevo: `src/hooks/useNavigationItems.ts`
-Filtra `navigationConfig` (solo UX, sin reemplazar enforcement backend):
-- `feature`: usa `useCerebroAcceso().tieneCerebro` para `institutional_brain`; genérico vía consulta ya existente.
-- `roles`: `hasRole` / `isSuperAdmin` de `useAuth`.
-- `plans`: `org.plan`.
-- Elimina grupos que quedan sin hijos visibles.
-- Devuelve las secciones ya agrupadas y ordenadas, o la lista de super admin cuando corresponde (`isSuperAdmin() && !isImpersonating`).
+Tal como se especificó: `id` UUID PK sin default (lo genera el frontend), `org_id` y `session_id` con `ON DELETE RESTRICT`, CHECK de estado (`pendiente|procesando|completado|fallido`), `operations` JSONB solo con metadata técnica de idempotencia, contadores, `current_objective`, `error` y timestamps.
 
-### Nuevo: `src/components/sidebar/NavGroup.tsx`
-Grupo colapsable con `Collapsible` de shadcn dentro de `SidebarMenu`:
-- Apertura exclusiva: el padre controla `openId` (un solo grupo abierto).
-- `useLocation()` abre automáticamente el grupo que contiene la ruta activa.
-- Persistencia en `localStorage` (`tracea_sidebar_open_group`), con la ruta activa teniendo prioridad.
-- En estado colapsado (icon mode) muestra solo iconos; los hijos se muestran al expandir la barra.
-- Ítems hoja renderizados con el `NavLink` existente y `activeClassName`, conservando `end` para `/`, `/admin` y `/cerebro`.
+GRANT `SELECT` a `authenticated` y `ALL` a `service_role`. RLS activo con una única policy de SELECT por organización. Índices por `session_id` y por `(org_id, estado)`. Trigger `trg_verify_turn_org_session` (BEFORE INSERT) que exige que la sesión pertenezca a la misma organización.
 
-### Modificado: `src/components/AppSidebar.tsx`
-- Se eliminan los arrays hardcodeados y los condicionales de rol/feature.
-- Queda: header (logo/org), render de las tres secciones con `SidebarGroupLabel` + `NavGroup`/ítems simples, y el bloque existente "Salir de empresa" durante impersonación.
-- Objetivo ~80 líneas.
+Pruebas: inserción válida, inserción con sesión de otra organización (debe fallar) y confirmación de que `authenticated` solo puede leer.
 
-## Detalles visuales
-- `NÚCLEO`: label con tono de acento sutil (token `sidebar-primary` a baja opacidad) frente al gris de `MÓDULOS`/`ADMINISTRACIÓN`.
-- Icono del Cerebro con un fondo redondeado tenue para diferenciarlo, sin destacar en exceso.
-- Solo tokens semánticos del design system, sin colores hardcodeados.
-- Se conserva el badge verde de "Mis Folios" y el atributo `data-onboarding` de los ítems del onboarding.
+## Migración 2 — `brain_interview_messages`
 
-## Verificación posterior
-- Rutas existentes marcan estado activo correctamente (incluidas `/` y `/cerebro`).
-- Comportamiento con roles admin, operador y responsable sanitario.
-- Org sin `institutional_brain`: el grupo Cerebro no aparece.
-- Vista móvil usando el drawer existente.
+Transcript visual de la sesión. `turn_id` nullable con `ON DELETE SET NULL`, `role` restringido a `user|assistant`, `metadata` solo técnica. GRANT y RLS idénticos a la migración 1 (lectura por organización, escritura solo service_role). Índices `(session_id, created_at ASC)` y parcial por `turn_id`. Trigger `trg_verify_message_turn_integrity` que valida turno → sesión → organización.
 
-## No se toca
-Rutas en `App.tsx`, módulos existentes, edge functions, lógica de negocio.
+Pruebas: sin `turn_id`, con `turn_id` correcto, con turno de otra sesión y de otra organización (deben fallar), e inserción bloqueada para `authenticated`.
 
-## Condiciones adicionales aceptadas
-- La ruta activa tiene prioridad absoluta sobre el valor persistido en localStorage: al entrar directo a una ruta hija, su grupo se abre aunque otro estuviera guardado como abierto.
-- `useNavigationItems` se mantiene genérico: un único predicado evalúa `feature`, `roles`, `plans` y `status` contra un contexto (`plan`, `roles`, `features`), sin condicionales por módulo. Añadir un módulo solo requiere una entrada en `navigationConfig` y, si aplica, una feature en el mapa de features.
-- Matching de rutas raíz con coincidencia exacta (`/`, `/cerebro`, `/admin`) mediante la bandera `exact` en la config, evitando múltiples ítems activos simultáneos.
+## Migración 3 — `brain_session_processes` + ALTER de sesiones
+
+Tabla nueva con `UNIQUE (session_id, process_id)`, FKs `RESTRICT`, GRANT y RLS estándar, índices por sesión y por proceso, y trigger de integridad triple (sesión y proceso de la misma organización) en INSERT y UPDATE.
+
+En `brain_interview_sessions`:
+- Se agrega `metadata JSONB NOT NULL DEFAULT '{}'`.
+- `assignment_id` ya existe con la definición correcta: se deja intacta (desviación respecto al prompt).
+- Se reemplaza el CHECK de estado según la decisión de vocabulario anterior.
+- Trigger `trg_verify_session_assignment_org` para que `assignment_id` sea de la misma organización.
+
+Pruebas: combinaciones válidas e inválidas de organización, estado `pausada`, `assignment_id` de otra organización y violación del UNIQUE.
+
+## Migración 4 — `turn_id` en tablas existentes
+
+- `brain_knowledge_items.created_from_turn_id` + trigger de verificación turno+organización + índice parcial.
+- `brain_gaps.turn_id` + trigger de tres dimensiones (usa `session_id` cuando está presente) + índice parcial.
+- `brain_contradictions.turn_id` + trigger equivalente + índice parcial.
+
+Todas las columnas son nullable, así que las filas existentes quedan con `turn_id` nulo y no se ven afectadas.
+
+Pruebas por tabla: `turn_id` nulo, turno de la misma organización, turno de otra organización, turno de otra sesión y conteo de filas existentes con `turn_id` no nulo (debe ser 0).
+
+## Entrega al cerrar la Fase A
+
+Inventario completo de tablas, funciones, triggers, índices y constraints creados; resultado de cada prueba por migración; confirmación de que no se alteraron datos existentes; y lista de desviaciones (hasta ahora: `assignment_id` preexistente y el vocabulario de estado).
+
+No se avanza a la Fase B sin aprobación explícita.
