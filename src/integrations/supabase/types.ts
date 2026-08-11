@@ -274,6 +274,115 @@ export type Database = {
           },
         ]
       }
+      brain_contradictions: {
+        Row: {
+          afecta_cumplimiento: boolean
+          afirmacion_a: string
+          afirmacion_b: string
+          area_id: string | null
+          created_at: string
+          decision_final: string | null
+          descripcion: string | null
+          estado: string
+          fuente_a: string | null
+          fuente_b: string | null
+          fundamento: string | null
+          id: string
+          item_a_id: string | null
+          item_b_id: string | null
+          org_id: string
+          proceso_id: string | null
+          resuelto_en: string | null
+          resuelto_por: string | null
+          updated_at: string
+        }
+        Insert: {
+          afecta_cumplimiento?: boolean
+          afirmacion_a: string
+          afirmacion_b: string
+          area_id?: string | null
+          created_at?: string
+          decision_final?: string | null
+          descripcion?: string | null
+          estado?: string
+          fuente_a?: string | null
+          fuente_b?: string | null
+          fundamento?: string | null
+          id?: string
+          item_a_id?: string | null
+          item_b_id?: string | null
+          org_id: string
+          proceso_id?: string | null
+          resuelto_en?: string | null
+          resuelto_por?: string | null
+          updated_at?: string
+        }
+        Update: {
+          afecta_cumplimiento?: boolean
+          afirmacion_a?: string
+          afirmacion_b?: string
+          area_id?: string | null
+          created_at?: string
+          decision_final?: string | null
+          descripcion?: string | null
+          estado?: string
+          fuente_a?: string | null
+          fuente_b?: string | null
+          fundamento?: string | null
+          id?: string
+          item_a_id?: string | null
+          item_b_id?: string | null
+          org_id?: string
+          proceso_id?: string | null
+          resuelto_en?: string | null
+          resuelto_por?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brain_contradictions_area_id_fkey"
+            columns: ["area_id"]
+            isOneToOne: false
+            referencedRelation: "brain_areas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brain_contradictions_item_a_id_fkey"
+            columns: ["item_a_id"]
+            isOneToOne: false
+            referencedRelation: "brain_knowledge_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brain_contradictions_item_b_id_fkey"
+            columns: ["item_b_id"]
+            isOneToOne: false
+            referencedRelation: "brain_knowledge_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brain_contradictions_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brain_contradictions_proceso_id_fkey"
+            columns: ["proceso_id"]
+            isOneToOne: false
+            referencedRelation: "brain_processes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brain_contradictions_resuelto_por_fkey"
+            columns: ["resuelto_por"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       brain_documents: {
         Row: {
           area_id: string | null
