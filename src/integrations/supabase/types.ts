@@ -531,6 +531,7 @@ export type Database = {
           proceso_id: string | null
           rol_sugerido: string | null
           session_id: string | null
+          tipo_brecha: string
           tipo_conocimiento: string | null
           updated_at: string
         }
@@ -548,6 +549,7 @@ export type Database = {
           proceso_id?: string | null
           rol_sugerido?: string | null
           session_id?: string | null
+          tipo_brecha?: string
           tipo_conocimiento?: string | null
           updated_at?: string
         }
@@ -565,6 +567,7 @@ export type Database = {
           proceso_id?: string | null
           rol_sugerido?: string | null
           session_id?: string | null
+          tipo_brecha?: string
           tipo_conocimiento?: string | null
           updated_at?: string
         }

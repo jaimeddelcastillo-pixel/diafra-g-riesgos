@@ -21,7 +21,7 @@ export default function CerebroBrechas() {
                 <div>
                   <p className="text-sm font-medium">{g.descripcion ?? g.titulo}</p>
                   <p className="text-xs text-muted-foreground">
-                    {[g.tipo, g.prioridad].filter(Boolean).join(" · ")}
+                    {[g.tipo_brecha, g.prioridad, g.rol_sugerido].filter(Boolean).join(" · ")}
                   </p>
                 </div>
                 <Badge variant="outline">{g.estado}</Badge>
