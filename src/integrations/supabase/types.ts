@@ -177,6 +177,365 @@ export type Database = {
           },
         ]
       }
+      brain_areas: {
+        Row: {
+          activo: boolean
+          created_at: string
+          descripcion: string | null
+          id: string
+          nombre: string
+          orden: number
+          org_id: string
+          responsable_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          activo?: boolean
+          created_at?: string
+          descripcion?: string | null
+          id?: string
+          nombre: string
+          orden?: number
+          org_id: string
+          responsable_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          activo?: boolean
+          created_at?: string
+          descripcion?: string | null
+          id?: string
+          nombre?: string
+          orden?: number
+          org_id?: string
+          responsable_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brain_areas_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brain_areas_responsable_id_fkey"
+            columns: ["responsable_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      brain_assignment_processes: {
+        Row: {
+          assignment_id: string
+          created_at: string
+          id: string
+          org_id: string
+          process_id: string
+        }
+        Insert: {
+          assignment_id: string
+          created_at?: string
+          id?: string
+          org_id: string
+          process_id: string
+        }
+        Update: {
+          assignment_id?: string
+          created_at?: string
+          id?: string
+          org_id?: string
+          process_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brain_assignment_processes_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "brain_interview_assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brain_assignment_processes_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brain_assignment_processes_process_id_fkey"
+            columns: ["process_id"]
+            isOneToOne: false
+            referencedRelation: "brain_processes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      brain_documents: {
+        Row: {
+          area_id: string | null
+          codigo: string | null
+          created_at: string
+          estado: string
+          fecha_documento: string | null
+          id: string
+          nombre: string
+          notas: string | null
+          org_id: string
+          proceso_id: string | null
+          revision: string | null
+          storage_path: string | null
+          tipo: string
+          updated_at: string
+        }
+        Insert: {
+          area_id?: string | null
+          codigo?: string | null
+          created_at?: string
+          estado?: string
+          fecha_documento?: string | null
+          id?: string
+          nombre: string
+          notas?: string | null
+          org_id: string
+          proceso_id?: string | null
+          revision?: string | null
+          storage_path?: string | null
+          tipo?: string
+          updated_at?: string
+        }
+        Update: {
+          area_id?: string | null
+          codigo?: string | null
+          created_at?: string
+          estado?: string
+          fecha_documento?: string | null
+          id?: string
+          nombre?: string
+          notas?: string | null
+          org_id?: string
+          proceso_id?: string | null
+          revision?: string | null
+          storage_path?: string | null
+          tipo?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brain_documents_area_id_fkey"
+            columns: ["area_id"]
+            isOneToOne: false
+            referencedRelation: "brain_areas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brain_documents_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brain_documents_proceso_id_fkey"
+            columns: ["proceso_id"]
+            isOneToOne: false
+            referencedRelation: "brain_processes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      brain_interview_assignments: {
+        Row: {
+          area_id: string | null
+          asignado_automaticamente: boolean
+          capa: string | null
+          created_at: string
+          dominios_conocimiento: string[]
+          estado: string
+          id: string
+          nivel_autoridad: string | null
+          nombre_externo: string | null
+          org_id: string
+          prioridad: string
+          profile_id: string | null
+          puesto: string | null
+          razon_asignacion: string | null
+          updated_at: string
+        }
+        Insert: {
+          area_id?: string | null
+          asignado_automaticamente?: boolean
+          capa?: string | null
+          created_at?: string
+          dominios_conocimiento?: string[]
+          estado?: string
+          id?: string
+          nivel_autoridad?: string | null
+          nombre_externo?: string | null
+          org_id: string
+          prioridad?: string
+          profile_id?: string | null
+          puesto?: string | null
+          razon_asignacion?: string | null
+          updated_at?: string
+        }
+        Update: {
+          area_id?: string | null
+          asignado_automaticamente?: boolean
+          capa?: string | null
+          created_at?: string
+          dominios_conocimiento?: string[]
+          estado?: string
+          id?: string
+          nivel_autoridad?: string | null
+          nombre_externo?: string | null
+          org_id?: string
+          prioridad?: string
+          profile_id?: string | null
+          puesto?: string | null
+          razon_asignacion?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brain_interview_assignments_area_id_fkey"
+            columns: ["area_id"]
+            isOneToOne: false
+            referencedRelation: "brain_areas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brain_interview_assignments_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brain_interview_assignments_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      brain_process_areas: {
+        Row: {
+          area_id: string
+          created_at: string
+          id: string
+          org_id: string
+          process_id: string
+          rol: string
+        }
+        Insert: {
+          area_id: string
+          created_at?: string
+          id?: string
+          org_id: string
+          process_id: string
+          rol?: string
+        }
+        Update: {
+          area_id?: string
+          created_at?: string
+          id?: string
+          org_id?: string
+          process_id?: string
+          rol?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brain_process_areas_area_id_fkey"
+            columns: ["area_id"]
+            isOneToOne: false
+            referencedRelation: "brain_areas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brain_process_areas_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brain_process_areas_process_id_fkey"
+            columns: ["process_id"]
+            isOneToOne: false
+            referencedRelation: "brain_processes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      brain_processes: {
+        Row: {
+          activo: boolean
+          created_at: string
+          descripcion: string | null
+          folio_id: string | null
+          id: string
+          marco_regulatorio: string | null
+          nombre: string
+          org_id: string
+          owner_area_id: string | null
+          tiene_folio: boolean
+          updated_at: string
+        }
+        Insert: {
+          activo?: boolean
+          created_at?: string
+          descripcion?: string | null
+          folio_id?: string | null
+          id?: string
+          marco_regulatorio?: string | null
+          nombre: string
+          org_id: string
+          owner_area_id?: string | null
+          tiene_folio?: boolean
+          updated_at?: string
+        }
+        Update: {
+          activo?: boolean
+          created_at?: string
+          descripcion?: string | null
+          folio_id?: string | null
+          id?: string
+          marco_regulatorio?: string | null
+          nombre?: string
+          org_id?: string
+          owner_area_id?: string | null
+          tiene_folio?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brain_processes_folio_id_fkey"
+            columns: ["folio_id"]
+            isOneToOne: false
+            referencedRelation: "folios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brain_processes_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brain_processes_owner_area_id_fkey"
+            columns: ["owner_area_id"]
+            isOneToOne: false
+            referencedRelation: "brain_areas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       capacitacion_progreso: {
         Row: {
           completado: boolean
