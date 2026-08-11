@@ -65,3 +65,8 @@ Grupo colapsable con `Collapsible` de shadcn dentro de `SidebarMenu`:
 
 ## No se toca
 Rutas en `App.tsx`, módulos existentes, edge functions, lógica de negocio.
+
+## Condiciones adicionales aceptadas
+- La ruta activa tiene prioridad absoluta sobre el valor persistido en localStorage: al entrar directo a una ruta hija, su grupo se abre aunque otro estuviera guardado como abierto.
+- `useNavigationItems` se mantiene genérico: un único predicado evalúa `feature`, `roles`, `plans` y `status` contra un contexto (`plan`, `roles`, `features`), sin condicionales por módulo. Añadir un módulo solo requiere una entrada en `navigationConfig` y, si aplica, una feature en el mapa de features.
+- Matching de rutas raíz con coincidencia exacta (`/`, `/cerebro`, `/admin`) mediante la bandera `exact` en la config, evitando múltiples ítems activos simultáneos.
