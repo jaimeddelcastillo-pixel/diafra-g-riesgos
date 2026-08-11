@@ -19,7 +19,30 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const MODEL = "claude-sonnet-4-6";
 const MAX_HISTORY = 24;
-const MAX_TOOL_CALLS_PER_TURN = 4;
+const MAX_TOOL_CALLS_PER_TURN = 6;
+
+const TIPOS_CONOCIMIENTO = [
+  "identidad_organizacional",
+  "producto_proceso",
+  "rol_responsabilidad",
+  "requisito_regulatorio",
+  "arquitectura_sgc",
+  "criterio_documental",
+  "conocimiento_operativo",
+  "riesgo_control",
+  "validacion_calificacion",
+  "desviacion_capa",
+  "auditoria_aprendizaje",
+  "regla_pno",
+];
+const TIPOS_FUENTE = [
+  "entrevista",
+  "documento",
+  "persona",
+  "registro",
+  "requisito_regulatorio",
+  "observacion",
+];
 
 // ──────────────────────────── Herramientas ────────────────────────────
 const TOOLS: any[] = [
@@ -40,6 +63,168 @@ const TOOLS: any[] = [
   },
 ];
 
+TOOLS.push({
+  name: "guardar_conocimiento",
+  description:
+    "Persiste conocimiento institucional extraído de la entrevista en brain_knowledge_items (y sus fuentes en brain_knowledge_sources). Llamar SIEMPRE antes de avanzar cuando la respuesta del entrevistado revele conocimiento relevante. El estado inicial es siempre 'capturado' o 'por_validar' — NUNCA 'validado' (eso es humano). Un ítem puede tener varias fuentes. Máximo 1 llamada por turno con todos los ítems del turno en el arreglo.",
+  input_schema: {
+    type: "object",
+    properties: {
+      items: {
+        type: "array",
+        description: "Ítems de conocimiento a guardar en este turno (1 a 8).",
+        items: {
+          type: "object",
+          properties: {
+            tipo: { type: "string", enum: TIPOS_CONOCIMIENTO, description: "Tipo de conocimiento según el mapeo a BD." },
+            contenido: {
+              type: "string",
+              description:
+                "Enunciado completo y autocontenido del conocimiento, redactado de forma que sea comprensible sin el historial del chat. Sin inventar datos.",
+            },
+            estado: {
+              type: "string",
+              enum: ["capturado", "por_validar"],
+              description: "capturado = dicho expresamente por el entrevistado. por_validar = inferencia razonable pendiente de confirmación.",
+            },
+            proceso_id: { type: "string", description: "UUID del proceso relacionado, si aplica." },
+            area_id: { type: "string", description: "UUID del área relacionada, si aplica." },
+            afecta_cumplimiento: { type: "boolean", description: "true si el conocimiento tiene impacto regulatorio o de cumplimiento." },
+            contexto: {
+              type: "object",
+              description: "Metadatos libres: bloque de entrevista, documentos mencionados, roles, condiciones, excepciones.",
+            },
+            sources: {
+              type: "array",
+              description: "Fuentes que respaldan el conocimiento. Al menos una.",
+              items: {
+                type: "object",
+                properties: {
+                  tipo_fuente: { type: "string", enum: TIPOS_FUENTE },
+                  nombre_fuente: { type: "string", description: "Nombre de la persona, documento o registro." },
+                  descripcion: { type: "string" },
+                  cita_textual: { type: "string", description: "Frase textual del entrevistado que respalda el conocimiento." },
+                },
+                required: ["tipo_fuente"],
+              },
+            },
+          },
+          required: ["tipo", "contenido", "sources"],
+        },
+      },
+    },
+    required: ["items"],
+  },
+});
+
+// ─────────────────── guardar_conocimiento ───────────────────
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+async function execGuardarConocimiento(
+  admin: any,
+  orgId: string,
+  sessionId: string | null,
+  userId: string,
+  input: any,
+) {
+  const raw: any[] = Array.isArray(input?.items) ? input.items : [];
+  if (!raw.length) return { ok: false, error: "No se recibieron ítems para guardar." };
+  if (raw.length > 8) raw.length = 8;
+
+  // IDs válidos de la organización (evita FK inválidas inventadas por el modelo)
+  const [{ data: procs }, { data: areas }] = await Promise.all([
+    admin.from("brain_processes").select("id").eq("org_id", orgId),
+    admin.from("brain_areas").select("id").eq("org_id", orgId),
+  ]);
+  const procIds = new Set((procs ?? []).map((p: any) => p.id));
+  const areaIds = new Set((areas ?? []).map((a: any) => a.id));
+
+  const guardados: any[] = [];
+  const rechazados: any[] = [];
+
+  for (const it of raw) {
+    const tipo = String(it?.tipo ?? "");
+    const contenido = String(it?.contenido ?? "").trim();
+    if (!TIPOS_CONOCIMIENTO.includes(tipo)) {
+      rechazados.push({ contenido: contenido.slice(0, 80), motivo: `tipo inválido: ${tipo}` });
+      continue;
+    }
+    if (contenido.length < 15) {
+      rechazados.push({ contenido, motivo: "contenido demasiado breve — profundiza antes de guardar" });
+      continue;
+    }
+    const estado = it?.estado === "por_validar" ? "por_validar" : "capturado";
+    const procesoId = UUID_RE.test(it?.proceso_id ?? "") && procIds.has(it.proceso_id) ? it.proceso_id : null;
+    const areaId = UUID_RE.test(it?.area_id ?? "") && areaIds.has(it.area_id) ? it.area_id : null;
+
+    const { data: row, error } = await admin
+      .from("brain_knowledge_items")
+      .insert({
+        org_id: orgId,
+        tipo,
+        contenido,
+        estado,
+        proceso_id: procesoId,
+        area_id: areaId,
+        afecta_cumplimiento: it?.afecta_cumplimiento === true,
+        marco_validado: false,
+        contexto: {
+          ...(typeof it?.contexto === "object" && it.contexto ? it.contexto : {}),
+          session_id: sessionId,
+          capturado_por: userId,
+          capturado_en: new Date().toISOString(),
+        },
+      })
+      .select("id, tipo, estado")
+      .single();
+
+    if (error || !row) {
+      rechazados.push({ contenido: contenido.slice(0, 80), motivo: error?.message ?? "error al insertar" });
+      continue;
+    }
+
+    const fuentes = (Array.isArray(it?.sources) ? it.sources : []).filter((s: any) =>
+      TIPOS_FUENTE.includes(String(s?.tipo_fuente ?? "")),
+    );
+    if (!fuentes.length) fuentes.push({ tipo_fuente: "entrevista" });
+
+    const { error: srcErr } = await admin.from("brain_knowledge_sources").insert(
+      fuentes.slice(0, 5).map((s: any) => ({
+        org_id: orgId,
+        knowledge_item_id: row.id,
+        tipo_fuente: s.tipo_fuente,
+        session_id: sessionId,
+        nombre_fuente: s.nombre_fuente ?? null,
+        descripcion: s.descripcion ?? null,
+        cita_textual: s.cita_textual ?? null,
+      })),
+    );
+    if (srcErr) console.error("brain_knowledge_sources insert", srcErr);
+
+    guardados.push({ id: row.id, tipo: row.tipo, estado: row.estado, fuentes: fuentes.length });
+  }
+
+  if (sessionId && guardados.length) {
+    const { data: s } = await admin
+      .from("brain_interview_sessions")
+      .select("items_capturados")
+      .eq("id", sessionId)
+      .maybeSingle();
+    await admin
+      .from("brain_interview_sessions")
+      .update({ items_capturados: ((s as any)?.items_capturados ?? 0) + guardados.length })
+      .eq("id", sessionId)
+      .eq("org_id", orgId);
+  }
+
+  return {
+    ok: guardados.length > 0,
+    guardados_count: guardados.length,
+    guardados,
+    rechazados,
+    nota: "Estado inicial capturado/por_validar. La validación es exclusivamente humana desde /cerebro/validacion.",
+  };
+}
 // ──────────────────────── Ejecución de herramientas ────────────────────
 async function execObtenerContextoCerebro(
   admin: any,
