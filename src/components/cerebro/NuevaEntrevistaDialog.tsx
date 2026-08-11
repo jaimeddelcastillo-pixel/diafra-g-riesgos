@@ -8,24 +8,71 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { useBrainAssignments, useBrainProcesses } from "@/hooks/useBrain";
+import { useBrainAreas, useBrainAssignments, useBrainProcesses } from "@/hooks/useBrain";
 import { useProfiles } from "@/hooks/useProfiles";
 import { toast } from "sonner";
 
 const CAPAS = [
-  { v: "vision", l: "Visión" },
-  { v: "proceso", l: "Proceso" },
-  { v: "especialista", l: "Especialista" },
-  { v: "documental", l: "Documental" },
-  { v: "validacion", l: "Validación" },
+  {
+    v: "vision",
+    l: "Visión",
+    ayuda:
+      "Explora cómo funciona la organización en conjunto: estructura, responsabilidades, interacción entre áreas, prioridades y contexto general.",
+  },
+  {
+    v: "proceso",
+    l: "Proceso",
+    ayuda:
+      "Explora cómo se realiza realmente un proceso: actividades, responsables, controles, entradas, salidas, excepciones e interacciones.",
+  },
+  {
+    v: "especialista",
+    l: "Especialista",
+    ayuda:
+      "Profundiza en conocimiento técnico o regulatorio que requiere experiencia específica.",
+  },
+  {
+    v: "documental",
+    l: "Documental",
+    ayuda:
+      "Revisa qué está formalmente documentado: procedimientos, formatos, registros, versiones, evidencias y ubicación documental.",
+  },
+  {
+    v: "validacion",
+    l: "Validación",
+    ayuda:
+      "Confirma, corrige o complementa conocimiento previamente capturado por el Cerebro.",
+  },
 ];
 
 const NIVELES = [
-  { v: "decisor", l: "Decisor" },
-  { v: "responsable", l: "Responsable" },
-  { v: "ejecutor", l: "Ejecutor" },
-  { v: "consultivo", l: "Consultivo" },
+  {
+    v: "decisor",
+    l: "Decisor",
+    ayuda:
+      "Tiene autoridad para establecer o aprobar decisiones sobre el dominio entrevistado.",
+  },
+  {
+    v: "responsable",
+    l: "Responsable",
+    ayuda:
+      "Tiene responsabilidad formal sobre el proceso o actividad y puede confirmar cómo debe gestionarse.",
+  },
+  {
+    v: "ejecutor",
+    l: "Ejecutor",
+    ayuda: "Realiza directamente las actividades y conoce su operación cotidiana.",
+  },
+  {
+    v: "consultivo",
+    l: "Consultivo",
+    ayuda:
+      "Aporta conocimiento o experiencia, pero no tiene autoridad formal para establecer el criterio institucional.",
+  },
 ];
+
+const NOTA_NIVEL =
+  "El nivel de autoridad no representa jerarquía organizacional. Indica el peso de esta persona respecto del conocimiento tratado en esta entrevista específicamente.";
 
 interface Props {
   open: boolean;
@@ -36,6 +83,7 @@ interface Props {
 export function NuevaEntrevistaDialog({ open, onOpenChange, onCreada }: Props) {
   const { data: asignaciones = [] } = useBrainAssignments();
   const { data: procesos = [] } = useBrainProcesses();
+  const { data: areas = [] } = useBrainAreas();
   const { data: profiles = [] } = useProfiles();
 
   const pendientes = useMemo(
@@ -54,24 +102,56 @@ export function NuevaEntrevistaDialog({ open, onOpenChange, onCreada }: Props) {
   const [nivel, setNivel] = useState("responsable");
   const [procesoIds, setProcesoIds] = useState<string[]>([]);
   const [guardando, setGuardando] = useState(false);
+  const [razonAsignacion, setRazonAsignacion] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) {
       setAssignmentId(null); setProfileId(null); setNombre(""); setPuesto("");
       setArea(""); setProcesoIds([]); setEsInterno(true); setModo("adhoc");
+      setRazonAsignacion(null);
     }
   }, [open]);
 
-  const aplicarAsignacion = (id: string) => {
+  const ayudaCapa = CAPAS.find((c) => c.v === capa)?.ayuda ?? "";
+  const ayudaNivel = NIVELES.find((n) => n.v === nivel)?.ayuda ?? "";
+
+  /** Autocompleta el puesto desde profiles.cargo al elegir un miembro interno. */
+  const aplicarMiembro = (id: string) => {
+    setProfileId(id);
+    const p = (profiles as any[]).find((x) => x.id === id);
+    if (p?.cargo && !puesto.trim()) setPuesto(p.cargo);
+  };
+
+  const aplicarAsignacion = async (id: string) => {
     setAssignmentId(id);
     const a = pendientes.find((x: any) => x.id === id);
     if (!a) return;
     setProfileId(a.profile_id ?? null);
     setEsInterno(!!a.profile_id);
     setNombre(a.nombre_externo ?? "");
-    setPuesto(a.puesto ?? "");
+    const perfil = (profiles as any[]).find((p) => p.id === a.profile_id);
+    setPuesto(a.puesto ?? perfil?.cargo ?? "");
+    setArea((areas as any[]).find((x) => x.id === a.area_id)?.nombre ?? "");
+    setRazonAsignacion(a.razon_asignacion ?? null);
     if (a.capa) setCapa(a.capa);
     if (a.nivel_autoridad) setNivel(a.nivel_autoridad);
+
+    // Procesos sugeridos por la asignación.
+    const { data: rel } = await supabase
+      .from("brain_assignment_processes")
+      .select("process_id")
+      .eq("assignment_id", id);
+    const sugeridos = (rel ?? []).map((r: any) => r.process_id).filter(Boolean);
+    if (sugeridos.length > 0) {
+      setProcesoIds(sugeridos);
+    } else if (Array.isArray(a.dominios_conocimiento) && a.dominios_conocimiento.length > 0) {
+      const dominios = (a.dominios_conocimiento as string[]).map((d) => d.toLowerCase().trim());
+      setProcesoIds(
+        (procesos as any[])
+          .filter((p) => dominios.some((d) => (p.nombre ?? "").toLowerCase().includes(d)))
+          .map((p) => p.id),
+      );
+    }
   };
 
   const toggleProceso = (id: string) =>
@@ -131,10 +211,13 @@ export function NuevaEntrevistaDialog({ open, onOpenChange, onCreada }: Props) {
         <Tabs value={modo} onValueChange={(v) => setModo(v as any)}>
           <TabsList className="grid grid-cols-2">
             <TabsTrigger value="asignacion">Desde asignación</TabsTrigger>
-            <TabsTrigger value="adhoc">Ad hoc</TabsTrigger>
+            <TabsTrigger value="adhoc">Nueva entrevista</TabsTrigger>
           </TabsList>
 
           <TabsContent value="asignacion" className="space-y-3 pt-3">
+            <p className="text-xs text-muted-foreground">
+              Entrevista solicitada previamente por el Cerebro para cubrir o validar conocimiento específico.
+            </p>
             {pendientes.length === 0 ? (
               <p className="text-sm text-muted-foreground">No hay asignaciones pendientes.</p>
             ) : (
@@ -151,11 +234,20 @@ export function NuevaEntrevistaDialog({ open, onOpenChange, onCreada }: Props) {
                     ))}
                   </SelectContent>
                 </Select>
+                {razonAsignacion && (
+                  <div className="rounded-md border border-border bg-muted/40 p-3">
+                    <p className="text-xs font-medium">Motivo de la asignación</p>
+                    <p className="text-xs text-muted-foreground">{razonAsignacion}</p>
+                  </div>
+                )}
               </div>
             )}
           </TabsContent>
 
           <TabsContent value="adhoc" className="space-y-3 pt-3">
+            <p className="text-xs text-muted-foreground">
+              Entrevista iniciada directamente con una persona, sin una asignación previa.
+            </p>
             <div className="flex items-center gap-2">
               <Checkbox id="interno" checked={esInterno} onCheckedChange={(v) => setEsInterno(!!v)} />
               <Label htmlFor="interno" className="font-normal">¿Es un miembro de la organización?</Label>
@@ -163,7 +255,7 @@ export function NuevaEntrevistaDialog({ open, onOpenChange, onCreada }: Props) {
             {esInterno ? (
               <div className="space-y-2">
                 <Label>Miembro</Label>
-                <Select value={profileId ?? undefined} onValueChange={setProfileId}>
+                <Select value={profileId ?? undefined} onValueChange={aplicarMiembro}>
                   <SelectTrigger><SelectValue placeholder="Selecciona a la persona" /></SelectTrigger>
                   <SelectContent>
                     {(profiles as any[]).map((p) => (
@@ -198,6 +290,7 @@ export function NuevaEntrevistaDialog({ open, onOpenChange, onCreada }: Props) {
                 {CAPAS.map((c) => <SelectItem key={c.v} value={c.v}>{c.l}</SelectItem>)}
               </SelectContent>
             </Select>
+            <p className="text-xs text-muted-foreground">{ayudaCapa}</p>
           </div>
           <div className="space-y-2">
             <Label>Nivel de autoridad</Label>
@@ -207,11 +300,13 @@ export function NuevaEntrevistaDialog({ open, onOpenChange, onCreada }: Props) {
                 {NIVELES.map((n) => <SelectItem key={n.v} value={n.v}>{n.l}</SelectItem>)}
               </SelectContent>
             </Select>
+            <p className="text-xs text-muted-foreground">{ayudaNivel}</p>
+            <p className="text-xs text-muted-foreground/80 italic">{NOTA_NIVEL}</p>
           </div>
         </div>
 
         <div className="space-y-2">
-          <Label>Procesos efectivos de esta sesión</Label>
+          <Label>Procesos a cubrir en esta entrevista</Label>
           {procesos.length === 0 ? (
             <p className="text-xs text-muted-foreground">Aún no hay procesos registrados.</p>
           ) : (
@@ -226,6 +321,10 @@ export function NuevaEntrevistaDialog({ open, onOpenChange, onCreada }: Props) {
               </div>
             </ScrollArea>
           )}
+          <p className="text-xs text-muted-foreground">
+            Selecciona los procesos sobre los que esta persona aportará conocimiento. Si aún no están
+            definidos, podrán identificarse progresivamente durante la construcción del Cerebro.
+          </p>
         </div>
 
         <DialogFooter>

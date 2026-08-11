@@ -430,9 +430,13 @@ export type Database = {
           estado: string
           fecha_documento: string | null
           id: string
+          import_batch_id: string | null
+          import_row_reference: number | null
+          import_status: string | null
           nombre: string
           notas: string | null
           org_id: string
+          origen: string
           proceso_id: string | null
           revision: string | null
           storage_path: string | null
@@ -446,9 +450,13 @@ export type Database = {
           estado?: string
           fecha_documento?: string | null
           id?: string
+          import_batch_id?: string | null
+          import_row_reference?: number | null
+          import_status?: string | null
           nombre: string
           notas?: string | null
           org_id: string
+          origen?: string
           proceso_id?: string | null
           revision?: string | null
           storage_path?: string | null
@@ -462,9 +470,13 @@ export type Database = {
           estado?: string
           fecha_documento?: string | null
           id?: string
+          import_batch_id?: string | null
+          import_row_reference?: number | null
+          import_status?: string | null
           nombre?: string
           notas?: string | null
           org_id?: string
+          origen?: string
           proceso_id?: string | null
           revision?: string | null
           storage_path?: string | null
@@ -477,6 +489,13 @@ export type Database = {
             columns: ["area_id"]
             isOneToOne: false
             referencedRelation: "brain_areas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brain_documents_import_batch_id_fkey"
+            columns: ["import_batch_id"]
+            isOneToOne: false
+            referencedRelation: "brain_import_batches"
             referencedColumns: ["id"]
           },
           {
@@ -654,6 +673,140 @@ export type Database = {
             columns: ["turn_id"]
             isOneToOne: false
             referencedRelation: "brain_interview_turns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      brain_import_batches: {
+        Row: {
+          created_at: string
+          estado: string
+          filas_importadas: number
+          formato: string
+          id: string
+          imported_by: string | null
+          mapeo: Json
+          nombre_archivo: string
+          org_id: string
+          storage_path: string | null
+          tipo: string
+          total_filas: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          estado?: string
+          filas_importadas?: number
+          formato: string
+          id?: string
+          imported_by?: string | null
+          mapeo?: Json
+          nombre_archivo: string
+          org_id: string
+          storage_path?: string | null
+          tipo?: string
+          total_filas?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          estado?: string
+          filas_importadas?: number
+          formato?: string
+          id?: string
+          imported_by?: string | null
+          mapeo?: Json
+          nombre_archivo?: string
+          org_id?: string
+          storage_path?: string | null
+          tipo?: string
+          total_filas?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brain_import_batches_imported_by_fkey"
+            columns: ["imported_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brain_import_batches_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      brain_import_propuestas: {
+        Row: {
+          area_id: string | null
+          batch_id: string
+          created_at: string
+          estado: string
+          evidencia: string | null
+          id: string
+          nivel_confianza: string | null
+          nombre: string
+          org_id: string
+          proceso_id: string | null
+          tipo: string
+        }
+        Insert: {
+          area_id?: string | null
+          batch_id: string
+          created_at?: string
+          estado?: string
+          evidencia?: string | null
+          id?: string
+          nivel_confianza?: string | null
+          nombre: string
+          org_id: string
+          proceso_id?: string | null
+          tipo: string
+        }
+        Update: {
+          area_id?: string | null
+          batch_id?: string
+          created_at?: string
+          estado?: string
+          evidencia?: string | null
+          id?: string
+          nivel_confianza?: string | null
+          nombre?: string
+          org_id?: string
+          proceso_id?: string | null
+          tipo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brain_import_propuestas_area_id_fkey"
+            columns: ["area_id"]
+            isOneToOne: false
+            referencedRelation: "brain_areas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brain_import_propuestas_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "brain_import_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brain_import_propuestas_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brain_import_propuestas_proceso_id_fkey"
+            columns: ["proceso_id"]
+            isOneToOne: false
+            referencedRelation: "brain_processes"
             referencedColumns: ["id"]
           },
         ]
