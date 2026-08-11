@@ -116,11 +116,40 @@ Deno.serve(async (req) => {
     // Áreas/procesos creados por el batch: solo si quedaron sin referencias.
     const { data: props } = await admin
       .from("brain_import_propuestas").select("area_id, proceso_id").eq("batch_id", bid);
+
+    const tieneRef = async (tabla: string, columna: string, valor: string) => {
+      const { count } = await admin.from(tabla)
+        .select("id", { count: "exact", head: true }).eq(columna, valor);
+      return (count ?? 0) > 0;
+    };
+
+    let procesosEliminados = 0;
+    let procesosConservados = 0;
+    const procesosVistos = new Set<string>();
+
     for (const p of props ?? []) {
       if (p.area_id) {
-        const { count } = await admin.from("brain_documents")
-          .select("id", { count: "exact", head: true }).eq("area_id", p.area_id);
-        if ((count ?? 0) === 0) await admin.from("brain_areas").delete().eq("id", p.area_id);
+        if (!(await tieneRef("brain_documents", "area_id", p.area_id))) {
+          await admin.from("brain_areas").delete().eq("id", p.area_id);
+        }
+      }
+      if (p.proceso_id && !procesosVistos.has(p.proceso_id)) {
+        procesosVistos.add(p.proceso_id);
+        const pid = p.proceso_id;
+        const referenciado =
+          (await tieneRef("brain_session_processes", "process_id", pid)) ||
+          (await tieneRef("brain_assignment_processes", "process_id", pid)) ||
+          (await tieneRef("brain_knowledge_items", "proceso_id", pid)) ||
+          (await tieneRef("brain_gaps", "proceso_id", pid)) ||
+          (await tieneRef("brain_contradictions", "proceso_id", pid)) ||
+          (await tieneRef("brain_documents", "proceso_id", pid));
+        if (referenciado) {
+          procesosConservados++;
+        } else {
+          const { error: delErr } = await admin.from("brain_processes").delete().eq("id", pid);
+          if (delErr) procesosConservados++;
+          else procesosEliminados++;
+        }
       }
     }
 
@@ -130,7 +159,12 @@ Deno.serve(async (req) => {
       filas_importadas: restantes,
     }).eq("id", bid);
 
-    return json({ eliminados: eliminables.length, conservados: restantes });
+    return json({
+      eliminados: eliminables.length,
+      conservados: restantes,
+      procesos_eliminados: procesosEliminados,
+      procesos_conservados: procesosConservados,
+    });
   }
 
   // Importación efectiva
