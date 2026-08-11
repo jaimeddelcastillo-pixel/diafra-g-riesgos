@@ -782,6 +782,7 @@ export type Database = {
           iniciada_en: string
           interview_thread_id: string
           items_capturados: number
+          metadata: Json
           objetivo_actual: string | null
           org_id: string
           preguntas_realizadas: number
@@ -800,6 +801,7 @@ export type Database = {
           iniciada_en?: string
           interview_thread_id?: string
           items_capturados?: number
+          metadata?: Json
           objetivo_actual?: string | null
           org_id: string
           preguntas_realizadas?: number
@@ -818,6 +820,7 @@ export type Database = {
           iniciada_en?: string
           interview_thread_id?: string
           items_capturados?: number
+          metadata?: Json
           objetivo_actual?: string | null
           org_id?: string
           preguntas_realizadas?: number
@@ -1281,6 +1284,52 @@ export type Database = {
             columns: ["owner_area_id"]
             isOneToOne: false
             referencedRelation: "brain_areas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      brain_session_processes: {
+        Row: {
+          created_at: string
+          id: string
+          org_id: string
+          process_id: string
+          session_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          org_id: string
+          process_id: string
+          session_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          org_id?: string
+          process_id?: string
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brain_session_processes_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brain_session_processes_process_id_fkey"
+            columns: ["process_id"]
+            isOneToOne: false
+            referencedRelation: "brain_processes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brain_session_processes_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "brain_interview_sessions"
             referencedColumns: ["id"]
           },
         ]
