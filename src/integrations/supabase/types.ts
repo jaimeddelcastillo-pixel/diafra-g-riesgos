@@ -423,6 +423,85 @@ export type Database = {
           },
         ]
       }
+      brain_interview_sessions: {
+        Row: {
+          assignment_id: string | null
+          created_at: string
+          created_by: string | null
+          entrevistado_nombre: string | null
+          entrevistado_profile_id: string | null
+          estado: string
+          finalizada_en: string | null
+          id: string
+          iniciada_en: string
+          interview_thread_id: string
+          items_capturados: number
+          objetivo_actual: string | null
+          org_id: string
+          preguntas_realizadas: number
+          resumen: string | null
+          updated_at: string
+        }
+        Insert: {
+          assignment_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          entrevistado_nombre?: string | null
+          entrevistado_profile_id?: string | null
+          estado?: string
+          finalizada_en?: string | null
+          id?: string
+          iniciada_en?: string
+          interview_thread_id?: string
+          items_capturados?: number
+          objetivo_actual?: string | null
+          org_id: string
+          preguntas_realizadas?: number
+          resumen?: string | null
+          updated_at?: string
+        }
+        Update: {
+          assignment_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          entrevistado_nombre?: string | null
+          entrevistado_profile_id?: string | null
+          estado?: string
+          finalizada_en?: string | null
+          id?: string
+          iniciada_en?: string
+          interview_thread_id?: string
+          items_capturados?: number
+          objetivo_actual?: string | null
+          org_id?: string
+          preguntas_realizadas?: number
+          resumen?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brain_interview_sessions_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "brain_interview_assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brain_interview_sessions_entrevistado_profile_id_fkey"
+            columns: ["entrevistado_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brain_interview_sessions_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       brain_process_areas: {
         Row: {
           area_id: string
