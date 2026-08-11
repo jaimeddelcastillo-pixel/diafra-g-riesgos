@@ -951,6 +951,7 @@ export type Database = {
           proceso_id: string | null
           riesgo_id: string | null
           tipo: string
+          turn_id: string | null
           updated_at: string
           validado_en: string | null
           validado_por: string | null
@@ -971,6 +972,7 @@ export type Database = {
           proceso_id?: string | null
           riesgo_id?: string | null
           tipo: string
+          turn_id?: string | null
           updated_at?: string
           validado_en?: string | null
           validado_por?: string | null
@@ -991,6 +993,7 @@ export type Database = {
           proceso_id?: string | null
           riesgo_id?: string | null
           tipo?: string
+          turn_id?: string | null
           updated_at?: string
           validado_en?: string | null
           validado_por?: string | null
@@ -1036,6 +1039,13 @@ export type Database = {
             columns: ["riesgo_id"]
             isOneToOne: false
             referencedRelation: "riesgos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brain_knowledge_items_turn_id_fkey"
+            columns: ["turn_id"]
+            isOneToOne: false
+            referencedRelation: "brain_interview_turns"
             referencedColumns: ["id"]
           },
           {
