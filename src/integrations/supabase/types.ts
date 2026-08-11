@@ -605,6 +605,84 @@ export type Database = {
           },
         ]
       }
+      brain_knowledge_sources: {
+        Row: {
+          cita_textual: string | null
+          created_at: string
+          descripcion: string | null
+          documento_id: string | null
+          id: string
+          knowledge_item_id: string
+          nombre_fuente: string | null
+          org_id: string
+          profile_id: string | null
+          session_id: string | null
+          tipo_fuente: string
+        }
+        Insert: {
+          cita_textual?: string | null
+          created_at?: string
+          descripcion?: string | null
+          documento_id?: string | null
+          id?: string
+          knowledge_item_id: string
+          nombre_fuente?: string | null
+          org_id: string
+          profile_id?: string | null
+          session_id?: string | null
+          tipo_fuente: string
+        }
+        Update: {
+          cita_textual?: string | null
+          created_at?: string
+          descripcion?: string | null
+          documento_id?: string | null
+          id?: string
+          knowledge_item_id?: string
+          nombre_fuente?: string | null
+          org_id?: string
+          profile_id?: string | null
+          session_id?: string | null
+          tipo_fuente?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brain_knowledge_sources_documento_id_fkey"
+            columns: ["documento_id"]
+            isOneToOne: false
+            referencedRelation: "brain_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brain_knowledge_sources_knowledge_item_id_fkey"
+            columns: ["knowledge_item_id"]
+            isOneToOne: false
+            referencedRelation: "brain_knowledge_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brain_knowledge_sources_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brain_knowledge_sources_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brain_knowledge_sources_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "brain_interview_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       brain_process_areas: {
         Row: {
           area_id: string
