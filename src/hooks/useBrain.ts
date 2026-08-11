@@ -135,3 +135,26 @@ export function calcularCobertura(
   if (base <= 0) return 0;
   return Math.round((validados / base) * 100);
 }
+export function useBrainImportBatches() {
+  return useOrgQuery("import-batches", async (orgId) => {
+    const { data, error } = await supabase
+      .from("brain_import_batches")
+      .select("*")
+      .eq("org_id", orgId)
+      .order("created_at", { ascending: false });
+    if (error) throw error;
+    return data ?? [];
+  });
+}
+
+export function useBrainImportPropuestas() {
+  return useOrgQuery("import-propuestas", async (orgId) => {
+    const { data, error } = await supabase
+      .from("brain_import_propuestas")
+      .select("*")
+      .eq("org_id", orgId)
+      .order("created_at", { ascending: false });
+    if (error) throw error;
+    return data ?? [];
+  });
+}
