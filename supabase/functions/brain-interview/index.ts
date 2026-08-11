@@ -776,11 +776,11 @@ async function execSugerirEntrevistado(
   if (sessionId) {
     const { data: ses } = await admin
       .from("brain_interview_sessions")
-      .select("iniciada_at, created_at")
+      .select("iniciada_en, created_at")
       .eq("id", sessionId)
       .eq("org_id", orgId)
       .maybeSingle();
-    const desde = (ses as any)?.iniciada_at ?? (ses as any)?.created_at;
+    const desde = (ses as any)?.iniciada_en ?? (ses as any)?.created_at;
     if (desde) {
       const { count } = await admin
         .from("brain_interview_assignments")
