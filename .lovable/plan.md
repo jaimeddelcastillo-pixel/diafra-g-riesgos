@@ -19,6 +19,13 @@ Orden de creación por dependencias:
 11. `brain_gaps`
 12. `brain_memoria_viva`
 13. `brain_exports`
+14. `organization_features`
+
+`organization_features` (`org_id`, `feature_key`, `activo`, fechas, UNIQUE (org_id, feature_key)) reemplaza cualquier columna nueva en `organizations`: el módulo es completamente aditivo. Feature key inicial: `institutional_brain`. Escritura solo para super admin / service_role; lectura para miembros de la org.
+
+Cada migración sigue este orden interno: comentario de propósito → CREATE TABLE → GRANT (`authenticated`, `service_role`) → ENABLE RLS → políticas (captura / gobernanza / delete) → triggers de gobernanza donde aplique. Un commit por tabla, sin avanzar a la Fase 2 automáticamente.
+
+Entrega al cerrar la Fase 1: listado de migraciones, esquema final por tabla, FK y constraints, políticas RLS, triggers de gobernanza, `organization_features` con su RLS, y cualquier desviación respecto al diseño acordado.
 
 Campos exactamente como los especificaste. Cada tabla incluye, en la misma migración y en este orden: CREATE TABLE → GRANT (`authenticated`, `service_role`) → ENABLE RLS → políticas.
 
@@ -37,21 +44,31 @@ Nota: las validaciones con `now()` (p. ej. expiración de memoria viva) se resue
 - Rutas registradas en `App.tsx` dentro de `AppLayout`.
 - Hooks de datos por tabla (patrón `useOrgTiposFolio`: react-query + `orgId` de `useAuth`).
 
-### Fase 3 — Pantallas (un commit por pantalla)
-1. `/cerebro` — Dashboard. Estado vacío con datos de la org pre-llenados y botón "Iniciar Cerebro Institucional"; con sesiones: indicador de cobertura, distribución de estados, contadores y accesos directos.
-2. `/cerebro/entrevistas` — asignaciones pendientes + sesiones completadas, "Nueva sesión".
-3. Panel de entrevista — 70/30: chat de consultor (sin burbujas de chatbot) + panel contextual en vivo (tema, proceso, conocimiento capturado, brechas, pendientes).
-4. `/cerebro/conocimiento` — tabla filtrable (tipo/proceso/área/estado), filas expandibles con fuentes y acciones.
-5. `/cerebro/validacion` — ítems `por_validar` / `contradictorio`, con Validar / Rechazar / Modificar / Pedir info.
-6. `/cerebro/documentos`, `/cerebro/contradicciones`, `/cerebro/brechas` — listados con alta y cambio de estado.
-7. `/cerebro/exportar` — genera y descarga `CEREBRO_INSTITUCIONAL_COMPLETO.txt`.
+### Fase 3 — MVP funcional del motor (antes que pantallas secundarias)
+Motor de entrevista end-to-end: `/cerebro` (dashboard con estado vacío e inicio), `/cerebro/entrevistas` y el panel de entrevista 70/30 (chat de consultor + panel contextual en vivo), junto con la edge function y sus herramientas.
+
+Prueba de aceptación obligatoria antes de pasar a la Fase 4:
+pregunta → respuesta → extracción → persistencia en BD → gap/contradicción → siguiente objetivo → siguiente pregunta; y cerrar sesión, iniciar otra, reconstruir contexto desde BD y continuar sin historial previo. No se avanza hasta comprobar ese ciclo completo.
+
+### Fase 4 — Pantallas restantes (un commit por pantalla)
+1. `/cerebro/conocimiento` — tabla filtrable (tipo/proceso/área/estado), filas expandibles con fuentes y acciones.
+2. `/cerebro/validacion` — ítems `por_validar` / `contradictorio`, con Validar / Rechazar / Modificar / Pedir info.
+3. `/cerebro/documentos`, `/cerebro/contradicciones`, `/cerebro/brechas` — listados con alta y cambio de estado.
+4. `/cerebro/exportar` — genera y descarga `CEREBRO_INSTITUCIONAL_COMPLETO.txt`.
 
 Indicador: **"Índice de madurez del conocimiento identificado"** = `validados / (capturados + gaps abiertos) × 100`, en una función `calcularCobertura` aislada, sustituible después por un catálogo de dominios esperados sin cambiar la UI. Nota visible obligatoria: "Índice preliminar — mide la madurez del conocimiento identificado hasta ahora. No representa el universo total de conocimiento institucional de la empresa."
 
-Visibilidad del módulo (misma lógica que el curso): `tieneCerebro = plan ∈ (professional, enterprise) OR org.tiene_cerebro_pagado`. Starter queda fuera del MVP (mensaje de upgrade). Trial: solo la primera sesión de entrevista y sin exportación. Se agrega `organizations.tiene_cerebro_pagado` (boolean, default false) para habilitar el futuro addon.
+Visibilidad del módulo: `tieneCerebro = plan ∈ (professional, enterprise) OR feature 'institutional_brain' activa en organization_features`. Starter queda fuera del MVP (mensaje de upgrade). Trial: solo la primera sesión de entrevista y sin exportación. El Sidebar y la UI son UX, no seguridad: el enforcement real es server-side.
 
-### Fase 4 — Edge function `brain-interview` (un commit por herramienta)
+### Edge function `brain-interview` (parte de la Fase 3 — un commit por herramienta)
 Función nueva, misma base que `chat-asistente` (Anthropic + service role + CORS POST/OPTIONS), archivo separado; `chat-asistente` no se modifica.
+
+Validación server-side, en este orden exacto, antes de cualquier operación con service_role:
+1. Recibir el JWT del usuario. 2. Validar el usuario. 3. Resolver `org_id` server-side (nunca del frontend). 4. Resolver el rol server-side. 5. Verificar acceso a `institutional_brain` en `organization_features`. 6. Verificar restricciones de plan/trial. 7. Derivar internamente el `org_id`. 8. Solo entonces ejecutar con service_role.
+
+Todas las herramientas internas trabajan con el `org_id` resuelto por la función — nunca con uno enviado por el frontend o por el modelo.
+
+Enforcement server-side de plan/trial (no solo en UI) en: crear sesión, iniciar entrevista, exportar cerebro, validar conocimiento y resolver contradicciones. Trial con una sesión existente → segunda sesión rechazada en backend; Trial intentando exportar → rechazado en backend.
 
 Herramientas, en este orden de commits:
 1. `obtener_contexto_cerebro`
@@ -65,7 +82,7 @@ Flujo por turno tal como lo definiste: contexto → análisis → guardar → co
 
 Inyección de contexto al inicio de cada sesión: empresa, marco regulatorio declarado con estado `por_validar`, entrevistado (nombre, puesto, capa, nivel de autoridad), conocimiento previo y gaps filtrados para ese entrevistado.
 
-Prompt: **sin versión provisional**. Antes de crear la edge function se inserta en `agent_prompts` (`nombre = 'cerebro_institucional'`) el contenido completo de `PROMPT_MAESTRO_CEREBRO_INSTITUCIONAL_EMPRESA_REGULADA_v2.txt`, que se entrega al iniciar la Fase 4. La función lo lee de ahí igual que `chat-asistente` lee `dm` y `farma`; esos prompts no se tocan.
+Prompt: **sin versión provisional**. Antes de crear la edge function se inserta en `agent_prompts` (`nombre = 'cerebro_institucional'`) el contenido completo de `PROMPT_MAESTRO_CEREBRO_INSTITUCIONAL_EMPRESA_REGULADA_v2.txt`, que se entrega al llegar al motor de entrevista. La función lo lee de ahí igual que `chat-asistente` lee `dm` y `farma`; esos prompts no se tocan.
 
 Regla de la edge function (corre con service_role): `guardar_conocimiento`, `registrar_brecha` y `registrar_contradiccion` siempre dejan estado inicial `capturado` / `abierta`. Nunca transicionan a `validado` ni `resuelta`; esas transiciones solo ocurren por acción humana autenticada desde `/cerebro/validacion`.
 
@@ -77,10 +94,13 @@ Regla de la edge function (corre con service_role): `guardar_conocimiento`, `reg
 - `brain_interview_sessions.interview_thread_id` (renombrado desde `conversation_id`) guarda el vínculo con el historial: UUID libre, sin FK a ninguna tabla de chat. El vínculo es por convención, no por constraint.
 - Documentos en el bucket de Storage existente, ruta `org_id/brain/...`, descarga por URL firmada.
 - Sin campo de confianza numérica; el `estado` es el indicador.
-- Sin cambios de esquema en tablas existentes; las FK hacia `folios`/`riesgos`/`profiles`/`organizations` son solo referencias salientes.
+- Sin cambios de esquema en tablas existentes; las FK hacia `folios`/`riesgos`/`profiles`/`organizations` son solo referencias salientes. Los flags del módulo viven en `organization_features`, no en `organizations`.
 
 ## Confirmado
 - Prompt Maestro v2 obligatorio desde el inicio, sin provisional; se entrega al llegar a la Fase 4.
 - Visibilidad: Professional y Enterprise; Trial con una sola sesión y sin exportar; Starter fuera del MVP.
 - "Índice de madurez del conocimiento identificado" en lugar de "cobertura", `interview_thread_id`, y RLS con separación captura/gobernanza.
-- Arrancamos por la Fase 1: un commit por tabla, en el orden de dependencias listado.
+- `organization_features` en vez de columnas nuevas en `organizations`.
+- Fase 3 = MVP funcional del motor, con prueba de aceptación obligatoria antes de seguir.
+- Validación server-side de identidad, org, rol, feature y plan en `brain-interview`.
+- Arrancamos por la Fase 1: un commit por tabla, en el orden de dependencias listado, y entrega de resultados antes de autorizar la Fase 2.
