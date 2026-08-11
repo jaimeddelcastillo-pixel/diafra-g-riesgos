@@ -1,115 +1,90 @@
-import { LayoutDashboard, FolderOpen, Settings, BookOpen, ShieldCheck, LogOut, LifeBuoy, Ticket, Library, Sparkles, GraduationCap, FileBadge, FileText, Search, Award, BarChart3, ClipboardCheck, Wrench, Brain, MessagesSquare, Lightbulb, BadgeCheck, Files, GitCompare, CircleAlert, Download } from "lucide-react";
-import { NavLink } from "@/components/NavLink";
+import { useEffect, useMemo, useState } from "react";
+import { LogOut } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { useCerebroAcceso } from "@/hooks/useCerebroAcceso";
+import { useNavigationItems } from "@/hooks/useNavigationItems";
+import { NavGroup, NavLeaf, groupContainsActive } from "@/components/sidebar/NavGroup";
+import { SECTION_LABELS, type NavItem } from "@/config/navigation";
 import { getOrgLogoUrl } from "@/lib/orgLogo";
+import { cn } from "@/lib/utils";
 import {
-  Sidebar,
-  SidebarContent,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarHeader,
-  useSidebar,
+  Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel,
+  SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarHeader, useSidebar,
 } from "@/components/ui/sidebar";
 
-const adminNavItems = [
-  { title: "Panel TRACEA", url: "/admin", icon: ShieldCheck },
-  { title: "Tickets", url: "/admin/tickets", icon: Ticket },
-  { title: "Agentes IA", url: "/admin/agentes-ia", icon: Sparkles },
-  { title: "Protocolos (addon)", url: "/admin/protocolos", icon: FileBadge },
-  { title: "Recursos públicos", url: "/admin/recursos", icon: Library },
-  { title: "Cursos", url: "/admin/cursos", icon: GraduationCap },
-  { title: "DC-3 pendientes", url: "/admin/dc3", icon: ClipboardCheck },
-  { title: "Gestión de Folios", url: "/admin/folios", icon: FileText },
-  { title: "Reeditar códigos", url: "/admin/super/reeditar-codigos", icon: Wrench },
-];
+const STORAGE_KEY = "tracea_sidebar_open_group";
 
-const orgNavItems = [
-  { title: "Dashboard", url: "/", icon: LayoutDashboard, onboarding: undefined as string | undefined },
-  { title: "Mis Folios", url: "/folios", icon: FolderOpen, onboarding: "folios" },
-  { title: "Catálogos", url: "/catalogos", icon: BookOpen, onboarding: undefined },
-  { title: "Recursos", url: "/recursos", icon: Library, onboarding: "recursos" },
-  { title: "Mis Protocolos", url: "/mis-protocolos", icon: FileBadge, onboarding: undefined },
-  { title: "Capacitación", url: "/capacitacion", icon: GraduationCap, onboarding: "capacitacion" },
-  { title: "Mis Diplomas", url: "/mis-diplomas", icon: Award, onboarding: undefined },
-  { title: "Auditoría", url: "/auditoria", icon: Search, onboarding: undefined },
-  { title: "Configuración", url: "/configuracion", icon: Settings, onboarding: undefined },
-];
-
-const cerebroNavItems = [
-  { title: "Panorama", url: "/cerebro", icon: Brain },
-  { title: "Entrevistas", url: "/cerebro/entrevistas", icon: MessagesSquare },
-  { title: "Conocimiento", url: "/cerebro/conocimiento", icon: Lightbulb },
-  { title: "Validación", url: "/cerebro/validacion", icon: BadgeCheck },
-  { title: "Documentos", url: "/cerebro/documentos", icon: Files },
-  { title: "Contradicciones", url: "/cerebro/contradicciones", icon: GitCompare },
-  { title: "Brechas", url: "/cerebro/brechas", icon: CircleAlert },
-  { title: "Exportar", url: "/cerebro/exportar", icon: Download },
-];
+/** Punto verde en "Mis Folios" por 24h tras elegir crear el primer folio. */
+function useBadgeFolios() {
+  const at = typeof window !== "undefined"
+    ? Number(localStorage.getItem("tracea_onboarding_first_folio_at") ?? 0)
+    : 0;
+  return at > 0 && Date.now() - at < 24 * 60 * 60 * 1000;
+}
 
 export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
-  const location = useLocation();
+  const { pathname } = useLocation();
   const navigate = useNavigate();
-  const { org, isSuperAdmin, isImpersonating, stopImpersonation, hasRole } = useAuth();
-  const { tieneCerebro } = useCerebroAcceso();
+  const { org, isImpersonating, stopImpersonation } = useAuth();
+  const { sections, isAdminNav } = useNavigationItems();
+  const mostrarBadgeFolios = useBadgeFolios();
 
-  const showOrgNav = !isSuperAdmin() || isImpersonating;
-  const showAdminNav = isSuperAdmin() && !isImpersonating;
+  const [openId, setOpenId] = useState<string | null>(
+    () => (typeof window !== "undefined" ? localStorage.getItem(STORAGE_KEY) : null),
+  );
 
-  // Solo admin y responsable_sanitario ven "Ayuda"
-  const puedeAyuda = hasRole("admin") || hasRole("responsable_sanitario");
-  const puedeCumplimiento = hasRole("admin") || hasRole("responsable_sanitario") || isSuperAdmin();
-  const navItems = showOrgNav
-    ? [
-        ...orgNavItems,
-        ...(puedeCumplimiento ? [{ title: "Cumplimiento", url: "/cumplimiento", icon: BarChart3, onboarding: undefined }] : []),
-        ...(puedeAyuda ? [{ title: "Ayuda", url: "/soporte", icon: LifeBuoy, onboarding: undefined }] : []),
-      ]
-    : adminNavItems;
-  const orgLabel = isImpersonating ? org?.nombre : (showAdminNav ? "Panel TRACEA" : (org?.nombre ?? "Gestión de Riesgos"));
-  const orgLogo = showOrgNav ? getOrgLogoUrl(org?.logo_url) : null;
+  // La ruta activa tiene prioridad absoluta sobre el estado persistido.
+  const activeGroupId = useMemo(() => {
+    for (const s of sections) {
+      const g = s.items.find((i) => i.children && groupContainsActive(pathname, i));
+      if (g) return g.id;
+    }
+    return null;
+  }, [sections, pathname]);
 
-  // Badge punto verde en "Mis Folios" por 24h tras elegir crear primer folio
-  const primerFolioAt = typeof window !== "undefined"
-    ? Number(localStorage.getItem("tracea_onboarding_first_folio_at") ?? 0)
-    : 0;
-  const mostrarBadgeFolios =
-    primerFolioAt > 0 && Date.now() - primerFolioAt < 24 * 60 * 60 * 1000;
+  useEffect(() => {
+    if (activeGroupId) setOpenId(activeGroupId);
+  }, [activeGroupId]);
+
+  const setOpen = (id: string, open: boolean) => {
+    const next = open ? id : null;
+    setOpenId(next);
+    if (next) localStorage.setItem(STORAGE_KEY, next);
+    else localStorage.removeItem(STORAGE_KEY);
+  };
+
+  const orgLogo = !isAdminNav ? getOrgLogoUrl(org?.logo_url) : null;
+
+  const renderExtra = (child: NavItem) =>
+    child.route === "/folios" && mostrarBadgeFolios ? (
+      <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" title="Nuevo" />
+    ) : null;
 
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader className="p-4">
         <div className="flex items-center gap-3">
           {orgLogo ? (
-            <img
-              src={orgLogo}
-              alt={org?.nombre ?? "Logo"}
-              className="h-8 w-8 object-contain rounded bg-white/10 p-0.5 flex-shrink-0"
-            />
+            <img src={orgLogo} alt={org?.nombre ?? "Logo"} className="h-8 w-8 object-contain rounded bg-white/10 p-0.5 flex-shrink-0" />
           ) : (
             <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 flex-shrink-0">
-              <rect x="1" y="1" width="17" height="17" rx="3" fill="white" fillOpacity="0.15"/>
-              <rect x="22" y="1" width="17" height="17" rx="3" fill="#185FA5"/>
-              <rect x="1" y="22" width="17" height="17" rx="3" fill="#185FA5"/>
-              <rect x="22" y="22" width="17" height="17" rx="3" fill="#8587E8"/>
-              <path d="M18 18L22 22" stroke="#8587E8" strokeWidth="2" strokeDasharray="2.5 2" strokeLinecap="round"/>
-              <path d="M27 30.5L30.5 34L36 27" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+              <rect x="1" y="1" width="17" height="17" rx="3" fill="white" fillOpacity="0.15" />
+              <rect x="22" y="1" width="17" height="17" rx="3" fill="#185FA5" />
+              <rect x="1" y="22" width="17" height="17" rx="3" fill="#185FA5" />
+              <rect x="22" y="22" width="17" height="17" rx="3" fill="#8587E8" />
+              <path d="M18 18L22 22" stroke="#8587E8" strokeWidth="2" strokeDasharray="2.5 2" strokeLinecap="round" />
+              <path d="M27 30.5L30.5 34L36 27" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           )}
           {!collapsed && (
             <div className="min-w-0">
               <h1 className="text-sm font-bold text-sidebar-foreground tracking-wide truncate">
-                {showOrgNav ? (org?.nombre ?? "TRACEA") : "TRACEA"}
+                {isAdminNav ? "TRACEA" : (org?.nombre ?? "TRACEA")}
               </h1>
               <p className="text-[10px] text-sidebar-foreground/60 leading-tight truncate max-w-[120px]">
-                {showOrgNav ? "Gestión de Riesgos" : orgLabel}
+                {isAdminNav ? "Panel TRACEA" : "Gestión de Riesgos"}
               </p>
             </div>
           )}
@@ -117,67 +92,37 @@ export function AppSidebar() {
       </SidebarHeader>
 
       <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupLabel className="text-sidebar-foreground/50 text-[10px] uppercase tracking-widest">
-            {!collapsed && "Navegación"}
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {navItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
-                    <NavLink
-                      to={item.url}
-                      end={item.url === "/" || item.url === "/admin"}
-                      className="hover:bg-sidebar-accent/50"
-                      activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
-                      data-onboarding={(item as any).onboarding}
-                    >
-                      <item.icon className="mr-2 h-4 w-4" />
-                      {!collapsed && (
-                        <span className="flex items-center gap-2">
-                          {item.title}
-                          {item.url === "/folios" && mostrarBadgeFolios && (
-                            <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" title="Nuevo" />
-                          )}
-                        </span>
-                      )}
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        {showOrgNav && tieneCerebro && (
-          <SidebarGroup>
-            <SidebarGroupLabel className="text-sidebar-foreground/50 text-[10px] uppercase tracking-widest">
-              {!collapsed && "Cerebro Institucional"}
+        {sections.map(({ section, items }) => (
+          <SidebarGroup key={section}>
+            <SidebarGroupLabel
+              className={cn(
+                "text-[10px] uppercase tracking-widest",
+                section === "nucleo" ? "text-sidebar-primary/70" : "text-sidebar-foreground/50",
+              )}
+            >
+              {!collapsed && SECTION_LABELS[section]}
             </SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
-                {cerebroNavItems.map((item) => (
-                  <SidebarMenuItem key={item.url}>
-                    <SidebarMenuButton asChild>
-                      <NavLink
-                        to={item.url}
-                        end={item.url === "/cerebro"}
-                        className="hover:bg-sidebar-accent/50"
-                        activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
-                      >
-                        <item.icon className="mr-2 h-4 w-4" />
-                        {!collapsed && <span>{item.title}</span>}
-                      </NavLink>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
+                {items.map((item) =>
+                  item.children ? (
+                    <NavGroup
+                      key={item.id}
+                      item={item}
+                      pathname={pathname}
+                      open={openId === item.id}
+                      onOpenChange={(o) => setOpen(item.id, o)}
+                      renderExtra={renderExtra}
+                    />
+                  ) : (
+                    <NavLeaf key={item.id} item={item} pathname={pathname} extra={renderExtra(item)} />
+                  ),
+                )}
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
-        )}
+        ))}
 
-        {/* Salir de la empresa impersonada */}
         {isImpersonating && (
           <SidebarGroup>
             <SidebarGroupContent>
