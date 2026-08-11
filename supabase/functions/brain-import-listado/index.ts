@@ -87,6 +87,52 @@ Deno.serve(async (req) => {
     return json({ batch_id: batch.id, upload: signed ?? null, storage_path: path });
   }
 
+  // Reversión controlada: nunca elimina conocimiento institucional.
+  if (accion === "revertir") {
+    const bid = String(body.batch_id ?? "");
+    const { data: b } = await admin
+      .from("brain_import_batches").select("id, org_id").eq("id", bid).maybeSingle();
+    if (!b || b.org_id !== orgId) return json({ error: "batch_fuera_de_org" }, 403);
+
+    const { data: docsBatch } = await admin
+      .from("brain_documents").select("id").eq("import_batch_id", bid);
+    const ids = (docsBatch ?? []).map((d: any) => d.id);
+    if (ids.length === 0) return json({ error: "sin_documentos" }, 400);
+
+    const { data: refs } = await admin
+      .from("brain_knowledge_sources").select("document_id").in("document_id", ids);
+    const referenciados = new Set((refs ?? []).map((r: any) => r.document_id));
+    const eliminables = ids.filter((id) => !referenciados.has(id));
+
+    if (body.solo_diagnostico) {
+      return json({ total: ids.length, referenciados: referenciados.size, eliminables: eliminables.length });
+    }
+    if (eliminables.length === 0) {
+      return json({ error: "todos_referenciados", total: ids.length }, 409);
+    }
+
+    await admin.from("brain_documents").delete().in("id", eliminables);
+
+    // Áreas/procesos creados por el batch: solo si quedaron sin referencias.
+    const { data: props } = await admin
+      .from("brain_import_propuestas").select("area_id, proceso_id").eq("batch_id", bid);
+    for (const p of props ?? []) {
+      if (p.area_id) {
+        const { count } = await admin.from("brain_documents")
+          .select("id", { count: "exact", head: true }).eq("area_id", p.area_id);
+        if ((count ?? 0) === 0) await admin.from("brain_areas").delete().eq("id", p.area_id);
+      }
+    }
+
+    const restantes = ids.length - eliminables.length;
+    await admin.from("brain_import_batches").update({
+      estado: restantes === 0 ? "revertido" : "parcial",
+      filas_importadas: restantes,
+    }).eq("id", bid);
+
+    return json({ eliminados: eliminables.length, conservados: restantes });
+  }
+
   // Importación efectiva
   const batchId = String(body.batch_id ?? "");
   if (!batchId) return json({ error: "batch_requerido" }, 400);
