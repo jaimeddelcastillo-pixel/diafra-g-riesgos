@@ -881,11 +881,13 @@ export type Database = {
           estado: string
           gaps_created: number
           id: string
+          institutional_effects: boolean
           interviewees_suggested: number
           knowledge_created: number
           operations: Json
           org_id: string
           session_id: string
+          transcript_persisted: boolean
         }
         Insert: {
           completed_at?: string | null
@@ -896,11 +898,13 @@ export type Database = {
           estado?: string
           gaps_created?: number
           id: string
+          institutional_effects?: boolean
           interviewees_suggested?: number
           knowledge_created?: number
           operations?: Json
           org_id: string
           session_id: string
+          transcript_persisted?: boolean
         }
         Update: {
           completed_at?: string | null
@@ -911,11 +915,13 @@ export type Database = {
           estado?: string
           gaps_created?: number
           id?: string
+          institutional_effects?: boolean
           interviewees_suggested?: number
           knowledge_created?: number
           operations?: Json
           org_id?: string
           session_id?: string
+          transcript_persisted?: boolean
         }
         Relationships: [
           {
@@ -3203,14 +3209,21 @@ export type Database = {
         Returns: string
       }
       brain_turn_claim_operation: {
-        Args: { p_clave: string; p_org_id: string; p_turn_id: string }
+        Args: {
+          p_clave: string
+          p_org_id: string
+          p_stale_seconds?: number
+          p_turn_id: string
+        }
         Returns: Json
       }
       brain_turn_set_operation: {
         Args: {
           p_clave: string
+          p_error?: string
           p_org_id: string
           p_resultado: Json
+          p_status?: string
           p_turn_id: string
         }
         Returns: undefined

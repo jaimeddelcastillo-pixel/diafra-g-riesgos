@@ -963,7 +963,10 @@ type TurnMetrics = {
   gaps_created: number;
   contradictions_created: number;
   interviewees_suggested: number;
-  persisted: boolean;
+  /** Se guardó únicamente conversación (brain_interview_messages). */
+  transcript_persisted: boolean;
+  /** Se creó/modificó al menos un efecto institucional (knowledge/gaps/contradicciones/asignaciones). */
+  institutional_effects: boolean;
 };
 
 async function stampTurn(admin: any, table: string, ids: string[], orgId: string, turnId: string) {
@@ -1010,9 +1013,11 @@ Deno.serve(async (req) => {
     const orgId: string = org.id;
 
     // ── 3. Feature institutional_brain + restricciones de plan
-    const { data: superRole } = await admin
-      .from("user_roles").select("role").eq("user_id", user.id).eq("role", "super_admin").maybeSingle();
-    const esSuperAdmin = !!superRole;
+    const { data: rolesRows } = await admin
+      .from("user_roles").select("role").eq("user_id", user.id);
+    const roles = (rolesRows ?? []).map((r: any) => String(r.role));
+    const esSuperAdmin = roles.includes("super_admin");
+    const esAdmin = esSuperAdmin || roles.includes("admin") || String((member as any)?.role ?? "") === "admin";
     const plan = String(org.plan ?? "").toLowerCase();
     const planIncluye = ["professional", "enterprise"].includes(plan);
     const { data: feat } = await admin
@@ -1034,7 +1039,7 @@ Deno.serve(async (req) => {
       const turnId = partes[partes.length - 1];
       const { data: turno } = await admin
         .from("brain_interview_turns")
-        .select("id, session_id, estado, operations, knowledge_created, gaps_created, contradictions_created, interviewees_suggested, current_objective, error, created_at, completed_at")
+        .select("id, session_id, estado, operations, transcript_persisted, institutional_effects, knowledge_created, gaps_created, contradictions_created, interviewees_suggested, current_objective, error, created_at, completed_at")
         .eq("id", turnId)
         .eq("org_id", orgId)
         .maybeSingle();
@@ -1056,6 +1061,19 @@ Deno.serve(async (req) => {
     const action: string = ACCIONES.includes(body?.action) ? body.action : "mensaje";
     const turnId: string | null = typeof body?.turn_id === "string" && UUID_RE.test(body.turn_id) ? body.turn_id : null;
     const content: string = String(body?.content ?? "").trim();
+
+    // completion_reason solicitado por el cliente: el backend decide si está autorizado.
+    // - user_closed      → usuario autorizado de la sesión (validado en el paso 5)
+    // - admin_closed     → solo con rol admin/super_admin resuelto server-side
+    // - objectives_complete → NUNCA lo impone el cliente; lo determina el motor
+    const razonSolicitada: string | null =
+      typeof body?.completion_reason === "string" ? body.completion_reason : null;
+    if (action === "cerrar" && razonSolicitada === "admin_closed" && !esAdmin) {
+      return json({
+        error: "Solo un administrador puede cerrar la sesión como admin_closed",
+        code: "forbidden_completion_reason",
+      }, 403);
+    }
 
     // ── 5. sesión pertenece a la org resuelta
     const sessionId: string | null = typeof body?.session_id === "string" ? body.session_id : null;
@@ -1115,7 +1133,7 @@ Deno.serve(async (req) => {
     // ── 6. Idempotencia de turno
     const { data: turnoPrev } = await admin
       .from("brain_interview_turns")
-      .select("id, estado, knowledge_created, gaps_created, contradictions_created, interviewees_suggested, current_objective")
+      .select("id, estado, operations, transcript_persisted, institutional_effects, knowledge_created, gaps_created, contradictions_created, interviewees_suggested, current_objective")
       .eq("id", turnId)
       .eq("org_id", orgId)
       .maybeSingle();
@@ -1142,6 +1160,31 @@ Deno.serve(async (req) => {
           replay: true,
         });
       });
+    }
+
+    // ── 6b. Turno fallido con efectos institucionales ya persistidos:
+    // NO se reejecuta (evita duplicar conocimiento semánticamente equivalente).
+    // Se devuelve el estado recuperado y el cliente debe continuar con un turno NUEVO.
+    if (turnoPrev?.estado === "fallido" && turnoPrev.institutional_effects === true) {
+      const ops = (turnoPrev.operations ?? {}) as Record<string, any>;
+      const completadas = Object.entries(ops)
+        .filter(([, v]: any) => v?.status === "completed")
+        .map(([k, v]: any) => ({ operation_key: k, tool: k.split(":")[0], completed_at: v?.completed_at ?? null }));
+      return json({
+        error: "El turno falló después de persistir efectos institucionales. No se reejecuta para no duplicar conocimiento.",
+        code: "partial_effects",
+        turn_id: turnId,
+        session_id: sessionId,
+        retryable: false,
+        next_action: "nuevo_turno",
+        recovered: {
+          knowledge_created: turnoPrev.knowledge_created,
+          gaps_created: turnoPrev.gaps_created,
+          contradictions_created: turnoPrev.contradictions_created,
+          interviewees_suggested: turnoPrev.interviewees_suggested,
+          operaciones_completadas: completadas,
+        },
+      }, 409);
     }
 
     if (!turnoPrev) {
@@ -1188,16 +1231,29 @@ Deno.serve(async (req) => {
 
     const systemPromptBase = (promptRow.data as any).system_prompt + bloque + bloqueAccion;
 
-    // Mensaje del entrevistado
+    // Mensaje del entrevistado (idempotente por turn_id + role)
     if (action === "mensaje") {
       if (!content) {
         await admin.from("brain_interview_turns").update({ estado: "fallido", error: "tool_error: contenido vacío" }).eq("id", turnId);
         return json({ error: "content requerido" }, 400);
       }
-      await admin.from("brain_interview_messages").insert({
-        org_id: orgId, session_id: sessionId, turn_id: turnId, role: "user", content,
-      });
-      historial.push({ role: "user", content });
+      const { data: yaUser } = await admin
+        .from("brain_interview_messages")
+        .select("id, content")
+        .eq("turn_id", turnId).eq("org_id", orgId).eq("role", "user")
+        .maybeSingle();
+      if (!yaUser) {
+        const { error: msgErr } = await admin.from("brain_interview_messages").insert({
+          org_id: orgId, session_id: sessionId, turn_id: turnId, role: "user", content,
+        });
+        // 23505 = ya insertado por una ejecución concurrente del mismo turno
+        if (msgErr && (msgErr as any).code !== "23505") return json({ error: msgErr.message }, 500);
+        await admin.from("brain_interview_turns")
+          .update({ transcript_persisted: true }).eq("id", turnId).eq("org_id", orgId);
+        historial.push({ role: "user", content });
+      } else if (!historial.some((m: any) => m.role === "user" && m.content === yaUser.content)) {
+        historial.push({ role: "user", content: yaUser.content });
+      }
     }
 
     const turnMessages: any[] = historial.length
@@ -1211,41 +1267,78 @@ Deno.serve(async (req) => {
     }
 
     const metrics: TurnMetrics = {
-      knowledge_created: 0, gaps_created: 0, contradictions_created: 0, interviewees_suggested: 0, persisted: false,
+      knowledge_created: 0, gaps_created: 0, contradictions_created: 0, interviewees_suggested: 0,
+      transcript_persisted: action === "mensaje", institutional_effects: false,
     };
     let currentObjective: any = null;
     let executedToolCalls = 0;
     let fullText = "";
+
+    /** Marca el turno como portador de efectos institucionales (antes de ejecutar la herramienta). */
+    const marcarEfectos = async () => {
+      if (metrics.institutional_effects) return;
+      metrics.institutional_effects = true;
+      await admin.from("brain_interview_turns")
+        .update({ institutional_effects: true }).eq("id", turnId).eq("org_id", orgId);
+    };
 
     const idem = async (toolName: string, payload: any, fn: () => Promise<any>) => {
       const clave = `${toolName}:${await sha256hex(canonical(payload ?? {}))}`;
       const { data: claim } = await admin.rpc("brain_turn_claim_operation", {
         p_turn_id: turnId, p_org_id: orgId, p_clave: clave,
       });
+
       if (!claim?.claimed) {
-        const prev = claim?.resultado;
-        if (prev && prev !== null && prev.status !== "in_progress") return { ...prev, idempotente: true };
-        return { ok: true, idempotente: true, nota: "Operación idéntica ya ejecutada en este turno." };
+        if (claim?.status === "completed") {
+          const prev = claim?.resultado ?? null;
+          return prev && typeof prev === "object"
+            ? { ...prev, idempotente: true }
+            : { ok: true, idempotente: true, nota: "Operación idéntica ya completada en este turno." };
+        }
+        // in_progress vivo: NUNCA se devuelve como resultado válido
+        return {
+          ok: false,
+          idempotente: true,
+          en_proceso: true,
+          error: "Esta operación ya está en curso en este turno. No la repitas ni asumas su resultado.",
+        };
       }
-      metrics.persisted = true;
-      const result = await fn();
-      await admin.rpc("brain_turn_set_operation", {
-        p_turn_id: turnId, p_org_id: orgId, p_clave: clave, p_resultado: result,
-      });
-      return result;
+
+      await marcarEfectos();
+      try {
+        const result = await fn();
+        await admin.rpc("brain_turn_set_operation", {
+          p_turn_id: turnId, p_org_id: orgId, p_clave: clave, p_resultado: result, p_status: "completed",
+        });
+        return claim?.reclaimed ? { ...result, reintentada: true } : result;
+      } catch (e) {
+        await admin.rpc("brain_turn_set_operation", {
+          p_turn_id: turnId, p_org_id: orgId, p_clave: clave, p_resultado: null,
+          p_status: "failed", p_error: String(e).slice(0, 500),
+        });
+        throw e;
+      }
     };
 
     return streamResponse(async (controller) => {
       const fallar = async (causa: string, mensaje: string) => {
-        const code = metrics.persisted ? "post_persist" : "pre_persist";
+        // Guardar solo el transcript NO convierte el fallo en post_persist.
+        const code = metrics.institutional_effects ? "post_persist" : "pre_persist";
         await admin.from("brain_interview_turns")
-          .update({ estado: "fallido", error: `${causa}: ${mensaje}`.slice(0, 1000) })
+          .update({
+            estado: "fallido",
+            error: `${causa}: ${mensaje}`.slice(0, 1000),
+            transcript_persisted: metrics.transcript_persisted,
+            institutional_effects: metrics.institutional_effects,
+          })
           .eq("id", turnId).eq("org_id", orgId);
         sse(controller, "error", {
           turn_id: turnId,
           code,
+          transcript_persisted: metrics.transcript_persisted,
+          institutional_effects: metrics.institutional_effects,
           message: code === "post_persist"
-            ? "El turno ya produjo cambios persistidos. Recupera el resultado del turno."
+            ? "El turno ya produjo efectos institucionales. Recupera el estado del turno y continúa en un turno nuevo."
             : "No se pudo procesar el turno. Puedes reintentar con el mismo turn_id.",
           retryable: code === "pre_persist",
         });
@@ -1367,13 +1460,18 @@ Deno.serve(async (req) => {
           turnMessages.push({ role: "user", content: toolResults });
         }
 
-        // ── Persistir mensaje del asistente
+        // ── Persistir mensaje del asistente (idempotente por turn_id + role)
         if (fullText.trim()) {
-          metrics.persisted = true;
-          await admin.from("brain_interview_messages").insert({
+          metrics.transcript_persisted = true;
+          const { error: aErr } = await admin.from("brain_interview_messages").insert({
             org_id: orgId, session_id: sessionId, turn_id: turnId, role: "assistant", content: fullText,
             metadata: { action },
           });
+          if (aErr && (aErr as any).code === "23505") {
+            await admin.from("brain_interview_messages")
+              .update({ content: fullText, metadata: { action } })
+              .eq("turn_id", turnId).eq("org_id", orgId).eq("role", "assistant");
+          }
         }
 
         let sessionStatus = action === "cerrar" ? "completada" : "en_proceso";
@@ -1399,12 +1497,17 @@ Deno.serve(async (req) => {
             if (t in gapsPorTipo) gapsPorTipo[t] += 1;
           }
 
-          let completionReason = RAZONES_CIERRE.includes(body?.completion_reason) ? body.completion_reason : null;
-          if (!completionReason) {
-            const obj = await execGetNextInterviewObjective(admin, orgId, sessionId, {});
-            completionReason = (obj?.bloques_pendientes ?? []).length === 0 && (obj?.brechas_prioritarias ?? []).length === 0
-              ? "objectives_complete"
-              : "user_closed";
+          // El motor decide si los objetivos están completos; el cliente no puede imponerlo.
+          const obj = await execGetNextInterviewObjective(admin, orgId, sessionId, {});
+          const objetivosCompletos =
+            (obj?.bloques_pendientes ?? []).length === 0 && (obj?.brechas_prioritarias ?? []).length === 0;
+          let completionReason: string;
+          if (razonSolicitada === "admin_closed" && esAdmin) {
+            completionReason = "admin_closed";
+          } else if (objetivosCompletos) {
+            completionReason = "objectives_complete";
+          } else {
+            completionReason = "user_closed";
           }
 
           const finalizadaEn = new Date();
@@ -1430,6 +1533,8 @@ Deno.serve(async (req) => {
 
           await admin.from("brain_interview_turns").update({
             estado: "completado",
+            transcript_persisted: metrics.transcript_persisted,
+            institutional_effects: metrics.institutional_effects,
             knowledge_created: metrics.knowledge_created,
             gaps_created: metrics.gaps_created,
             contradictions_created: metrics.contradictions_created,
@@ -1462,6 +1567,8 @@ Deno.serve(async (req) => {
 
         await admin.from("brain_interview_turns").update({
           estado: "completado",
+          transcript_persisted: metrics.transcript_persisted,
+          institutional_effects: metrics.institutional_effects,
           knowledge_created: metrics.knowledge_created,
           gaps_created: metrics.gaps_created,
           contradictions_created: metrics.contradictions_created,
