@@ -1,7 +1,8 @@
-import { LayoutDashboard, FolderOpen, Settings, BookOpen, ShieldCheck, LogOut, LifeBuoy, Ticket, Library, Sparkles, GraduationCap, FileBadge, FileText, Search, Award, BarChart3, ClipboardCheck, Wrench } from "lucide-react";
+import { LayoutDashboard, FolderOpen, Settings, BookOpen, ShieldCheck, LogOut, LifeBuoy, Ticket, Library, Sparkles, GraduationCap, FileBadge, FileText, Search, Award, BarChart3, ClipboardCheck, Wrench, Brain, MessagesSquare, Lightbulb, BadgeCheck, Files, GitCompare, CircleAlert, Download } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { useCerebroAcceso } from "@/hooks/useCerebroAcceso";
 import { getOrgLogoUrl } from "@/lib/orgLogo";
 import {
   Sidebar,
@@ -40,12 +41,24 @@ const orgNavItems = [
   { title: "Configuración", url: "/configuracion", icon: Settings, onboarding: undefined },
 ];
 
+const cerebroNavItems = [
+  { title: "Panorama", url: "/cerebro", icon: Brain },
+  { title: "Entrevistas", url: "/cerebro/entrevistas", icon: MessagesSquare },
+  { title: "Conocimiento", url: "/cerebro/conocimiento", icon: Lightbulb },
+  { title: "Validación", url: "/cerebro/validacion", icon: BadgeCheck },
+  { title: "Documentos", url: "/cerebro/documentos", icon: Files },
+  { title: "Contradicciones", url: "/cerebro/contradicciones", icon: GitCompare },
+  { title: "Brechas", url: "/cerebro/brechas", icon: CircleAlert },
+  { title: "Exportar", url: "/cerebro/exportar", icon: Download },
+];
+
 export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const location = useLocation();
   const navigate = useNavigate();
   const { org, isSuperAdmin, isImpersonating, stopImpersonation, hasRole } = useAuth();
+  const { tieneCerebro } = useCerebroAcceso();
 
   const showOrgNav = !isSuperAdmin() || isImpersonating;
   const showAdminNav = isSuperAdmin() && !isImpersonating;
@@ -136,6 +149,33 @@ export function AppSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+
+        {showOrgNav && tieneCerebro && (
+          <SidebarGroup>
+            <SidebarGroupLabel className="text-sidebar-foreground/50 text-[10px] uppercase tracking-widest">
+              {!collapsed && "Cerebro Institucional"}
+            </SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {cerebroNavItems.map((item) => (
+                  <SidebarMenuItem key={item.url}>
+                    <SidebarMenuButton asChild>
+                      <NavLink
+                        to={item.url}
+                        end={item.url === "/cerebro"}
+                        className="hover:bg-sidebar-accent/50"
+                        activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
+                      >
+                        <item.icon className="mr-2 h-4 w-4" />
+                        {!collapsed && <span>{item.title}</span>}
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
 
         {/* Salir de la empresa impersonada */}
         {isImpersonating && (
