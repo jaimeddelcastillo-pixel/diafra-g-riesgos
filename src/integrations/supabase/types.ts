@@ -228,6 +228,79 @@ export type Database = {
           },
         ]
       }
+      brain_documents: {
+        Row: {
+          area_id: string | null
+          codigo: string | null
+          created_at: string
+          estado: string
+          fecha_documento: string | null
+          id: string
+          nombre: string
+          notas: string | null
+          org_id: string
+          proceso_id: string | null
+          revision: string | null
+          storage_path: string | null
+          tipo: string
+          updated_at: string
+        }
+        Insert: {
+          area_id?: string | null
+          codigo?: string | null
+          created_at?: string
+          estado?: string
+          fecha_documento?: string | null
+          id?: string
+          nombre: string
+          notas?: string | null
+          org_id: string
+          proceso_id?: string | null
+          revision?: string | null
+          storage_path?: string | null
+          tipo?: string
+          updated_at?: string
+        }
+        Update: {
+          area_id?: string | null
+          codigo?: string | null
+          created_at?: string
+          estado?: string
+          fecha_documento?: string | null
+          id?: string
+          nombre?: string
+          notas?: string | null
+          org_id?: string
+          proceso_id?: string | null
+          revision?: string | null
+          storage_path?: string | null
+          tipo?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brain_documents_area_id_fkey"
+            columns: ["area_id"]
+            isOneToOne: false
+            referencedRelation: "brain_areas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brain_documents_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brain_documents_proceso_id_fkey"
+            columns: ["proceso_id"]
+            isOneToOne: false
+            referencedRelation: "brain_processes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       brain_process_areas: {
         Row: {
           area_id: string
