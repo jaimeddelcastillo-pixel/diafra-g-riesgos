@@ -299,6 +299,7 @@ export type Database = {
           riesgo_potencial: string | null
           session_id: string | null
           tema: string | null
+          turn_id: string | null
           updated_at: string
         }
         Insert: {
@@ -325,6 +326,7 @@ export type Database = {
           riesgo_potencial?: string | null
           session_id?: string | null
           tema?: string | null
+          turn_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -351,6 +353,7 @@ export type Database = {
           riesgo_potencial?: string | null
           session_id?: string | null
           tema?: string | null
+          turn_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -408,6 +411,13 @@ export type Database = {
             columns: ["session_id"]
             isOneToOne: false
             referencedRelation: "brain_interview_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brain_contradictions_turn_id_fkey"
+            columns: ["turn_id"]
+            isOneToOne: false
+            referencedRelation: "brain_interview_turns"
             referencedColumns: ["id"]
           },
         ]
@@ -562,6 +572,7 @@ export type Database = {
           session_id: string | null
           tipo_brecha: string
           tipo_conocimiento: string | null
+          turn_id: string | null
           updated_at: string
         }
         Insert: {
@@ -580,6 +591,7 @@ export type Database = {
           session_id?: string | null
           tipo_brecha?: string
           tipo_conocimiento?: string | null
+          turn_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -598,6 +610,7 @@ export type Database = {
           session_id?: string | null
           tipo_brecha?: string
           tipo_conocimiento?: string | null
+          turn_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -634,6 +647,13 @@ export type Database = {
             columns: ["session_id"]
             isOneToOne: false
             referencedRelation: "brain_interview_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brain_gaps_turn_id_fkey"
+            columns: ["turn_id"]
+            isOneToOne: false
+            referencedRelation: "brain_interview_turns"
             referencedColumns: ["id"]
           },
         ]
@@ -921,6 +941,7 @@ export type Database = {
           contenido: string
           contexto: Json | null
           created_at: string
+          created_from_turn_id: string | null
           estado: string
           folio_id: string | null
           id: string
@@ -940,6 +961,7 @@ export type Database = {
           contenido: string
           contexto?: Json | null
           created_at?: string
+          created_from_turn_id?: string | null
           estado?: string
           folio_id?: string | null
           id?: string
@@ -959,6 +981,7 @@ export type Database = {
           contenido?: string
           contexto?: Json | null
           created_at?: string
+          created_from_turn_id?: string | null
           estado?: string
           folio_id?: string | null
           id?: string
@@ -978,6 +1001,13 @@ export type Database = {
             columns: ["area_id"]
             isOneToOne: false
             referencedRelation: "brain_areas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brain_knowledge_items_created_from_turn_id_fkey"
+            columns: ["created_from_turn_id"]
+            isOneToOne: false
+            referencedRelation: "brain_interview_turns"
             referencedColumns: ["id"]
           },
           {
