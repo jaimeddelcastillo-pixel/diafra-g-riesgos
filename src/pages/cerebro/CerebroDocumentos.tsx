@@ -45,7 +45,18 @@ export default function CerebroDocumentos() {
     setTrabajando(null);
     if (error) { toast.error("No se pudo deshacer la importación."); return; }
     qc.invalidateQueries({ queryKey: ["brain"] });
-    toast.success(`Se eliminaron ${data?.eliminados ?? 0} documentos. Conservados: ${data?.conservados ?? 0}.`);
+    const partes = [
+      `Se eliminaron ${data?.eliminados ?? 0} documentos. Conservados: ${data?.conservados ?? 0}.`,
+    ];
+    if ((data?.procesos_eliminados ?? 0) > 0) {
+      partes.push(`${data.procesos_eliminados} procesos sin uso se eliminaron.`);
+    }
+    if ((data?.procesos_conservados ?? 0) > 0) {
+      partes.push(
+        `${data.procesos_conservados} procesos se conservaron porque ya tienen conocimiento o entrevistas asociadas.`,
+      );
+    }
+    toast.success(partes.join(" "));
   };
 
   return (
