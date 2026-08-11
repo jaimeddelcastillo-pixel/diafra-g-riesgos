@@ -793,6 +793,69 @@ export type Database = {
           },
         ]
       }
+      brain_interview_turns: {
+        Row: {
+          completed_at: string | null
+          contradictions_created: number
+          created_at: string
+          current_objective: Json | null
+          error: string | null
+          estado: string
+          gaps_created: number
+          id: string
+          interviewees_suggested: number
+          knowledge_created: number
+          operations: Json
+          org_id: string
+          session_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          contradictions_created?: number
+          created_at?: string
+          current_objective?: Json | null
+          error?: string | null
+          estado?: string
+          gaps_created?: number
+          id: string
+          interviewees_suggested?: number
+          knowledge_created?: number
+          operations?: Json
+          org_id: string
+          session_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          contradictions_created?: number
+          created_at?: string
+          current_objective?: Json | null
+          error?: string | null
+          estado?: string
+          gaps_created?: number
+          id?: string
+          interviewees_suggested?: number
+          knowledge_created?: number
+          operations?: Json
+          org_id?: string
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brain_interview_turns_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brain_interview_turns_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "brain_interview_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       brain_knowledge_items: {
         Row: {
           afecta_cumplimiento: boolean | null
