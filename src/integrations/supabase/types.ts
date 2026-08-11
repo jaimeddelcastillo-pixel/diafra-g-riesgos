@@ -228,6 +228,52 @@ export type Database = {
           },
         ]
       }
+      brain_assignment_processes: {
+        Row: {
+          assignment_id: string
+          created_at: string
+          id: string
+          org_id: string
+          process_id: string
+        }
+        Insert: {
+          assignment_id: string
+          created_at?: string
+          id?: string
+          org_id: string
+          process_id: string
+        }
+        Update: {
+          assignment_id?: string
+          created_at?: string
+          id?: string
+          org_id?: string
+          process_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brain_assignment_processes_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "brain_interview_assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brain_assignment_processes_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brain_assignment_processes_process_id_fkey"
+            columns: ["process_id"]
+            isOneToOne: false
+            referencedRelation: "brain_processes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       brain_documents: {
         Row: {
           area_id: string | null
