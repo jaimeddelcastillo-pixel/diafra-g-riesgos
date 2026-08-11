@@ -280,9 +280,11 @@ export type Database = {
           afirmacion_a: string
           afirmacion_b: string
           area_id: string | null
+          autoridad_requerida: string | null
           created_at: string
           decision_final: string | null
           descripcion: string | null
+          document_id: string | null
           estado: string
           fuente_a: string | null
           fuente_b: string | null
@@ -294,6 +296,9 @@ export type Database = {
           proceso_id: string | null
           resuelto_en: string | null
           resuelto_por: string | null
+          riesgo_potencial: string | null
+          session_id: string | null
+          tema: string | null
           updated_at: string
         }
         Insert: {
@@ -301,9 +306,11 @@ export type Database = {
           afirmacion_a: string
           afirmacion_b: string
           area_id?: string | null
+          autoridad_requerida?: string | null
           created_at?: string
           decision_final?: string | null
           descripcion?: string | null
+          document_id?: string | null
           estado?: string
           fuente_a?: string | null
           fuente_b?: string | null
@@ -315,6 +322,9 @@ export type Database = {
           proceso_id?: string | null
           resuelto_en?: string | null
           resuelto_por?: string | null
+          riesgo_potencial?: string | null
+          session_id?: string | null
+          tema?: string | null
           updated_at?: string
         }
         Update: {
@@ -322,9 +332,11 @@ export type Database = {
           afirmacion_a?: string
           afirmacion_b?: string
           area_id?: string | null
+          autoridad_requerida?: string | null
           created_at?: string
           decision_final?: string | null
           descripcion?: string | null
+          document_id?: string | null
           estado?: string
           fuente_a?: string | null
           fuente_b?: string | null
@@ -336,6 +348,9 @@ export type Database = {
           proceso_id?: string | null
           resuelto_en?: string | null
           resuelto_por?: string | null
+          riesgo_potencial?: string | null
+          session_id?: string | null
+          tema?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -344,6 +359,13 @@ export type Database = {
             columns: ["area_id"]
             isOneToOne: false
             referencedRelation: "brain_areas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brain_contradictions_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "brain_documents"
             referencedColumns: ["id"]
           },
           {
@@ -379,6 +401,13 @@ export type Database = {
             columns: ["resuelto_por"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brain_contradictions_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "brain_interview_sessions"
             referencedColumns: ["id"]
           },
         ]
