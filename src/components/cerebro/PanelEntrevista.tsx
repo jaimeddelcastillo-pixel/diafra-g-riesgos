@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { ArrowLeft, Loader2, Pause, Play, Send, Square } from "lucide-react";
 import { useEntrevistaStream, TurnComplete } from "@/hooks/useEntrevistaStream";
+import { TranscriptMarkdown } from "@/components/cerebro/TranscriptMarkdown";
 
 type Msg = { id: string; role: string; content: string; created_at: string };
 
@@ -177,13 +178,17 @@ export function PanelEntrevista({ sessionId, onSalir }: Props) {
               <p className="text-[10px] uppercase tracking-widest text-muted-foreground">
                 {m.role === "assistant" ? "Consultor" : "Entrevistado"}
               </p>
-              <p className="text-sm leading-relaxed whitespace-pre-wrap">{m.content}</p>
+              {m.role === "assistant" ? (
+                <TranscriptMarkdown>{m.content}</TranscriptMarkdown>
+              ) : (
+                <p className="text-sm leading-relaxed whitespace-pre-wrap">{m.content}</p>
+              )}
             </div>
           ))}
           {streamText && (
             <div className="space-y-1">
               <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Consultor</p>
-              <p className="text-sm leading-relaxed whitespace-pre-wrap">{streamText}</p>
+              <TranscriptMarkdown>{streamText}</TranscriptMarkdown>
             </div>
           )}
           {(procesando || (enviando && !streamText)) && (
