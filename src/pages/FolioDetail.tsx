@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { OrigenAnalisisSelect } from "@/components/OrigenAnalisisSelect";
-import { ArrowLeft, FileSignature, Lock, Printer, Plus, Pencil, Trash2, Save, X, History, AlertTriangle, Clock, CheckCircle2, Sparkles } from "lucide-react";
+import { ArrowLeft, ArrowDownUp, FileSignature, Lock, Printer, Plus, Pencil, Trash2, Save, X, History, AlertTriangle, Clock, CheckCircle2, Sparkles } from "lucide-react";
 import { useFolioDetail, getNPRLevel, getEstadoStyle } from "@/hooks/useFolios";
 import type { Folio, Riesgo, FolioComite } from "@/hooks/useFolios";
 import { Skeleton } from "@/components/ui/skeleton";
