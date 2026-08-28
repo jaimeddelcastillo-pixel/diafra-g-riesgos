@@ -1419,18 +1419,44 @@ function SeccionRiesgos({ riesgos, locked, folioId, folioCodigo, procesoEquipo, 
           </table>
         </div>
         {!locked && (
-          <div className="p-3 border-t bg-muted/20">
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-1 text-xs"
-              onClick={() => setWizardOpen(true)}
-            >
-              <Plus className="h-3 w-3" /> Agregar Riesgo
-            </Button>
+          <div className="p-3 border-t bg-muted/20 space-y-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1 text-xs"
+                onClick={() => setWizardOpen(true)}
+              >
+                <Plus className="h-3 w-3" /> Agregar Riesgo
+              </Button>
+              {esBorrador && riesgos.length > 1 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1 text-xs"
+                  onClick={() => setReordenarOpen(true)}
+                >
+                  <ArrowDownUp className="h-3 w-3" /> Reordenar Id
+                </Button>
+              )}
+            </div>
+            {esBorrador && (
+              <p className="text-[10px] text-muted-foreground">
+                En Borrador los Id se reasignan por posición (01…N, sin huecos). Al enviar el folio a firma quedan fijos.
+              </p>
+            )}
           </div>
         )}
       </div>
+
+      {reordenarOpen && (
+        <ReordenarRiesgosDialog
+          open={reordenarOpen}
+          onClose={() => setReordenarOpen(false)}
+          folioId={folioId}
+          riesgos={riesgos}
+        />
+      )}
 
       {riesgoForm.open && (
         <RiesgoFormDialog
