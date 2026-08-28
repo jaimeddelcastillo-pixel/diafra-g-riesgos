@@ -14,6 +14,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { RiesgoFormDialog } from "@/components/RiesgoFormDialog";
 import { RiesgoWizardDialog } from "@/components/RiesgoWizardDialog";
 import { RiesgoDetailSheet } from "@/components/RiesgoDetailSheet";
+import ReordenarRiesgosDialog from "@/components/ReordenarRiesgosDialog";
 import { SeccionDictamen } from "@/components/SeccionDictamen";
 import { SeccionEvidencias } from "@/components/SeccionEvidencias";
 import { ComiteTab } from "@/components/comite/ComiteTab";
