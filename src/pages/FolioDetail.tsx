@@ -1141,6 +1141,9 @@ function SeccionRiesgos({ riesgos, locked, folioId, folioCodigo, procesoEquipo, 
     if (error) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } else {
+      if (esBorrador) {
+        await supabase.rpc("recompactar_riesgos", { p_folio_id: folioId });
+      }
       toast({ title: "Riesgo eliminado" });
       queryClient.invalidateQueries({ queryKey: ["folio", folioId] });
       queryClient.invalidateQueries({ queryKey: ["all-riesgos"] });
