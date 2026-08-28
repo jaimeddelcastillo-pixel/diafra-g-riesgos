@@ -3537,6 +3537,7 @@ export type Database = {
           read_ct: number
         }[]
       }
+      recompactar_riesgos: { Args: { p_folio_id: string }; Returns: Json }
       reeditar_codigos_folios: {
         Args: {
           p_actor: string
@@ -3544,6 +3545,10 @@ export type Database = {
           p_motivo: string
           p_org_id: string
         }
+        Returns: Json
+      }
+      reordenar_riesgos: {
+        Args: { p_folio_id: string; p_orden: string[] }
         Returns: Json
       }
       restaurar_documento: { Args: { p_doc_id: string }; Returns: boolean }

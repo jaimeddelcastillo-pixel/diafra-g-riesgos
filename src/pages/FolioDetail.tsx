@@ -7,13 +7,14 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { OrigenAnalisisSelect } from "@/components/OrigenAnalisisSelect";
-import { ArrowLeft, FileSignature, Lock, Printer, Plus, Pencil, Trash2, Save, X, History, AlertTriangle, Clock, CheckCircle2, Sparkles } from "lucide-react";
+import { ArrowLeft, ArrowDownUp, FileSignature, Lock, Printer, Plus, Pencil, Trash2, Save, X, History, AlertTriangle, Clock, CheckCircle2, Sparkles } from "lucide-react";
 import { useFolioDetail, getNPRLevel, getEstadoStyle } from "@/hooks/useFolios";
 import type { Folio, Riesgo, FolioComite } from "@/hooks/useFolios";
 import { Skeleton } from "@/components/ui/skeleton";
 import { RiesgoFormDialog } from "@/components/RiesgoFormDialog";
 import { RiesgoWizardDialog } from "@/components/RiesgoWizardDialog";
 import { RiesgoDetailSheet } from "@/components/RiesgoDetailSheet";
+import ReordenarRiesgosDialog from "@/components/ReordenarRiesgosDialog";
 import { SeccionDictamen } from "@/components/SeccionDictamen";
 import { SeccionEvidencias } from "@/components/SeccionEvidencias";
 import { ComiteTab } from "@/components/comite/ComiteTab";
@@ -1094,6 +1095,8 @@ function SeccionRiesgos({ riesgos, locked, folioId, folioCodigo, procesoEquipo, 
   const [wizardOpen, setWizardOpen] = useState(false);
   const [wizardEditar, setWizardEditar] = useState<{ open: boolean; riesgo: Riesgo | null }>({ open: false, riesgo: null });
   const [detalle, setDetalle] = useState<{ open: boolean; riesgo: Riesgo | null }>({ open: false, riesgo: null });
+  const [reordenarOpen, setReordenarOpen] = useState(false);
+  const esBorrador = folioEstado === "Borrador" && !locked;
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const nc = getNormaConfig(normaFolio);
@@ -1141,6 +1144,9 @@ function SeccionRiesgos({ riesgos, locked, folioId, folioCodigo, procesoEquipo, 
     if (error) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } else {
+      if (esBorrador) {
+        await supabase.rpc("recompactar_riesgos", { p_folio_id: folioId });
+      }
       toast({ title: "Riesgo eliminado" });
       queryClient.invalidateQueries({ queryKey: ["folio", folioId] });
       queryClient.invalidateQueries({ queryKey: ["all-riesgos"] });
@@ -1414,18 +1420,44 @@ function SeccionRiesgos({ riesgos, locked, folioId, folioCodigo, procesoEquipo, 
           </table>
         </div>
         {!locked && (
-          <div className="p-3 border-t bg-muted/20">
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-1 text-xs"
-              onClick={() => setWizardOpen(true)}
-            >
-              <Plus className="h-3 w-3" /> Agregar Riesgo
-            </Button>
+          <div className="p-3 border-t bg-muted/20 space-y-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1 text-xs"
+                onClick={() => setWizardOpen(true)}
+              >
+                <Plus className="h-3 w-3" /> Agregar Riesgo
+              </Button>
+              {esBorrador && riesgos.length > 1 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1 text-xs"
+                  onClick={() => setReordenarOpen(true)}
+                >
+                  <ArrowDownUp className="h-3 w-3" /> Reordenar Id
+                </Button>
+              )}
+            </div>
+            {esBorrador && (
+              <p className="text-[10px] text-muted-foreground">
+                En Borrador los Id se reasignan por posición (01…N, sin huecos). Al enviar el folio a firma quedan fijos.
+              </p>
+            )}
           </div>
         )}
       </div>
+
+      {reordenarOpen && (
+        <ReordenarRiesgosDialog
+          open={reordenarOpen}
+          onClose={() => setReordenarOpen(false)}
+          folioId={folioId}
+          riesgos={riesgos}
+        />
+      )}
 
       {riesgoForm.open && (
         <RiesgoFormDialog
