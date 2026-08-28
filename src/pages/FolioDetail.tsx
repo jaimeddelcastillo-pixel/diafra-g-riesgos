@@ -1094,6 +1094,8 @@ function SeccionRiesgos({ riesgos, locked, folioId, folioCodigo, procesoEquipo, 
   const [wizardOpen, setWizardOpen] = useState(false);
   const [wizardEditar, setWizardEditar] = useState<{ open: boolean; riesgo: Riesgo | null }>({ open: false, riesgo: null });
   const [detalle, setDetalle] = useState<{ open: boolean; riesgo: Riesgo | null }>({ open: false, riesgo: null });
+  const [reordenarOpen, setReordenarOpen] = useState(false);
+  const esBorrador = folioEstado === "Borrador" && !locked;
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const nc = getNormaConfig(normaFolio);
