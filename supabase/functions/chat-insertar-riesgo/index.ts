@@ -2,6 +2,7 @@
 // Inserta un riesgo en un folio. Respeta locks: solo permite si el folio está en 'Borrador'.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { aListaNumerada, aControlesPrevencionTexto } from "../_shared/listas-riesgo.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -46,13 +47,13 @@ Deno.serve(async (req) => {
       peligro: body.peligro ?? "",
       peligro_modo_falla: body.modo_falla ?? body.peligro_modo_falla ?? "",
       situacion_peligrosa: body.situacion_peligrosa ?? "",
-      secuencia_eventos: body.secuencia_eventos ?? "",
+      secuencia_eventos: aListaNumerada(body.secuencia_eventos, 8),
       efecto_dano: body.efecto_dano ?? "",
-      causa_potencial: body.causa_potencial ?? "",
+      causa_potencial: aListaNumerada(body.causa_potencial, 8),
       etapa_proceso: body.etapa_proceso ?? "",
       controles_actuales: body.controles_existentes ?? body.controles_actuales ?? "",
-      controles_prevencion: body.controles_prevencion ?? "",
-      controles_deteccion: body.controles_deteccion ?? "",
+      controles_prevencion: aControlesPrevencionTexto(body.controles_prevencion, 12),
+      controles_deteccion: aListaNumerada(body.controles_deteccion, 8),
       severidad: clamp(body.severidad ?? 1),
       ocurrencia: clamp(body.ocurrencia ?? 1),
       deteccion: clamp(body.deteccion ?? 1),

@@ -115,17 +115,46 @@ const TOOLS = [
           description: "Modo de falla asociado al peligro (cómo falla el proceso/producto). Mapea a la columna peligro_modo_falla.",
         },
         situacion_peligrosa: { type: "string" },
-        secuencia_eventos: { type: "string" },
+        secuencia_eventos: {
+          type: "array",
+          items: { type: "string" },
+          minItems: 3,
+          maxItems: 8,
+          description: "Cadena causal PASO A PASO. Un elemento por paso (3 a 8). NO numeres el texto ni concatenes varios pasos en un mismo elemento.",
+        },
         efecto_dano: { type: "string" },
-        causa_potencial: { type: "string" },
+        causa_potencial: {
+          type: "array",
+          items: { type: "string" },
+          maxItems: 8,
+          description: "Causas potenciales, UNA por elemento del arreglo. Sin numerar el texto.",
+        },
         etapa_proceso: { type: "string" },
         controles_existentes: {
           type: "string",
           description: "Controles ya implementados por la organización (preguntar al usuario antes de proponer controles nuevos). Mapea a controles_actuales.",
         },
         controles_actuales: { type: "string" },
-        controles_prevencion: { type: "string" },
-        controles_deteccion: { type: "string" },
+        controles_prevencion: {
+          type: "array",
+          maxItems: 12,
+          items: {
+            type: "object",
+            properties: {
+              nivel: { type: "string", enum: ["A", "B", "C"], description: "A = diseño/design space, B = proceso validado, C = documental y capacitación." },
+              texto: { type: "string" },
+            },
+            required: ["nivel", "texto"],
+          },
+          description: "Controles de prevención, UNO por elemento, clasificados por nivel A/B/C.",
+        },
+        controles_deteccion: {
+          type: "array",
+          items: { type: "string" },
+          maxItems: 8,
+          description: "Controles analíticos de detección, UNO por elemento del arreglo. Sin numerar el texto.",
+        },
+
         severidad: { type: "integer", minimum: 1, maximum: 10 },
         ocurrencia: { type: "integer", minimum: 1, maximum: 10 },
         deteccion: { type: "integer", minimum: 1, maximum: 10 },
@@ -304,6 +333,8 @@ const TOOL_RULES_ADDENDUM = `
 11. proponer_riesgo REQUIERE 'modo_falla' (cómo falla el proceso/producto, p.ej. "contaminación cruzada", "dosis incorrecta"). Si el usuario no lo dio, pregúntalo antes de llamar la herramienta.
 12. Antes de proponer controles_prevencion o controles_deteccion nuevos, PREGUNTA al usuario qué controles_existentes ya tiene implementados y envíalos en ese campo. No dupliques en controles_prevencion lo que ya está en controles_existentes.
 13. Selecciona tipo_escala_severidad según la naturaleza del peligro: usa "sgc_regulatorio" cuando el riesgo es documental o de cumplimiento ante COFEPRIS (desviaciones, observaciones, no conformidades, hallazgos de auditoría, riesgo de recall o suspensión BPF). Usa "estandar" para todo riesgo cuyo impacto recae sobre producto, proceso o paciente. Si no está claro, default "estandar".
+14. CAMPOS MULTI-ELEMENTO (secuencia_eventos, causa_potencial, controles_prevencion, controles_deteccion): son ARREGLOS. Envía UN elemento por paso/causa/control. La plataforma los muestra en renglones separados del wizard, así que NUNCA metas varios pasos en un mismo elemento, ni numeres el texto ("1.", "-", "•"), ni uses separadores internos (";", "→", "luego", "después"). secuencia_eventos debe tener entre 3 y 8 pasos, cada uno una acción concreta y verificable. controles_prevencion usa objetos {nivel: "A"|"B"|"C", texto}.
+
 `;
 
 async function getOrgContext(supabase: any, userId: string) {

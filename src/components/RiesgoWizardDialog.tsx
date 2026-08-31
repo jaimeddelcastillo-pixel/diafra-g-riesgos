@@ -62,6 +62,7 @@ import {
 } from "@/components/causa-raiz/CausaRaizSheet";
 import { Search } from "lucide-react";
 import type { Riesgo } from "@/hooks/useFolios";
+import { normalizarLista } from "@/lib/listas-riesgo";
 
 interface Props {
   open: boolean;
@@ -836,17 +837,24 @@ export function RiesgoWizardDialog({
           break;
         case "causa": {
           const causas = prev.causas.filter((c) => c.trim());
-          next.causas = [...causas, String(value)];
+          next.causas = [...causas, ...normalizarLista(value, 8)];
+          break;
+        }
+        case "secuencia": {
+          const nuevos = normalizarLista(value, 8);
+          const actuales = prev.pasos.filter((p) => p.trim());
+          const pasos = [...actuales, ...nuevos].slice(0, 8);
+          next.pasos = pasos.length >= 2 ? pasos : [...pasos, "", ""].slice(0, 2);
           break;
         }
         case "control_prevencion": {
           const arr = prev.controles_prev_b.filter((c) => c.trim());
-          next.controles_prev_b = [...arr, String(value)];
+          next.controles_prev_b = [...arr, ...normalizarLista(value, 8)];
           break;
         }
         case "control_deteccion": {
           const arr = prev.controles_deteccion.filter((c) => c.trim());
-          next.controles_deteccion = [...arr, String(value)];
+          next.controles_deteccion = [...arr, ...normalizarLista(value, 8)];
           break;
         }
         case "accion_propuesta":

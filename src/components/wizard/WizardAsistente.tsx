@@ -14,6 +14,7 @@ export type WizardApplyField =
   | "peligro_modo_falla"
   | "causa"
   | "situacion_peligrosa"
+  | "secuencia"
   | "efecto_dano"
   | "severidad"
   | "ocurrencia"
@@ -158,7 +159,7 @@ export function WizardAsistente({ folioId, agente, contextoSistema, paso, onAppl
   useEffect(() => {
     if (initialSent.current || !session) return;
     initialSent.current = true;
-    const prompt = `${contextoSistema}\n\nResponde de forma breve y técnica, citando la norma cuando aplique. Cuando propongas un valor numérico (S, O, D) o un texto para llenar un campo del wizard, usa el formato \`::APLICAR campo=valor::\` al final (campos: severidad, ocurrencia, deteccion, peligro, peligro_modo_falla, causa, situacion_peligrosa, efecto_dano, control_prevencion, control_deteccion, accion_propuesta). Inicia confirmando que entendiste el contexto y haz 1 pregunta corta para orientar al usuario en el paso ${paso}.`;
+    const prompt = `${contextoSistema}\n\nResponde de forma breve y técnica, citando la norma cuando aplique. Cuando propongas un valor numérico (S, O, D) o un texto para llenar un campo del wizard, usa el formato \`::APLICAR campo=valor::\` al final (campos: severidad, ocurrencia, deteccion, peligro, peligro_modo_falla, causa, secuencia, situacion_peligrosa, efecto_dano, control_prevencion, control_deteccion, accion_propuesta). Para campos multi-elemento (secuencia, causa, control_prevencion, control_deteccion) separa cada elemento con " | " dentro del mismo ::APLICAR::, nunca los concatenes en una sola frase. Inicia confirmando que entendiste el contexto y haz 1 pregunta corta para orientar al usuario en el paso ${paso}.`;
     setMessages([{ role: "user", content: "_(contexto del wizard enviado)_" }]);
     enviar(prompt, true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
