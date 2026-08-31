@@ -333,6 +333,8 @@ const TOOL_RULES_ADDENDUM = `
 11. proponer_riesgo REQUIERE 'modo_falla' (cómo falla el proceso/producto, p.ej. "contaminación cruzada", "dosis incorrecta"). Si el usuario no lo dio, pregúntalo antes de llamar la herramienta.
 12. Antes de proponer controles_prevencion o controles_deteccion nuevos, PREGUNTA al usuario qué controles_existentes ya tiene implementados y envíalos en ese campo. No dupliques en controles_prevencion lo que ya está en controles_existentes.
 13. Selecciona tipo_escala_severidad según la naturaleza del peligro: usa "sgc_regulatorio" cuando el riesgo es documental o de cumplimiento ante COFEPRIS (desviaciones, observaciones, no conformidades, hallazgos de auditoría, riesgo de recall o suspensión BPF). Usa "estandar" para todo riesgo cuyo impacto recae sobre producto, proceso o paciente. Si no está claro, default "estandar".
+14. CAMPOS MULTI-ELEMENTO (secuencia_eventos, causa_potencial, controles_prevencion, controles_deteccion): son ARREGLOS. Envía UN elemento por paso/causa/control. La plataforma los muestra en renglones separados del wizard, así que NUNCA metas varios pasos en un mismo elemento, ni numeres el texto ("1.", "-", "•"), ni uses separadores internos (";", "→", "luego", "después"). secuencia_eventos debe tener entre 3 y 8 pasos, cada uno una acción concreta y verificable. controles_prevencion usa objetos {nivel: "A"|"B"|"C", texto}.
+
 `;
 
 async function getOrgContext(supabase: any, userId: string) {
