@@ -98,9 +98,9 @@ export function aControlesPrevencionTexto(value: unknown, maxItems = 12): string
 
 function parsePrefijoNivel(linea: string): ControlPrevencion | null {
   if (!linea) return null;
-  const m = linea.match(/^\[?\s*(A|B|C)\s*\]?\s*[:\-]?\s*(.+)$/i);
-  if (m && m[2].trim()) {
-    return { nivel: m[1].toUpperCase() as "A" | "B" | "C", texto: m[2].trim() };
+  const m = linea.match(/^(?:\[\s*(A|B|C)\s*\]|(A|B|C)\s*[:\-–])\s*(.+)$/i);
+  if (m && m[3].trim()) {
+    return { nivel: (m[1] ?? m[2]).toUpperCase() as "A" | "B" | "C", texto: m[3].trim() };
   }
   return { nivel: "A", texto: linea };
 }
