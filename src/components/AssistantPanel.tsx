@@ -745,13 +745,19 @@ function MessageBubble({ msg, onInsertarRiesgo, folioId, insertedRiskKeys }: { m
                   {r.etapa_proceso && <div><strong>Etapa:</strong> {r.etapa_proceso}</div>}
                   <div><strong>Peligro:</strong> {r.peligro}</div>
                   <div><strong>Situación:</strong> {r.situacion_peligrosa}</div>
-                  {r.secuencia_eventos && <div><strong>Secuencia:</strong> {r.secuencia_eventos}</div>}
+                  <ListaPreview label="Secuencia" items={normalizarLista(r.secuencia_eventos, 8)} />
                   <div><strong>Efecto:</strong> {r.efecto_dano}</div>
-                  {r.causa_potencial && <div><strong>Causa:</strong> {r.causa_potencial}</div>}
-                  {(r.controles_prevencion || r.controles_actuales) && (
-                    <div><strong>Prevención:</strong> {r.controles_prevencion || r.controles_actuales}</div>
-                  )}
-                  {r.controles_deteccion && <div><strong>Detección:</strong> {r.controles_deteccion}</div>}
+                  <ListaPreview label="Causa" items={normalizarLista(r.causa_potencial, 8)} />
+                  <ListaPreview
+                    label="Prevención"
+                    items={
+                      r.controles_prevencion
+                        ? aControlesPrevencionTexto(r.controles_prevencion, 12).split("\n").map((l: string) => l.replace(/^\d+\.\s*/, ""))
+                        : normalizarLista(r.controles_actuales, 8)
+                    }
+                  />
+                  <ListaPreview label="Detección" items={normalizarLista(r.controles_deteccion, 8)} />
+
                   <div className="text-muted-foreground">S:{r.severidad} O:{r.ocurrencia} D:{r.deteccion}</div>
                   {nprRes > 0 && (
                     <div className="text-muted-foreground">Residual → S:{r.sev_residual} O:{r.ocu_residual} D:{r.det_residual}</div>
