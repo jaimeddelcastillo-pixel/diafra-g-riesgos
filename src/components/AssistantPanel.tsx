@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { CONSULTAS_IA_PACK } from "@/config/plans";
 import { Link } from "react-router-dom";
+import { normalizarLista, aControlesPrevencionTexto } from "@/lib/listas-riesgo";
 import {
   extractFileText,
   buildAttachmentPrefix,
@@ -811,6 +812,27 @@ function MessageBubble({ msg, onInsertarRiesgo, folioId, insertedRiskKeys }: { m
           return null;
         })}
       </div>
+    </div>
+  );
+}
+
+function ListaPreview({ label, items }: { label: string; items: string[] }) {
+  if (!items.length) return null;
+  if (items.length === 1) {
+    return (
+      <div>
+        <strong>{label}:</strong> {items[0]}
+      </div>
+    );
+  }
+  return (
+    <div>
+      <strong>{label}:</strong>
+      <ol className="list-decimal pl-4 my-0.5 space-y-0.5">
+        {items.map((it, i) => (
+          <li key={i}>{it}</li>
+        ))}
+      </ol>
     </div>
   );
 }
