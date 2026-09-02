@@ -46,10 +46,12 @@ function UploadEvidencia({
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.type !== "application/pdf") {
+    const esPDF = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
+    if (!esPDF) {
       toast({ title: "Solo archivos PDF", variant: "destructive" });
       return;
     }
+
 
     setUploading(true);
     try {
