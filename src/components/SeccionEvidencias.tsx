@@ -227,7 +227,11 @@ export function SeccionEvidencias({ riesgos, folioCodigo, folioId, normaFolio }:
 
                 {/* Lista de archivos */}
                 <div className="space-y-1.5 ml-8">
+                  {anexos.length === 0 && (
+                    <p className="text-xs text-muted-foreground italic">Sin evidencias adjuntas para este riesgo.</p>
+                  )}
                   {anexos.map((anexo, idx) => (
+
                     <div key={idx} className="flex items-center justify-between bg-muted/40 rounded-md px-3 py-2 group">
                       <div className="flex items-center gap-2 min-w-0">
                         <FileText className="h-4 w-4 text-red-500 shrink-0" />
