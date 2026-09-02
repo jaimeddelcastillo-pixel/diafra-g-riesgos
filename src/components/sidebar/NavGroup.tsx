@@ -95,44 +95,74 @@ export function NavGroup({ item, pathname, open, onOpenChange, renderExtra }: Na
   const collapsed = state === "collapsed";
   const hasActive = groupContainsActive(pathname, item);
 
+  const triggerButton = (
+    <SidebarMenuButton
+      className={cn("hover:bg-sidebar-accent/50", hasActive && !open && "text-sidebar-primary")}
+    >
+      <span
+        className={cn(
+          "mr-2 flex h-5 w-5 items-center justify-center rounded",
+          item.highlight && "bg-sidebar-primary/15 text-sidebar-primary",
+        )}
+      >
+        <item.icon className="h-4 w-4" />
+      </span>
+      {!collapsed && (
+        <>
+          <span className="flex-1 text-left">{item.label}</span>
+          <ChevronRight className={cn("h-4 w-4 transition-transform", open && "rotate-90")} />
+        </>
+      )}
+    </SidebarMenuButton>
+  );
+
+  // Colapsado (modo iconos): los sub-items usan primitives con
+  // `group-data-[collapsible=icon]:hidden`, así que el grupo abre un
+  // flyout (DropdownMenu) con sus rutas para no perder navegación.
+  if (collapsed) {
+    return (
+      <SidebarMenuItem>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>{triggerButton}</DropdownMenuTrigger>
+          <DropdownMenuContent side="right" align="start" sideOffset={8} className="w-52">
+            <DropdownMenuLabel>{item.label}</DropdownMenuLabel>
+            {(item.children ?? []).map((child) => (
+              <DropdownMenuItem key={child.id} asChild>
+                <NavLink
+                  to={child.route!}
+                  end={child.exact}
+                  className="flex w-full items-center gap-2"
+                  activeClassName="bg-accent text-primary font-medium"
+                  data-onboarding={child.onboarding}
+                >
+                  <child.icon className="h-4 w-4" />
+                  <span>{child.label}</span>
+                </NavLink>
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </SidebarMenuItem>
+    );
+  }
+
   return (
     <Collapsible open={open} onOpenChange={onOpenChange}>
       <SidebarMenuItem>
-        <CollapsibleTrigger asChild>
-          <SidebarMenuButton
-            className={cn("hover:bg-sidebar-accent/50", hasActive && !open && "text-sidebar-primary")}
-          >
-            <span
-              className={cn(
-                "mr-2 flex h-5 w-5 items-center justify-center rounded",
-                item.highlight && "bg-sidebar-primary/15 text-sidebar-primary",
-              )}
-            >
-              <item.icon className="h-4 w-4" />
-            </span>
-            {!collapsed && (
-              <>
-                <span className="flex-1 text-left">{item.label}</span>
-                <ChevronRight className={cn("h-4 w-4 transition-transform", open && "rotate-90")} />
-              </>
-            )}
-          </SidebarMenuButton>
-        </CollapsibleTrigger>
-        {!collapsed && (
-          <CollapsibleContent>
-            <SidebarMenuSub>
-              {(item.children ?? []).map((child) => (
-                <NavLeaf
-                  key={child.id}
-                  item={child}
-                  pathname={pathname}
-                  sub
-                  extra={renderExtra?.(child)}
-                />
-              ))}
-            </SidebarMenuSub>
-          </CollapsibleContent>
-        )}
+        <CollapsibleTrigger asChild>{triggerButton}</CollapsibleTrigger>
+        <CollapsibleContent>
+          <SidebarMenuSub>
+            {(item.children ?? []).map((child) => (
+              <NavLeaf
+                key={child.id}
+                item={child}
+                pathname={pathname}
+                sub
+                extra={renderExtra?.(child)}
+              />
+            ))}
+          </SidebarMenuSub>
+        </CollapsibleContent>
       </SidebarMenuItem>
     </Collapsible>
   );
