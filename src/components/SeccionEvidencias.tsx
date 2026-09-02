@@ -46,10 +46,12 @@ function UploadEvidencia({
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.type !== "application/pdf") {
+    const esPDF = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
+    if (!esPDF) {
       toast({ title: "Solo archivos PDF", variant: "destructive" });
       return;
     }
+
 
     setUploading(true);
     try {
@@ -183,19 +185,18 @@ export function SeccionEvidencias({ riesgos, folioCodigo, folioId, normaFolio }:
         )}
       </div>
 
-      {totalAnexos === 0 ? (
+      {riesgos.length === 0 ? (
         <div className="p-8 text-center text-muted-foreground">
           <FileText className="h-10 w-10 mx-auto mb-2 opacity-30" />
-          <p className="text-sm">No hay evidencias adjuntas en este folio.</p>
-          <p className="text-xs mt-1">
-            Adjunta archivos PDF en la sección de riesgos para documentar las acciones implementadas.
-          </p>
+          <p className="text-sm">Este folio aún no tiene riesgos registrados.</p>
+          <p className="text-xs mt-1">Agrega riesgos para poder adjuntar evidencias en PDF.</p>
         </div>
       ) : (
         <div className="divide-y">
-          {riesgosConAnexos.map((riesgo) => {
-            const anexos = (riesgo as any).anexos as Anexo[];
+          {riesgos.map((riesgo) => {
+            const anexos = (((riesgo as any).anexos as Anexo[] | null) ?? []);
             const npr = riesgo.npr ?? riesgo.severidad * riesgo.ocurrencia * riesgo.deteccion;
+
             const esCritico = npr > 150 || riesgo.severidad >= 9;
 
             return (
@@ -226,7 +227,11 @@ export function SeccionEvidencias({ riesgos, folioCodigo, folioId, normaFolio }:
 
                 {/* Lista de archivos */}
                 <div className="space-y-1.5 ml-8">
+                  {anexos.length === 0 && (
+                    <p className="text-xs text-muted-foreground italic">Sin evidencias adjuntas para este riesgo.</p>
+                  )}
                   {anexos.map((anexo, idx) => (
+
                     <div key={idx} className="flex items-center justify-between bg-muted/40 rounded-md px-3 py-2 group">
                       <div className="flex items-center gap-2 min-w-0">
                         <FileText className="h-4 w-4 text-red-500 shrink-0" />
