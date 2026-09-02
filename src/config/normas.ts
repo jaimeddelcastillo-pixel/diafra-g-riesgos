@@ -337,8 +337,19 @@ const ORIGENES_COMUNES: OrigenGroup[] = [
     opciones: [
       "Diseño y Desarrollo",
       "Transferencia de Tecnología",
-      "Validación de Proceso",
       "Escalamiento",
+    ],
+  },
+  {
+    titulo: "Validación / Calificación",
+    opciones: [
+      "Calificación de Instalaciones",
+      "Calificación de Equipos (IQ/OQ/PQ)",
+      "Validación de Proceso",
+      "Validación de Limpieza",
+      "Validación de Métodos Analíticos",
+      "Validación de Sistemas Computarizados (CSV)",
+      "Recalificación / Revalidación",
     ],
   },
   {
@@ -352,6 +363,7 @@ const ORIGENES_COMUNES: OrigenGroup[] = [
       "Laboratorio / Control de Calidad",
     ],
   },
+
   {
     titulo: "Sistema de Calidad",
     opciones: [
