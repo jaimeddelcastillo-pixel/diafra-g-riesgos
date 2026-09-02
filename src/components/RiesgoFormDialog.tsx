@@ -299,10 +299,12 @@ export function RiesgoFormDialog({ open, onClose, folioId, riesgo, nextNumeroId,
     setUploading(true);
     const newAnexos = [...form.anexos];
     for (const file of Array.from(files)) {
-      if (file.type !== "application/pdf") {
+      const esPDF = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
+      if (!esPDF) {
         toast({ title: "Solo archivos PDF", description: `"${file.name}" no es PDF.`, variant: "destructive" });
         continue;
       }
+
       // Sanitizar nombre: reemplazar espacios y caracteres especiales
       const nombreLimpio = file.name
         .normalize("NFD")
