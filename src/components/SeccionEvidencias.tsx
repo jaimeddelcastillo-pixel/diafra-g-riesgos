@@ -185,19 +185,18 @@ export function SeccionEvidencias({ riesgos, folioCodigo, folioId, normaFolio }:
         )}
       </div>
 
-      {totalAnexos === 0 ? (
+      {riesgos.length === 0 ? (
         <div className="p-8 text-center text-muted-foreground">
           <FileText className="h-10 w-10 mx-auto mb-2 opacity-30" />
-          <p className="text-sm">No hay evidencias adjuntas en este folio.</p>
-          <p className="text-xs mt-1">
-            Adjunta archivos PDF en la sección de riesgos para documentar las acciones implementadas.
-          </p>
+          <p className="text-sm">Este folio aún no tiene riesgos registrados.</p>
+          <p className="text-xs mt-1">Agrega riesgos para poder adjuntar evidencias en PDF.</p>
         </div>
       ) : (
         <div className="divide-y">
-          {riesgosConAnexos.map((riesgo) => {
-            const anexos = (riesgo as any).anexos as Anexo[];
+          {riesgos.map((riesgo) => {
+            const anexos = (((riesgo as any).anexos as Anexo[] | null) ?? []);
             const npr = riesgo.npr ?? riesgo.severidad * riesgo.ocurrencia * riesgo.deteccion;
+
             const esCritico = npr > 150 || riesgo.severidad >= 9;
 
             return (
