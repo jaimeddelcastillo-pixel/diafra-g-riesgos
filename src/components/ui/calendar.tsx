@@ -46,7 +46,7 @@ function Calendar({
           "absolute inset-0 h-full w-full cursor-pointer opacity-0",
         dropdown_month: "relative inline-flex items-center",
         dropdown_year: "relative inline-flex items-center",
-        vhidden: "hidden",
+        vhidden: "sr-only",
         nav: "space-x-1 flex items-center",
         nav_button: cn(
           buttonVariants({ variant: "outline" }),
