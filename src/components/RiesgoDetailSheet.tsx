@@ -184,10 +184,10 @@ export function RiesgoDetailSheet({
               }
             />
             <div className="sm:col-span-2">
-              <Field label="Acción propuesta" value={r.accion_propuesta} />
+              <Field label="Acción propuesta" value={r.requiere_accion ? r.accion_propuesta : "No aplica"} />
             </div>
-            <Field label="Responsable" value={r.responsable} />
-            <Field label="Fecha compromiso" value={r.fecha_compromiso} />
+            <Field label="Responsable" value={r.requiere_accion ? r.responsable : "No aplica"} />
+            <Field label="Fecha compromiso" value={r.requiere_accion ? r.fecha_compromiso : "No aplica"} />
           </Group>
 
           <Separator />
