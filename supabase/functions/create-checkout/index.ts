@@ -146,7 +146,7 @@ Deno.serve(async (req) => {
           JSON.stringify({
             ok: true,
             changed: true,
-            url: `${Deno.env.get("APP_URL") || "https://tracea.com.mx"}/checkout/success?change=1`,
+            url: `https://tracea.com.mx/checkout/success?change=1`,
           }),
           { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
         );
@@ -181,7 +181,7 @@ Deno.serve(async (req) => {
         .eq("id", member.org_id);
     }
 
-    const appUrl = Deno.env.get("APP_URL") || "https://tracea.com.mx";
+    const appUrl = "https://tracea.com.mx";
 
     const session = await stripe.checkout.sessions.create({
       customer: customerId,

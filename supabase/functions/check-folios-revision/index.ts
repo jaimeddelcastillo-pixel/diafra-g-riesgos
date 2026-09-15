@@ -8,7 +8,7 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-const APP_URL = Deno.env.get("APP_URL") ?? "https://tracea.com.mx";
+const APP_URL = "https://tracea.com.mx";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });

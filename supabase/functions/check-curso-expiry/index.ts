@@ -6,7 +6,7 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-const APP_URL = Deno.env.get("APP_URL") ?? "https://tracea.com.mx";
+const APP_URL = "https://tracea.com.mx";
 
 async function getOrgAdminContact(
   supabase: ReturnType<typeof createClient>,

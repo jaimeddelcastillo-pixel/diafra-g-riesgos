@@ -32,7 +32,7 @@ const MAX_TIMESTAMP_SKEW_MS = 5 * 60 * 1000; // 5 minutos
 const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000; // 1 hora
 const RATE_LIMIT_MAX = 3;
 const TRIAL_DAYS = 14;
-const APP_BASE = Deno.env.get("APP_URL") || "https://tracea.com.mx";
+const APP_BASE = "https://tracea.com.mx";
 
 const NORMAS_OK = new Set(["NOM-241", "NOM-059", "MULTI"]);
 
