@@ -828,8 +828,8 @@ export function RiesgoFormDialog({ open, onClose, folioId, riesgo, nextNumeroId,
               </div>
               <div className="space-y-1.5 col-span-2 flex items-center gap-2 border rounded-md p-2">
                 <Switch
-                  checked={form.requiere_accion || needsAction}
-                  onCheckedChange={(v) => update("requiere_accion", v)}
+                  checked={accionAplica}
+                  onCheckedChange={toggleRequiereAccion}
                   disabled={needsAction}
                 />
                 <Label className="text-xs cursor-pointer">
@@ -837,24 +837,35 @@ export function RiesgoFormDialog({ open, onClose, folioId, riesgo, nextNumeroId,
                   {needsAction && <span className="text-destructive ml-1">(obligatorio por NPR/S)</span>}
                 </Label>
               </div>
+              {!accionAplica && (
+                <div className="col-span-2 rounded-md border border-dashed bg-muted/30 p-2 text-xs text-muted-foreground">
+                  No aplica — el riesgo es aceptable con los controles actuales. Acción propuesta,
+                  responsable y fecha compromiso quedan en blanco para mantener la trazabilidad.
+                </div>
+              )}
               <div className="space-y-1.5">
                 <Label className="text-xs">
                   Acción Propuesta {needsAction && <span className="text-destructive">*</span>}
                 </Label>
                 <Textarea
-                  value={form.accion_propuesta}
+                  value={accionAplica ? form.accion_propuesta : ""}
                   onChange={(e) => update("accion_propuesta", e.target.value)}
                   rows={3}
+                  disabled={!accionAplica}
                   className={needsAction && !form.accion_propuesta ? "border-destructive" : ""}
-                  placeholder="Describa la acción de mejora propuesta"
+                  placeholder={accionAplica ? "Describa la acción de mejora propuesta" : "No aplica"}
                 />
               </div>
               <div className="space-y-3">
                 <div className="space-y-1.5">
                   <Label className="text-xs">Responsable</Label>
-                  <Select value={form.responsable} onValueChange={(v) => update("responsable", v)}>
+                  <Select
+                    value={accionAplica ? form.responsable : ""}
+                    onValueChange={(v) => update("responsable", v)}
+                    disabled={!accionAplica}
+                  >
                     <SelectTrigger>
-                      <SelectValue placeholder="Seleccionar responsable" />
+                      <SelectValue placeholder={accionAplica ? "Seleccionar responsable" : "No aplica"} />
                     </SelectTrigger>
                     <SelectContent>
                       {profiles?.map((p) => (
@@ -869,9 +880,13 @@ export function RiesgoFormDialog({ open, onClose, folioId, riesgo, nextNumeroId,
                   <Label className="text-xs">Fecha Compromiso</Label>
                   <Popover>
                     <PopoverTrigger asChild>
-                      <Button variant="outline" className={cn("w-full justify-start text-left font-normal text-xs", !form.fecha_compromiso && "text-muted-foreground")}>
+                      <Button variant="outline" disabled={!accionAplica} className={cn("w-full justify-start text-left font-normal text-xs", !form.fecha_compromiso && "text-muted-foreground")}>
                         <CalendarIcon className="mr-2 h-4 w-4" />
-                        {fechaCompromisoDate ? format(fechaCompromisoDate, "PPP") : form.fecha_compromiso || "Seleccionar fecha"}
+                        {!accionAplica
+                          ? "No aplica"
+                          : fechaCompromisoDate
+                          ? format(fechaCompromisoDate, "PPP")
+                          : form.fecha_compromiso || "Seleccionar fecha"}
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="start">
