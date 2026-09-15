@@ -2046,6 +2046,22 @@ export default function FolioDetail() {
                   })()}
                   Checklist
                 </Button>
+                {/* Botón solicitar votación del comité */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1 text-xs"
+                  onClick={() => handleSolicitarVotacion()}
+                  disabled={convocando || comite.length === 0}
+                  title={
+                    comite.length === 0
+                      ? "Agrega miembros al comité primero"
+                      : "Enviar correo al comité para que revise y vote"
+                  }
+                >
+                  <MailCheck className="h-3 w-3" />
+                  {convocando ? "Enviando..." : "Solicitar votación"}
+                </Button>
                 {/* Botón enviar */}
                 <Button
                   size="sm"
