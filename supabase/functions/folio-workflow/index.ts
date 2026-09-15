@@ -337,6 +337,118 @@ Deno.serve(async (req) => {
   const callerOrgId = callerMember?.org_id ?? null;
   const callerRole = callerMember?.role ?? null;
 
+  // ─── ACCIÓN 0: Solicitar votación del comité (folio en Borrador) ─────────────
+  if (accion === "solicitar-votacion") {
+    const { data: folio, error: fErr } = await admin
+      .from("folios")
+      .select("id, codigo, proceso_equipo, estado, created_by, org_id, norma_folio")
+      .eq("id", folio_id)
+      .single();
+
+    if (fErr || !folio) return json({ error: "Folio no encontrado" }, 404);
+    if (folio.org_id !== callerOrgId) return json({ error: "Sin permiso para este folio" }, 403);
+    if (folio.estado !== "Borrador") {
+      return json({ error: "Solo se puede convocar a votación mientras el folio está en Borrador" }, 400);
+    }
+    if (folio.created_by !== user.id) {
+      if (!["admin", "responsable_sanitario", "super_admin"].includes(callerRole ?? "")) {
+        return json({ error: "Sin permiso para convocar a votación en este folio" }, 403);
+      }
+    }
+
+    const norma = getNorma((folio as any).norma_folio);
+    const orgInfo = await getOrgInfo(admin, folio.org_id);
+
+    const { data: comite } = await admin
+      .from("folio_comite")
+      .select("id, nombre, cargo, user_id")
+      .eq("folio_id", folio_id);
+
+    if (!comite || comite.length === 0) {
+      return json({ error: "El folio no tiene miembros en el comité" }, 400);
+    }
+
+    const { data: votos } = await admin
+      .from("comite_votos")
+      .select("user_id")
+      .eq("folio_id", folio_id);
+    const yaVotaron = new Set((votos ?? []).map((v: any) => v.user_id));
+
+    const { count: totalRiesgos } = await admin
+      .from("riesgos")
+      .select("id", { count: "exact", head: true })
+      .eq("folio_id", folio_id);
+
+    const pendientes = comite.filter((m: any) => m.user_id && !yaVotaron.has(m.user_id));
+    const esRecordatorio = yaVotaron.size > 0;
+    const ronda = new Date().toISOString().slice(0, 13); // permite reenvío por hora
+
+    const notificados: string[] = [];
+    for (const miembro of pendientes) {
+      const { data: perfil } = await admin
+        .from("profiles")
+        .select("email, nombre")
+        .eq("id", miembro.user_id)
+        .single();
+      if (!perfil?.email) continue;
+
+      await sendTplEmail(
+        admin,
+        "folio-solicitud-votacion",
+        perfil.email,
+        {
+          nombre: perfil.nombre || miembro.nombre,
+          folio_codigo: folio.codigo,
+          proceso: folio.proceso_equipo,
+          organizacion: orgInfo.org_nombre,
+          norma_nombre: norma.nombre,
+          norma_largo: norma.nombreLargo,
+          metodologia: norma.metodologia,
+          documento: norma.terminologia.documento,
+          proceso_label: norma.terminologia.procesoEquipo,
+          total_riesgos: totalRiesgos ?? 0,
+          recordatorio: esRecordatorio,
+          link: `${APP_URL}/folios/${folio_id}`,
+        },
+        `folio-votacion-${folio_id}-${miembro.user_id}-${ronda}`,
+      );
+      notificados.push(perfil.email);
+    }
+
+    const sinCuenta = comite.filter((m: any) => !m.user_id).length;
+
+    await admin.from("audit_trail").insert({
+      tabla: "folios",
+      registro_id: folio_id,
+      accion: esRecordatorio ? "RECORDATORIO_VOTACION" : "SOLICITUD_VOTACION",
+      user_id: user.id,
+      org_id: folio.org_id,
+      ip:
+        req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+        req.headers.get("x-real-ip") ||
+        null,
+      valor_nuevo: {
+        folio_codigo: folio.codigo,
+        notificados,
+        total_miembros: comite.length,
+        ya_votaron: yaVotaron.size,
+        sin_cuenta: sinCuenta,
+      },
+    });
+
+    return json({
+      success: true,
+      notificados: notificados.length,
+      ya_votaron: yaVotaron.size,
+      sin_cuenta: sinCuenta,
+      recordatorio: esRecordatorio,
+      mensaje:
+        notificados.length > 0
+          ? `Se notificó a ${notificados.length} miembro(s) del comité`
+          : "Todos los miembros con cuenta ya votaron",
+    });
+  }
+
   // ─── ACCIÓN 1: Enviar folio a firma ──────────────────────────────────────────
   if (accion === "enviar-a-firma") {
     const { data: folio, error: fErr } = await admin
@@ -411,10 +523,25 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Resultado de la votación del comité (contexto para el dictamen del RS)
+    const { data: votosFolio } = await admin
+      .from("comite_votos")
+      .select("user_id, voto")
+      .eq("folio_id", folio_id);
+    const votosValidos = (votosFolio ?? []).filter((v: any) =>
+      (comite ?? []).some((c: any) => c.user_id === v.user_id),
+    );
+    const votosAprueba = votosValidos.filter((v: any) => v.voto === "aprueba").length;
+    const votosObserv = votosValidos.filter(
+      (v: any) => v.voto === "aprueba_con_observaciones",
+    ).length;
+    const totalMiembros = (comite ?? []).length;
+    const votosPendientes = Math.max(0, totalMiembros - votosValidos.length);
+
     // Notificar también al aprobador final (RS). Fallback: admins de la org.
     await notificarAprobadorFinal(admin, folio.org_id, {
-      templateName: "folio-enviado-firma",
-      idempotencyPrefix: `folio-firma-aprobador-${folio_id}`,
+      templateName: "folio-listo-dictamen",
+      idempotencyPrefix: `folio-dictamen-aviso-${folio_id}`,
       templateData: {
         folio_codigo: folio.codigo,
         proceso: folio.proceso_equipo,
@@ -424,6 +551,11 @@ Deno.serve(async (req) => {
         metodologia: norma.metodologia,
         documento: norma.terminologia.documento,
         proceso_label: norma.terminologia.procesoEquipo,
+        aprobador: norma.terminologia.aprobadorFinal,
+        votos_aprueba: votosAprueba,
+        votos_observaciones: votosObserv,
+        votos_pendientes: votosPendientes,
+        total_miembros: totalMiembros,
         link: `${APP_URL}/folios/${folio_id}`,
       },
       aprobadorLabel: norma.terminologia.aprobadorFinal,

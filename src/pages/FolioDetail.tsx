@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { OrigenAnalisisSelect } from "@/components/OrigenAnalisisSelect";
-import { ArrowLeft, ArrowDownUp, FileSignature, Lock, Printer, Plus, Pencil, Trash2, Save, X, History, AlertTriangle, Clock, CheckCircle2, Sparkles } from "lucide-react";
+import { ArrowLeft, ArrowDownUp, FileSignature, Lock, Printer, Plus, Pencil, Trash2, Save, X, History, AlertTriangle, Clock, CheckCircle2, Sparkles, MailCheck } from "lucide-react";
 import { useFolioDetail, getNPRLevel, getEstadoStyle } from "@/hooks/useFolios";
 import type { Folio, Riesgo, FolioComite } from "@/hooks/useFolios";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -1680,6 +1680,7 @@ export default function FolioDetail() {
   const isAdmin = hasRole("admin") || hasRole("responsable_sanitario");
 
   const [enviandoFirma, setEnviandoFirma] = useState(false);
+  const [convocando, setConvocando] = useState(false);
   const [showChecklist, setShowChecklist] = useState(false);
   const [cancelarOpen, setCancelarOpen] = useState(false);
   const [cancelarModo, setCancelarModo] = useState<
@@ -1769,6 +1770,38 @@ export default function FolioDetail() {
     queryClient.invalidateQueries({ queryKey: ["folios"] });
   };
 
+  // ── Solicitar votación del comité (folio en Borrador) ──
+  const handleSolicitarVotacion = async (): Promise<boolean> => {
+    setConvocando(true);
+    try {
+      const { data: result, error } = await supabase.functions.invoke("folio-workflow", {
+        body: { accion: "solicitar-votacion", folio_id: folio.id },
+      });
+      if (error) throw new Error(error.message);
+      if (result?.error) throw new Error(result.error);
+
+      const sinCuenta = result?.sin_cuenta ?? 0;
+      toast({
+        title: result?.notificados > 0 ? "📨 Convocatoria enviada" : "Sin pendientes",
+        description:
+          (result?.mensaje || "") +
+          (sinCuenta > 0
+            ? ` · ${sinCuenta} miembro(s) sin usuario en el sistema no recibieron correo.`
+            : ""),
+      });
+      return true;
+    } catch (err: any) {
+      toast({
+        title: "Error al convocar a votación",
+        description: err.message,
+        variant: "destructive",
+      });
+      return false;
+    } finally {
+      setConvocando(false);
+    }
+  };
+
   // ── Enviar folio a firma ──
   const handleEnviarAFirma = async () => {
     setEnviandoFirma(true);
@@ -1804,10 +1837,13 @@ export default function FolioDetail() {
       }
       if (pendientes > 0) {
         const ok = window.confirm(
-          `${pendientes} miembro(s) del comité aún no han votado. ¿Deseas continuar de todas formas?`,
+          `${pendientes} miembro(s) del comité aún no han votado.\n\n` +
+            `Aceptar: enviar a firma de todas formas.\n` +
+            `Cancelar: enviarles primero la solicitud de votación.`,
         );
         if (!ok) {
           setEnviandoFirma(false);
+          await handleSolicitarVotacion();
           return;
         }
       }
@@ -2009,6 +2045,22 @@ export default function FolioDetail() {
                         : <span className="text-green-700 font-bold">✓</span>;
                   })()}
                   Checklist
+                </Button>
+                {/* Botón solicitar votación del comité */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1 text-xs"
+                  onClick={() => handleSolicitarVotacion()}
+                  disabled={convocando || comite.length === 0}
+                  title={
+                    comite.length === 0
+                      ? "Agrega miembros al comité primero"
+                      : "Enviar correo al comité para que revise y vote"
+                  }
+                >
+                  <MailCheck className="h-3 w-3" />
+                  {convocando ? "Enviando..." : "Solicitar votación"}
                 </Button>
                 {/* Botón enviar */}
                 <Button
