@@ -1770,6 +1770,38 @@ export default function FolioDetail() {
     queryClient.invalidateQueries({ queryKey: ["folios"] });
   };
 
+  // ── Solicitar votación del comité (folio en Borrador) ──
+  const handleSolicitarVotacion = async (): Promise<boolean> => {
+    setConvocando(true);
+    try {
+      const { data: result, error } = await supabase.functions.invoke("folio-workflow", {
+        body: { accion: "solicitar-votacion", folio_id: folio.id },
+      });
+      if (error) throw new Error(error.message);
+      if (result?.error) throw new Error(result.error);
+
+      const sinCuenta = result?.sin_cuenta ?? 0;
+      toast({
+        title: result?.notificados > 0 ? "📨 Convocatoria enviada" : "Sin pendientes",
+        description:
+          (result?.mensaje || "") +
+          (sinCuenta > 0
+            ? ` · ${sinCuenta} miembro(s) sin usuario en el sistema no recibieron correo.`
+            : ""),
+      });
+      return true;
+    } catch (err: any) {
+      toast({
+        title: "Error al convocar a votación",
+        description: err.message,
+        variant: "destructive",
+      });
+      return false;
+    } finally {
+      setConvocando(false);
+    }
+  };
+
   // ── Enviar folio a firma ──
   const handleEnviarAFirma = async () => {
     setEnviandoFirma(true);
