@@ -293,6 +293,34 @@ export function RiesgoFormDialog({ open, onClose, folioId, riesgo, nextNumeroId,
 
   const update = (field: string, value: any) => setForm((f) => ({ ...f, [field]: value }));
 
+  // ¿Aplica el bloque de acción de mejora? Si no, los campos se bloquean y se guardan vacíos.
+  const accionAplica = form.requiere_accion || needsAction;
+
+  const toggleRequiereAccion = (v: boolean) => {
+    if (!v) {
+      const hayDatos =
+        form.accion_propuesta.trim() !== "" ||
+        form.responsable.trim() !== "" ||
+        form.fecha_compromiso !== "";
+      if (
+        hayDatos &&
+        !window.confirm(
+          "Se eliminarán la acción propuesta, el responsable y la fecha compromiso de este ID. ¿Continuar?",
+        )
+      )
+        return;
+      setForm((f) => ({
+        ...f,
+        requiere_accion: false,
+        accion_propuesta: "",
+        responsable: "",
+        fecha_compromiso: "",
+      }));
+      return;
+    }
+    update("requiere_accion", true);
+  };
+
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files?.length) return;
