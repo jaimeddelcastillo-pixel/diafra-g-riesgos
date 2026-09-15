@@ -523,10 +523,25 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Resultado de la votación del comité (contexto para el dictamen del RS)
+    const { data: votosFolio } = await admin
+      .from("comite_votos")
+      .select("user_id, voto")
+      .eq("folio_id", folio_id);
+    const votosValidos = (votosFolio ?? []).filter((v: any) =>
+      (comite ?? []).some((c: any) => c.user_id === v.user_id),
+    );
+    const votosAprueba = votosValidos.filter((v: any) => v.voto === "aprueba").length;
+    const votosObserv = votosValidos.filter(
+      (v: any) => v.voto === "aprueba_con_observaciones",
+    ).length;
+    const totalMiembros = (comite ?? []).length;
+    const votosPendientes = Math.max(0, totalMiembros - votosValidos.length);
+
     // Notificar también al aprobador final (RS). Fallback: admins de la org.
     await notificarAprobadorFinal(admin, folio.org_id, {
-      templateName: "folio-enviado-firma",
-      idempotencyPrefix: `folio-firma-aprobador-${folio_id}`,
+      templateName: "folio-listo-dictamen",
+      idempotencyPrefix: `folio-dictamen-aviso-${folio_id}`,
       templateData: {
         folio_codigo: folio.codigo,
         proceso: folio.proceso_equipo,
@@ -536,6 +551,11 @@ Deno.serve(async (req) => {
         metodologia: norma.metodologia,
         documento: norma.terminologia.documento,
         proceso_label: norma.terminologia.procesoEquipo,
+        aprobador: norma.terminologia.aprobadorFinal,
+        votos_aprueba: votosAprueba,
+        votos_observaciones: votosObserv,
+        votos_pendientes: votosPendientes,
+        total_miembros: totalMiembros,
         link: `${APP_URL}/folios/${folio_id}`,
       },
       aprobadorLabel: norma.terminologia.aprobadorFinal,
