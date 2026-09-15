@@ -15,7 +15,8 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-const APP_URL = Deno.env.get("APP_URL") ?? "https://tu-app.lovable.app";
+// Dominio productivo fijo: ignoramos cualquier APP_URL heredado de despliegues anteriores.
+const APP_URL = "https://tracea.com.mx";
 
 // ─── Configuración multi-norma (espejo simplificado de src/config/normas.ts) ──
 // Edge functions no pueden importar de src/; mantenemos los valores aquí.

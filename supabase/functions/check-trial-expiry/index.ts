@@ -11,7 +11,7 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-const APP_URL = Deno.env.get("APP_URL") ?? "https://tracea.com.mx";
+const APP_URL = "https://tracea.com.mx";
 const TRIAL_DAYS = 30;
 const AVISO_DIAS = [7, 3, 1] as const;
 

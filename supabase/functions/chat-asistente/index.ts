@@ -409,7 +409,7 @@ async function maybeEnviarAviso80(
           limite: limit,
           restantes,
           fecha_renovacion: fechaRenovacionTexto(),
-          link: `${Deno.env.get("APP_URL") || "https://tracea.com.mx"}/precios?from=limite`,
+          link: `https://tracea.com.mx/precios?from=limite`,
         },
       },
     });

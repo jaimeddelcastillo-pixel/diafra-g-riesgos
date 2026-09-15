@@ -34,7 +34,7 @@ const CONSULTAS_POR_PACK: Record<string, number> = {
   consultas_ia_100: 100,
 };
 
-const APP_URL = Deno.env.get("APP_URL") ?? "https://tracea.com.mx";
+const APP_URL = "https://tracea.com.mx";
 
 async function sendTplEmail(
   supabase: ReturnType<typeof createClient>,

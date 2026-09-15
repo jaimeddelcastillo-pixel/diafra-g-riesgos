@@ -32,7 +32,7 @@ async function verifyAccessToken(token: string, supabaseUrl: string) {
   return payload;
 }
 
-const APP_URL = Deno.env.get("APP_URL") ?? "https://tracea.com.mx";
+const APP_URL = "https://tracea.com.mx";
 const PLANES_VALIDOS = ["trial", "starter", "professional", "enterprise"];
 
 Deno.serve(async (req) => {

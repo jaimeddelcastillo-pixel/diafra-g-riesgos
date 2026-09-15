@@ -80,7 +80,7 @@ Deno.serve(async (req) => {
         .eq("id", member.org_id);
     }
 
-    const appUrl = Deno.env.get("APP_URL") || "https://tracea.com.mx";
+    const appUrl = "https://tracea.com.mx";
     const session = await stripe.billingPortal.sessions.create({
       customer: customerId,
       return_url: `${appUrl}/configuracion`,
