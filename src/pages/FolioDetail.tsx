@@ -1680,6 +1680,7 @@ export default function FolioDetail() {
   const isAdmin = hasRole("admin") || hasRole("responsable_sanitario");
 
   const [enviandoFirma, setEnviandoFirma] = useState(false);
+  const [convocando, setConvocando] = useState(false);
   const [showChecklist, setShowChecklist] = useState(false);
   const [cancelarOpen, setCancelarOpen] = useState(false);
   const [cancelarModo, setCancelarModo] = useState<
