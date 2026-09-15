@@ -717,7 +717,9 @@ export async function generateFolioPDF(
             styles: { halign: "center", valign: "middle", fontStyle: "bold", textColor: getNPRColor(npr, r.severidad, folio.norma_folio) },
           },
           {
-            content: `Acción Propuesta:\n${r.accion_propuesta || "—"}\n\nResponsable: ${r.responsable || "—"}\nFecha: ${fmtDate(r.fecha_compromiso)}`,
+            content: r.requiere_accion
+              ? `Acción Propuesta:\n${r.accion_propuesta || "—"}\n\nResponsable: ${r.responsable || "—"}\nFecha: ${fmtDate(r.fecha_compromiso)}`
+              : `Acción Propuesta:\nNo aplica — riesgo aceptable con los controles actuales.\n\nResponsable: No aplica\nFecha: No aplica`,
             rowSpan: 3,
             styles: { valign: "top" },
           },
