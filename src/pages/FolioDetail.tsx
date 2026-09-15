@@ -1837,10 +1837,13 @@ export default function FolioDetail() {
       }
       if (pendientes > 0) {
         const ok = window.confirm(
-          `${pendientes} miembro(s) del comité aún no han votado. ¿Deseas continuar de todas formas?`,
+          `${pendientes} miembro(s) del comité aún no han votado.\n\n` +
+            `Aceptar: enviar a firma de todas formas.\n` +
+            `Cancelar: enviarles primero la solicitud de votación.`,
         );
         if (!ok) {
           setEnviandoFirma(false);
+          await handleSolicitarVotacion();
           return;
         }
       }
