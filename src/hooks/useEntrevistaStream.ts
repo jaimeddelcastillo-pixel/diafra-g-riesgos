@@ -26,13 +26,18 @@ interface Opts {
   onAssistantMessage: (texto: string) => void;
 }
 
+let currentOrgId: string | null = null;
+
 async function authHeaders() {
   const { data } = await supabase.auth.getSession();
-  return {
+  const h: Record<string, string> = {
     "Content-Type": "application/json",
     Authorization: `Bearer ${data.session?.access_token ?? ""}`,
     apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string,
   };
+  // Solo tiene efecto server-side para super_admin (modo soporte)
+  if (currentOrgId) h["x-org-id"] = currentOrgId;
+  return h;
 }
 
 export function useEntrevistaStream({ sessionId, onTurnComplete, onAssistantMessage }: Opts) {

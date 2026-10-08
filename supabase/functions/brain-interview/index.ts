@@ -10,7 +10,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
+    "authorization, x-client-info, apikey, content-type, x-org-id",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
@@ -1002,21 +1002,31 @@ Deno.serve(async (req) => {
 
     const admin = createClient(SUPABASE_URL, SERVICE_KEY);
 
-    // ── 2. org_id resuelto server-side (nunca del frontend ni del modelo)
+    // ── 2. org_id resuelto server-side (nunca del modelo)
+    const { data: rolesRows } = await admin
+      .from("user_roles").select("role").eq("user_id", user.id);
+    const roles = (rolesRows ?? []).map((r: any) => String(r.role));
+    const esSuperAdmin = roles.includes("super_admin");
+
     const { data: member } = await admin
       .from("org_members")
       .select("org_id, role, organizations(id, nombre, norma_aplicable, plan)")
       .eq("user_id", user.id)
       .maybeSingle();
-    const org: any = (member as any)?.organizations;
+    let org: any = (member as any)?.organizations;
+
+    // Super admin en modo soporte (impersonación): org indicada por header, validada por rol
+    const orgHeader = req.headers.get("x-org-id");
+    if (esSuperAdmin && orgHeader && UUID_RE.test(orgHeader)) {
+      const { data: orgImp } = await admin
+        .from("organizations").select("id, nombre, norma_aplicable, plan")
+        .eq("id", orgHeader).maybeSingle();
+      if (orgImp) org = orgImp;
+    }
     if (!org) return json({ error: "Usuario sin organización" }, 403);
     const orgId: string = org.id;
 
     // ── 3. Feature institutional_brain + restricciones de plan
-    const { data: rolesRows } = await admin
-      .from("user_roles").select("role").eq("user_id", user.id);
-    const roles = (rolesRows ?? []).map((r: any) => String(r.role));
-    const esSuperAdmin = roles.includes("super_admin");
     const esAdmin = esSuperAdmin || roles.includes("admin") || String((member as any)?.role ?? "") === "admin";
     const plan = String(org.plan ?? "").toLowerCase();
     const planIncluye = ["professional", "enterprise"].includes(plan);
