@@ -35,6 +35,7 @@ interface TraceaUser {
   email: string;
   cargo: string | null;
   role: string;
+  activo?: boolean;
 }
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
