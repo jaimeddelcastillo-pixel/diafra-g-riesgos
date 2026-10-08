@@ -32,17 +32,16 @@ function iconForMime(mime: string | null): string {
 }
 
 export default function MisProtocolos() {
-  const { user } = useAuth();
+  const { user, orgId } = useAuth();
   const navigate = useNavigate();
 
   // Verificar compra
   const { data: tienCompra, isLoading: loadingCompra } = useQuery({
-    queryKey: ["addon-purchase-protocolos", user?.id],
+    queryKey: ["addon-purchase-protocolos", user?.id, orgId],
     enabled: !!user?.id,
     queryFn: async () => {
-      const { data: member } = await supabase
-        .from("org_members").select("org_id").eq("user_id", user!.id).maybeSingle();
-      if (!member?.org_id) return false;
+      const member = { org_id: orgId };
+      if (!member.org_id) return false;
       const { data } = await supabase
         .from("addon_purchases")
         .select("id")

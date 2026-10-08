@@ -1,6 +1,7 @@
 // Importación del Listado Maestro de Documentos.
 // El parseo ocurre en el cliente; aquí solo se validan permisos y se persiste.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
+import { resolverContextoOrg, ContextoOrgError } from "../_shared/contexto-org.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
