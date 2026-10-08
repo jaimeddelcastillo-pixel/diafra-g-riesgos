@@ -28,30 +28,24 @@ Deno.serve(async (req) => {
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
   );
 
-  // 1. JWT válido
-  const token = (req.headers.get("Authorization") ?? "").replace("Bearer ", "");
-  const { data: userData, error: userErr } = await admin.auth.getUser(token);
-  if (userErr || !userData?.user) return json({ error: "no_autenticado" }, 401);
-  const userId = userData.user.id;
-
-  // 2. org_id desde org_members — nunca del frontend
-  const { data: member } = await admin
-    .from("org_members").select("org_id, role").eq("user_id", userId).maybeSingle();
-
-  const { data: superRow } = await admin
-    .from("user_roles").select("role").eq("user_id", userId).eq("role", "super_admin").maybeSingle();
-  const esSuper = !!superRow;
+  // 1-2. JWT + empresa/rol desde contexto_org_actual — nunca del frontend
+  let ctx;
+  try {
+    ctx = await resolverContextoOrg(req);
+  } catch (e) {
+    const err = e as ContextoOrgError;
+    const code = err.status === 401 ? "no_autenticado" : err.status === 403 ? "sin_organizacion" : "error_contexto";
+    return json({ error: code }, err.status ?? 500);
+  }
+  const userId = ctx.userId;
+  const orgId = ctx.orgId;
+  const esSuper = ctx.esSuperAdmin;
 
   const body = await req.json().catch(() => null);
   if (!body) return json({ error: "payload_invalido" }, 400);
 
-  const orgId = member?.org_id ?? (esSuper ? body.org_id : null);
-  if (!orgId) return json({ error: "sin_organizacion" }, 403);
-
-  // 3. Rol autorizado
-  const { data: roles } = await admin.from("user_roles").select("role").eq("user_id", userId);
-  const lista = new Set<string>([...(roles ?? []).map((r: any) => r.role), member?.role].filter(Boolean) as string[]);
-  const autorizado = esSuper || lista.has("admin") || lista.has("responsable_sanitario");
+  // 3. Rol autorizado (rol local en la empresa, no user_roles)
+  const autorizado = esSuper || ctx.rolEnOrg === "admin" || ctx.rolEnOrg === "responsable_sanitario";
   if (!autorizado) return json({ error: "sin_permiso" }, 403);
 
   // 4. Módulo del Cerebro (decisión única en org_tiene_modulo)
