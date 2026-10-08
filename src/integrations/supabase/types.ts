@@ -2622,6 +2622,27 @@ export type Database = {
           },
         ]
       }
+      modulos: {
+        Row: {
+          activo: boolean
+          clave: string
+          descripcion: string | null
+          nombre: string
+        }
+        Insert: {
+          activo?: boolean
+          clave: string
+          descripcion?: string | null
+          nombre: string
+        }
+        Update: {
+          activo?: boolean
+          clave?: string
+          descripcion?: string | null
+          nombre?: string
+        }
+        Relationships: []
+      }
       org_documentos: {
         Row: {
           creado_por: string | null
@@ -3004,6 +3025,102 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      plan_modulos: {
+        Row: {
+          modulo: string
+          plan: string
+        }
+        Insert: {
+          modulo: string
+          plan: string
+        }
+        Update: {
+          modulo?: string
+          plan?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plan_modulos_modulo_fkey"
+            columns: ["modulo"]
+            isOneToOne: false
+            referencedRelation: "modulos"
+            referencedColumns: ["clave"]
+          },
+          {
+            foreignKeyName: "plan_modulos_plan_fkey"
+            columns: ["plan"]
+            isOneToOne: false
+            referencedRelation: "planes"
+            referencedColumns: ["clave"]
+          },
+        ]
+      }
+      planes: {
+        Row: {
+          activo: boolean
+          clave: string
+          nombre: string
+        }
+        Insert: {
+          activo?: boolean
+          clave: string
+          nombre: string
+        }
+        Update: {
+          activo?: boolean
+          clave?: string
+          nombre?: string
+        }
+        Relationships: []
+      }
+      precios: {
+        Row: {
+          id: string
+          modulo: string | null
+          moneda: string
+          monto: number
+          periodo: string
+          plan: string
+          vigente_desde: string
+          vigente_hasta: string | null
+        }
+        Insert: {
+          id?: string
+          modulo?: string | null
+          moneda?: string
+          monto: number
+          periodo: string
+          plan: string
+          vigente_desde?: string
+          vigente_hasta?: string | null
+        }
+        Update: {
+          id?: string
+          modulo?: string | null
+          moneda?: string
+          monto?: number
+          periodo?: string
+          plan?: string
+          vigente_desde?: string
+          vigente_hasta?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "precios_modulo_fkey"
+            columns: ["modulo"]
+            isOneToOne: false
+            referencedRelation: "modulos"
+            referencedColumns: ["clave"]
+          },
+          {
+            foreignKeyName: "precios_plan_fkey"
+            columns: ["plan"]
+            isOneToOne: false
+            referencedRelation: "planes"
+            referencedColumns: ["clave"]
           },
         ]
       }
@@ -3505,6 +3622,7 @@ export type Database = {
         Returns: boolean
       }
       is_super_admin: { Args: never; Returns: boolean }
+      mi_org_tiene_modulo: { Args: { _modulo: string }; Returns: boolean }
       move_to_dlq: {
         Args: {
           dlq_name: string
@@ -3521,6 +3639,10 @@ export type Database = {
         | { Args: { p_org_id: string; p_tipo: string }; Returns: string }
       next_ticket_code: { Args: { p_org_id: string }; Returns: string }
       org_has_curso_access: { Args: { _org_id: string }; Returns: boolean }
+      org_tiene_modulo: {
+        Args: { _modulo: string; _org: string }
+        Returns: boolean
+      }
       purgar_documentos_eliminados: { Args: never; Returns: number }
       purgar_documentos_expirados: {
         Args: never
