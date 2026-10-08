@@ -57,6 +57,7 @@ export const navigationConfig: NavItem[] = [
       { id: "cerebro-contradicciones", label: "Contradicciones", icon: GitCompare, route: "/cerebro/contradicciones", section: "nucleo" },
       { id: "cerebro-brechas", label: "Brechas", icon: CircleAlert, route: "/cerebro/brechas", section: "nucleo" },
       { id: "cerebro-exportar", label: "Exportar", icon: Download, route: "/cerebro/exportar", section: "nucleo" },
+      { id: "cerebro-auditoria", label: "Auditoría", icon: Search, route: "/cerebro/auditoria", section: "nucleo", roles: ["admin", "responsable_sanitario"] },
     ],
   },
   {

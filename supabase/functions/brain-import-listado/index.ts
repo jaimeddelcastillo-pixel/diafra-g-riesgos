@@ -54,14 +54,11 @@ Deno.serve(async (req) => {
   const autorizado = esSuper || lista.has("admin") || lista.has("responsable_sanitario");
   if (!autorizado) return json({ error: "sin_permiso" }, 403);
 
-  // 4. Feature del Cerebro activa
-  const { data: feature } = await admin
-    .from("organization_features").select("activo, expira_en")
-    .eq("org_id", orgId).eq("feature_key", "institutional_brain").maybeSingle();
-  const { data: org } = await admin.from("organizations").select("plan").eq("id", orgId).maybeSingle();
-  const planIncluye = ["professional", "enterprise"].includes(org?.plan ?? "");
-  const featureActiva = !!feature?.activo && (!feature.expira_en || new Date(feature.expira_en) > new Date());
-  if (!esSuper && !planIncluye && !featureActiva) return json({ error: "feature_inactiva" }, 403);
+  // 4. Módulo del Cerebro (decisión única en org_tiene_modulo)
+  const { data: tieneModulo } = await admin.rpc("org_tiene_modulo", {
+    _org: orgId, _modulo: "institutional_brain",
+  });
+  if (!esSuper && !tieneModulo) return json({ error: "feature_inactiva" }, 403);
 
   const accion = body.accion ?? "importar";
 

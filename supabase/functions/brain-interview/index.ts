@@ -1029,15 +1029,11 @@ Deno.serve(async (req) => {
     // ── 3. Feature institutional_brain + restricciones de plan
     const esAdmin = esSuperAdmin || roles.includes("admin") || String((member as any)?.role ?? "") === "admin";
     const plan = String(org.plan ?? "").toLowerCase();
-    const planIncluye = ["professional", "enterprise"].includes(plan);
-    const { data: feat } = await admin
-      .from("organization_features")
-      .select("activo, expira_en")
-      .eq("org_id", orgId)
-      .eq("feature_key", "institutional_brain")
-      .maybeSingle();
-    const featActiva = !!feat?.activo && (!feat.expira_en || new Date(feat.expira_en) > new Date());
-    if (!esSuperAdmin && !planIncluye && !featActiva) {
+    const { data: tieneModulo } = await admin.rpc("org_tiene_modulo", {
+      _org: orgId,
+      _modulo: "institutional_brain",
+    });
+    if (!esSuperAdmin && !tieneModulo) {
       return json({ error: "El módulo Cerebro Institucional no está activo para esta organización" }, 403);
     }
     const esTrial = plan.startsWith("trial");
