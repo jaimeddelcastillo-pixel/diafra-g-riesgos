@@ -153,6 +153,41 @@ export default function Admin() {
     },
   });
 
+  const { data: miembrosQA = [] } = useQuery({
+    queryKey: ["miembros-qa", imperOrg?.id],
+    enabled: !!imperOrg?.id && /^QA\s/i.test(imperOrg?.nombre ?? ""),
+    queryFn: async () => {
+      const { data: mems, error } = await supabase
+        .from("org_members").select("user_id, role").eq("org_id", imperOrg!.id);
+      if (error) throw error;
+      const ids = (mems ?? []).map((m) => m.user_id);
+      if (!ids.length) return [];
+      const { data: profs } = await supabase.from("profiles").select("id, nombre, email").in("id", ids);
+      return (mems ?? []).map((m) => {
+        const p: any = (profs ?? []).find((x: any) => x.id === m.user_id);
+        return { user_id: m.user_id, role: m.role as string, nombre: p?.nombre ?? "", email: p?.email ?? "" };
+      });
+    },
+  });
+
+  const entrarComoUsuario = async (userId: string) => {
+    if (!imperOrg) return;
+    setImperLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("admin-login-as", {
+        body: { user_id: userId, org_id: imperOrg.id, motivo: imperMotivo },
+      });
+      if (error || (data as any)?.error) throw new Error((data as any)?.error ?? error?.message);
+      await supabase.auth.signOut();
+      const { error: vErr } = await supabase.auth.verifyOtp({ token_hash: (data as any).token_hash, type: "magiclink" });
+      if (vErr) throw vErr;
+      window.location.href = "/";
+    } catch (e: any) {
+      toast.error("No se pudo entrar como el usuario: " + (e?.message ?? "error"));
+      setImperLoading(false);
+    }
+  };
+
   const confirmImpersonation = async () => {
     if (!imperOrg) return;
     if (imperMotivo.trim().length < 10) {
@@ -1376,6 +1411,25 @@ export default function Admin() {
                 Mínimo 10 caracteres. Sé específico (ticket, folio, problema).
               </p>
             </div>
+            {imperOrg && /^QA\s/i.test(imperOrg.nombre) && (
+              <div className="space-y-2 rounded-md border p-3">
+                <Label>O entrar como un usuario de esta empresa de prueba</Label>
+                <p className="text-[11px] text-muted-foreground">
+                  Cerrará tu sesión de super admin y entrarás exactamente como ese usuario. Queda en la bitácora. Para volver, cierra sesión y entra con tu cuenta.
+                </p>
+                {miembrosQA.length === 0 && <p className="text-xs text-muted-foreground">Sin usuarios.</p>}
+                {miembrosQA.map((m) => (
+                  <div key={m.user_id} className="flex items-center justify-between gap-2 text-sm">
+                    <span className="truncate">{m.nombre || m.email} <span className="text-muted-foreground text-xs">· {m.role}</span></span>
+                    <Button size="sm" variant="secondary" className="h-7 text-xs gap-1"
+                      disabled={imperLoading || imperMotivo.trim().length < 10}
+                      onClick={() => entrarComoUsuario(m.user_id)}>
+                      <LogIn className="h-3 w-3" /> Entrar como
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => { setImperOrg(null); setImperMotivo(""); setImperTicketId(""); }}>
