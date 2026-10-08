@@ -1,6 +1,7 @@
 import { useCallback, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useAuth } from "@/hooks/useAuth";
 
 const FN_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/brain-interview`;
 
@@ -41,6 +42,8 @@ async function authHeaders() {
 }
 
 export function useEntrevistaStream({ sessionId, onTurnComplete, onAssistantMessage }: Opts) {
+  const { orgId } = useAuth();
+  currentOrgId = orgId;
   const [enviando, setEnviando] = useState(false);
   const [procesando, setProcesando] = useState(false);
   const [streamText, setStreamText] = useState("");
