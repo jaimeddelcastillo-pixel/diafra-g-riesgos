@@ -53,6 +53,8 @@ import CerebroDocumentos from "./pages/cerebro/CerebroDocumentos";
 import CerebroContradicciones from "./pages/cerebro/CerebroContradicciones";
 import CerebroBrechas from "./pages/cerebro/CerebroBrechas";
 import CerebroExportar from "./pages/cerebro/CerebroExportar";
+import CerebroAuditoria from "./pages/cerebro/CerebroAuditoria";
+import { CerebroGuard } from "./components/cerebro/CerebroGuard";
 
 const queryClient = new QueryClient();
 
@@ -89,14 +91,17 @@ const App = () => (
               <Route path="/mis-diplomas" element={<MisDiplomas />} />
               <Route path="/cumplimiento" element={<Cumplimiento />} />
               <Route path="/configuracion" element={<Configuracion />} />
-              <Route path="/cerebro" element={<CerebroDashboard />} />
-              <Route path="/cerebro/entrevistas" element={<CerebroEntrevistas />} />
-              <Route path="/cerebro/conocimiento" element={<CerebroConocimiento />} />
-              <Route path="/cerebro/validacion" element={<CerebroValidacion />} />
-              <Route path="/cerebro/documentos" element={<CerebroDocumentos />} />
-              <Route path="/cerebro/contradicciones" element={<CerebroContradicciones />} />
-              <Route path="/cerebro/brechas" element={<CerebroBrechas />} />
-              <Route path="/cerebro/exportar" element={<CerebroExportar />} />
+              <Route element={<CerebroGuard />}>
+                <Route path="/cerebro" element={<CerebroDashboard />} />
+                <Route path="/cerebro/entrevistas" element={<CerebroEntrevistas />} />
+                <Route path="/cerebro/conocimiento" element={<CerebroConocimiento />} />
+                <Route path="/cerebro/validacion" element={<CerebroValidacion />} />
+                <Route path="/cerebro/documentos" element={<CerebroDocumentos />} />
+                <Route path="/cerebro/contradicciones" element={<CerebroContradicciones />} />
+                <Route path="/cerebro/brechas" element={<CerebroBrechas />} />
+                <Route path="/cerebro/exportar" element={<CerebroExportar />} />
+                <Route path="/cerebro/auditoria" element={<CerebroAuditoria />} />
+              </Route>
               <Route path="/admin" element={<Admin />} />
               <Route path="/admin/org/:id" element={<AdminOrg />} />
               <Route path="/admin/tickets" element={<AdminTickets />} />
