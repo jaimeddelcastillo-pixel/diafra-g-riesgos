@@ -1,4 +1,4 @@
-// Solo super_admin: inicia sesión como un usuario de una empresa de PRUEBA (nombre empieza con "QA ").
+// Solo super_admin: inicia sesión como un usuario de una empresa marcada es_prueba = true.
 // Queda registrado en la bitácora (quién, cuándo, como quién, motivo).
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
@@ -35,9 +35,9 @@ Deno.serve(async (req) => {
     if (motivo.length < 10 || motivo.length > 1000) return json({ error: "Motivo de 10 a 1000 caracteres" }, 400);
     if (user_id === caller.id) return json({ error: "No puedes entrar como tú mismo" }, 400);
 
-    const { data: org } = await admin.from("organizations").select("id, nombre, estado").eq("id", org_id).maybeSingle();
-    if (!org || !/^QA\s/i.test(org.nombre) || org.estado === "cancelado") {
-      return json({ error: "Solo disponible para empresas de prueba (QA) activas" }, 403);
+    const { data: org } = await admin.from("organizations").select("id, nombre, estado, es_prueba").eq("id", org_id).maybeSingle();
+    if (!org || org.es_prueba !== true || org.estado === "cancelado") {
+      return json({ error: "Solo disponible para empresas marcadas como de prueba y activas" }, 403);
     }
     const { data: mem } = await admin.from("org_members").select("user_id")
       .eq("org_id", org_id).eq("user_id", user_id).maybeSingle();

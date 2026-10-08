@@ -153,9 +153,18 @@ export default function Admin() {
     },
   });
 
+  const { data: imperEsPrueba = false } = useQuery({
+    queryKey: ["org-es-prueba", imperOrg?.id],
+    enabled: !!imperOrg?.id,
+    queryFn: async () => {
+      const { data } = await supabase.from("organizations").select("es_prueba").eq("id", imperOrg!.id).maybeSingle();
+      return !!(data as any)?.es_prueba;
+    },
+  });
+
   const { data: miembrosQA = [] } = useQuery({
     queryKey: ["miembros-qa", imperOrg?.id],
-    enabled: !!imperOrg?.id && /^QA\s/i.test(imperOrg?.nombre ?? ""),
+    enabled: !!imperOrg?.id && imperEsPrueba,
     queryFn: async () => {
       const { data: mems, error } = await supabase
         .from("org_members").select("user_id, role").eq("org_id", imperOrg!.id);
@@ -181,6 +190,10 @@ export default function Admin() {
       await supabase.auth.signOut();
       const { error: vErr } = await supabase.auth.verifyOtp({ token_hash: (data as any).token_hash, type: "magiclink" });
       if (vErr) throw vErr;
+      const objetivo = miembrosQA.find((m) => m.user_id === userId);
+      localStorage.setItem("tracea-actuando-como", JSON.stringify({
+        user_id: userId, nombre: objetivo?.nombre || (data as any).email, email: (data as any).email,
+      }));
       window.location.href = "/";
     } catch (e: any) {
       toast.error("No se pudo entrar como el usuario: " + (e?.message ?? "error"));
@@ -1411,7 +1424,7 @@ export default function Admin() {
                 Mínimo 10 caracteres. Sé específico (ticket, folio, problema).
               </p>
             </div>
-            {imperOrg && /^QA\s/i.test(imperOrg.nombre) && (
+            {imperOrg && imperEsPrueba && (
               <div className="space-y-2 rounded-md border p-3">
                 <Label>O entrar como un usuario de esta empresa de prueba</Label>
                 <p className="text-[11px] text-muted-foreground">

@@ -2851,6 +2851,7 @@ export type Database = {
           dc3_adicionales_disponibles: number
           dc3_emitidos: number
           descripcion: string
+          es_prueba: boolean
           estado: Database["public"]["Enums"]["org_estado"]
           folio_digitos_consecutivo: number
           folio_formato_periodo: string
@@ -2898,6 +2899,7 @@ export type Database = {
           dc3_adicionales_disponibles?: number
           dc3_emitidos?: number
           descripcion?: string
+          es_prueba?: boolean
           estado?: Database["public"]["Enums"]["org_estado"]
           folio_digitos_consecutivo?: number
           folio_formato_periodo?: string
@@ -2945,6 +2947,7 @@ export type Database = {
           dc3_adicionales_disponibles?: number
           dc3_emitidos?: number
           descripcion?: string
+          es_prueba?: boolean
           estado?: Database["public"]["Enums"]["org_estado"]
           folio_digitos_consecutivo?: number
           folio_formato_periodo?: string
