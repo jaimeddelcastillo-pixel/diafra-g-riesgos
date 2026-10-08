@@ -90,9 +90,64 @@ Deno.serve(async (req) => {
       email_confirm: true,
       user_metadata: { nombre },
     });
-    if (createError) return json({ error: createError.message }, 400);
 
-    const userId = newUser.user.id;
+    let userId: string;
+    if (createError) {
+      const yaExiste = /already been registered|already registered|email_exists/i.test(createError.message);
+      if (!yaExiste) return json({ error: createError.message }, 200);
+
+      // Buscar el usuario existente por email
+      const target = String(email).trim().toLowerCase();
+      let existing: any = null;
+      for (let page = 1; page <= 20 && !existing; page++) {
+        const { data: list, error: lErr } = await adminClient.auth.admin.listUsers({ page, perPage: 1000 });
+        if (lErr) return json({ error: lErr.message }, 200);
+        existing = list.users.find((u) => (u.email ?? "").toLowerCase() === target);
+        if (list.users.length < 1000) break;
+      }
+      if (!existing) return json({ error: "Ese correo ya está registrado." }, 200);
+
+      // ¿Sigue activo en alguna organización?
+      const { count: membresias } = await adminClient
+        .from("org_members").select("org_id", { count: "exact", head: true }).eq("user_id", existing.id);
+      const { data: rolGlobal } = await adminClient
+        .from("user_roles").select("role").eq("user_id", existing.id).limit(1);
+      if ((membresias ?? 0) > 0 || (rolGlobal?.length ?? 0) > 0) {
+        return json({
+          error: "Este correo ya pertenece a un usuario activo. Si es de tu empresa, edítalo desde la lista de usuarios.",
+        }, 200);
+      }
+
+      // Usuario desactivado → reactivar con la nueva contraseña
+      const { error: upErr } = await adminClient.auth.admin.updateUserById(existing.id, {
+        password,
+        ban_duration: "none",
+        email_confirm: true,
+        user_metadata: { ...(existing.user_metadata ?? {}), nombre },
+      } as any);
+      if (upErr) return json({ error: `No se pudo reactivar el usuario: ${upErr.message}` }, 200);
+
+      await adminClient.from("profiles").update({
+        activo: true,
+        desactivado_en: null,
+        desactivado_por: null,
+        motivo_desactivacion: null,
+      } as any).eq("id", existing.id);
+
+      await adminClient.from("audit_trail").insert({
+        accion: "USUARIO_REACTIVADO",
+        tabla: "profiles",
+        registro_id: existing.id,
+        org_id: orgIdToUse,
+        user_id: caller.id,
+        valor_nuevo: { email: target, role: role || null, org_id: orgIdToUse },
+        ip: req.headers.get("x-forwarded-for") ?? null,
+      });
+
+      userId = existing.id;
+    } else {
+      userId = newUser.user.id;
+    }
 
     // Actualizar perfil
     await adminClient
@@ -106,7 +161,7 @@ Deno.serve(async (req) => {
         .from("org_members")
         .insert({ org_id: orgIdToUse, user_id: userId, role: role || "operador" });
       if (memberError) {
-        await adminClient.auth.admin.deleteUser(userId);
+        if (!createError) await adminClient.auth.admin.deleteUser(userId);
         return json({ error: memberError.message }, 500);
       }
     } else {
@@ -115,7 +170,7 @@ Deno.serve(async (req) => {
         .from("user_roles")
         .insert({ user_id: userId, role: role || "super_admin" });
       if (roleError) {
-        await adminClient.auth.admin.deleteUser(userId);
+        if (!createError) await adminClient.auth.admin.deleteUser(userId);
         return json({ error: roleError.message }, 500);
       }
     }
