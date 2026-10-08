@@ -28,7 +28,7 @@ export default function CerebroDocumentos() {
     const { data: diag } = await supabase.functions.invoke("brain-import-listado", {
       body: { accion: "revertir", org_id: orgId, batch_id: batchId, solo_diagnostico: true },
     });
-    if (diag && diag.eliminables === 0) {
+    if (diag && diag.eliminables === 0 && !diag.vacio) {
       setTrabajando(null);
       toast.error("Toda esta importación ya está siendo utilizada por el Cerebro y se conservará.");
       return;
