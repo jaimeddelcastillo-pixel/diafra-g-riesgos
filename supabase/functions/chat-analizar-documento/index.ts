@@ -3,6 +3,7 @@
 // y aplica visión si es escaneado). Devuelve resumen estructurado y clasificación.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { resolverContextoOrg } from "../_shared/contexto-org.ts";
 import JSZip from "npm:jszip@3.10.1";
 
 const corsHeaders = {
@@ -33,8 +34,8 @@ Deno.serve(async (req) => {
     if (!storage_path) return j({ error: "storage_path requerido" }, 400);
 
     // Org del usuario
-    const { data: member } = await adminClient
-      .from("org_members").select("org_id").eq("user_id", user.id).maybeSingle();
+    let member: { org_id: string } | null = null;
+    try { member = { org_id: (await resolverContextoOrg(req)).orgId }; } catch (_e) { member = null; }
     if (!member) return j({ error: "sin organización" }, 403);
 
     // Descargar el archivo

@@ -3,6 +3,7 @@
 // Devuelve JSON estructurado (no streaming).
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { resolverContextoOrg } from "../_shared/contexto-org.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -87,11 +88,9 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    const { data: memberRow } = await userClient
-      .from("org_members")
-      .select("org_id")
-      .eq("user_id", userData.user.id)
-      .maybeSingle();
+    // Empresa resuelta por el servidor (contexto_org_actual) — C2a
+    let memberRow: { org_id: string } | null = null;
+    try { memberRow = { org_id: (await resolverContextoOrg(req)).orgId }; } catch (_e) { memberRow = null; }
     if (!memberRow) {
       return new Response(JSON.stringify({ error: "sin organización" }), {
         status: 403,

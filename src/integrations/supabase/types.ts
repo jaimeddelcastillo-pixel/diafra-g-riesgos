@@ -2575,6 +2575,7 @@ export type Database = {
           super_admin_email: string
           super_admin_id: string
           ticket_id: string | null
+          tipo_cierre: string | null
           user_agent: string | null
         }
         Insert: {
@@ -2589,6 +2590,7 @@ export type Database = {
           super_admin_email: string
           super_admin_id: string
           ticket_id?: string | null
+          tipo_cierre?: string | null
           user_agent?: string | null
         }
         Update: {
@@ -2603,6 +2605,7 @@ export type Database = {
           super_admin_email?: string
           super_admin_id?: string
           ticket_id?: string | null
+          tipo_cierre?: string | null
           user_agent?: string | null
         }
         Relationships: [
@@ -3136,6 +3139,7 @@ export type Database = {
           id: string
           motivo_desactivacion: string | null
           nombre: string
+          org_activa_id: string | null
           updated_at: string
         }
         Insert: {
@@ -3149,6 +3153,7 @@ export type Database = {
           id: string
           motivo_desactivacion?: string | null
           nombre: string
+          org_activa_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -3162,9 +3167,18 @@ export type Database = {
           id?: string
           motivo_desactivacion?: string | null
           nombre?: string
+          org_activa_id?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_org_activa_id_fkey"
+            columns: ["org_activa_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       riesgos: {
         Row: {
@@ -3573,6 +3587,19 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      cerrar_mis_soportes: {
+        Args: { _log_id?: string; _tipo: string }
+        Returns: number
+      }
+      contexto_org_actual: {
+        Args: never
+        Returns: {
+          es_super_admin: boolean
+          org_id: string
+          rol_en_org: string
+          soporte_log_id: string
+        }[]
+      }
       crear_sesion_entrevista: {
         Args: {
           p_assignment_id?: string
@@ -3635,6 +3662,15 @@ export type Database = {
       }
       is_super_admin: { Args: never; Returns: boolean }
       mi_org_tiene_modulo: { Args: { _modulo: string }; Returns: boolean }
+      mis_organizaciones: {
+        Args: never
+        Returns: {
+          es_activa: boolean
+          nombre: string
+          org_id: string
+          rol: string
+        }[]
+      }
       move_to_dlq: {
         Args: {
           dlq_name: string
@@ -3691,6 +3727,7 @@ export type Database = {
         Args: { _norma: string; _org_id: string }
         Returns: undefined
       }
+      set_org_activa: { Args: { _org: string }; Returns: undefined }
       todos_firmaron: { Args: { p_folio_id: string }; Returns: boolean }
       verificar_diploma: {
         Args: { p_hash: string }

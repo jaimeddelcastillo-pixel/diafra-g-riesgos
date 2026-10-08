@@ -48,13 +48,13 @@ export function AppLayout() {
               <div className="bg-amber-500 text-white flex items-center justify-between px-4 py-1.5 text-xs shrink-0">
                 <span className="flex items-center gap-1.5 font-medium">
                   <Building2 className="h-3 w-3" />
-                  Viendo empresa: <strong>{impersonatedOrg?.nombre}</strong>
+                  Modo soporte — empresa: <strong>{impersonatedOrg?.nombre}</strong>
                 </span>
                 <button
                   className="underline hover:no-underline text-white font-medium"
-                  onClick={() => { stopImpersonation(); navigate("/admin"); }}
+                  onClick={async () => { await stopImpersonation(); navigate("/admin"); }}
                 >
-                  ← Volver a Panel TRACEA
+                  Terminar soporte
                 </button>
               </div>
             )}

@@ -1,6 +1,7 @@
 // Conserva el nombre "delete-user" por compatibilidad, pero ahora DESACTIVA:
 // nunca borra al usuario ni su perfil, para no perder autoría (ALCOA+ / 21 CFR Part 11).
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { resolverContextoOrg } from "../_shared/contexto-org.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -53,16 +54,16 @@ Deno.serve(async (req) => {
     // Organización afectada
     let orgId: string | null = null;
     if (!isSuperAdmin) {
-      const { data: callerMember } = await admin
-        .from("org_members").select("role, org_id")
-        .eq("user_id", caller.id).eq("role", "admin").maybeSingle();
-      if (!callerMember) return json({ error: "Se requiere rol de administrador" }, 403);
+      // Empresa y rol local resueltos por el servidor (contexto_org_actual) — C2a
+      let ctx;
+      try { ctx = await resolverContextoOrg(req); } catch (_e) { ctx = null; }
+      if (!ctx || ctx.rolEnOrg !== "admin") return json({ error: "Se requiere rol de administrador" }, 403);
 
       const { data: targetMember } = await admin
         .from("org_members").select("org_id")
-        .eq("user_id", user_id).eq("org_id", callerMember.org_id).maybeSingle();
+        .eq("user_id", user_id).eq("org_id", ctx.orgId).maybeSingle();
       if (!targetMember) return json({ error: "Usuario no pertenece a tu organización" }, 403);
-      orgId = callerMember.org_id;
+      orgId = ctx.orgId;
     } else {
       // El super_admin indica la organización. Si no la indica y el usuario no tiene
       // ninguna membresía (p. ej. equipo TRACEA), se desactiva sin quitar membresías.

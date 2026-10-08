@@ -56,20 +56,16 @@ function diasRestantes(iso: string | null): number | null {
 }
 
 export function PlanSubscriptionCard() {
-  const { user } = useAuth();
+  const { user, orgId } = useAuth();
   const navigate = useNavigate();
   const [loadingCheckout, setLoadingCheckout] = useState<PlanId | null>(null);
 
   const { data: org, isLoading } = useQuery<OrgSubscription | null>({
-    queryKey: ["plan-subscription-card", user?.id],
+    queryKey: ["plan-subscription-card", user?.id, orgId],
     enabled: !!user?.id,
     queryFn: async () => {
-      const { data: member } = await supabase
-        .from("org_members")
-        .select("org_id")
-        .eq("user_id", user!.id)
-        .maybeSingle();
-      if (!member?.org_id) return null;
+      const member = { org_id: orgId };
+      if (!member.org_id) return null;
 
       const { data, error } = await supabase
         .from("organizations")

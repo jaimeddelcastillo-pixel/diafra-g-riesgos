@@ -6,11 +6,12 @@
 // Respuesta: SSE con eventos { type: "content_block_delta" | "tool_use" | "sesion" | "error" }
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { resolverContextoOrg, ContextoOrgError } from "../_shared/contexto-org.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-org-id",
+    "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
@@ -990,44 +991,25 @@ Deno.serve(async (req) => {
     });
 
   try {
-    // ── 1. JWT
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) return json({ error: "No autenticado" }, 401);
-
-    const userClient = createClient(SUPABASE_URL, Deno.env.get("SUPABASE_ANON_KEY")!, {
-      global: { headers: { Authorization: authHeader } },
-    });
-    const { data: { user } } = await userClient.auth.getUser();
-    if (!user) return json({ error: "No autenticado" }, 401);
-
-    const admin = createClient(SUPABASE_URL, SERVICE_KEY);
-
-    // ── 2. org_id resuelto server-side (nunca del modelo)
-    const { data: rolesRows } = await admin
-      .from("user_roles").select("role").eq("user_id", user.id);
-    const roles = (rolesRows ?? []).map((r: any) => String(r.role));
-    const esSuperAdmin = roles.includes("super_admin");
-
-    const { data: member } = await admin
-      .from("org_members")
-      .select("org_id, role, organizations(id, nombre, norma_aplicable, plan)")
-      .eq("user_id", user.id)
-      .maybeSingle();
-    let org: any = (member as any)?.organizations;
-
-    // Super admin en modo soporte (impersonación): org indicada por header, validada por rol
-    const orgHeader = req.headers.get("x-org-id");
-    if (esSuperAdmin && orgHeader && UUID_RE.test(orgHeader)) {
-      const { data: orgImp } = await admin
-        .from("organizations").select("id, nombre, norma_aplicable, plan")
-        .eq("id", orgHeader).maybeSingle();
-      if (orgImp) org = orgImp;
+    // ── 1-2. JWT + empresa/rol resueltos por el servidor (contexto_org_actual)
+    let ctx;
+    try {
+      ctx = await resolverContextoOrg(req);
+    } catch (e) {
+      const err = e as ContextoOrgError;
+      return json({ error: err.message }, err.status ?? 500);
     }
+    const user = { id: ctx.userId, email: ctx.email };
+    const admin = createClient(SUPABASE_URL, SERVICE_KEY);
+    const esSuperAdmin = ctx.esSuperAdmin;
+    const orgId: string = ctx.orgId;
+    const { data: org } = await admin
+      .from("organizations").select("id, nombre, norma_aplicable, plan")
+      .eq("id", orgId).maybeSingle();
     if (!org) return json({ error: "Usuario sin organización" }, 403);
-    const orgId: string = org.id;
 
     // ── 3. Feature institutional_brain + restricciones de plan
-    const esAdmin = esSuperAdmin || roles.includes("admin") || String((member as any)?.role ?? "") === "admin";
+    const esAdmin = esSuperAdmin || ctx.rolEnOrg === "admin";
     const plan = String(org.plan ?? "").toLowerCase();
     const { data: tieneModulo } = await admin.rpc("org_tiene_modulo", {
       _org: orgId,

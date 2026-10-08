@@ -3,6 +3,7 @@
 // 1 user message = 1 unit (incremented on the first user message of the request).
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { resolverContextoOrg } from "../_shared/contexto-org.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -337,13 +338,14 @@ const TOOL_RULES_ADDENDUM = `
 
 `;
 
-async function getOrgContext(supabase: any, userId: string) {
-  const { data: member } = await supabase
-    .from("org_members")
-    .select("org_id, role, organizations(id, nombre, plan, norma_aplicable, metodologia, usar_detectabilidad, umbral_npr_alto, umbral_npr_medio, consultas_ia_extras)")
-    .eq("user_id", userId)
+async function getOrgContext(supabase: any, orgId: string, rolEnOrg: string | null) {
+  const { data: org } = await supabase
+    .from("organizations")
+    .select("id, nombre, plan, norma_aplicable, metodologia, usar_detectabilidad, umbral_npr_alto, umbral_npr_medio, consultas_ia_extras")
+    .eq("id", orgId)
     .maybeSingle();
-  return member;
+  if (!org) return null;
+  return { org_id: orgId, role: rolEnOrg, organizations: org };
 }
 
 function fechaRenovacionTexto(): string {
@@ -506,7 +508,10 @@ Deno.serve(async (req) => {
     const agente_override: "dm" | "farma" | null = body.agente ?? null;
     let conversacion_id: string | null = body.conversacion_id ?? null;
 
-    const member = await getOrgContext(adminClient, user.id);
+    // Empresa resuelta por el servidor (contexto_org_actual) — C2a
+    let ctxOrg;
+    try { ctxOrg = await resolverContextoOrg(req); } catch (_e) { ctxOrg = null; }
+    const member = ctxOrg ? await getOrgContext(adminClient, ctxOrg.orgId, ctxOrg.rolEnOrg) : null;
     if (!member) {
       return new Response(JSON.stringify({ error: "sin organización" }), {
         status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },

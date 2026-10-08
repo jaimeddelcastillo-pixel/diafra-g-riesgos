@@ -36,6 +36,13 @@
       "when": 1791490094351,
       "tag": "0004_usuarios_desactivacion_y_bitacora_inalterable",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1791498524220,
+      "tag": "0005_c2a_contexto_org",
+      "breakpoints": true
     }
   ]
 }

@@ -1,4 +1,5 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, useRef, useCallback, ReactNode } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { User, Session } from "@supabase/supabase-js";
 
@@ -52,93 +53,108 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const ORG_COLS = "id, nombre, slug, plan, activo, max_users, trial_expires_at, logo_url, codigo_formato, version_formato, descripcion, estado, pending_price_id, norma_aplicable, metodologia, usar_detectabilidad, umbral_npr_alto, umbral_npr_medio, onboarding_completado, onboarding_saltado, tiene_curso_pagado, curso_expira_en, dc3_emitidos, dc3_adicionales_disponibles, subscription_status, folio_prefijo, folio_formato_periodo, folio_digitos_consecutivo";
+const SOPORTE_KEY = "tracea-soporte-log";
+
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const queryClient = useQueryClient();
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<AuthContextType["profile"]>(null);
   const [roles, setRoles] = useState<AppRole[]>([]);
-  const [_orgId, setOrgId] = useState<string | null>(null);
-  const [_org, setOrg] = useState<OrgInfo | null>(null);
+  const [orgId, setOrgId] = useState<string | null>(null);
+  const [org, setOrg] = useState<OrgInfo | null>(null);
   const [orgRole, setOrgRole] = useState<AppRole | null>(null);
+  const [soporteLogId, setSoporteLogId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [impersonatedOrg, setImpersonatedOrg] = useState<OrgInfo | null>(null);
-  const [impersonationLogId, setImpersonationLogId] = useState<string | null>(null);
+  const channelRef = useRef<BroadcastChannel | null>(null);
+  const lastUserRef = useRef<string | null>(null);
 
-  // Cuando impersona, orgId y org reflejan la org del cliente transparentemente
-  const orgId = impersonatedOrg?.id ?? _orgId;
-  const org = impersonatedOrg ?? _org;
-  const isImpersonating = impersonatedOrg !== null;
+  // Empresa, rol y modo soporte vienen SIEMPRE del servidor (contexto_org_actual).
+  const isImpersonating = soporteLogId !== null;
+  const impersonatedOrg = isImpersonating ? org : null;
+
+  const broadcast = (tipo: string) => {
+    try { channelRef.current?.postMessage({ tipo }); } catch { /* noop */ }
+  };
+
+  const cargarContexto = useCallback(async (u: User) => {
+    const { data: profileData } = await supabase
+      .from("profiles").select("nombre, email, cargo").eq("id", u.id).maybeSingle();
+    setProfile(profileData);
+
+    let { data: ctxData } = await supabase.rpc("contexto_org_actual");
+    let ctx: any = Array.isArray(ctxData) ? ctxData[0] : ctxData;
+
+    // El soporte debe iniciarse a propósito en cada sesión de pestaña:
+    // si el servidor tiene uno abierto que esta pestaña no inició, se cierra.
+    if (ctx?.es_super_admin && ctx?.soporte_log_id &&
+        sessionStorage.getItem(SOPORTE_KEY) !== ctx.soporte_log_id) {
+      await supabase.rpc("cerrar_mis_soportes", { _tipo: "inicio_sesion" });
+      const r = await supabase.rpc("contexto_org_actual");
+      ctx = Array.isArray(r.data) ? r.data[0] : r.data;
+    }
+
+    const esSA = !!ctx?.es_super_admin;
+    const rol = (ctx?.rol_en_org ?? null) as AppRole | null;
+    setSoporteLogId(ctx?.soporte_log_id ?? null);
+    setOrgId(ctx?.org_id ?? null);
+    setOrgRole(ctx?.soporte_log_id ? null : rol);
+
+    if (ctx?.org_id) {
+      const { data: orgData } = await supabase
+        .from("organizations").select(ORG_COLS).eq("id", ctx.org_id).maybeSingle();
+      setOrg((orgData as any) ?? null);
+    } else {
+      setOrg(null);
+    }
+
+    if (ctx?.soporte_log_id || (!ctx?.org_id)) {
+      // super_admin (soporte o sin empresa) o usuario legacy sin membresía
+      const { data: rolesData } = await supabase.from("user_roles").select("role").eq("user_id", u.id);
+      setRoles((rolesData || []).map((r: any) => r.role as AppRole));
+    } else {
+      setRoles(esSA ? [rol as AppRole, "super_admin"] : rol ? [rol] : []);
+    }
+    setLoading(false);
+  }, []);
+
+  const limpiarEstado = () => {
+    setProfile(null); setRoles([]); setOrgId(null); setOrg(null); setOrgRole(null);
+    setSoporteLogId(null);
+  };
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-
-        if (session?.user) {
-          setTimeout(async () => {
-            // Perfil
-            const { data: profileData } = await supabase
-              .from("profiles")
-              .select("nombre, email, cargo")
-              .eq("id", session.user.id)
-              .single();
-            setProfile(profileData);
-
-            // Org membership (sistema multi-tenant)
-            const { data: memberData } = await supabase
-              .from("org_members")
-              .select("role, org_id, organizations(id, nombre, slug, plan, activo, max_users, trial_expires_at, logo_url, codigo_formato, version_formato, descripcion, estado, pending_price_id, norma_aplicable, metodologia, usar_detectabilidad, umbral_npr_alto, umbral_npr_medio, onboarding_completado, onboarding_saltado, tiene_curso_pagado, curso_expira_en, dc3_emitidos, dc3_adicionales_disponibles, subscription_status, folio_prefijo, folio_formato_periodo, folio_digitos_consecutivo)")
-              .eq("user_id", session.user.id)
-              .single();
-
-            if (memberData) {
-              const role = memberData.role as AppRole;
-              setOrgRole(role);
-              setOrgId(memberData.org_id);
-              const orgData = memberData.organizations as any;
-              if (orgData) setOrg(orgData);
-
-              // super_admin vive en user_roles aunque el usuario tenga org_members
-              const { data: saData } = await supabase
-                .from("user_roles")
-                .select("role")
-                .eq("user_id", session.user.id)
-                .eq("role", "super_admin")
-                .maybeSingle();
-              setRoles(saData ? [role, "super_admin"] : [role]);
-            } else {
-              // Fallback: leer user_roles si no tiene org_members (super_admin sin org propia)
-              const { data: rolesData } = await supabase
-                .from("user_roles")
-                .select("role")
-                .eq("user_id", session.user.id);
-              setRoles((rolesData || []).map((r: any) => r.role as AppRole));
-              setOrgRole(null);
-              setOrgId(null);
-              setOrg(null);
-            }
-
-            setLoading(false);
-          }, 0);
-        } else {
-          setProfile(null);
-          setRoles([]);
-          setOrgId(null);
-          setOrg(null);
-          setOrgRole(null);
-          setImpersonatedOrg(null);
-          setLoading(false);
-        }
+    if (typeof BroadcastChannel !== "undefined") {
+      const ch = new BroadcastChannel("tracea-org");
+      ch.onmessage = () => window.location.reload();
+      channelRef.current = ch;
+    }
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      const nuevoId = session?.user?.id ?? null;
+      if (lastUserRef.current !== nuevoId) {
+        // Cambio de usuario: nada de la sesión anterior puede quedar en caché.
+        queryClient.clear();
+        limpiarEstado();
+        if (nuevoId) setLoading(true);
       }
-    );
-
+      lastUserRef.current = nuevoId;
+      setSession(session);
+      setUser(session?.user ?? null);
+      if (session?.user) {
+        if (event === "SIGNED_IN" || event === "INITIAL_SESSION" || event === "USER_UPDATED") {
+          const u = session.user;
+          setTimeout(() => { cargarContexto(u); }, 0);
+        }
+      } else {
+        setLoading(false);
+      }
+    });
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!session) setLoading(false);
     });
-
-    return () => subscription.unsubscribe();
-  }, []);
+    return () => { subscription.unsubscribe(); channelRef.current?.close(); };
+  }, [cargarContexto, queryClient]);
 
   const hasRole = (role: AppRole) =>
     roles.includes(role) || roles.includes("super_admin");
@@ -146,26 +162,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const isSuperAdmin = () => roles.includes("super_admin");
 
   const refreshOrg = async () => {
-    if (!user || !_orgId) return;
-    const { data } = await supabase
-      .from("organizations")
-      .select("id, nombre, slug, plan, activo, max_users, trial_expires_at, logo_url, codigo_formato, version_formato, descripcion, estado, pending_price_id, norma_aplicable, metodologia, usar_detectabilidad, umbral_npr_alto, umbral_npr_medio, onboarding_completado, onboarding_saltado, tiene_curso_pagado, curso_expira_en, dc3_emitidos, dc3_adicionales_disponibles, subscription_status, folio_prefijo, folio_formato_periodo, folio_digitos_consecutivo")
-      .eq("id", _orgId)
-      .maybeSingle();
+    if (!user || !orgId) return;
+    const { data } = await supabase.from("organizations").select(ORG_COLS).eq("id", orgId).maybeSingle();
     if (data) setOrg(data as any);
   };
 
-  const startImpersonation = async (org: OrgInfo, motivo: string, ticketId?: string | null) => {
+  const recargar = async () => {
+    queryClient.clear();
+    if (user) await cargarContexto(user);
+    broadcast("org");
+  };
+
+  const startImpersonation = async (target: OrgInfo, motivo: string, ticketId?: string | null) => {
     if (!user) return;
-    // Registrar inicio de impersonación (auditoría ISO 27001)
     const ua = typeof navigator !== "undefined" ? navigator.userAgent : "";
+    // Un solo soporte abierto a la vez
+    await supabase.rpc("cerrar_mis_soportes", { _tipo: "usuario" });
     const { data, error } = await supabase
       .from("impersonation_logs")
       .insert({
         super_admin_id: user.id,
         super_admin_email: user.email ?? "",
-        org_id: org.id,
-        org_nombre: org.nombre,
+        org_id: target.id,
+        org_nombre: target.nombre,
         motivo: motivo.trim(),
         user_agent: ua,
         ticket_id: ticketId ?? null,
@@ -176,18 +195,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.error("Error registrando impersonación:", error);
       throw error;
     }
-    setImpersonationLogId(data.id);
-    // Cargar el registro completo de la organización para que
-    // campos como norma_aplicable, metodologia, etc. estén disponibles
-    // mientras se impersona (los headers y vistas dependen de esto).
-    const { data: fullOrg } = await supabase
-      .from("organizations")
-      .select("id, nombre, slug, plan, activo, max_users, trial_expires_at, logo_url, codigo_formato, version_formato, descripcion, estado, pending_price_id, norma_aplicable, metodologia, usar_detectabilidad, umbral_npr_alto, umbral_npr_medio, onboarding_completado, onboarding_saltado, tiene_curso_pagado, curso_expira_en, dc3_emitidos, dc3_adicionales_disponibles, subscription_status, folio_prefijo, folio_formato_periodo, folio_digitos_consecutivo")
-      .eq("id", org.id)
-      .maybeSingle();
-    setImpersonatedOrg((fullOrg as any) ?? org);
+    sessionStorage.setItem(SOPORTE_KEY, data.id);
+    await recargar();
 
-    // Si hay ticket vinculado, agregar nota interna automática
     if (ticketId) {
       try {
         await supabase.from("ticket_mensajes").insert({
@@ -195,7 +205,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           autor_id: user.id,
           autor_nombre: "Sistema TRACEA",
           autor_email: user.email ?? "",
-          mensaje: `🔐 Soporte inició sesión de acceso a la organización "${org.nombre}" para atender este ticket.\nMotivo registrado: ${motivo.trim()}`,
+          mensaje: `🔐 Soporte inició sesión de acceso a la organización "${target.nombre}" para atender este ticket.\nMotivo registrado: ${motivo.trim()}`,
           es_interno: true,
           es_soporte: true,
         });
@@ -206,25 +216,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const stopImpersonation = async () => {
-    if (impersonationLogId) {
-      await supabase
-        .from("impersonation_logs")
-        .update({ ended_at: new Date().toISOString() })
-        .eq("id", impersonationLogId);
-    }
-    setImpersonationLogId(null);
-    setImpersonatedOrg(null);
+    await supabase.rpc("cerrar_mis_soportes", { _tipo: "usuario" });
+    sessionStorage.removeItem(SOPORTE_KEY);
+    await recargar();
   };
 
   const signOut = async () => {
-    if (impersonationLogId) {
-      await supabase
-        .from("impersonation_logs")
-        .update({ ended_at: new Date().toISOString() })
-        .eq("id", impersonationLogId);
-      setImpersonationLogId(null);
+    if (isSuperAdmin()) {
+      try { await supabase.rpc("cerrar_mis_soportes", { _tipo: "cierre_sesion" }); } catch { /* noop */ }
     }
-    setImpersonatedOrg(null);
+    sessionStorage.removeItem(SOPORTE_KEY);
+    queryClient.clear();
+    limpiarEstado();
+    broadcast("signout");
     await supabase.auth.signOut();
   };
 
