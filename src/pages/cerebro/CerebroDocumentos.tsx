@@ -13,7 +13,7 @@ import { useAuth } from "@/hooks/useAuth";
 
 export default function CerebroDocumentos() {
   const qc = useQueryClient();
-  const { hasRole } = useAuth();
+  const { hasRole, orgId } = useAuth();
   const { data: docs = [], isLoading } = useBrainDocuments();
   const { data: batches = [] } = useBrainImportBatches();
   const { data: propuestas = [] } = useBrainImportPropuestas();
@@ -26,7 +26,7 @@ export default function CerebroDocumentos() {
   const revertir = async (batchId: string) => {
     setTrabajando(batchId);
     const { data: diag } = await supabase.functions.invoke("brain-import-listado", {
-      body: { accion: "revertir", batch_id: batchId, solo_diagnostico: true },
+      body: { accion: "revertir", org_id: orgId, batch_id: batchId, solo_diagnostico: true },
     });
     if (diag && diag.eliminables === 0) {
       setTrabajando(null);
@@ -40,7 +40,7 @@ export default function CerebroDocumentos() {
       if (!ok) { setTrabajando(null); return; }
     }
     const { data, error } = await supabase.functions.invoke("brain-import-listado", {
-      body: { accion: "revertir", batch_id: batchId },
+      body: { accion: "revertir", org_id: orgId, batch_id: batchId },
     });
     setTrabajando(null);
     if (error) { toast.error("No se pudo deshacer la importación."); return; }

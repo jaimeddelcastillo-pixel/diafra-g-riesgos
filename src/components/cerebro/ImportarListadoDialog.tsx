@@ -101,7 +101,7 @@ export function ImportarListadoDialog({ open, onOpenChange }: Props) {
       const mapeoPlano = Object.fromEntries(mapeo.filter((m) => m.campo).map((m) => [m.origen, m.campo!]));
 
       const { data: prep, error: prepErr } = await supabase.functions.invoke("brain-import-listado", {
-        body: { accion: "preparar", nombre_archivo: file.name, formato, total_filas: registros.length, mapeo: mapeoPlano },
+        body: { accion: "preparar", org_id: orgId, nombre_archivo: file.name, formato, total_filas: registros.length, mapeo: mapeoPlano },
       });
       if (prepErr || !prep?.batch_id) throw new Error(prepErr?.message ?? "No se pudo iniciar la importación.");
 
@@ -120,6 +120,7 @@ export function ImportarListadoDialog({ open, onOpenChange }: Props) {
       const { data, error } = await supabase.functions.invoke("brain-import-listado", {
         body: {
           accion: "importar",
+          org_id: orgId,
           batch_id: prep.batch_id,
           mapeo: mapeoPlano,
           registros: registros.filter((r) => r.clasificacion !== "posible_duplicado"),
