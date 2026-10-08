@@ -19,12 +19,12 @@ const roleLabels: Record<string, string> = {
 };
 
 export function AppLayout() {
-  const { profile, roles, org, signOut, isImpersonating, impersonatedOrg, stopImpersonation } = useAuth();
+  const { user, profile, roles, org, signOut, isImpersonating, impersonatedOrg, stopImpersonation } = useAuth();
   const navigate = useNavigate();
   const actuandoComo = (() => {
     try {
       const v = JSON.parse(localStorage.getItem("tracea-actuando-como") ?? "null");
-      return v && v.user_id === profile?.id ? v as { nombre: string; email: string } : null;
+      return v && v.user_id === user?.id ? v as { nombre: string; email: string } : null;
     } catch { return null; }
   })();
 
