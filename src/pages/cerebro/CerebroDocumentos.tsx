@@ -13,7 +13,7 @@ import { useAuth } from "@/hooks/useAuth";
 
 export default function CerebroDocumentos() {
   const qc = useQueryClient();
-  const { hasRole } = useAuth();
+  const { hasRole, orgId } = useAuth();
   const { data: docs = [], isLoading } = useBrainDocuments();
   const { data: batches = [] } = useBrainImportBatches();
   const { data: propuestas = [] } = useBrainImportPropuestas();
