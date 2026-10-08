@@ -15,6 +15,20 @@
       "when": 1791482239908,
       "tag": "0001_c1_catalogo_modulos",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791482275825,
+      "tag": "0002_c1_rls_modulo_brain",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1791482282454,
+      "tag": "0003_c1_auditoria_brain",
+      "breakpoints": true
     }
   ]
 }
