@@ -161,7 +161,7 @@ Deno.serve(async (req) => {
         .from("org_members")
         .insert({ org_id: orgIdToUse, user_id: userId, role: role || "operador" });
       if (memberError) {
-        await adminClient.auth.admin.deleteUser(userId);
+        if (!createError) await adminClient.auth.admin.deleteUser(userId);
         return json({ error: memberError.message }, 500);
       }
     } else {
@@ -170,7 +170,7 @@ Deno.serve(async (req) => {
         .from("user_roles")
         .insert({ user_id: userId, role: role || "super_admin" });
       if (roleError) {
-        await adminClient.auth.admin.deleteUser(userId);
+        if (!createError) await adminClient.auth.admin.deleteUser(userId);
         return json({ error: roleError.message }, 500);
       }
     }
