@@ -35,6 +35,7 @@ interface TraceaUser {
   email: string;
   cargo: string | null;
   role: string;
+  activo?: boolean;
 }
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
@@ -208,6 +209,7 @@ export default function Admin() {
   const [resetPwValue, setResetPwValue] = useState("");
   const [deleteUserOpen, setDeleteUserOpen] = useState(false);
   const [deleteUserTarget, setDeleteUserTarget] = useState<TraceaUser | null>(null);
+  const [deleteMotivo, setDeleteMotivo] = useState("");
   const [editUserOpen, setEditUserOpen] = useState(false);
   const [editUserTarget, setEditUserTarget] = useState<TraceaUser | null>(null);
   const [editUserForm, setEditUserForm] = useState({ nombre: "", cargo: "" });
@@ -336,7 +338,7 @@ export default function Admin() {
 
       const { data: profiles, error: pErr } = await supabase
         .from("profiles")
-        .select("id, nombre, email, cargo")
+        .select("id, nombre, email, cargo, activo")
         .in("id", userIds);
       if (pErr) throw pErr;
 
@@ -349,6 +351,7 @@ export default function Admin() {
           email: p?.email ?? "",
           cargo: p?.cargo ?? null,
           role: r.role,
+          activo: (p as any)?.activo !== false,
         };
       });
     },
@@ -390,16 +393,17 @@ export default function Admin() {
   });
 
   const deleteTraceaMutation = useMutation({
-    mutationFn: async (user_id: string) => {
+    mutationFn: async ({ user_id, motivo }: { user_id: string; motivo: string }) => {
       const { data, error } = await supabase.functions.invoke("delete-user", {
-        body: { user_id },
+        body: { user_id, motivo },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
     },
     onSuccess: () => {
       refetchTracea();
-      toast.success("Usuario eliminado.");
+      toast.success("Usuario desactivado.");
+      setDeleteMotivo("");
       setDeleteUserOpen(false);
       setDeleteUserTarget(null);
     },
@@ -926,7 +930,7 @@ export default function Admin() {
               <tbody>
                 {traceaUsers.map((u) => (
                   <tr key={u.id} className="border-b last:border-0">
-                    <td className="py-2 font-medium">{u.nombre}</td>
+                    <td className="py-2 font-medium">{u.nombre}{(u as any).activo === false && <Badge variant="secondary" className="ml-2 text-[10px]">Desactivado</Badge>}</td>
                     <td className="py-2 text-xs text-muted-foreground">{u.email}</td>
                     <td className="py-2 text-xs text-muted-foreground">{u.cargo || "—"}</td>
                     <td className="py-2">
@@ -980,8 +984,9 @@ export default function Admin() {
                         variant="ghost"
                         size="icon"
                         className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
-                        title="Eliminar usuario"
-                        onClick={() => { setDeleteUserTarget(u); setDeleteUserOpen(true); }}
+                        title="Desactivar usuario"
+                        disabled={(u as any).activo === false}
+                        onClick={() => { setDeleteUserTarget(u); setDeleteMotivo(""); setDeleteUserOpen(true); }}
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>
@@ -1191,26 +1196,30 @@ export default function Admin() {
         </DialogContent>
       </Dialog>
 
-      {/* ── Dialog eliminar usuario TRACEA ── */}
+      {/* ── Dialog desactivar usuario TRACEA ── */}
       <Dialog open={deleteUserOpen} onOpenChange={setDeleteUserOpen}>
         <DialogContent>
-          <DialogHeader><DialogTitle>Eliminar usuario</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>Desactivar usuario</DialogTitle></DialogHeader>
           <div className="space-y-3 py-2">
             <p className="text-sm">
-              ¿Confirmas eliminar a <strong>{deleteUserTarget?.nombre}</strong> ({deleteUserTarget?.email})?
+              ¿Confirmas desactivar a <strong>{deleteUserTarget?.nombre}</strong> ({deleteUserTarget?.email})?
             </p>
-            <p className="text-xs text-destructive">
-              Esta acción es irreversible. Se eliminarán su cuenta de acceso, perfil y rol.
+            <p className="text-xs text-muted-foreground">
+              La persona ya no podrá entrar. Su nombre se conserva en todos los registros que creó, firmó o validó.
             </p>
+            <div className="space-y-1">
+              <Label htmlFor="motivo-desactivar">Motivo *</Label>
+              <Textarea id="motivo-desactivar" value={deleteMotivo} onChange={(e) => setDeleteMotivo(e.target.value)} maxLength={1000} placeholder="Ej. Baja de la empresa" />
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDeleteUserOpen(false)}>Cancelar</Button>
             <Button
               variant="destructive"
-              onClick={() => deleteUserTarget && deleteTraceaMutation.mutate(deleteUserTarget.id)}
-              disabled={deleteTraceaMutation.isPending}
+              onClick={() => deleteUserTarget && deleteTraceaMutation.mutate({ user_id: deleteUserTarget.id, motivo: deleteMotivo.trim() })}
+              disabled={deleteTraceaMutation.isPending || !deleteMotivo.trim()}
             >
-              {deleteTraceaMutation.isPending ? "Eliminando…" : "Eliminar"}
+              {deleteTraceaMutation.isPending ? "Desactivando…" : "Desactivar usuario"}
             </Button>
           </DialogFooter>
         </DialogContent>

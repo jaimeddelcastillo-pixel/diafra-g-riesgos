@@ -3126,29 +3126,41 @@ export type Database = {
       }
       profiles: {
         Row: {
+          activo: boolean
           cargo: string | null
           created_at: string
+          desactivado_en: string | null
+          desactivado_por: string | null
           email: string
           firma_url: string | null
           id: string
+          motivo_desactivacion: string | null
           nombre: string
           updated_at: string
         }
         Insert: {
+          activo?: boolean
           cargo?: string | null
           created_at?: string
+          desactivado_en?: string | null
+          desactivado_por?: string | null
           email: string
           firma_url?: string | null
           id: string
+          motivo_desactivacion?: string | null
           nombre: string
           updated_at?: string
         }
         Update: {
+          activo?: boolean
           cargo?: string | null
           created_at?: string
+          desactivado_en?: string | null
+          desactivado_por?: string | null
           email?: string
           firma_url?: string | null
           id?: string
+          motivo_desactivacion?: string | null
           nombre?: string
           updated_at?: string
         }
