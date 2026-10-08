@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useNavigate, useSearchParams, Navigate, Link } from "react-router-dom";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, TrendingUp, ExternalLink } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -374,6 +374,32 @@ export default function Login() {
                   }}
                 />
               </div>
+
+              {/* Enlace al sistema de Análisis de Tendencias (otra pestaña, acceso independiente) */}
+              <a
+                href="https://tracea.site"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group flex w-full items-center justify-between gap-3 rounded-md border border-border bg-muted/40 px-3 py-2.5 transition-colors hover:bg-muted/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <span className="flex min-w-0 items-center gap-2.5">
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded bg-accent/10">
+                    <TrendingUp className="h-4 w-4 text-accent" strokeWidth={1.8} />
+                  </span>
+                  <span className="flex min-w-0 flex-col leading-tight">
+                    <span className="truncate text-xs font-semibold text-primary">
+                      Análisis de Tendencias
+                    </span>
+                    <span className="truncate text-[10.5px] text-muted-foreground">
+                      Sistema independiente · abre en otra pestaña
+                    </span>
+                  </span>
+                </span>
+                <ExternalLink
+                  className="h-3.5 w-3.5 shrink-0 text-accent opacity-60 transition-opacity group-hover:opacity-100"
+                  strokeWidth={1.8}
+                />
+              </a>
 
               <div>
                 <label
