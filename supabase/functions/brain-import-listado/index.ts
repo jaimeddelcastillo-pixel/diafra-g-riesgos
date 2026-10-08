@@ -97,7 +97,12 @@ Deno.serve(async (req) => {
     const { data: docsBatch } = await admin
       .from("brain_documents").select("id").eq("import_batch_id", bid);
     const ids = (docsBatch ?? []).map((d: any) => d.id);
-    if (ids.length === 0) return json({ error: "sin_documentos" }, 400);
+    if (ids.length === 0) {
+      // Batch sin documentos (importación fallida o vacía): solo se cierra como revertido.
+      if (body.solo_diagnostico) return json({ total: 0, referenciados: 0, eliminables: 0, vacio: true });
+      await admin.from("brain_import_batches").update({ estado: "revertido", filas_importadas: 0 }).eq("id", bid);
+      return json({ eliminados: 0, conservados: 0, procesos_eliminados: 0, procesos_conservados: 0, vacio: true });
+    }
 
     const { data: refs } = await admin
       .from("brain_knowledge_sources").select("document_id").in("document_id", ids);
