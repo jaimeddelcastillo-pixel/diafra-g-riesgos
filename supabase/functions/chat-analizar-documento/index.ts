@@ -38,6 +38,17 @@ Deno.serve(async (req) => {
     try { member = { org_id: (await resolverContextoOrg(req)).orgId }; } catch (_e) { member = null; }
     if (!member) return j({ error: "sin organización" }, 403);
 
+    // C2a.1: el archivo debe pertenecer a la empresa del contexto
+    if (typeof storage_path !== "string" || !storage_path.startsWith(`${member.org_id}/`) || storage_path.includes("..")) {
+      return j({ error: "El documento no pertenece a tu organización" }, 403);
+    }
+    if (folio_id) {
+      const { data: folio } = await adminClient.from("folios").select("org_id").eq("id", folio_id).maybeSingle();
+      if (!folio || folio.org_id !== member.org_id) {
+        return j({ error: "El folio no pertenece a tu organización" }, 403);
+      }
+    }
+
     // Descargar el archivo
     const { data: file, error: dErr } = await adminClient
       .storage.from("chat-documentos").download(storage_path);

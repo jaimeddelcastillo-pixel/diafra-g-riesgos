@@ -21,6 +21,12 @@ const roleLabels: Record<string, string> = {
 export function AppLayout() {
   const { profile, roles, org, signOut, isImpersonating, impersonatedOrg, stopImpersonation } = useAuth();
   const navigate = useNavigate();
+  const actuandoComo = (() => {
+    try {
+      const v = JSON.parse(localStorage.getItem("tracea-actuando-como") ?? "null");
+      return v && v.user_id === profile?.id ? v as { nombre: string; email: string } : null;
+    } catch { return null; }
+  })();
 
   const initials = profile?.nombre
     ? profile.nombre.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase()
@@ -42,6 +48,12 @@ export function AppLayout() {
         <div className="min-h-screen flex w-full">
           <AppSidebar />
           <div className="flex-1 flex flex-col min-w-0">
+
+            {actuandoComo && (
+              <div className="bg-destructive text-destructive-foreground px-4 py-1.5 text-xs font-medium shrink-0 sticky top-0 z-50">
+                Sesión de prueba: estás actuando como {actuandoComo.nombre}{actuandoComo.email && actuandoComo.email !== actuandoComo.nombre ? ` (${actuandoComo.email})` : ""}. Lo que hagas queda a su nombre.
+              </div>
+            )}
 
             {/* Banner de impersonación */}
             {isImpersonating && (

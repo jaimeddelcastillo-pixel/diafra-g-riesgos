@@ -226,6 +226,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try { await supabase.rpc("cerrar_mis_soportes", { _tipo: "cierre_sesion" }); } catch { /* noop */ }
     }
     sessionStorage.removeItem(SOPORTE_KEY);
+    localStorage.removeItem("tracea-actuando-como");
     queryClient.clear();
     limpiarEstado();
     broadcast("signout");
