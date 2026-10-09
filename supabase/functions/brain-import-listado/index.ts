@@ -68,6 +68,7 @@ Deno.serve(async (req) => {
       formato,
       estado: "pendiente",
       imported_by: userId,
+      actualizado_por: userId,
       total_filas: Number(body.total_filas ?? 0),
       mapeo: body.mapeo ?? {},
     }).select("id").single();
@@ -75,7 +76,7 @@ Deno.serve(async (req) => {
 
     const path = `${orgId}/${batch.id}/${nombreArchivo.replace(/[^\w.\-]/g, "_")}`;
     const { data: signed } = await admin.storage.from("brain-imports").createSignedUploadUrl(path);
-    await admin.from("brain_import_batches").update({ storage_path: path }).eq("id", batch.id);
+    await admin.from("brain_import_batches").update({ storage_path: path, actualizado_por: userId }).eq("id", batch.id);
     return json({ batch_id: batch.id, upload: signed ?? null, storage_path: path });
   }
 
@@ -92,7 +93,7 @@ Deno.serve(async (req) => {
     if (ids.length === 0) {
       // Batch sin documentos (importación fallida o vacía): solo se cierra como revertido.
       if (body.solo_diagnostico) return json({ total: 0, referenciados: 0, eliminables: 0, vacio: true });
-      await admin.from("brain_import_batches").update({ estado: "revertido", filas_importadas: 0 }).eq("id", bid);
+      await admin.from("brain_import_batches").update({ estado: "revertido", filas_importadas: 0, actualizado_por: userId }).eq("id", bid);
       return json({ eliminados: 0, conservados: 0, procesos_eliminados: 0, procesos_conservados: 0, vacio: true });
     }
 
@@ -108,11 +109,28 @@ Deno.serve(async (req) => {
       return json({ error: "todos_referenciados", total: ids.length }, 409);
     }
 
-    await admin.from("brain_documents").delete().in("id", eliminables);
-
     // Áreas/procesos creados por el batch: solo si quedaron sin referencias.
     const { data: props } = await admin
       .from("brain_import_propuestas").select("area_id, proceso_id").eq("batch_id", bid);
+
+    // C3: evento de resumen a nombre de quien pidió la reversión, antes de borrar.
+    const { error: audErr } = await admin.from("audit_trail").insert({
+      user_id: userId,
+      org_id: orgId,
+      tabla: "brain_import_batches",
+      registro_id: bid,
+      accion: "IMPORTACION_REVERTIDA",
+      valor_nuevo: {
+        batch_id: bid,
+        documentos_a_borrar: eliminables,
+        documentos_conservados: ids.filter((id) => referenciados.has(id)),
+        areas_candidatas: [...new Set((props ?? []).map((p: any) => p.area_id).filter(Boolean))],
+        procesos_candidatos: [...new Set((props ?? []).map((p: any) => p.proceso_id).filter(Boolean))],
+      },
+    });
+    if (audErr) return json({ error: "no_se_pudo_registrar_auditoria", detalle: audErr.message }, 500);
+
+    await admin.from("brain_documents").delete().in("id", eliminables);
 
     const tieneRef = async (tabla: string, columna: string, valor: string) => {
       const { count } = await admin.from(tabla)
@@ -154,6 +172,7 @@ Deno.serve(async (req) => {
     await admin.from("brain_import_batches").update({
       estado: restantes === 0 ? "revertido" : "parcial",
       filas_importadas: restantes,
+      actualizado_por: userId,
     }).eq("id", bid);
 
     return json({
@@ -172,7 +191,7 @@ Deno.serve(async (req) => {
   if (!batch || batch.org_id !== orgId) return json({ error: "batch_fuera_de_org" }, 403);
   if (batch.estado !== "pendiente") return json({ error: "batch_ya_procesado" }, 409);
 
-  await admin.from("brain_import_batches").update({ estado: "procesando", mapeo: body.mapeo ?? {} }).eq("id", batchId);
+  await admin.from("brain_import_batches").update({ estado: "procesando", mapeo: body.mapeo ?? {}, actualizado_por: userId }).eq("id", batchId);
 
   const registros: any[] = Array.isArray(body.registros) ? body.registros : [];
   if (registros.length > 2000) return json({ error: "demasiadas_filas" }, 400);
@@ -239,6 +258,7 @@ Deno.serve(async (req) => {
         area_id: r.area ? areaPorNombre.get(normalizar(r.area)) ?? null : null,
         notas: r.responsable ? `Responsable: ${r.responsable}` : null,
         origen: "listado_maestro",
+        actualizado_por: userId,
         import_batch_id: batchId,
         import_row_reference: r.fila ?? null,
         import_status: r.clasificacion === "posible_actualizacion" ? "actualizado"
@@ -260,6 +280,7 @@ Deno.serve(async (req) => {
     estado,
     filas_importadas: importados,
     total_filas: registros.length,
+    actualizado_por: userId,
   }).eq("id", batchId);
 
   return json({
