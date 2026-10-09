@@ -3309,6 +3309,35 @@ export type Database = {
           },
         ]
       }
+      plan_limites: {
+        Row: {
+          clave: string
+          plan: string
+          updated_at: string
+          valor: Json
+        }
+        Insert: {
+          clave: string
+          plan: string
+          updated_at?: string
+          valor: Json
+        }
+        Update: {
+          clave?: string
+          plan?: string
+          updated_at?: string
+          valor?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plan_limites_plan_fkey"
+            columns: ["plan"]
+            isOneToOne: false
+            referencedRelation: "planes"
+            referencedColumns: ["clave"]
+          },
+        ]
+      }
       plan_modulos: {
         Row: {
           modulo: string
@@ -4016,6 +4045,7 @@ export type Database = {
       }
       is_super_admin: { Args: never; Returns: boolean }
       mi_org_tiene_modulo: { Args: { _modulo: string }; Returns: boolean }
+      mi_plan_limite: { Args: { p_clave: string }; Returns: Json }
       mis_organizaciones: {
         Args: never
         Returns: {
@@ -4054,6 +4084,7 @@ export type Database = {
         Args: { _modulo: string; _org: string }
         Returns: boolean
       }
+      plan_limite: { Args: { p_clave: string; p_org: string }; Returns: Json }
       puede_editar_catalogo_documentos: { Args: never; Returns: boolean }
       purgar_documentos_eliminados: { Args: never; Returns: number }
       purgar_documentos_expirados: {
