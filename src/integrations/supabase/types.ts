@@ -445,6 +445,7 @@ export type Database = {
           revision: string | null
           storage_path: string | null
           tipo: string
+          tipo_clave: string | null
           updated_at: string
         }
         Insert: {
@@ -466,6 +467,7 @@ export type Database = {
           revision?: string | null
           storage_path?: string | null
           tipo?: string
+          tipo_clave?: string | null
           updated_at?: string
         }
         Update: {
@@ -487,6 +489,7 @@ export type Database = {
           revision?: string | null
           storage_path?: string | null
           tipo?: string
+          tipo_clave?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -2322,6 +2325,88 @@ export type Database = {
         }
         Relationships: []
       }
+      documento_tipos: {
+        Row: {
+          activo: boolean
+          clave: string
+          claves_codigo: string[]
+          created_at: string
+          es_propio: boolean
+          es_registro: boolean
+          id: string
+          nombre: string
+          orden: number
+          org_id: string | null
+          sinonimos: string[]
+          updated_at: string
+        }
+        Insert: {
+          activo?: boolean
+          clave: string
+          claves_codigo?: string[]
+          created_at?: string
+          es_propio?: boolean
+          es_registro?: boolean
+          id?: string
+          nombre: string
+          orden?: number
+          org_id?: string | null
+          sinonimos?: string[]
+          updated_at?: string
+        }
+        Update: {
+          activo?: boolean
+          clave?: string
+          claves_codigo?: string[]
+          created_at?: string
+          es_propio?: boolean
+          es_registro?: boolean
+          id?: string
+          nombre?: string
+          orden?: number
+          org_id?: string | null
+          sinonimos?: string[]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "documento_tipos_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      documento_tipos_config: {
+        Row: {
+          id: string
+          org_id: string
+          posicion_tipo_en_codigo: number
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          org_id: string
+          posicion_tipo_en_codigo?: number
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          org_id?: string
+          posicion_tipo_en_codigo?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "documento_tipos_config_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       email_send_log: {
         Row: {
           created_at: string
@@ -2749,6 +2834,7 @@ export type Database = {
       }
       org_documentos: {
         Row: {
+          clasificacion: string
           creado_por: string | null
           created_at: string
           deleted_at: string | null
@@ -2760,15 +2846,19 @@ export type Database = {
           org_id: string
           parent_doc_id: string | null
           sha256: string | null
+          sha256_servidor: string | null
+          sha256_verificado_en: string | null
           size_bytes: number | null
           storage_path: string
           tipo: string
+          tipo_clave: string | null
           updated_at: string
           usar_en_ia: boolean
           version: string
           version_num: number
         }
         Insert: {
+          clasificacion?: string
           creado_por?: string | null
           created_at?: string
           deleted_at?: string | null
@@ -2780,15 +2870,19 @@ export type Database = {
           org_id: string
           parent_doc_id?: string | null
           sha256?: string | null
+          sha256_servidor?: string | null
+          sha256_verificado_en?: string | null
           size_bytes?: number | null
           storage_path: string
           tipo: string
+          tipo_clave?: string | null
           updated_at?: string
           usar_en_ia?: boolean
           version?: string
           version_num?: number
         }
         Update: {
+          clasificacion?: string
           creado_por?: string | null
           created_at?: string
           deleted_at?: string | null
@@ -2800,9 +2894,12 @@ export type Database = {
           org_id?: string
           parent_doc_id?: string | null
           sha256?: string | null
+          sha256_servidor?: string | null
+          sha256_verificado_en?: string | null
           size_bytes?: number | null
           storage_path?: string
           tipo?: string
+          tipo_clave?: string | null
           updated_at?: string
           usar_en_ia?: boolean
           version?: string
@@ -3727,6 +3824,14 @@ export type Database = {
         Args: { _log_id?: string; _tipo: string }
         Returns: number
       }
+      clasificar_tipo_documento: {
+        Args: { p_codigo: string; p_org: string; p_tipo: string }
+        Returns: string
+      }
+      clasificar_tipos_documento: {
+        Args: { p_items: Json; p_org: string }
+        Returns: Json
+      }
       contexto_org_actual: {
         Args: never
         Returns: {
@@ -3767,6 +3872,14 @@ export type Database = {
       delete_email: {
         Args: { message_id: number; queue_name: string }
         Returns: boolean
+      }
+      documento_tipos_uso: {
+        Args: never
+        Returns: {
+          archivos: number
+          clave: string
+          documentos: number
+        }[]
       }
       eliminar_documento_permanente: {
         Args: { p_doc_id: string }
@@ -3829,11 +3942,13 @@ export type Database = {
           nombre: string
         }[]
       }
+      normalizar_txt: { Args: { _t: string }; Returns: string }
       org_has_curso_access: { Args: { _org_id: string }; Returns: boolean }
       org_tiene_modulo: {
         Args: { _modulo: string; _org: string }
         Returns: boolean
       }
+      puede_editar_catalogo_documentos: { Args: never; Returns: boolean }
       purgar_documentos_eliminados: { Args: never; Returns: number }
       purgar_documentos_expirados: {
         Args: never
@@ -3842,6 +3957,7 @@ export type Database = {
           storage_path: string
         }[]
       }
+      quitar_documento_tipo: { Args: { p_id: string }; Returns: string }
       read_email_batch: {
         Args: { batch_size: number; queue_name: string; vt: number }
         Returns: {
@@ -3850,6 +3966,7 @@ export type Database = {
           read_ct: number
         }[]
       }
+      reclasificar_documentos: { Args: never; Returns: Json }
       recompactar_riesgos: { Args: { p_folio_id: string }; Returns: Json }
       reeditar_codigos_folios: {
         Args: {
@@ -3865,7 +3982,9 @@ export type Database = {
         Returns: Json
       }
       restaurar_documento: { Args: { p_doc_id: string }; Returns: boolean }
+      restaurar_documento_tipos: { Args: never; Returns: number }
       same_org_member: { Args: { _user_id: string }; Returns: boolean }
+      seed_documento_tipos: { Args: { _org_id: string }; Returns: number }
       seed_org_folio_tipos: {
         Args: { _norma: string; _org_id: string }
         Returns: undefined
