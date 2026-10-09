@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { resolverContextoOrg, ContextoOrgError } from "../_shared/contexto-org.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -7,11 +8,54 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const ROLES_ORG = ["admin", "responsable_sanitario", "comite_tecnico", "operador", "lectura"];
+const ROL_LABEL: Record<string, string> = {
+  admin: "Administrador", responsable_sanitario: "Responsable Sanitario",
+  comite_tecnico: "Comité Técnico", operador: "Operador", lectura: "Lectura",
+};
+
 function json(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
+}
+
+type Admin = ReturnType<typeof createClient>;
+
+// Lógica única de reactivación (alta con correo desactivado y botón "Reactivar").
+async function reactivarUsuario(admin: Admin, p: {
+  userId: string; orgId: string | null; role: string | null; callerId: string;
+  ip: string | null; password?: string; nombre?: string; metadata?: Record<string, unknown>;
+}): Promise<string | null> {
+  const upd: Record<string, unknown> = { ban_duration: "none" };
+  if (p.password) {
+    upd.password = p.password;
+    upd.email_confirm = true;
+    if (p.nombre) upd.user_metadata = { ...(p.metadata ?? {}), nombre: p.nombre };
+  }
+  const { error: upErr } = await admin.auth.admin.updateUserById(p.userId, upd as any);
+  if (upErr) return `No se pudo reactivar el usuario: ${upErr.message}`;
+
+  await admin.from("profiles").update({
+    activo: true, desactivado_en: null, desactivado_por: null, motivo_desactivacion: null,
+  } as any).eq("id", p.userId);
+
+  if (p.orgId) {
+    const { error: mErr } = await admin.from("org_members")
+      .insert({ org_id: p.orgId, user_id: p.userId, role: p.role || "operador" });
+    if (mErr && !/duplicate|unique/i.test(mErr.message)) return mErr.message;
+  }
+
+  const { error: aErr } = await admin.from("audit_trail").insert({
+    accion: "USUARIO_REACTIVADO", tabla: "profiles", registro_id: p.userId,
+    org_id: p.orgId, user_id: p.callerId,
+    valor_nuevo: { role: p.role || null, org_id: p.orgId },
+    ip: p.ip,
+  });
+  if (aErr) console.error("audit USUARIO_REACTIVADO:", aErr);
+  return null;
 }
 
 Deno.serve(async (req) => {
@@ -25,7 +69,6 @@ Deno.serve(async (req) => {
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
 
-    // Verificar que el caller está autenticado
     const callerClient = createClient(supabaseUrl, anonKey, {
       global: { headers: { Authorization: authHeader } },
     });
@@ -35,60 +78,75 @@ Deno.serve(async (req) => {
     const adminClient = createClient(supabaseUrl, serviceRoleKey, {
       auth: { autoRefreshToken: false, persistSession: false },
     });
+    const ip = req.headers.get("x-forwarded-for") ?? null;
 
-    // ¿Es super_admin?
     const { data: saRow } = await adminClient
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", caller.id)
-      .eq("role", "super_admin")
-      .maybeSingle();
+      .from("user_roles").select("role")
+      .eq("user_id", caller.id).eq("role", "super_admin").maybeSingle();
     const isSuperAdmin = !!saRow;
 
-    let orgIdToUse: string | null = null;
+    const body = await req.json().catch(() => ({}));
+    const { email, password, nombre, cargo, role, accion } = body ?? {};
 
+    let orgIdToUse: string | null = null;
     if (isSuperAdmin) {
       // Super admin puede indicar cualquier org_id, o null para crear usuario TRACEA
-      const body = await req.json();
-      var { email, password, nombre, cargo, role, org_id } = body ?? {};
-      orgIdToUse = org_id ?? null;
+      orgIdToUse = body?.org_id ?? null;
+      if (orgIdToUse && !UUID_RE.test(orgIdToUse)) return json({ error: "org_id inválido" }, 400);
     } else {
-      // Admin de org: debe tener org_members.role = admin
-      const { data: callerMember } = await adminClient
-        .from("org_members")
-        .select("role, org_id, organizations(max_users)")
-        .eq("user_id", caller.id)
-        .eq("role", "admin")
-        .maybeSingle();
+      // Admin en su empresa activa (C2b): empresa y rol del servidor
+      let ctx;
+      try { ctx = await resolverContextoOrg(req); }
+      catch (e) { if (e instanceof ContextoOrgError) return json({ error: e.message }, e.status); throw e; }
+      if (ctx.rolEnOrg !== "admin") return json({ error: "Se requiere rol de administrador" }, 403);
+      orgIdToUse = ctx.orgId;
+    }
 
-      if (!callerMember) return json({ error: "Se requiere rol de administrador" }, 403);
+    const limiteAlcanzado = async (): Promise<string | null> => {
+      if (!orgIdToUse || isSuperAdmin) return null;
+      const { data: org } = await adminClient.from("organizations").select("max_users").eq("id", orgIdToUse).maybeSingle();
+      const maxUsers = (org as any)?.max_users ?? 5;
+      const { count } = await adminClient.from("org_members")
+        .select("*", { count: "exact", head: true }).eq("org_id", orgIdToUse);
+      return (count ?? 0) >= maxUsers ? `Límite de usuarios alcanzado (máx. ${maxUsers})` : null;
+    };
 
-      orgIdToUse = callerMember.org_id;
-      const maxUsers = (callerMember.organizations as any)?.max_users ?? 5;
+    // ── Reactivar desde "Usuarios desactivados" ──────────────────────────────
+    if (accion === "reactivar") {
+      const targetId: string | undefined = body?.user_id;
+      if (!targetId || !UUID_RE.test(targetId)) return json({ error: "Falta user_id" }, 400);
+      if (!orgIdToUse) return json({ error: "Indica la organización" }, 400);
 
-      const { count: currentUsers } = await adminClient
-        .from("org_members")
-        .select("*", { count: "exact" })
-        .eq("org_id", orgIdToUse);
+      const { data: yaMiembro } = await adminClient.from("org_members").select("id")
+        .eq("org_id", orgIdToUse).eq("user_id", targetId).maybeSingle();
+      if (yaMiembro) return json({ error: "Ya pertenece a esta empresa" }, 200);
 
-      if ((currentUsers ?? 0) >= maxUsers) {
-        return json({ error: `Límite de usuarios alcanzado (máx. ${maxUsers})` }, 403);
-      }
+      const lim = await limiteAlcanzado();
+      if (lim) return json({ error: lim }, 200);
 
-      const body = await req.json();
-      var { email, password, nombre, cargo, role } = body ?? {};
+      // Rol que tenía al desactivarse en esta empresa
+      const { data: ev } = await adminClient.from("audit_trail")
+        .select("valor_anterior").eq("accion", "USUARIO_DESACTIVADO")
+        .eq("org_id", orgIdToUse).eq("registro_id", targetId)
+        .order("created_at", { ascending: false }).limit(1).maybeSingle();
+      const rolPrevio = (ev as any)?.valor_anterior?.rol;
+      const rol = ROLES_ORG.includes(rolPrevio) ? rolPrevio : "operador";
+
+      const err = await reactivarUsuario(adminClient, { userId: targetId, orgId: orgIdToUse, role: rol, callerId: caller.id, ip });
+      if (err) return json({ error: err }, 200);
+      return json({ success: true, user: { id: targetId }, role: rol, reactivado: true });
     }
 
     if (!email || !password || !nombre) {
       return json({ error: "Faltan campos obligatorios: email, password, nombre" }, 400);
     }
+    if (orgIdToUse && role && !ROLES_ORG.includes(role)) return json({ error: "Rol inválido" }, 400);
 
-    // Crear usuario en auth
+    const lim = await limiteAlcanzado();
+    if (lim) return json({ error: lim }, 403);
+
     const { data: newUser, error: createError } = await adminClient.auth.admin.createUser({
-      email,
-      password,
-      email_confirm: true,
-      user_metadata: { nombre },
+      email, password, email_confirm: true, user_metadata: { nombre },
     });
 
     let userId: string;
@@ -96,7 +154,6 @@ Deno.serve(async (req) => {
       const yaExiste = /already been registered|already registered|email_exists/i.test(createError.message);
       if (!yaExiste) return json({ error: createError.message }, 200);
 
-      // Buscar el usuario existente por email
       const target = String(email).trim().toLowerCase();
       let existing: any = null;
       for (let page = 1; page <= 20 && !existing; page++) {
@@ -107,56 +164,69 @@ Deno.serve(async (req) => {
       }
       if (!existing) return json({ error: "Ese correo ya está registrado." }, 200);
 
-      // ¿Sigue activo en alguna organización?
+      if (orgIdToUse) {
+        const { data: yaMiembro } = await adminClient.from("org_members").select("id")
+          .eq("org_id", orgIdToUse).eq("user_id", existing.id).maybeSingle();
+        if (yaMiembro) return json({ error: "Ya pertenece a esta empresa" }, 200);
+      }
+
       const { count: membresias } = await adminClient
         .from("org_members").select("org_id", { count: "exact", head: true }).eq("user_id", existing.id);
       const { data: rolGlobal } = await adminClient
-        .from("user_roles").select("role").eq("user_id", existing.id).limit(1);
+        .from("user_roles").select("role").eq("user_id", existing.id);
+      const esSA = (rolGlobal ?? []).some((r: any) => r.role === "super_admin");
+
       if ((membresias ?? 0) > 0 || (rolGlobal?.length ?? 0) > 0) {
-        return json({
-          error: "Este correo ya pertenece a un usuario activo. Si es de tu empresa, edítalo desde la lista de usuarios.",
-        }, 200);
+        // ── Parte D: usuario activo → agregar a la empresa activa de quien invita ──
+        if (!orgIdToUse) return json({ error: "Este correo ya pertenece a un usuario activo." }, 200);
+        if (esSA) return json({ error: "Ese correo pertenece al equipo TRACEA y no se puede agregar a una empresa." }, 200);
+        const rol = role || "operador";
+        const { error: mErr } = await adminClient.from("org_members")
+          .insert({ org_id: orgIdToUse, user_id: existing.id, role: rol });
+        if (mErr) {
+          if (/duplicate|unique/i.test(mErr.message)) return json({ error: "Ya pertenece a esta empresa" }, 200);
+          return json({ error: mErr.message }, 500);
+        }
+        const { data: org } = await adminClient.from("organizations").select("nombre").eq("id", orgIdToUse).maybeSingle();
+        const { data: perfil } = await adminClient.from("profiles").select("nombre").eq("id", existing.id).maybeSingle();
+        await adminClient.from("audit_trail").insert({
+          accion: "USUARIO_AGREGADO_A_EMPRESA", tabla: "org_members", registro_id: existing.id,
+          org_id: orgIdToUse, user_id: caller.id,
+          valor_nuevo: { invitado_por: caller.id, org_id: orgIdToUse, org_nombre: (org as any)?.nombre ?? null, rol },
+          ip,
+        });
+        try {
+          await adminClient.functions.invoke("send-transactional-email", {
+            body: {
+              templateName: "usuario-agregado-empresa",
+              recipientEmail: target,
+              idempotencyKey: `agregado-${orgIdToUse}-${existing.id}-${Date.now()}`,
+              templateData: {
+                nombre: (perfil as any)?.nombre ?? undefined,
+                organizacion: (org as any)?.nombre ?? "",
+                rol: ROL_LABEL[rol] ?? rol,
+                loginUrl: "https://tracea.com.mx/login",
+              },
+            },
+          });
+        } catch (e) { console.warn("correo usuario-agregado-empresa:", e); }
+        return json({ success: true, user: { id: existing.id }, agregado: true });
       }
 
       // Usuario desactivado → reactivar con la nueva contraseña
-      const { error: upErr } = await adminClient.auth.admin.updateUserById(existing.id, {
-        password,
-        ban_duration: "none",
-        email_confirm: true,
-        user_metadata: { ...(existing.user_metadata ?? {}), nombre },
-      } as any);
-      if (upErr) return json({ error: `No se pudo reactivar el usuario: ${upErr.message}` }, 200);
-
-      await adminClient.from("profiles").update({
-        activo: true,
-        desactivado_en: null,
-        desactivado_por: null,
-        motivo_desactivacion: null,
-      } as any).eq("id", existing.id);
-
-      await adminClient.from("audit_trail").insert({
-        accion: "USUARIO_REACTIVADO",
-        tabla: "profiles",
-        registro_id: existing.id,
-        org_id: orgIdToUse,
-        user_id: caller.id,
-        valor_nuevo: { email: target, role: role || null, org_id: orgIdToUse },
-        ip: req.headers.get("x-forwarded-for") ?? null,
+      const err = await reactivarUsuario(adminClient, {
+        userId: existing.id, orgId: null, role: role || null, callerId: caller.id, ip,
+        password, nombre, metadata: existing.user_metadata ?? {},
       });
-
+      if (err) return json({ error: err }, 200);
       userId = existing.id;
     } else {
       userId = newUser.user.id;
     }
 
-    // Actualizar perfil
-    await adminClient
-      .from("profiles")
-      .update({ nombre, cargo: cargo || "" })
-      .eq("id", userId);
+    await adminClient.from("profiles").update({ nombre, cargo: cargo || "" }).eq("id", userId);
 
     if (orgIdToUse) {
-      // Usuario de organización → org_members
       const { error: memberError } = await adminClient
         .from("org_members")
         .insert({ org_id: orgIdToUse, user_id: userId, role: role || "operador" });
@@ -165,7 +235,6 @@ Deno.serve(async (req) => {
         return json({ error: memberError.message }, 500);
       }
     } else {
-      // Usuario TRACEA → user_roles (sin org)
       const { error: roleError } = await adminClient
         .from("user_roles")
         .insert({ user_id: userId, role: role || "super_admin" });
