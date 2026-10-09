@@ -268,7 +268,7 @@ export default function Recursos() {
       : { copia_no_controlada_propuesta: false, copia_no_controlada_evidencia: null };
     const { error } = await (supabase as any).from("org_documentos").update(cambios).eq("id", doc.id);
     if (error) return toast({ title: "Error", description: error.message, variant: "destructive" });
-    toast({ title: confirmar ? "Marcado como copia no controlada" : "Propuesta descartada" });
+    toast({ title: confirmar ? "Marcado como copia no controlada; su conocimiento quedó en revisión" : "Propuesta descartada" });
     cargarDocs();
   };
 

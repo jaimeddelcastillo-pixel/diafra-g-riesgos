@@ -433,6 +433,7 @@ export type Database = {
           area_id: string | null
           codigo: string | null
           created_at: string
+          enlace_comentario: string | null
           enlace_evidencia: string | null
           enlace_por_confirmar: boolean
           enlace_revision_detectada: string | null
@@ -465,6 +466,7 @@ export type Database = {
           area_id?: string | null
           codigo?: string | null
           created_at?: string
+          enlace_comentario?: string | null
           enlace_evidencia?: string | null
           enlace_por_confirmar?: boolean
           enlace_revision_detectada?: string | null
@@ -497,6 +499,7 @@ export type Database = {
           area_id?: string | null
           codigo?: string | null
           created_at?: string
+          enlace_comentario?: string | null
           enlace_evidencia?: string | null
           enlace_por_confirmar?: boolean
           enlace_revision_detectada?: string | null

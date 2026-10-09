@@ -57,3 +57,10 @@ BEGIN
           AND (v_obs OR coalesce(btrim(s.documento_revision),'') IS DISTINCT FROM coalesce(btrim(NEW.revision),'')));
   RETURN NEW;
 END $function$;
+
+-- 0022 ajustes
+DROP TRIGGER IF EXISTS trg_org_documentos_copia_marca_conocimiento ON public.org_documentos;
+DROP FUNCTION IF EXISTS public.org_documentos_copia_marca_conocimiento();
+DROP TRIGGER IF EXISTS trg_brain_documents_enlace_comentario ON public.brain_documents;
+DROP FUNCTION IF EXISTS public.brain_documents_enlace_comentario_guard();
+ALTER TABLE public.brain_documents DROP COLUMN IF EXISTS enlace_comentario;

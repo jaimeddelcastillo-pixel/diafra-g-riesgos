@@ -155,6 +155,13 @@
       "when": 1791587958079,
       "tag": "0021_c6a4_extracciones_propuestas_revision",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1791588708561,
+      "tag": "0022_c6a4_ajustes_comentario_copia",
+      "breakpoints": true
     }
   ]
 }
