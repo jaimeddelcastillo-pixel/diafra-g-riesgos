@@ -101,6 +101,7 @@ Deno.serve(async (req) => {
     .from("org_members")
     .select("org_id")
     .eq("user_id", user_id)
+    .limit(1)
     .maybeSingle();
 
   if (existing) {
