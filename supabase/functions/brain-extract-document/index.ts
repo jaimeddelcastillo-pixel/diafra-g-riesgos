@@ -256,7 +256,7 @@ Reglas: solo afirmaciones que estén literalmente en el documento; no inventes n
         console.error("insert item", iErr);
         continue;
       }
-      await admin.from("brain_knowledge_sources").insert({
+      const { error: sErr } = await admin.from("brain_knowledge_sources").insert({
         org_id: orgId,
         knowledge_item_id: item.id,
         tipo_fuente: "archivo",
