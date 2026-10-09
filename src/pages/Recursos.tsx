@@ -193,6 +193,10 @@ export default function Recursos() {
   const { toast } = useToast();
   const [docs, setDocs] = useState<OrgDocumento[]>([]);
   const [docsPapelera, setDocsPapelera] = useState<OrgDocumento[]>([]);
+  const [docsRetirados, setDocsRetirados] = useState<OrgDocumento[]>([]);
+  const [retenidos, setRetenidos] = useState<Record<string, string>>({});
+  const [retirarDoc, setRetirarDoc] = useState<OrgDocumento | null>(null);
+  const [motivoRetiro, setMotivoRetiro] = useState("");
   const [loading, setLoading] = useState(true);
   const [uploadOpen, setUploadOpen] = useState(false);
   const [previewDoc, setPreviewDoc] = useState<ReferenciaDoc | null>(null);
@@ -257,12 +261,21 @@ export default function Recursos() {
       .select("*")
       .eq("org_id", org.id)
       .is("deleted_at", null)
+      .is("retirado_en", null)
       .eq("es_version_actual", true)
       .order("created_at", { ascending: false });
     if (errA) {
       toast({ title: "Error", description: errA.message, variant: "destructive" });
     } else {
       setDocs((activos ?? []) as OrgDocumento[]);
+    }
+    // Retención: documentos controlados o enlazados/citados en Cerebro solo se pueden retirar.
+    const ids = ((activos ?? []) as OrgDocumento[]).map((d) => d.id);
+    if (ids.length > 0) {
+      const { data: ret } = await sb.rpc("documentos_retenidos", { p_ids: ids });
+      setRetenidos(Object.fromEntries(((ret ?? []) as any[]).map((r) => [r.id, r.motivo])));
+    } else {
+      setRetenidos({});
     }
     // Papelera (solo admins por RLS)
     if (puedeEliminar) {
@@ -274,7 +287,34 @@ export default function Recursos() {
         .order("deleted_at", { ascending: false });
       setDocsPapelera((trash ?? []) as OrgDocumento[]);
     }
+    if (puedeRetirar) {
+      const { data: ret } = await sb
+        .from("org_documentos")
+        .select("*")
+        .eq("org_id", org.id)
+        .not("retirado_en", "is", null)
+        .order("retirado_en", { ascending: false });
+      setDocsRetirados((ret ?? []) as OrgDocumento[]);
+    }
     setLoading(false);
+  };
+
+  const confirmarRetiro = async () => {
+    if (!retirarDoc) return;
+    if (!motivoRetiro.trim()) {
+      toast({ title: "El motivo es obligatorio", variant: "destructive" });
+      return;
+    }
+    const { error } = await (supabase as any).rpc("retirar_documento", {
+      p_doc_id: retirarDoc.id, p_motivo: motivoRetiro.trim(),
+    });
+    if (error) {
+      toast({ title: "No se pudo retirar", description: error.message, variant: "destructive" });
+      return;
+    }
+    toast({ title: "Documento retirado", description: "Queda fuera de uso y se conserva con su registro de retiro." });
+    setRetirarDoc(null);
+    cargarDocs();
   };
 
   useEffect(() => {
@@ -1049,7 +1089,18 @@ export default function Recursos() {
                               <Upload className="h-4 w-4" />
                             </Button>
                           )}
-                          {puedeEliminar && (
+                          {puedeRetirar && retenidos[doc.id] && (
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="text-destructive hover:text-destructive"
+                              title="Retirar (documento con retención)"
+                              onClick={() => { setRetirarDoc(doc); setMotivoRetiro(""); }}
+                            >
+                              <Archive className="h-4 w-4" />
+                            </Button>
+                          )}
+                          {puedeEliminar && !retenidos[doc.id] && (
                             <AlertDialog>
                               <AlertDialogTrigger asChild>
                                 <Button
