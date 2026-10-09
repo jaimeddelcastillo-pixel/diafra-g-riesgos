@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Users, Bell, Pencil, UserPlus, Upload, X, KeyRound, Lock, Mail } from "lucide-react";
+import { UsuariosDesactivadosCard } from "@/components/UsuariosDesactivadosCard";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -446,6 +447,8 @@ export default function Configuracion() {
           )}
         </CardContent>
       </Card>
+
+      {isAdmin && <UsuariosDesactivadosCard puedeReactivar={hasRole("admin") || isSuperAdmin()} />}
 
       <Card>
         <CardHeader>
