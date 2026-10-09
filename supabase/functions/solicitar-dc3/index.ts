@@ -47,7 +47,7 @@ Deno.serve(async (req) => {
     // Diploma
     const { data: diploma, error: dErr } = await admin
       .from("curso_diplomas")
-      .select("id, user_id, curso_id, curso_titulo, curso_norma, calificacion, intento_id, alumno_nombre, alumno_email")
+      .select("id, user_id, org_id, curso_id, curso_titulo, curso_norma, calificacion, intento_id, alumno_nombre, alumno_email")
       .eq("id", diplomaId)
       .maybeSingle();
     if (dErr || !diploma) return json({ error: "Diploma no encontrado" }, 404);
