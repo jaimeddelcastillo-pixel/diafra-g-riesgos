@@ -308,6 +308,7 @@ Reglas: solo afirmaciones que estén literalmente en el documento; no inventes n
         documento_id: documentoId,
         archivo_id: archivo.id,
         items_creados: creados,
+        items_sin_fuente: itemsSinFuente,
         metodo,
         paginas_leidas: metodo === "pdf_texto" ? Math.min(totalPaginas ?? 0, paginasMax) : null,
         paginas_totales: totalPaginas,
@@ -318,6 +319,7 @@ Reglas: solo afirmaciones que estén literalmente en el documento; no inventes n
     return j({
       ok: true,
       items_creados: creados,
+      items_sin_fuente: itemsSinFuente,
       metodo,
       paginas_totales: totalPaginas,
       truncado,
