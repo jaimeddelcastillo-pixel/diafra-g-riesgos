@@ -240,6 +240,7 @@ Reglas: solo afirmaciones que estén literalmente en el documento; no inventes n
     // deno-lint-ignore no-explicit-any
     const conocimientos: any[] = Array.isArray(resultado.conocimientos) ? resultado.conocimientos.slice(0, 15) : [];
     let creados = 0;
+    let itemsSinFuente = 0;
     for (const c of conocimientos) {
       if (!c?.contenido || typeof c.contenido !== "string") continue;
       const tipo = TIPOS_CONOCIMIENTO.includes(c.tipo) ? c.tipo : "criterio_documental";
@@ -273,6 +274,13 @@ Reglas: solo afirmaciones que estén literalmente en el documento; no inventes n
         metodo,
         descripcion: `Extracción automática (${metodo}) por ${user.email ?? user.id}`,
       });
+      if (sErr) {
+        // Sin fuente no hay trazabilidad: se borra el ítem huérfano y se reporta.
+        console.error("insert source", sErr);
+        await admin.from("brain_knowledge_items").delete().eq("id", item.id);
+        itemsSinFuente++;
+        continue;
+      }
       creados++;
     }
 
