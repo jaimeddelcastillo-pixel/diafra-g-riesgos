@@ -76,7 +76,10 @@ export default function CerebroDocumentos() {
       body: { documento_id: documentoId },
     });
     setTrabajando(null);
-    const mensaje = data?.mensaje ?? (error as any)?.context?.mensaje;
+    let mensaje = data?.mensaje as string | undefined;
+    if (!mensaje && error) {
+      try { mensaje = (await (error as any).context?.json())?.mensaje; } catch { /* sin cuerpo */ }
+    }
     if (error || !data?.ok) {
       toast.error(mensaje ?? "No se pudo extraer el conocimiento del documento.");
       return;
