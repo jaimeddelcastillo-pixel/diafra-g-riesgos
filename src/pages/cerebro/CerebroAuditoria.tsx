@@ -29,13 +29,14 @@ const TABLAS: Record<string, string> = {
   brain_gaps: "Brecha",
   brain_memoria_viva: "Memoria viva",
   brain_exports: "Exportación",
+  brain_vinculos: "Vínculo con otro módulo",
 };
-const ACCIONES: Record<string, string> = { INSERT: "Alta", UPDATE: "Cambio", DELETE: "Baja" };
+const ACCIONES: Record<string, string> = { INSERT: "Alta", UPDATE: "Cambio", DELETE: "Baja", IMPORTACION_REVERTIDA: "Importación revertida" };
 const IGNORAR = new Set(["updated_at"]);
 
 type Fila = {
   id: string; created_at: string; user_id: string | null; tabla: string; registro_id: string | null;
-  accion: string; valor_anterior: any; valor_nuevo: any;
+  accion: string; valor_anterior: any; valor_nuevo: any; solicitado_por: string | null;
 };
 
 function fmt(v: unknown): string {
@@ -61,7 +62,7 @@ function etiquetaRegistro(f: Fila): string {
 const PAGE = 100;
 const MAX_EXPORT = 50000;
 const SISTEMA = "Sistema (IA / importación)";
-const COLS = "id, created_at, user_id, tabla, registro_id, accion, valor_anterior, valor_nuevo";
+const COLS = "id, created_at, user_id, tabla, registro_id, accion, valor_anterior, valor_nuevo, solicitado_por";
 
 type Filtros = { desde: string; hasta: string; tipo: string; accion: string; persona: string };
 
@@ -78,6 +79,9 @@ function aplicarFiltros(q: any, orgId: string, f: Filtros) {
 /** Persona responsable sin atribuir nunca a alguien algo que no hizo. */
 function responsable(f: Fila, perfiles: Record<string, string>): { texto: string; sistema: boolean } {
   if (f.user_id) return { texto: perfiles[f.user_id] ?? f.user_id, sistema: false };
+  if (f.solicitado_por) {
+    return { texto: `Sistema, a solicitud de ${perfiles[f.solicitado_por] ?? f.solicitado_por}`, sistema: true };
+  }
   if (f.accion === "INSERT") {
     const r = f.valor_nuevo ?? {};
     const uid = r?.contexto?.capturado_por ?? r.imported_by ?? r.generado_por ?? null;
@@ -90,6 +94,7 @@ function idsDePersonas(filas: Fila[]): string[] {
   const s = new Set<string>();
   filas.forEach((f) => {
     if (f.user_id) s.add(f.user_id);
+    else if (f.solicitado_por) s.add(f.solicitado_por);
     else if (f.accion === "INSERT") {
       const r = f.valor_nuevo ?? {};
       [r?.contexto?.capturado_por, r.imported_by, r.generado_por].forEach((x) => typeof x === "string" && s.add(x));
@@ -277,7 +282,7 @@ export default function CerebroAuditoria() {
                       <tr key={v.f.id} className="border-t align-top">
                         <td className="p-2 whitespace-nowrap">{v.fecha.toLocaleString("es-MX")}</td>
                         <td className="p-2">{v.sistema ? (
-                          <span className="inline-flex items-center gap-1"><Badge variant="secondary" className="gap-1 text-[10px]"><Bot className="h-3 w-3" />Sistema</Badge><span className="text-xs text-muted-foreground">{v.persona.replace(SISTEMA, "IA / importación")}</span></span>
+                          <span className="inline-flex items-center gap-1"><Badge variant="secondary" className="gap-1 text-[10px]"><Bot className="h-3 w-3" />Sistema</Badge><span className="text-xs text-muted-foreground">{v.persona.startsWith("Sistema, a solicitud de ") ? v.persona.replace("Sistema, ", "") : v.persona.replace(SISTEMA, "IA / importación")}</span></span>
                         ) : v.persona}</td>
                         <td className="p-2">{v.accion}</td>
                         <td className="p-2">{v.que}</td>
