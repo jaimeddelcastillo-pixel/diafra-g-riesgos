@@ -141,6 +141,13 @@
       "when": 1791585204447,
       "tag": "0019_c6a3_tipo_fuente_archivo",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1791586326732,
+      "tag": "0020_plan_limites_select_own_plan",
+      "breakpoints": true
     }
   ]
 }
