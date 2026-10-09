@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { resolverContextoOrg, ContextoOrgError } from "../_shared/contexto-org.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -53,14 +54,11 @@ Deno.serve(async (req) => {
 
     if (!isSuperAdmin) {
       // Admin de org: verificar que tiene rol admin y que el target es de su org
-      const { data: callerMember } = await adminClient
-        .from("org_members")
-        .select("role, org_id")
-        .eq("user_id", caller.id)
-        .eq("role", "admin")
-        .maybeSingle();
-
-      if (!callerMember) return json({ error: "Se requiere rol de administrador" }, 403);
+      let ctx;
+      try { ctx = await resolverContextoOrg(req); }
+      catch (e) { if (e instanceof ContextoOrgError) return json({ error: e.message }, e.status); throw e; }
+      if (ctx.rolEnOrg !== "admin") return json({ error: "Se requiere rol de administrador" }, 403);
+      const callerMember = { org_id: ctx.orgId };
 
       const { data: targetMember } = await adminClient
         .from("org_members")

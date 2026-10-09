@@ -4,6 +4,7 @@
 // Solo super_admin (TRACEA) o admin de la misma organización pueden invocarla.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { resolverContextoOrg, ContextoOrgError } from "../_shared/contexto-org.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -72,23 +73,25 @@ Deno.serve(async (req) => {
       .eq("id", target_user_id)
       .maybeSingle();
 
-    const { data: targetMember } = await admin
+    // Empresa de la sesión (C2b). super_admin sin soporte: empresa más antigua del destinatario.
+    let sesionOrgId: string | null = null;
+    let sesionRol: string | null = null;
+    try { const ctx = await resolverContextoOrg(req); sesionOrgId = ctx.orgId; sesionRol = ctx.rolEnOrg; }
+    catch (e) { if (!(e instanceof ContextoOrgError) || !isSuperAdmin) {
+      return json({ error: e instanceof ContextoOrgError ? e.message : "Error" }, e instanceof ContextoOrgError ? e.status : 500);
+    } }
+
+    let tq = admin
       .from("org_members")
       .select("org_id, role, organizations(nombre, slug)")
-      .eq("user_id", target_user_id)
-      .maybeSingle();
+      .eq("user_id", target_user_id);
+    if (sesionOrgId) tq = tq.eq("org_id", sesionOrgId);
+    const { data: targetMember } = await tq.order("created_at", { ascending: true }).limit(1).maybeSingle();
 
-    // Permisos: super_admin SIEMPRE puede; admin de org solo a usuarios de SU org
+    // Permisos: super_admin SIEMPRE puede; admin de org solo a usuarios de SU empresa activa
     if (!isSuperAdmin) {
-      const { data: callerMember } = await admin
-        .from("org_members")
-        .select("org_id, role")
-        .eq("user_id", caller.id)
-        .eq("role", "admin")
-        .maybeSingle();
-
-      if (!callerMember) return json({ error: "Se requiere rol de administrador" }, 403);
-      if (!targetMember || targetMember.org_id !== callerMember.org_id) {
+      if (sesionRol !== "admin") return json({ error: "Se requiere rol de administrador" }, 403);
+      if (!targetMember) {
         return json({ error: "El usuario no pertenece a tu organización" }, 403);
       }
     }

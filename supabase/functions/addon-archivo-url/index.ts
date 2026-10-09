@@ -2,6 +2,7 @@
 // Genera una signed URL (60 min) para descargar un archivo del catálogo addon_archivos
 // Verifica que la org del usuario haya comprado el producto correspondiente.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { resolverContextoOrg, ContextoOrgError } from "../_shared/contexto-org.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -43,9 +44,9 @@ Deno.serve(async (req) => {
     const isSuper = !!roleRow;
 
     if (!isSuper) {
-      const { data: member } = await admin
-        .from("org_members").select("org_id").eq("user_id", user.id).maybeSingle();
-      if (!member) return j({ error: "sin organización" }, 403);
+      let member: { org_id: string };
+      try { member = { org_id: (await resolverContextoOrg(req)).orgId }; }
+      catch (e) { if (e instanceof ContextoOrgError) return j({ error: e.message }, e.status); throw e; }
 
       const { data: purchase } = await admin
         .from("addon_purchases")

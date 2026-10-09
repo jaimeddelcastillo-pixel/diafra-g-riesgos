@@ -4,6 +4,7 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 import Stripe from "https://esm.sh/stripe@17.5.0?target=deno";
+import { resolverContextoOrg, ContextoOrgError } from "../_shared/contexto-org.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -45,14 +46,12 @@ Deno.serve(async (req) => {
     );
 
     // Validar admin de la org
-    const { data: member } = await admin
-      .from("org_members")
-      .select("org_id, role")
-      .eq("user_id", userId)
-      .maybeSingle();
+    let member: { org_id: string | null; role: string | null } = { org_id: null, role: null };
+    try { const ctx = await resolverContextoOrg(req); member = { org_id: ctx.orgId, role: ctx.soporteLogId ? null : ctx.rolEnOrg }; }
+    catch (e) { if (!(e instanceof ContextoOrgError)) throw e; }
 
     if (!member?.org_id) return json({ error: "Usuario sin organización" }, 400);
-    if (member.role !== "admin" && member.role !== "super_admin") {
+    if (member.role !== "admin") {
       return json({ error: "Solo administradores pueden gestionar la suscripción" }, 403);
     }
 
