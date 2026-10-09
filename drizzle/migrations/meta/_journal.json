@@ -71,6 +71,13 @@
       "when": 1791556139100,
       "tag": "0009_c2b_f_nombres_personas",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1791556730698,
+      "tag": "0010_c2b1_empresas_canceladas",
+      "breakpoints": true
     }
   ]
 }
