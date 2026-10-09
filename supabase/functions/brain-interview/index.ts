@@ -191,8 +191,10 @@ async function execGuardarConocimiento(
     );
     if (!fuentes.length) fuentes.push({ tipo_fuente: "entrevista" });
 
-    const { error: srcErr } = await admin.from("brain_knowledge_sources").insert(
-      fuentes.slice(0, 5).map((s: any) => ({
+    // C6a.4 (Parte E): fuente tipo documento con código que existe exactamente en el Listado.
+    const docsPorCodigo = await cargarCodigosListado();
+    const filas = fuentes.slice(0, 5).map((s: any) => {
+      const base: any = {
         org_id: orgId,
         knowledge_item_id: row.id,
         tipo_fuente: s.tipo_fuente,
@@ -200,11 +202,42 @@ async function execGuardarConocimiento(
         nombre_fuente: s.nombre_fuente ?? null,
         descripcion: s.descripcion ?? null,
         cita_textual: s.cita_textual ?? null,
-      })),
-    );
-    if (srcErr) console.error("brain_knowledge_sources insert", srcErr);
+      };
+      if (s.tipo_fuente === "documento") {
+        const cand = [s.documento_codigo, s.nombre_fuente]
+          .map((v: unknown) => String(v ?? "").trim().toUpperCase()).filter(Boolean);
+        const doc = cand.map((c: string) => docsPorCodigo.get(c)).find(Boolean);
+        if (doc) {
+          base.documento_id = doc.id;
+          base.documento_codigo = doc.codigo;
+          base.documento_revision = doc.revision;
+        }
+      }
+      return base;
+    });
 
-    guardados.push({ id: row.id, tipo: row.tipo, estado: row.estado, fuentes: fuentes.length });
+    // C6a.4 (punto 5): ningún conocimiento sin fuente.
+    let { error: srcErr } = await admin.from("brain_knowledge_sources").insert(filas);
+    if (srcErr) {
+      console.error("brain_knowledge_sources insert", srcErr);
+      ({ error: srcErr } = await admin.from("brain_knowledge_sources").insert({
+        org_id: orgId,
+        knowledge_item_id: row.id,
+        tipo_fuente: "entrevista",
+        session_id: sessionId,
+      }));
+    }
+    if (srcErr) {
+      console.error("brain_knowledge_sources fuente mínima", srcErr);
+      await admin.from("brain_knowledge_items").delete().eq("id", row.id);
+      rechazados.push({
+        contenido: contenido.slice(0, 80),
+        motivo: `no se pudo guardar la fuente (${srcErr.message}); el conocimiento no se guardó, reintenta`,
+      });
+      continue;
+    }
+
+    guardados.push({ id: row.id, tipo: row.tipo, estado: row.estado, fuentes: filas.length });
   }
 
   if (sessionId && guardados.length) {
