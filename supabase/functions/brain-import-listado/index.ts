@@ -97,9 +97,12 @@ Deno.serve(async (req) => {
       return json({ eliminados: 0, conservados: 0, procesos_eliminados: 0, procesos_conservados: 0, vacio: true });
     }
 
-    const { data: refs } = await admin
-      .from("brain_knowledge_sources").select("document_id").in("document_id", ids);
-    const referenciados = new Set((refs ?? []).map((r: any) => r.document_id));
+    const { data: refs, error: refsErr } = await admin
+      .from("brain_knowledge_sources").select("documento_id").in("documento_id", ids);
+    if (refsErr) {
+      return json({ error: "no_se_pudo_verificar_referencias", detalle: refsErr.message }, 500);
+    }
+    const referenciados = new Set((refs ?? []).map((r: any) => r.documento_id));
     const eliminables = ids.filter((id) => !referenciados.has(id));
 
     if (body.solo_diagnostico) {

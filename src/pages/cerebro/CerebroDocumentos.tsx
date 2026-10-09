@@ -25,20 +25,25 @@ export default function CerebroDocumentos() {
 
   const revertir = async (batchId: string) => {
     setTrabajando(batchId);
-    const { data: diag } = await supabase.functions.invoke("brain-import-listado", {
+    const { data: diag, error: diagErr } = await supabase.functions.invoke("brain-import-listado", {
       body: { accion: "revertir", batch_id: batchId, solo_diagnostico: true },
     });
-    if (diag && diag.eliminables === 0 && !diag.vacio) {
+    if (diagErr || !diag) {
+      setTrabajando(null);
+      toast.error("No se pudo verificar qué documentos están en uso. No se borró nada.");
+      return;
+    }
+    if (diag.eliminables === 0 && !diag.vacio) {
       setTrabajando(null);
       toast.error("Toda esta importación ya está siendo utilizada por el Cerebro y se conservará.");
       return;
     }
-    if (diag && diag.referenciados > 0) {
-      const ok = window.confirm(
-        `Parte de esta importación ya está siendo utilizada por el Cerebro. ${diag.referenciados} documentos tienen conocimiento asociado y se conservarán. ${diag.eliminables} documentos todavía pueden eliminarse. ¿Continuar?`,
-      );
-      if (!ok) { setTrabajando(null); return; }
-    }
+    const ok = window.confirm(
+      diag.vacio
+        ? "Esta importación no tiene documentos. Se marcará como deshecha. ¿Continuar?"
+        : `Se eliminarán ${diag.eliminables} documentos y se conservarán ${diag.referenciados} (tienen conocimiento asociado). ¿Deshacer la importación?`,
+    );
+    if (!ok) { setTrabajando(null); return; }
     const { data, error } = await supabase.functions.invoke("brain-import-listado", {
       body: { accion: "revertir", batch_id: batchId },
     });
