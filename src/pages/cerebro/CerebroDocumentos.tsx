@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Upload, Undo2, Paperclip } from "lucide-react";
+import { Upload, Undo2, Paperclip, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -66,6 +66,32 @@ export default function CerebroDocumentos() {
     setTrabajando(null);
     if (error) return toast.error(error.message);
     toast.success(confirmar ? "Enlace confirmado." : "Sugerencia descartada.");
+    qc.invalidateQueries({ queryKey: ["brain"] });
+  };
+
+  // C6a.3: extraer conocimiento del archivo enlazado. Todo entra como "por_validar".
+  const extraer = async (documentoId: string) => {
+    setTrabajando(documentoId);
+    const { data, error } = await supabase.functions.invoke("brain-extract-document", {
+      body: { documento_id: documentoId },
+    });
+    setTrabajando(null);
+    let mensaje = data?.mensaje as string | undefined;
+    if (!mensaje && error) {
+      try { mensaje = (await (error as any).context?.json())?.mensaje; } catch { /* sin cuerpo */ }
+    }
+    if (error || !data?.ok) {
+      toast.error(mensaje ?? "No se pudo extraer el conocimiento del documento.");
+      return;
+    }
+    if (data.truncado) {
+      toast.warning(`Se leyeron solo las primeras páginas permitidas por tu plan. ${data.mensaje}`);
+    } else {
+      toast.success(data.mensaje);
+    }
+    if (data.sugerencia_enlace) {
+      toast.info(`El contenido sugiere el registro ${data.sugerencia_enlace.codigo}. Revísalo en los enlaces sugeridos.`);
+    }
     qc.invalidateQueries({ queryKey: ["brain"] });
   };
 
@@ -182,6 +208,18 @@ export default function CerebroDocumentos() {
                 <div className="flex items-center gap-2">
                   {d.origen === "listado_maestro" && <Badge variant="secondary">Listado Maestro</Badge>}
                   <Badge variant="outline">{d.estado}</Badge>
+                  {d.archivo_id && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="gap-1"
+                      disabled={trabajando === d.id}
+                      onClick={() => extraer(d.id)}
+                    >
+                      <Sparkles className="h-3.5 w-3.5" />
+                      {trabajando === d.id ? "Leyendo…" : "Extraer conocimiento"}
+                    </Button>
+                  )}
                 </div>
               </CardContent>
             </Card>

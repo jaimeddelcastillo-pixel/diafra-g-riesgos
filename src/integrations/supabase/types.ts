@@ -429,6 +429,7 @@ export type Database = {
         Row: {
           actualizado_por: string | null
           archivo_id: string | null
+          archivo_nombre: string | null
           area_id: string | null
           codigo: string | null
           created_at: string
@@ -452,6 +453,7 @@ export type Database = {
         Insert: {
           actualizado_por?: string | null
           archivo_id?: string | null
+          archivo_nombre?: string | null
           area_id?: string | null
           codigo?: string | null
           created_at?: string
@@ -475,6 +477,7 @@ export type Database = {
         Update: {
           actualizado_por?: string | null
           archivo_id?: string | null
+          archivo_nombre?: string | null
           area_id?: string | null
           codigo?: string | null
           created_at?: string
@@ -1335,6 +1338,7 @@ export type Database = {
       }
       brain_knowledge_sources: {
         Row: {
+          archivo_id: string | null
           cita_textual: string | null
           created_at: string
           descripcion: string | null
@@ -1343,13 +1347,18 @@ export type Database = {
           documento_revision: string | null
           id: string
           knowledge_item_id: string
+          metodo: string | null
           nombre_fuente: string | null
           org_id: string
+          pagina: number | null
+          parrafo: number | null
           profile_id: string | null
+          seccion: string | null
           session_id: string | null
           tipo_fuente: string
         }
         Insert: {
+          archivo_id?: string | null
           cita_textual?: string | null
           created_at?: string
           descripcion?: string | null
@@ -1358,13 +1367,18 @@ export type Database = {
           documento_revision?: string | null
           id?: string
           knowledge_item_id: string
+          metodo?: string | null
           nombre_fuente?: string | null
           org_id: string
+          pagina?: number | null
+          parrafo?: number | null
           profile_id?: string | null
+          seccion?: string | null
           session_id?: string | null
           tipo_fuente: string
         }
         Update: {
+          archivo_id?: string | null
           cita_textual?: string | null
           created_at?: string
           descripcion?: string | null
@@ -1373,13 +1387,24 @@ export type Database = {
           documento_revision?: string | null
           id?: string
           knowledge_item_id?: string
+          metodo?: string | null
           nombre_fuente?: string | null
           org_id?: string
+          pagina?: number | null
+          parrafo?: number | null
           profile_id?: string | null
+          seccion?: string | null
           session_id?: string | null
           tipo_fuente?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "brain_knowledge_sources_archivo_id_fkey"
+            columns: ["archivo_id"]
+            isOneToOne: false
+            referencedRelation: "org_documentos"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "brain_knowledge_sources_documento_id_fkey"
             columns: ["documento_id"]
