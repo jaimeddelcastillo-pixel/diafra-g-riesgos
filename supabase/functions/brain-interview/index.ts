@@ -166,6 +166,7 @@ async function execGuardarConocimiento(
         tipo,
         contenido,
         estado,
+        actualizado_por: userId,
         proceso_id: procesoId,
         area_id: areaId,
         afecta_cumplimiento: it?.afecta_cumplimiento === true,
@@ -214,7 +215,7 @@ async function execGuardarConocimiento(
       .maybeSingle();
     await admin
       .from("brain_interview_sessions")
-      .update({ items_capturados: ((s as any)?.items_capturados ?? 0) + guardados.length })
+      .update({ items_capturados: ((s as any)?.items_capturados ?? 0) + guardados.length, actualizado_por: userId })
       .eq("id", sessionId)
       .eq("org_id", orgId);
   }
@@ -644,6 +645,7 @@ async function execGetNextInterviewObjective(
   orgId: string,
   sessionId: string | null,
   input: any,
+  userId: string | null = null,
 ) {
   const ctx = await execObtenerContextoCerebro(admin, orgId, sessionId, false);
 
@@ -712,7 +714,7 @@ async function execGetNextInterviewObjective(
   if (sessionId) {
     await admin
       .from("brain_interview_sessions")
-      .update({ objetivo_actual: objetivoFinal.slice(0, 500) })
+      .update({ objetivo_actual: objetivoFinal.slice(0, 500), actualizado_por: userId })
       .eq("id", sessionId)
       .eq("org_id", orgId);
   }
@@ -1101,7 +1103,7 @@ Deno.serve(async (req) => {
 
     // ── Acción pausar (no requiere turno del modelo)
     if (action === "pausar") {
-      await admin.from("brain_interview_sessions").update({ estado: "pausada" }).eq("id", sessionId).eq("org_id", orgId);
+      await admin.from("brain_interview_sessions").update({ estado: "pausada", actualizado_por: user.id }).eq("id", sessionId).eq("org_id", orgId);
       return streamResponse(async (c) => {
         sse(c, "turn_complete", {
           session_id: sessionId,
@@ -1206,10 +1208,10 @@ Deno.serve(async (req) => {
 
     let bloqueAccion = "";
     if (action === "iniciar") {
-      await admin.from("brain_interview_sessions").update({ estado: "en_proceso", iniciada_en: new Date().toISOString() }).eq("id", sessionId).eq("org_id", orgId);
+      await admin.from("brain_interview_sessions").update({ estado: "en_proceso", iniciada_en: new Date().toISOString(), actualizado_por: user.id }).eq("id", sessionId).eq("org_id", orgId);
       bloqueAccion = "\n\n[INICIO DE SESIÓN] Abre la entrevista según el Prompt Maestro: preséntate, encuadra el objetivo y formula UNA sola primera pregunta.";
     } else if (action === "reanudar") {
-      await admin.from("brain_interview_sessions").update({ estado: "en_proceso" }).eq("id", sessionId).eq("org_id", orgId);
+      await admin.from("brain_interview_sessions").update({ estado: "en_proceso", actualizado_por: user.id }).eq("id", sessionId).eq("org_id", orgId);
       const ultimas = historial.slice(-SESSION_TRANSCRIPT_WINDOW);
       const ultima = ultimas.length ? ultimas[ultimas.length - 1] : null;
       bloqueAccion = `\n\n[SESIÓN REANUDADA]\n[ÚLTIMA INTERACCIÓN]: ${ultima ? `${ultima.role}: ${String(ultima.content).slice(0, 600)}` : "(sin interacciones previas)"}\nRetoma la entrevista con coherencia. Tú decides cómo retomar: no repitas preguntas ya respondidas.`;
@@ -1404,7 +1406,7 @@ Deno.serve(async (req) => {
               if (tb.name === "obtener_contexto_cerebro") {
                 result = await execObtenerContextoCerebro(admin, orgId, sessionId, tb.input?.incluir_items !== false);
               } else if (tb.name === "get_next_interview_objective") {
-                result = await execGetNextInterviewObjective(admin, orgId, sessionId, tb.input ?? {});
+                result = await execGetNextInterviewObjective(admin, orgId, sessionId, tb.input ?? {}, user.id);
                 currentObjective = { objetivo: result?.objetivo, origen: result?.origen, razon: result?.razon };
               } else if (tb.name === "guardar_conocimiento") {
                 result = await idem("guardar_conocimiento", tb.input ?? {}, () =>
@@ -1486,7 +1488,7 @@ Deno.serve(async (req) => {
           }
 
           // El motor decide si los objetivos están completos; el cliente no puede imponerlo.
-          const obj = await execGetNextInterviewObjective(admin, orgId, sessionId, {});
+          const obj = await execGetNextInterviewObjective(admin, orgId, sessionId, {}, user.id);
           const objetivosCompletos =
             (obj?.bloques_pendientes ?? []).length === 0 && (obj?.brechas_prioritarias ?? []).length === 0;
           let completionReason: string;
@@ -1513,6 +1515,7 @@ Deno.serve(async (req) => {
 
           await admin.from("brain_interview_sessions").update({
             estado: "completada",
+            actualizado_por: user.id,
             finalizada_en: finalizadaEn.toISOString(),
             metadata: { ...(sesion.metadata ?? {}), cierre },
           }).eq("id", sessionId).eq("org_id", orgId);
@@ -1549,7 +1552,7 @@ Deno.serve(async (req) => {
           const { data: s } = await admin
             .from("brain_interview_sessions").select("preguntas_realizadas").eq("id", sessionId).maybeSingle();
           await admin.from("brain_interview_sessions")
-            .update({ preguntas_realizadas: ((s as any)?.preguntas_realizadas ?? 0) + 1 })
+            .update({ preguntas_realizadas: ((s as any)?.preguntas_realizadas ?? 0) + 1, actualizado_por: user.id })
             .eq("id", sessionId).eq("org_id", orgId);
         }
 
