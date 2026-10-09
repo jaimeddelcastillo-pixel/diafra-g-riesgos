@@ -78,6 +78,13 @@
       "when": 1791556730698,
       "tag": "0010_c2b1_empresas_canceladas",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1791562335580,
+      "tag": "0011_c3_vinculos_ciclo_vida_trazabilidad",
+      "breakpoints": true
     }
   ]
 }

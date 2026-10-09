@@ -138,6 +138,7 @@ export type Database = {
           ip: string | null
           org_id: string | null
           registro_id: string
+          solicitado_por: string | null
           tabla: string
           user_id: string | null
           valor_anterior: Json | null
@@ -150,6 +151,7 @@ export type Database = {
           ip?: string | null
           org_id?: string | null
           registro_id: string
+          solicitado_por?: string | null
           tabla: string
           user_id?: string | null
           valor_anterior?: Json | null
@@ -162,6 +164,7 @@ export type Database = {
           ip?: string | null
           org_id?: string | null
           registro_id?: string
+          solicitado_por?: string | null
           tabla?: string
           user_id?: string | null
           valor_anterior?: Json | null
@@ -424,6 +427,7 @@ export type Database = {
       }
       brain_documents: {
         Row: {
+          actualizado_por: string | null
           area_id: string | null
           codigo: string | null
           created_at: string
@@ -444,6 +448,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          actualizado_por?: string | null
           area_id?: string | null
           codigo?: string | null
           created_at?: string
@@ -464,6 +469,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          actualizado_por?: string | null
           area_id?: string | null
           codigo?: string | null
           created_at?: string
@@ -679,6 +685,7 @@ export type Database = {
       }
       brain_import_batches: {
         Row: {
+          actualizado_por: string | null
           created_at: string
           estado: string
           filas_importadas: number
@@ -694,6 +701,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          actualizado_por?: string | null
           created_at?: string
           estado?: string
           filas_importadas?: number
@@ -709,6 +717,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          actualizado_por?: string | null
           created_at?: string
           estado?: string
           filas_importadas?: number
@@ -944,6 +953,7 @@ export type Database = {
       }
       brain_interview_sessions: {
         Row: {
+          actualizado_por: string | null
           assignment_id: string | null
           capa: string | null
           created_at: string
@@ -967,6 +977,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          actualizado_por?: string | null
           assignment_id?: string | null
           capa?: string | null
           created_at?: string
@@ -990,6 +1001,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          actualizado_por?: string | null
           assignment_id?: string | null
           capa?: string | null
           created_at?: string
@@ -1107,6 +1119,7 @@ export type Database = {
       }
       brain_knowledge_items: {
         Row: {
+          actualizado_por: string | null
           afecta_cumplimiento: boolean | null
           area_id: string | null
           contenido: string
@@ -1114,13 +1127,17 @@ export type Database = {
           created_at: string
           created_from_turn_id: string | null
           estado: string
+          estado_cambiado_en: string | null
+          estado_cambiado_por: string | null
           folio_id: string | null
           id: string
           marco_validado: boolean
+          motivo_estado: string | null
           motivo_invalidacion: string | null
           org_id: string
           proceso_id: string | null
           riesgo_id: string | null
+          sustituido_por_id: string | null
           tipo: string
           turn_id: string | null
           updated_at: string
@@ -1128,6 +1145,7 @@ export type Database = {
           validado_por: string | null
         }
         Insert: {
+          actualizado_por?: string | null
           afecta_cumplimiento?: boolean | null
           area_id?: string | null
           contenido: string
@@ -1135,13 +1153,17 @@ export type Database = {
           created_at?: string
           created_from_turn_id?: string | null
           estado?: string
+          estado_cambiado_en?: string | null
+          estado_cambiado_por?: string | null
           folio_id?: string | null
           id?: string
           marco_validado?: boolean
+          motivo_estado?: string | null
           motivo_invalidacion?: string | null
           org_id: string
           proceso_id?: string | null
           riesgo_id?: string | null
+          sustituido_por_id?: string | null
           tipo: string
           turn_id?: string | null
           updated_at?: string
@@ -1149,6 +1171,7 @@ export type Database = {
           validado_por?: string | null
         }
         Update: {
+          actualizado_por?: string | null
           afecta_cumplimiento?: boolean | null
           area_id?: string | null
           contenido?: string
@@ -1156,13 +1179,17 @@ export type Database = {
           created_at?: string
           created_from_turn_id?: string | null
           estado?: string
+          estado_cambiado_en?: string | null
+          estado_cambiado_por?: string | null
           folio_id?: string | null
           id?: string
           marco_validado?: boolean
+          motivo_estado?: string | null
           motivo_invalidacion?: string | null
           org_id?: string
           proceso_id?: string | null
           riesgo_id?: string | null
+          sustituido_por_id?: string | null
           tipo?: string
           turn_id?: string | null
           updated_at?: string
@@ -1213,6 +1240,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "brain_knowledge_items_sustituido_por_id_fkey"
+            columns: ["sustituido_por_id"]
+            isOneToOne: false
+            referencedRelation: "brain_knowledge_items"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "brain_knowledge_items_turn_id_fkey"
             columns: ["turn_id"]
             isOneToOne: false
@@ -1233,7 +1267,9 @@ export type Database = {
           cita_textual: string | null
           created_at: string
           descripcion: string | null
+          documento_codigo: string | null
           documento_id: string | null
+          documento_revision: string | null
           id: string
           knowledge_item_id: string
           nombre_fuente: string | null
@@ -1246,7 +1282,9 @@ export type Database = {
           cita_textual?: string | null
           created_at?: string
           descripcion?: string | null
+          documento_codigo?: string | null
           documento_id?: string | null
+          documento_revision?: string | null
           id?: string
           knowledge_item_id: string
           nombre_fuente?: string | null
@@ -1259,7 +1297,9 @@ export type Database = {
           cita_textual?: string | null
           created_at?: string
           descripcion?: string | null
+          documento_codigo?: string | null
           documento_id?: string | null
+          documento_revision?: string | null
           id?: string
           knowledge_item_id?: string
           nombre_fuente?: string | null
@@ -1541,6 +1581,64 @@ export type Database = {
             columns: ["session_id"]
             isOneToOne: false
             referencedRelation: "brain_interview_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      brain_vinculos: {
+        Row: {
+          creado_por: string | null
+          created_at: string | null
+          entidad_id: string
+          entidad_tipo: string
+          id: string
+          knowledge_item_id: string
+          nota: string | null
+          org_id: string
+          relacion: string
+        }
+        Insert: {
+          creado_por?: string | null
+          created_at?: string | null
+          entidad_id: string
+          entidad_tipo: string
+          id?: string
+          knowledge_item_id: string
+          nota?: string | null
+          org_id: string
+          relacion: string
+        }
+        Update: {
+          creado_por?: string | null
+          created_at?: string | null
+          entidad_id?: string
+          entidad_tipo?: string
+          id?: string
+          knowledge_item_id?: string
+          nota?: string | null
+          org_id?: string
+          relacion?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brain_vinculos_entidad_tipo_fkey"
+            columns: ["entidad_tipo"]
+            isOneToOne: false
+            referencedRelation: "vinculo_tipos_entidad"
+            referencedColumns: ["tipo"]
+          },
+          {
+            foreignKeyName: "brain_vinculos_knowledge_item_id_fkey"
+            columns: ["knowledge_item_id"]
+            isOneToOne: false
+            referencedRelation: "brain_knowledge_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brain_vinculos_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]
@@ -3509,6 +3607,38 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      vinculo_tipos_entidad: {
+        Row: {
+          activo: boolean
+          descripcion: string | null
+          modulo: string
+          tabla: string
+          tipo: string
+        }
+        Insert: {
+          activo?: boolean
+          descripcion?: string | null
+          modulo: string
+          tabla: string
+          tipo: string
+        }
+        Update: {
+          activo?: boolean
+          descripcion?: string | null
+          modulo?: string
+          tabla?: string
+          tipo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vinculo_tipos_entidad_modulo_fkey"
+            columns: ["modulo"]
+            isOneToOne: false
+            referencedRelation: "modulos"
+            referencedColumns: ["clave"]
+          },
+        ]
       }
     }
     Views: {
