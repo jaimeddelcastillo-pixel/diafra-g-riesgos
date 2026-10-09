@@ -13,7 +13,7 @@ import { useAuth } from "@/hooks/useAuth";
 
 export default function CerebroDocumentos() {
   const qc = useQueryClient();
-  const { hasRole, orgId, orgRole } = useAuth();
+  const { hasRole, orgId, orgRole, isSuperAdmin } = useAuth();
   const { data: docs = [], isLoading } = useBrainDocuments();
   const { data: batches = [] } = useBrainImportBatches();
   const { data: propuestas = [] } = useBrainImportPropuestas();
@@ -21,7 +21,7 @@ export default function CerebroDocumentos() {
   const [trabajando, setTrabajando] = useState<string | null>(null);
 
   const puedeImportar = hasRole("admin") || hasRole("responsable_sanitario");
-  const puedeEnlazar = orgRole === "admin" || orgRole === "responsable_sanitario" || orgRole === "super_admin";
+  const puedeEnlazar = isSuperAdmin() || orgRole === "admin" || orgRole === "responsable_sanitario" || orgRole === "super_admin";
   const pendientes = (propuestas as any[]).filter((p) => p.estado === "propuesta");
 
   // Archivos vigentes de Recursos (para mostrar enlace y la sección "Sin registro oficial").
@@ -92,6 +92,30 @@ export default function CerebroDocumentos() {
     if (data.sugerencia_enlace) {
       toast.info(`El contenido sugiere el registro ${data.sugerencia_enlace.codigo}. Revísalo en los enlaces sugeridos.`);
     }
+    qc.invalidateQueries({ queryKey: ["brain"] });
+  };
+
+  // C6a.4: propuestas de la extracción. Solo admin/RS; el trigger registra quién en la bitácora.
+  const resolverEstado = async (d: any, confirmar: boolean) => {
+    if (confirmar && !window.confirm(`¿Cambiar el estado de ${d.codigo ?? d.nombre} a "${d.estado_propuesto}"?`)) return;
+    setTrabajando(d.id);
+    const limpiar = { estado_propuesto: null, estado_evidencia: null, estado_confianza: null, requiere_confirmacion: false, estado_propuesto_en: null };
+    const { error } = await (supabase as any).from("brain_documents")
+      .update(confirmar ? { ...limpiar, estado: d.estado_propuesto } : limpiar).eq("id", d.id);
+    setTrabajando(null);
+    if (error) return toast.error(error.message);
+    toast.success(confirmar ? "Estado confirmado." : "Propuesta descartada.");
+    qc.invalidateQueries({ queryKey: ["brain"] });
+  };
+  const resolverRevision = async (d: any, quitarEnlace: boolean) => {
+    if (quitarEnlace && !window.confirm("¿Quitar el enlace con este archivo? El archivo y el registro se conservan.")) return;
+    setTrabajando(d.id);
+    const limpiar = { enlace_por_confirmar: false, enlace_revision_detectada: null, enlace_evidencia: null };
+    const { error } = await (supabase as any).from("brain_documents")
+      .update(quitarEnlace ? { ...limpiar, archivo_id: null } : limpiar).eq("id", d.id);
+    setTrabajando(null);
+    if (error) return toast.error(error.message);
+    toast.success(quitarEnlace ? "Enlace quitado." : "Enlace confirmado.");
     qc.invalidateQueries({ queryKey: ["brain"] });
   };
 
@@ -204,11 +228,36 @@ export default function CerebroDocumentos() {
                       ? `Archivo enlazado: ${archivoPorId[d.archivo_id]?.nombre ?? "en Recursos"}`
                       : "Sin archivo enlazado"}
                   </p>
+                  {d.requiere_confirmacion && d.estado_propuesto && (
+                    <div className="text-xs border-l-2 border-destructive/60 pl-2 mt-2 space-y-1">
+                      <p>
+                        <Badge variant="destructive" className="mr-1">Estado propuesto: {d.estado_propuesto}</Badge>
+                        Confianza {d.estado_confianza ?? "—"}. {d.estado_evidencia}
+                      </p>
+                      {puedeEnlazar && (
+                        <div className="flex gap-2">
+                          <Button size="sm" className="h-7" disabled={trabajando === d.id} onClick={() => resolverEstado(d, true)}>Confirmar</Button>
+                          <Button size="sm" variant="ghost" className="h-7" disabled={trabajando === d.id} onClick={() => resolverEstado(d, false)}>Descartar</Button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  {d.enlace_por_confirmar && (
+                    <div className="text-xs border-l-2 border-destructive/60 pl-2 mt-2 space-y-1">
+                      <p><Badge variant="outline" className="mr-1">Enlace por confirmar</Badge>{d.enlace_evidencia}</p>
+                      {puedeEnlazar && (
+                        <div className="flex gap-2">
+                          <Button size="sm" className="h-7" disabled={trabajando === d.id} onClick={() => resolverRevision(d, false)}>Mantener enlace</Button>
+                          <Button size="sm" variant="ghost" className="h-7" disabled={trabajando === d.id} onClick={() => resolverRevision(d, true)}>Quitar enlace</Button>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
                 <div className="flex items-center gap-2">
                   {d.origen === "listado_maestro" && <Badge variant="secondary">Listado Maestro</Badge>}
                   <Badge variant="outline">{d.estado}</Badge>
-                  {d.archivo_id && (
+                  {d.archivo_id && puedeEnlazar && (
                     <Button
                       size="sm"
                       variant="outline"
