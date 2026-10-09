@@ -109,8 +109,13 @@ export default function CerebroDocumentos() {
   };
   const resolverRevision = async (d: any, quitarEnlace: boolean) => {
     if (quitarEnlace && !window.confirm("¿Quitar el enlace con este archivo? El archivo y el registro se conservan.")) return;
+    let comentario: string | null = null;
+    if (!quitarEnlace) {
+      comentario = window.prompt("Comentario obligatorio: ¿por qué se mantiene el enlace pese a la revisión distinta?")?.trim() || null;
+      if (!comentario) return toast.error("Para mantener el enlace escribe un comentario.");
+    }
     setTrabajando(d.id);
-    const limpiar = { enlace_por_confirmar: false, enlace_revision_detectada: null, enlace_evidencia: null };
+    const limpiar = { enlace_por_confirmar: false, enlace_revision_detectada: null, enlace_evidencia: null, enlace_comentario: comentario };
     const { error } = await (supabase as any).from("brain_documents")
       .update(quitarEnlace ? { ...limpiar, archivo_id: null } : limpiar).eq("id", d.id);
     setTrabajando(null);
