@@ -1,6 +1,7 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { supabase } from "@/integrations/supabase/client";
+import { nombresPersonas } from "@/lib/nombresPersonas";
 import type { Folio, Riesgo, FolioComite } from "@/hooks/useFolios";
 import { fetchOrgLogoDataUrl } from "@/lib/orgLogo";
 import { getNormaConfig, calcularNPR, getNPRLevelByNorma, getClasificacionMode } from "@/config/normas";
@@ -156,11 +157,8 @@ async function fetchVersiones(folioId: string, currentVersion: string): Promise<
   const userIds = Array.from(new Set(versiones.map((v) => v.creado_por).filter(Boolean))) as string[];
   const nombresMap = new Map<string, string>();
   if (userIds.length > 0) {
-    const { data: profs } = await supabase
-      .from("profiles")
-      .select("id, nombre")
-      .in("id", userIds);
-    profs?.forEach((p) => nombresMap.set(p.id, p.nombre));
+    const nombres = await nombresPersonas(userIds);
+    Object.entries(nombres).forEach(([id, n]) => nombresMap.set(id, n));
   }
 
   // Para cada versión archivada: De=esa versión, A=siguiente (o currentVersion si es la última)
@@ -568,6 +566,11 @@ export async function generateFolioPDF(
             .in("id", votosFolio.map((v) => v.user_id))
         : { data: [] as any[] };
     const perfilMap = new Map((perfilesVoto || []).map((p: any) => [p.id, p]));
+    const faltantes = votosFolio.map((v) => v.user_id).filter((id) => !perfilMap.has(id));
+    if (faltantes.length) {
+      const n = await nombresPersonas(faltantes);
+      Object.entries(n).forEach(([id, nombre]) => perfilMap.set(id, { id, nombre, cargo: null }));
+    }
 
     y = (doc as any).lastAutoTable.finalY + 4;
     y = sectionHeader(y, "II-B.", "VOTACIÓN DEL COMITÉ TÉCNICO");
