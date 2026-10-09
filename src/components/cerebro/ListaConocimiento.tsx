@@ -117,6 +117,12 @@ export function ListaConocimiento({
                     <Badge variant={retirado ? "secondary" : i.estado === "validado" ? "default" : "outline"}>{i.estado}</Badge>
                   </div>
                   <p className="text-xs text-muted-foreground">{i.tipo}</p>
+                  {i.requiere_revision && (
+                    <div className="text-xs border-l-2 border-destructive/60 pl-2">
+                      <Badge variant="destructive" className="mr-2">Requiere revisión</Badge>
+                      {i.motivo_revision}
+                    </div>
+                  )}
                   {mostrarValidacion && (
                     <div className="text-xs text-muted-foreground space-y-0.5 border-l-2 border-primary/40 pl-2">
                       <p><span className="font-medium">Validado por:</span> {nombre(i.validado_por)} · {fecha(i.validado_en)}</p>

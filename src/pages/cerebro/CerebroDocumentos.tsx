@@ -135,7 +135,7 @@ export default function CerebroDocumentos() {
         </Card>
       )}
 
-      {puedeImportar && (sugerencias as any[]).length > 0 && (
+      {puedeEnlazar && (sugerencias as any[]).length > 0 && (
         <section className="space-y-2">
           <h2 className="text-sm font-semibold">Enlaces sugeridos por nombre de archivo</h2>
           <p className="text-xs text-muted-foreground">
