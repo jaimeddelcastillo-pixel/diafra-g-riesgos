@@ -120,6 +120,13 @@
       "when": 1791584499656,
       "tag": "0016_c6a3_plan_limites",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1791584580927,
+      "tag": "0017_c6a3_crear_sesion_limites",
+      "breakpoints": true
     }
   ]
 }
