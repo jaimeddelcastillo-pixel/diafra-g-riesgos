@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import { nombresPersonas } from "@/lib/nombresPersonas";
 import { useProfiles } from "@/hooks/useProfiles";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -98,18 +99,29 @@ function idsDePersonas(filas: Fila[]): string[] {
 }
 
 async function cargarPerfiles(ids: string[]): Promise<Record<string, string>> {
-  const m: Record<string, string> = {};
-  for (let i = 0; i < ids.length; i += 200) {
-    const { data } = await supabase.from("profiles").select("id, nombre, email").in("id", ids.slice(i, i + 200));
-    (data ?? []).forEach((p: any) => (m[p.id] = p.nombre || p.email || p.id));
-  }
-  return m;
+  // C2b-F: incluye personas desactivadas que aparecen en la bitácora de la empresa.
+  return nombresPersonas(ids);
 }
 
 export default function CerebroAuditoria() {
   const { orgId, org, roles, isSuperAdmin, profile, user } = useAuth();
   const permitido = isSuperAdmin() || roles.includes("admin" as any) || roles.includes("responsable_sanitario" as any);
-  const { data: miembros = [] } = useProfiles();
+  const { data: miembrosActuales = [] } = useProfiles();
+  // Filtro de persona: miembros actuales + todas las personas de los eventos de la empresa.
+  const { data: miembros = [] } = useQuery({
+    queryKey: ["cerebro-auditoria-personas", orgId, (miembrosActuales as any[]).length],
+    enabled: !!orgId,
+    queryFn: async () => {
+      const { data } = await supabase.from("audit_trail").select("user_id")
+        .eq("org_id", orgId!).like("tabla", "brain_%").not("user_id", "is", null).limit(10000);
+      const ids = new Set<string>((miembrosActuales as any[]).map((m) => m.id));
+      (data ?? []).forEach((r: any) => r.user_id && ids.add(r.user_id));
+      const nombres = await nombresPersonas([...ids]);
+      (miembrosActuales as any[]).forEach((m) => { if (!nombres[m.id]) nombres[m.id] = m.nombre; });
+      return [...ids].map((id) => ({ id, nombre: nombres[id] ?? id }))
+        .sort((a, b) => a.nombre.localeCompare(b.nombre));
+    },
+  });
 
   const [desde, setDesde] = useState("");
   const [hasta, setHasta] = useState("");
