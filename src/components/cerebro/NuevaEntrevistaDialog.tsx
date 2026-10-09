@@ -184,7 +184,7 @@ export function NuevaEntrevistaDialog({ open, onOpenChange, onCreada }: Props) {
     if (error) {
       const m = String(error.message ?? "");
       if (m.includes("trial_limit")) {
-        toast.error("Tu plan de prueba permite una sola sesión de entrevista. Contacta a tu asesor para activar tu plan.");
+        toast.error("Llegaste al límite de entrevistas de tu plan. Contrata un plan para hacer más entrevistas.");
       } else if (m.includes("feature_inactiva")) {
         toast.error("El Cerebro Institucional no está activo para tu organización.");
       } else if (m.includes("fuera_de_org")) {
