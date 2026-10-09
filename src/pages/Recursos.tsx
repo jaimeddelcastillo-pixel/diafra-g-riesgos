@@ -23,7 +23,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import {
   ClipboardList, LayoutTemplate, Upload, Download, Trash2,
-  FileText, Eye, Inbox, RotateCcw, Shield, History, Copy, CheckCircle2, AlertTriangle, Loader2,
+  FileText, Eye, Inbox, RotateCcw, Archive, Shield, History, Copy, CheckCircle2, AlertTriangle, Loader2,
 } from "lucide-react";
 import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
@@ -54,6 +54,8 @@ interface OrgDocumento {
   version_num?: number;
   parent_doc_id?: string | null;
   es_version_actual?: boolean;
+  retirado_en?: string | null;
+  motivo_retiro?: string | null;
 }
 
 interface ReferenciaDoc {
@@ -188,7 +190,7 @@ function diasParaPurga(deletedAt: string): number {
 }
 
 export default function Recursos() {
-  const { org, user, hasRole } = useAuth();
+  const { org, user, hasRole, orgRole } = useAuth();
   const isTrial = useIsTrial();
   const { toast } = useToast();
   const [docs, setDocs] = useState<OrgDocumento[]>([]);
@@ -240,6 +242,7 @@ export default function Recursos() {
   const [parentDocId, setParentDocId] = useState<string | null>(null);
 
   const puedeEliminar = hasRole("admin");
+  const puedeRetirar = orgRole === "admin" || orgRole === "responsable_sanitario" || orgRole === "super_admin";
 
   /** Selección de referencias según la norma aplicable de la organización. */
   const norma = org?.norma_aplicable ?? "NOM-241";
@@ -392,6 +395,7 @@ export default function Recursos() {
       clasificacion,
       version: version.trim() || "1.0",
       storage_path: path,
+      nombre_archivo_original: file.name.slice(0, 300),
       mime_type: file.type,
       size_bytes: file.size,
       usar_en_ia: usarEnIa,
@@ -469,7 +473,11 @@ export default function Recursos() {
       } as any)
       .eq("id", doc.id);
     if (error) {
-      toast({ title: "Error eliminando documento", description: error.message, variant: "destructive" });
+      toast({
+        title: error.message.includes("RETENCION") ? "Este documento no se puede eliminar" : "Error eliminando documento",
+        description: error.message.replace("RETENCION: ", ""),
+        variant: "destructive",
+      });
       return;
     }
     toast({
