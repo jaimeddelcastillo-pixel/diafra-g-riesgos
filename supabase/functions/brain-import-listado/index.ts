@@ -20,6 +20,32 @@ function normalizar(s: string) {
     .toLowerCase().replace(/[^a-z0-9\s]/g, " ").replace(/\s+/g, " ").trim();
 }
 
+// Catálogo válido de brain_documents.tipo y sinónimos (comparación sin mayúsculas ni acentos).
+const SINONIMOS_TIPO: Record<string, string[]> = {
+  pno: ["pno", "procedimiento", "procedimientos", "procedimiento normalizado de operacion",
+    "procedimiento normalizado de operaciones", "procedimiento estandar de operacion", "sop", "poe"],
+  formato: ["formato", "formatos", "registro", "registros"],
+  manual_calidad: ["manual", "manual de calidad", "manual calidad", "manual_calidad"],
+  organigrama: ["organigrama"],
+  mapa_procesos: ["mapa de procesos", "mapa procesos", "mapa_procesos"],
+  auditoria: ["auditoria", "auditorias"],
+  capa: ["capa", "accion correctiva", "accion preventiva", "acciones correctivas y preventivas"],
+  riesgo: ["riesgo", "riesgos", "analisis de riesgo", "analisis de riesgos"],
+  protocolo: ["protocolo", "protocolos"],
+  informe: ["informe", "informes", "reporte", "reportes"],
+  autorizacion_regulatoria: ["autorizacion regulatoria", "autorizacion_regulatoria", "registro sanitario", "licencia sanitaria"],
+  otro: ["otro", "otros"],
+};
+const TIPO_POR_SINONIMO = new Map<string, string>();
+for (const [tipo, lista] of Object.entries(SINONIMOS_TIPO)) {
+  for (const s of lista) TIPO_POR_SINONIMO.set(normalizar(s), tipo);
+}
+function mapearTipo(valor: string): string {
+  const k = normalizar(valor ?? "");
+  if (!k) return "otro";
+  return TIPO_POR_SINONIMO.get(k) ?? "otro";
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: cors });
   if (req.method !== "POST") return json({ error: "method_not_allowed" }, 405);
@@ -243,7 +269,7 @@ Deno.serve(async (req) => {
 
   let importados = 0;
   let duplicados = 0;
-  const errores: { fila: number; error: string }[] = [];
+  const errores: { fila: number | string; error: string }[] = [];
 
   for (let i = 0; i < registros.length; i += LOTE) {
     const lote = registros.slice(i, i + LOTE);
@@ -251,15 +277,20 @@ Deno.serve(async (req) => {
       const clave = r.codigo ? `${normalizar(r.codigo)}|${normalizar(r.revision ?? "")}` : "";
       if (clave && porCodigoRev.has(clave)) { duplicados++; return null; }
       if (clave) porCodigoRev.add(clave);
+      const tipoOriginal = r.tipo != null ? String(r.tipo).trim() : "";
+      const notas = [
+        tipoOriginal ? `Tipo en listado: ${tipoOriginal.slice(0, 200)}` : null,
+        r.responsable ? `Responsable: ${r.responsable}` : null,
+      ].filter(Boolean).join("\n");
       return {
         org_id: orgId,
         nombre: String(r.nombre ?? "").slice(0, 500),
-        tipo: r.tipo ? String(r.tipo).slice(0, 100) : "documento",
+        tipo: mapearTipo(tipoOriginal),
         codigo: r.codigo ?? null,
         revision: r.revision ?? null,
         estado: r.estado ? String(r.estado).slice(0, 60) : "vigente",
         area_id: r.area ? areaPorNombre.get(normalizar(r.area)) ?? null : null,
-        notas: r.responsable ? `Responsable: ${r.responsable}` : null,
+        notas: notas || null,
         origen: "listado_maestro",
         actualizado_por: userId,
         import_batch_id: batchId,
@@ -267,14 +298,16 @@ Deno.serve(async (req) => {
         import_status: r.clasificacion === "posible_actualizacion" ? "actualizado"
           : r.clasificacion === "requiere_revision" ? "revisar" : "nuevo",
       };
-    }).filter(Boolean);
+    }).filter(Boolean) as any[];
 
     if (filas.length === 0) continue;
-    const { error } = await admin.from("brain_documents").insert(filas as any[]);
-    if (error) {
-      errores.push({ fila: lote[0]?.fila ?? i, error: error.message });
-    } else {
-      importados += filas.length;
+    const { error } = await admin.from("brain_documents").insert(filas);
+    if (!error) { importados += filas.length; continue; }
+    // El lote falló: se reintenta fila por fila para identificar cuáles fallan y por qué.
+    for (const f of filas) {
+      const { error: e1 } = await admin.from("brain_documents").insert(f);
+      if (e1) errores.push({ fila: f.import_row_reference ?? "?", error: e1.message });
+      else importados++;
     }
   }
 

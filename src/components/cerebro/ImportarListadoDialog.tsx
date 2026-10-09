@@ -132,11 +132,19 @@ export function ImportarListadoDialog({ open, onOpenChange }: Props) {
       if (error) throw new Error(error.message);
 
       qc.invalidateQueries({ queryKey: ["brain"] });
-      toast.success(
-        data?.estado === "parcial"
-          ? `Importación parcial: ${data.importados} documentos importados, con errores registrados.`
-          : `Importación completada: ${data?.importados ?? 0} documentos.`,
-      );
+      const errores = (data?.errores ?? []) as { fila: number | string; error: string }[];
+      if (data?.estado === "parcial" || errores.length > 0) {
+        toast.warning(
+          `Importación parcial: ${data?.importados ?? 0} documentos importados, ${errores.length} filas no se guardaron.`,
+          {
+            duration: Infinity,
+            description: errores.slice(0, 15).map((e) => `Fila ${e.fila}: ${e.error}`).join("\n")
+              + (errores.length > 15 ? `\n… y ${errores.length - 15} más.` : ""),
+          },
+        );
+      } else {
+        toast.success(`Importación completada: ${data?.importados ?? 0} documentos.`);
+      }
       onOpenChange(false);
     } catch (e: any) {
       toast.error(e?.message?.includes("sin_permiso")
