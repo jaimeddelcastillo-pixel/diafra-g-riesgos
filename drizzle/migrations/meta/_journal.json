@@ -50,6 +50,13 @@
       "when": 1791499045685,
       "tag": "0006_c2a1_es_prueba",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1791555823321,
+      "tag": "0007_c2b_a_preparacion",
+      "breakpoints": true
     }
   ]
 }
