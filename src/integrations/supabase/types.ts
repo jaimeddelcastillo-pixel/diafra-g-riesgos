@@ -428,6 +428,7 @@ export type Database = {
       brain_documents: {
         Row: {
           actualizado_por: string | null
+          archivo_id: string | null
           area_id: string | null
           codigo: string | null
           created_at: string
@@ -450,6 +451,7 @@ export type Database = {
         }
         Insert: {
           actualizado_por?: string | null
+          archivo_id?: string | null
           area_id?: string | null
           codigo?: string | null
           created_at?: string
@@ -472,6 +474,7 @@ export type Database = {
         }
         Update: {
           actualizado_por?: string | null
+          archivo_id?: string | null
           area_id?: string | null
           codigo?: string | null
           created_at?: string
@@ -493,6 +496,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "brain_documents_archivo_id_fkey"
+            columns: ["archivo_id"]
+            isOneToOne: false
+            referencedRelation: "org_documentos"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "brain_documents_area_id_fkey"
             columns: ["area_id"]
@@ -519,6 +529,55 @@ export type Database = {
             columns: ["proceso_id"]
             isOneToOne: false
             referencedRelation: "brain_processes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      brain_enlace_descartes: {
+        Row: {
+          archivo_id: string
+          created_at: string
+          descartado_por: string | null
+          documento_id: string
+          id: string
+          org_id: string
+        }
+        Insert: {
+          archivo_id: string
+          created_at?: string
+          descartado_por?: string | null
+          documento_id: string
+          id?: string
+          org_id: string
+        }
+        Update: {
+          archivo_id?: string
+          created_at?: string
+          descartado_por?: string | null
+          documento_id?: string
+          id?: string
+          org_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brain_enlace_descartes_archivo_id_fkey"
+            columns: ["archivo_id"]
+            isOneToOne: false
+            referencedRelation: "org_documentos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brain_enlace_descartes_documento_id_fkey"
+            columns: ["documento_id"]
+            isOneToOne: false
+            referencedRelation: "brain_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brain_enlace_descartes_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]
@@ -1138,8 +1197,10 @@ export type Database = {
           marco_validado: boolean
           motivo_estado: string | null
           motivo_invalidacion: string | null
+          motivo_revision: string | null
           org_id: string
           proceso_id: string | null
+          requiere_revision: boolean
           riesgo_id: string | null
           sustituido_por_id: string | null
           tipo: string
@@ -1165,8 +1226,10 @@ export type Database = {
           marco_validado?: boolean
           motivo_estado?: string | null
           motivo_invalidacion?: string | null
+          motivo_revision?: string | null
           org_id: string
           proceso_id?: string | null
+          requiere_revision?: boolean
           riesgo_id?: string | null
           sustituido_por_id?: string | null
           tipo: string
@@ -1192,8 +1255,10 @@ export type Database = {
           marco_validado?: boolean
           motivo_estado?: string | null
           motivo_invalidacion?: string | null
+          motivo_revision?: string | null
           org_id?: string
           proceso_id?: string | null
+          requiere_revision?: boolean
           riesgo_id?: string | null
           sustituido_por_id?: string | null
           tipo?: string
@@ -2842,9 +2907,13 @@ export type Database = {
           es_version_actual: boolean
           id: string
           mime_type: string | null
+          motivo_retiro: string | null
           nombre: string
+          nombre_archivo_original: string | null
           org_id: string
           parent_doc_id: string | null
+          retirado_en: string | null
+          retirado_por: string | null
           sha256: string | null
           sha256_servidor: string | null
           sha256_verificado_en: string | null
@@ -2866,9 +2935,13 @@ export type Database = {
           es_version_actual?: boolean
           id?: string
           mime_type?: string | null
+          motivo_retiro?: string | null
           nombre: string
+          nombre_archivo_original?: string | null
           org_id: string
           parent_doc_id?: string | null
+          retirado_en?: string | null
+          retirado_por?: string | null
           sha256?: string | null
           sha256_servidor?: string | null
           sha256_verificado_en?: string | null
@@ -2890,9 +2963,13 @@ export type Database = {
           es_version_actual?: boolean
           id?: string
           mime_type?: string | null
+          motivo_retiro?: string | null
           nombre?: string
+          nombre_archivo_original?: string | null
           org_id?: string
           parent_doc_id?: string | null
+          retirado_en?: string | null
+          retirado_por?: string | null
           sha256?: string | null
           sha256_servidor?: string | null
           sha256_verificado_en?: string | null
@@ -3749,6 +3826,26 @@ export type Database = {
         Args: { p_folio_id: string; p_motivo?: string }
         Returns: string
       }
+      brain_resolver_enlace: {
+        Args: {
+          p_archivo_id: string
+          p_confirmar: boolean
+          p_documento_id: string
+        }
+        Returns: undefined
+      }
+      brain_sugerencias_enlace: {
+        Args: never
+        Returns: {
+          archivo_id: string
+          archivo_nombre: string
+          codigo: string
+          documento_id: string
+          documento_nombre: string
+          nombre_archivo: string
+          revision: string
+        }[]
+      }
       brain_turn_claim_operation: {
         Args: {
           p_clave: string
@@ -3832,6 +3929,7 @@ export type Database = {
         Args: { p_items: Json; p_org: string }
         Returns: Json
       }
+      codigo_tokens: { Args: { _t: string }; Returns: string }
       contexto_org_actual: {
         Args: never
         Returns: {
@@ -3879,6 +3977,13 @@ export type Database = {
           archivos: number
           clave: string
           documentos: number
+        }[]
+      }
+      documentos_retenidos: {
+        Args: { p_ids: string[] }
+        Returns: {
+          id: string
+          motivo: string
         }[]
       }
       eliminar_documento_permanente: {
@@ -3943,6 +4048,7 @@ export type Database = {
         }[]
       }
       normalizar_txt: { Args: { _t: string }; Returns: string }
+      org_documento_retencion: { Args: { p_id: string }; Returns: string }
       org_has_curso_access: { Args: { _org_id: string }; Returns: boolean }
       org_tiene_modulo: {
         Args: { _modulo: string; _org: string }
@@ -3983,6 +4089,10 @@ export type Database = {
       }
       restaurar_documento: { Args: { p_doc_id: string }; Returns: boolean }
       restaurar_documento_tipos: { Args: never; Returns: number }
+      retirar_documento: {
+        Args: { p_doc_id: string; p_motivo: string }
+        Returns: undefined
+      }
       same_org_member: { Args: { _user_id: string }; Returns: boolean }
       seed_documento_tipos: { Args: { _org_id: string }; Returns: number }
       seed_org_folio_tipos: {
