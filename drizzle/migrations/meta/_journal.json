@@ -64,6 +64,13 @@
       "when": 1791556117785,
       "tag": "0008_c2b_c_varias_membresias",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1791556139100,
+      "tag": "0009_c2b_f_nombres_personas",
+      "breakpoints": true
     }
   ]
 }

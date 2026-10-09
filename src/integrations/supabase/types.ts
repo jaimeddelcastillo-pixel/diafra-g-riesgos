@@ -3689,6 +3689,13 @@ export type Database = {
         | { Args: { p_tipo: string }; Returns: string }
         | { Args: { p_org_id: string; p_tipo: string }; Returns: string }
       next_ticket_code: { Args: { p_org_id: string }; Returns: string }
+      nombres_personas: {
+        Args: { _ids: string[] }
+        Returns: {
+          id: string
+          nombre: string
+        }[]
+      }
       org_has_curso_access: { Args: { _org_id: string }; Returns: boolean }
       org_tiene_modulo: {
         Args: { _modulo: string; _org: string }
