@@ -17,6 +17,7 @@ export default function CerebroValidacion() {
           items={items as any[]}
           filtroBase={(i) => PENDIENTES.includes(i.estado)}
           vacio="No hay conocimiento pendiente de validación."
+          modo="validacion"
         />
       )}
     </CerebroPage>

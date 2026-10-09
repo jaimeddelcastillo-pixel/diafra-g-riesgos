@@ -92,6 +92,13 @@
       "when": 1791571507315,
       "tag": "0012_c3_1_conservar_validacion",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1791575805516,
+      "tag": "0013_c3_3_validacion_rechazado",
+      "breakpoints": true
     }
   ]
 }
