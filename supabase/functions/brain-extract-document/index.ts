@@ -10,6 +10,7 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { resolverContextoOrg } from "../_shared/contexto-org.ts";
+import { PDFDocument } from "npm:pdf-lib@1.17.1";
 import {
   bloqueImagen,
   bloquePdf,
@@ -60,10 +61,17 @@ Deno.serve(async (req) => {
     if (!user) return j({ error: "sesión inválida" }, 401);
 
     let orgId: string;
+    let puedeExtraer = false;
     try {
-      orgId = (await resolverContextoOrg(req)).orgId;
+      const ctx = await resolverContextoOrg(req);
+      orgId = ctx.orgId;
+      puedeExtraer = ctx.esSuperAdmin || ctx.rolEnOrg === "admin" || ctx.rolEnOrg === "responsable_sanitario";
     } catch (_e) {
       return j({ error: "sin organización" }, 403);
+    }
+    // C6a.4: solo admin, RS o super_admin pueden extraer.
+    if (!puedeExtraer) {
+      return j({ error: "sin_permiso", mensaje: "Solo administradores o responsable sanitario pueden extraer conocimiento." }, 403);
     }
 
     // La empresa debe tener el módulo Cerebro.
@@ -95,11 +103,27 @@ Deno.serve(async (req) => {
 
     // Archivo de Recursos: misma empresa, vigente (ni en papelera ni retirado).
     const { data: archivo } = await admin.from("org_documentos")
-      .select("id, org_id, nombre, nombre_archivo_original, mime_type, storage_path, sha256, sha256_servidor, deleted_at, retirado_en")
+      .select("id, org_id, nombre, nombre_archivo_original, mime_type, storage_path, sha256, sha256_servidor, deleted_at, retirado_en, usar_en_ia")
       .eq("id", archivoId).maybeSingle();
     if (!archivo || archivo.org_id !== orgId) return j({ error: "El archivo no pertenece a tu organización" }, 403);
     if (archivo.deleted_at || archivo.retirado_en) {
       return j({ error: "archivo_no_vigente", mensaje: "El archivo está en la papelera o retirado." }, 409);
+    }
+
+    // C6a.4: "Usar en IA" con efecto real.
+    if (archivo.usar_en_ia === false) {
+      await admin.from("audit_trail").insert({
+        user_id: user.id,
+        org_id: orgId,
+        tabla: "org_documentos",
+        registro_id: archivo.id,
+        accion: "EXTRACCION_RECHAZADA_USAR_EN_IA",
+        valor_nuevo: { archivo_id: archivo.id, documento_id: documentoId },
+      });
+      return j({
+        error: "no_autorizado_ia",
+        mensaje: "Este archivo no está autorizado para lectura por IA. Actívalo en Recursos (Usar en IA)",
+      }, 403);
     }
 
     // Descargar y recalcular huella. Si no coincide, se detiene y queda en bitácora.
@@ -167,10 +191,21 @@ Deno.serve(async (req) => {
         metodo = "pdf_texto";
         textoPlano = pdf.paginas.map((p) => `[Página ${p.numero}]\n${p.texto}`).join("\n\n");
       } else {
-        // Escaneado sin texto seleccionable: visión sobre el PDF completo (sin corte de páginas).
+        // Escaneado sin texto seleccionable: visión sobre las primeras paginasMax páginas (pdf-lib).
         metodo = "vision";
-        bloquesVision = [bloquePdf(buffer)];
-        truncado = false;
+        if (pdf.totalPaginas > paginasMax) {
+          const origen = await PDFDocument.load(buffer, { ignoreEncryption: true });
+          const recorte = await PDFDocument.create();
+          const idx = Array.from({ length: paginasMax }, (_, i) => i);
+          const copiadas = await recorte.copyPages(origen, idx);
+          copiadas.forEach((pg) => recorte.addPage(pg));
+          const bytes = await recorte.save();
+          bloquesVision = [bloquePdf(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer)];
+          truncado = true;
+        } else {
+          bloquesVision = [bloquePdf(buffer)];
+          truncado = false;
+        }
       }
     } else if (isWordMime(mime, nombreArchivo)) {
       const parrafos = await extractDocxParrafos(buffer);
@@ -199,9 +234,18 @@ Deno.serve(async (req) => {
       "seccion": "encabezado de sección si aplica",
       "cita": "cita textual corta que respalda el contenido"
     }
-  ]
+  ],
+  "estado_documento": {
+    "estado_propuesto": "obsoleto" o "cancelado" o null,
+    "estado_evidencia": "qué se ve: sello o leyenda OBSOLETO/CANCELADO, o vigencia vencida (con fecha)",
+    "estado_confianza": "alta" | "media" | "baja",
+    "copia_no_controlada": true o false,
+    "copia_evidencia": "texto del sello o leyenda COPIA NO CONTROLADA y página",
+    "revision_detectada": "revisión que aparece impresa en el documento, o null",
+    "revision_evidencia": "dónde aparece (página, encabezado)"
+  }
 }
-Reglas: solo afirmaciones que estén literalmente en el documento; no inventes ni interpretes; máximo 15 conocimientos; si el documento no aporta conocimiento institucional, devuelve {"conocimientos": []}. No agregues explicaciones fuera del JSON.`;
+Reglas: "pagina" es el número de página real del archivo PDF (la primera página del archivo es 1), no el folio impreso; reporta estado_documento solo con evidencia visible en el documento, si no la hay deja null/false; solo afirmaciones que estén literalmente en el documento; no inventes ni interpretes; máximo 15 conocimientos; si el documento no aporta conocimiento institucional, devuelve {"conocimientos": []}. No agregues explicaciones fuera del JSON.`;
 
     // deno-lint-ignore no-explicit-any
     const userContent: any[] = metodo === "vision"
@@ -235,6 +279,26 @@ Reglas: solo afirmaciones que estén literalmente en el documento; no inventes n
       resultado = JSON.parse(cleaned);
     } catch {
       return j({ error: "respuesta_invalida", mensaje: "La IA no devolvió un resultado válido. No se guardó nada." }, 502);
+    }
+
+    // C6a.4: registro de lo que la IA leyó.
+    const paginasLeidas = totalPaginas === null ? null : Math.min(totalPaginas, paginasMax);
+    const { data: extraccion, error: eErr } = await admin.from("brain_extracciones").insert({
+      org_id: orgId,
+      archivo_id: archivo.id,
+      documento_id: brainDoc?.id ?? null,
+      sha256: hex,
+      metodo,
+      modelo: CLAUDE_MODEL,
+      paginas_totales: totalPaginas,
+      paginas_leidas: paginasLeidas,
+      truncado,
+      texto: metodo === "vision" ? null : textoPlano.slice(0, 120000),
+      solicitado_por: user.id,
+    }).select("id").single();
+    if (eErr || !extraccion) {
+      console.error("insert extraccion", eErr);
+      return j({ error: "registro_extraccion", mensaje: "No se pudo registrar la extracción. No se guardó nada." }, 500);
     }
 
     // deno-lint-ignore no-explicit-any
@@ -272,6 +336,7 @@ Reglas: solo afirmaciones que estén literalmente en el documento; no inventes n
         seccion: typeof c.seccion === "string" ? c.seccion : null,
         cita_textual: typeof c.cita === "string" ? c.cita : null,
         metodo,
+        extraccion_id: extraccion.id,
         descripcion: `Extracción automática (${metodo}) por ${user.email ?? user.id}`,
       });
       if (sErr) {
@@ -282,6 +347,44 @@ Reglas: solo afirmaciones que estén literalmente en el documento; no inventes n
         continue;
       }
       creados++;
+    }
+
+    // C6a.4: propuestas (nunca cambian estados).
+    const ed = resultado.estado_documento ?? {};
+    const conf = ["alta", "media", "baja"].includes(ed.estado_confianza) ? ed.estado_confianza : "baja";
+    const propuestas: string[] = [];
+    if (brainDoc && (ed.estado_propuesto === "obsoleto" || ed.estado_propuesto === "cancelado") && ed.estado_evidencia) {
+      await admin.from("brain_documents").update({
+        estado_propuesto: ed.estado_propuesto,
+        estado_evidencia: String(ed.estado_evidencia).slice(0, 1000),
+        estado_confianza: conf,
+        requiere_confirmacion: true,
+        estado_propuesto_en: new Date().toISOString(),
+      }).eq("id", brainDoc.id);
+      propuestas.push(`estado ${ed.estado_propuesto}`);
+    }
+    if (ed.copia_no_controlada === true && ed.copia_evidencia) {
+      await admin.from("org_documentos").update({
+        copia_no_controlada_propuesta: true,
+        copia_no_controlada_evidencia: String(ed.copia_evidencia).slice(0, 1000),
+      }).eq("id", archivo.id);
+      propuestas.push("copia no controlada");
+    }
+    const norm = (v: unknown) => String(v ?? "").toLowerCase().replace(/^(rev\.?|revisi[oó]n)\s*/i, "").replace(/\s+/g, "").replace(/^0+(?=\d)/, "");
+    if (brainDoc && ed.revision_detectada && brainDoc.revision && norm(ed.revision_detectada) !== norm(brainDoc.revision)) {
+      await admin.from("brain_documents").update({
+        enlace_por_confirmar: true,
+        enlace_revision_detectada: String(ed.revision_detectada).slice(0, 50),
+        enlace_evidencia: `Revisión detectada ${ed.revision_detectada} contra registrada ${brainDoc.revision}${ed.revision_evidencia ? ` (${String(ed.revision_evidencia).slice(0, 300)})` : ""}`,
+      }).eq("id", brainDoc.id);
+      propuestas.push("revisión distinta");
+    }
+    if (propuestas.length) {
+      await admin.from("audit_trail").insert({
+        user_id: user.id, org_id: orgId, tabla: "brain_documents", registro_id: brainDoc?.id ?? null,
+        accion: "PROPUESTA_ESTADO_DOCUMENTO",
+        valor_nuevo: { extraccion_id: extraccion.id, archivo_id: archivo.id, propuestas, estado_documento: ed },
+      });
     }
 
     // Sugerencia de enlace por primera página (decisión d): solo si no hay registro enlazado.
@@ -310,7 +413,8 @@ Reglas: solo afirmaciones que estén literalmente en el documento; no inventes n
         items_creados: creados,
         items_sin_fuente: itemsSinFuente,
         metodo,
-        paginas_leidas: metodo === "pdf_texto" ? Math.min(totalPaginas ?? 0, paginasMax) : null,
+        paginas_leidas: paginasLeidas,
+        extraccion_id: extraccion.id,
         paginas_totales: totalPaginas,
         truncado,
       },
