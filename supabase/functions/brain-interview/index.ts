@@ -104,6 +104,7 @@ TOOLS.push({
                 properties: {
                   tipo_fuente: { type: "string", enum: TIPOS_FUENTE },
                   nombre_fuente: { type: "string", description: "Nombre de la persona, documento o registro." },
+                  documento_codigo: { type: "string", description: "Si la fuente es un documento y el entrevistado dio su código (p. ej. PNO-CAL-001), escríbelo tal cual." },
                   descripcion: { type: "string" },
                   cita_textual: { type: "string", description: "Frase textual del entrevistado que respalda el conocimiento." },
                 },
@@ -143,6 +144,20 @@ async function execGuardarConocimiento(
 
   const guardados: any[] = [];
   const rechazados: any[] = [];
+
+  // C6a.4: códigos del Listado Maestro (coincidencia exacta, sin distinguir mayúsculas).
+  let codigosCache: Map<string, any> | null = null;
+  const cargarCodigosListado = async () => {
+    if (codigosCache) return codigosCache;
+    const { data } = await admin.from("brain_documents")
+      .select("id, codigo, revision").eq("org_id", orgId).not("codigo", "is", null);
+    codigosCache = new Map();
+    for (const d of data ?? []) {
+      const k = String(d.codigo).trim().toUpperCase();
+      if (k && !codigosCache.has(k)) codigosCache.set(k, d);
+    }
+    return codigosCache;
+  };
 
   for (const it of raw) {
     const tipo = String(it?.tipo ?? "");
