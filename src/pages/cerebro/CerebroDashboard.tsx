@@ -16,8 +16,10 @@ export default function CerebroDashboard() {
   const { data: contras = [] } = useBrainContradictions();
   const { data: sesiones = [] } = useBrainSessions();
 
-  const validados = items.filter((i: any) => i.estado === "validado").length;
-  const capturados = items.length;
+  // C3: obsoletos y sustituidos no cuentan como vigentes.
+  const vigentes = items.filter((i: any) => i.estado !== "obsoleto" && i.estado !== "sustituido");
+  const validados = vigentes.filter((i: any) => i.estado === "validado").length;
+  const capturados = vigentes.length;
   const gapsAbiertos = gaps.filter((g: any) => g.estado === "abierta").length;
   const contrasAbiertas = contras.filter((c: any) => c.estado === "abierta").length;
   const indice = calcularCobertura(validados, capturados, gapsAbiertos);
