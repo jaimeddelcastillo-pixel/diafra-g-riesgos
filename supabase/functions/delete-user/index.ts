@@ -75,6 +75,33 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Rol que tenía en la empresa afectada (para valor_anterior y reactivación)
+    let rolPrevio: string | null = null;
+    if (orgId) {
+      const { data: m } = await admin.from("org_members").select("role")
+        .eq("user_id", user_id).eq("org_id", orgId).maybeSingle();
+      rolPrevio = (m as any)?.role ?? null;
+    }
+    const { count: totalAntes } = await admin
+      .from("org_members").select("org_id", { count: "exact", head: true }).eq("user_id", user_id);
+    const bloqueara = (totalAntes ?? 0) - (orgId && rolPrevio ? 1 : 0) <= 0;
+
+    // C2b-F: la bitácora se escribe ANTES de quitar la membresía; si falla, no se desactiva.
+    const { error: audErr } = await admin.from("audit_trail").insert({
+      accion: "USUARIO_DESACTIVADO",
+      tabla: "profiles",
+      registro_id: user_id,
+      org_id: orgId,
+      user_id: caller.id,
+      valor_anterior: { org_id: orgId, rol: rolPrevio },
+      valor_nuevo: { motivo, bloqueado: bloqueara, org_id: orgId },
+      ip: req.headers.get("x-forwarded-for") ?? null,
+    });
+    if (audErr) {
+      console.error("audit insert error:", audErr);
+      return json({ error: "No se pudo registrar en la bitácora; el usuario no se desactivó." }, 500);
+    }
+
     // Quitar membresía solo en la organización de quien desactiva
     if (orgId) {
       const { error: mErr } = await admin.from("org_members").delete()
@@ -97,18 +124,10 @@ Deno.serve(async (req) => {
         desactivado_por: caller.id,
         motivo_desactivacion: motivo,
       }).eq("id", user_id);
+    } else {
+      // Si su empresa activa era la que se quitó, se limpia para que resuelva otra.
+      await admin.from("profiles").update({ org_activa_id: null }).eq("id", user_id).eq("org_activa_id", orgId);
     }
-
-    const { error: audErr } = await admin.from("audit_trail").insert({
-      accion: "USUARIO_DESACTIVADO",
-      tabla: "profiles",
-      registro_id: user_id,
-      org_id: orgId,
-      user_id: caller.id,
-      valor_nuevo: { motivo, bloqueado, org_id: orgId },
-      ip: req.headers.get("x-forwarded-for") ?? null,
-    });
-    if (audErr) console.error("audit insert error:", audErr);
 
     return json({ success: true, bloqueado });
   } catch (err: any) {
