@@ -49,6 +49,7 @@ interface AuthContextType {
   stopImpersonation: () => Promise<void>;
   signOut: () => Promise<void>;
   refreshOrg: () => Promise<void>;
+  cambiarEmpresa: (orgId: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -215,6 +216,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  // C2b-E: cambiar la empresa activa (consultores con varias membresías).
+  const cambiarEmpresa = async (nuevaOrg: string) => {
+    if (!user || isImpersonating || nuevaOrg === orgId) return;
+    setLoading(true);
+    const { error } = await supabase.rpc("set_org_activa", { _org: nuevaOrg });
+    if (error) { setLoading(false); throw error; }
+    queryClient.clear();
+    limpiarEstado();
+    await cargarContexto(user);
+    broadcast("org");
+    window.location.assign("/");
+  };
+
   const stopImpersonation = async () => {
     await supabase.rpc("cerrar_mis_soportes", { _tipo: "usuario" });
     sessionStorage.removeItem(SOPORTE_KEY);
@@ -243,6 +257,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       startImpersonation, stopImpersonation,
       signOut,
       refreshOrg,
+      cambiarEmpresa,
     }}>
       {children}
     </AuthContext.Provider>

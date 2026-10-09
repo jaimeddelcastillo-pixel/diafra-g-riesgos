@@ -1,6 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { LogOut } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigationItems } from "@/hooks/useNavigationItems";
 import { NavGroup, NavLeaf, groupContainsActive } from "@/components/sidebar/NavGroup";
@@ -13,6 +17,11 @@ import {
 } from "@/components/ui/sidebar";
 
 const STORAGE_KEY = "tracea_sidebar_open_group";
+
+const ROL_LABEL: Record<string, string> = {
+  admin: "Administrador", responsable_sanitario: "Resp. Sanitario", comite_tecnico: "Comité Técnico",
+  operador: "Operador", lectura: "Lectura", super_admin: "Super admin",
+};
 
 /** Punto verde en "Mis Folios" por 24h tras elegir crear el primer folio. */
 function useBadgeFolios() {
@@ -27,7 +36,17 @@ export function AppSidebar() {
   const collapsed = state === "collapsed";
   const { pathname } = useLocation();
   const navigate = useNavigate();
-  const { org, isImpersonating, stopImpersonation } = useAuth();
+  const { org, orgId, orgRole, user, isImpersonating, stopImpersonation, cambiarEmpresa } = useAuth();
+  const { data: misOrgs = [] } = useQuery({
+    queryKey: ["mis-organizaciones", user?.id],
+    enabled: !!user && !isImpersonating,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("mis_organizaciones");
+      if (error) throw error;
+      return (data ?? []) as { org_id: string; nombre: string; rol: string; es_activa: boolean }[];
+    },
+  });
+  const mostrarSelector = !isImpersonating && misOrgs.length > 1;
   const { sections, isAdminNav } = useNavigationItems();
   const mostrarBadgeFolios = useBadgeFolios();
 
@@ -83,12 +102,34 @@ export function AppSidebar() {
               <h1 className="text-sm font-bold text-sidebar-foreground tracking-wide truncate">
                 {isAdminNav ? "TRACEA" : (org?.nombre ?? "TRACEA")}
               </h1>
-              <p className="text-[10px] text-sidebar-foreground/60 leading-tight truncate max-w-[120px]">
-                {isAdminNav ? "Panel TRACEA" : "Gestión de Riesgos"}
+              <p className="text-[10px] text-sidebar-foreground/60 leading-tight truncate max-w-[140px]">
+                {isAdminNav ? "Panel TRACEA" : orgRole ? `Rol: ${ROL_LABEL[orgRole] ?? orgRole}` : "Gestión de Riesgos"}
               </p>
             </div>
           )}
         </div>
+        {mostrarSelector && !collapsed && !isAdminNav && (
+          <div className="mt-3">
+            <Select
+              value={orgId ?? undefined}
+              onValueChange={async (v) => {
+                try { await cambiarEmpresa(v); }
+                catch (e: any) { toast.error(e?.message ?? "No se pudo cambiar de empresa"); }
+              }}
+            >
+              <SelectTrigger className="h-8 text-xs" aria-label="Cambiar de empresa">
+                <SelectValue placeholder="Empresa" />
+              </SelectTrigger>
+              <SelectContent>
+                {misOrgs.map((o) => (
+                  <SelectItem key={o.org_id} value={o.org_id} className="text-xs">
+                    {o.nombre} · {ROL_LABEL[o.rol] ?? o.rol}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
       </SidebarHeader>
 
       <SidebarContent>
