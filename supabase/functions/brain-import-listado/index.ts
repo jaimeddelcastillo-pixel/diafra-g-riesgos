@@ -269,7 +269,7 @@ Deno.serve(async (req) => {
 
   let importados = 0;
   let duplicados = 0;
-  const errores: { fila: number; error: string }[] = [];
+  const errores: { fila: number | string; error: string }[] = [];
 
   for (let i = 0; i < registros.length; i += LOTE) {
     const lote = registros.slice(i, i + LOTE);
