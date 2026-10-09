@@ -1122,6 +1122,7 @@ export type Database = {
           actualizado_por: string | null
           afecta_cumplimiento: boolean | null
           area_id: string | null
+          comentario_validacion: string | null
           contenido: string
           contexto: Json | null
           created_at: string
@@ -1148,6 +1149,7 @@ export type Database = {
           actualizado_por?: string | null
           afecta_cumplimiento?: boolean | null
           area_id?: string | null
+          comentario_validacion?: string | null
           contenido: string
           contexto?: Json | null
           created_at?: string
@@ -1174,6 +1176,7 @@ export type Database = {
           actualizado_por?: string | null
           afecta_cumplimiento?: boolean | null
           area_id?: string | null
+          comentario_validacion?: string | null
           contenido?: string
           contexto?: Json | null
           created_at?: string
