@@ -2,3 +2,6 @@
 - Recursos (org_documentos) never references brain_* tables, and file/hash columns are immutable by trigger; why: Recursos must work without Cerebro and originals must stay intact.
 - Retention of Recursos files is decided only by org_documento_retencion (DB-enforced by trigger and in purge functions); why: no path may delete a controlled or Cerebro-linked file.
 - Per-plan caps (interviews, export, document extraction, pages) live only in table plan_limites, read via plan_limite/mi_plan_limite (NULL = unlimited); why: limits change by data, not code. Server-side export, when built, must enforce `exportar` from this table, not only the UI.
+- La lectura de archivos (PDF/Word/imagen) vive solo en supabase/functions/_shared/documento-contenido.ts; chat-analizar-documento y brain-extract-document la comparten. Why: una sola pieza de extracción evita divergencias entre asistente y Cerebro.
+- brain-extract-document recalcula SHA-256 contra org_documentos antes de leer; si no coincide se detiene con 409 y audita HUELLA_NO_COINCIDE. Why: el conocimiento nunca sale de un archivo alterado.
+- Los conocimientos extraídos entran siempre por_validar con fuente tipo_fuente='archivo' (página/párrafo/sección/cita/método); si la fuente falla, el ítem se borra. Why: EXTRAER ≠ VALIDAR y sin fuente no hay trazabilidad.
