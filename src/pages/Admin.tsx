@@ -258,7 +258,6 @@ export default function Admin() {
   const [resetPwValue, setResetPwValue] = useState("");
   const [deleteUserOpen, setDeleteUserOpen] = useState(false);
   const [deleteUserTarget, setDeleteUserTarget] = useState<TraceaUser | null>(null);
-  const [deleteMotivo, setDeleteMotivo] = useState("");
   const [editUserOpen, setEditUserOpen] = useState(false);
   const [editUserTarget, setEditUserTarget] = useState<TraceaUser | null>(null);
   const [editUserForm, setEditUserForm] = useState({ nombre: "", cargo: "" });
