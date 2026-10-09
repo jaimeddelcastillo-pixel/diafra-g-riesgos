@@ -1,0 +1,2 @@
+- Document types are classified only by the SQL function clasificar_tipo_documento over each org's documento_tipos catalog (template rows have org_id NULL and are never used to classify); why: one rule for imports, Recursos and reclassification.
+- Recursos (org_documentos) never references brain_* tables, and file/hash columns are immutable by trigger; why: Recursos must work without Cerebro and originals must stay intact.
