@@ -1076,15 +1076,19 @@ Deno.serve(async (req) => {
       .maybeSingle();
     if (!sesion) return json({ error: "Sesión no encontrada para esta organización" }, 403);
 
-    // Trial: una sola sesión de entrevista por organización
-    if (esTrial && !esSuperAdmin && action === "iniciar") {
-      const { count } = await admin
-        .from("brain_interview_sessions")
-        .select("id", { count: "exact", head: true })
-        .eq("org_id", orgId)
-        .neq("id", sessionId);
-      if ((count ?? 0) >= 1) {
-        return json({ error: "El plan de prueba permite una sola sesión de entrevista" }, 403);
+    // Tope de entrevistas del plan (plan_limites.entrevistas_max; NULL = sin límite)
+    if (!esSuperAdmin && action === "iniciar") {
+      const { data: lim } = await admin.rpc("plan_limite", { p_org: orgId, p_clave: "entrevistas_max" });
+      const max = typeof lim === "number" ? lim : null;
+      if (max !== null) {
+        const { count } = await admin
+          .from("brain_interview_sessions")
+          .select("id", { count: "exact", head: true })
+          .eq("org_id", orgId)
+          .neq("id", sessionId);
+        if ((count ?? 0) >= max) {
+          return json({ error: `Tu plan permite ${max} sesión(es) de entrevista`, code: "trial_limit" }, 403);
+        }
       }
     }
 
