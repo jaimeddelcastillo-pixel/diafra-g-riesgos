@@ -1258,6 +1258,50 @@ export default function Recursos() {
           )}
         </DialogContent>
       </Dialog>
+      <Dialog open={!!retirarDoc} onOpenChange={(o) => !o && setRetirarDoc(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Retirar documento</DialogTitle>
+            <DialogDescription>
+              "{retirarDoc?.nombre}" no se puede eliminar porque{" "}
+              {retirarDoc && retenidos[retirarDoc.id] === "controlado"
+                ? "es un documento controlado"
+                : "está enlazado o citado en Cerebro"}
+              . Al retirarlo queda fuera de uso y de las listas, pero se conserva con quién, cuándo y el motivo.
+            </DialogDescription>
+          </DialogHeader>
+          <div>
+            <Label htmlFor="motivo-retiro">Motivo (obligatorio)</Label>
+            <Input id="motivo-retiro" value={motivoRetiro} onChange={(e) => setMotivoRetiro(e.target.value)} />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRetirarDoc(null)}>Cancelar</Button>
+            <Button variant="destructive" onClick={confirmarRetiro}>Retirar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {puedeRetirar && docsRetirados.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2"><Archive className="h-4 w-4" /> Documentos retirados</CardTitle>
+            <CardDescription>Fuera de uso. Se conservan por retención y no se pueden borrar.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {docsRetirados.map((d) => (
+              <div key={d.id} className="flex items-start justify-between gap-3 border-b pb-2 last:border-0">
+                <div>
+                  <p className="text-sm font-medium">{d.nombre}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {d.tipo} · v{d.version} · retirado el {d.retirado_en ? formatDate(d.retirado_en) : "—"} · Motivo: {d.motivo_retiro ?? "—"}
+                  </p>
+                </div>
+                <Badge variant="secondary">Retirado</Badge>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
       </TooltipProvider>
     </div>
   );
