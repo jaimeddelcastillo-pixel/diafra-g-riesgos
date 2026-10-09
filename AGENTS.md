@@ -5,3 +5,5 @@
 - La lectura de archivos (PDF/Word/imagen) vive solo en supabase/functions/_shared/documento-contenido.ts; chat-analizar-documento y brain-extract-document la comparten. Why: una sola pieza de extracción evita divergencias entre asistente y Cerebro.
 - brain-extract-document recalcula SHA-256 contra org_documentos antes de leer; si no coincide se detiene con 409 y audita HUELLA_NO_COINCIDE. Why: el conocimiento nunca sale de un archivo alterado.
 - Los conocimientos extraídos entran siempre por_validar con fuente tipo_fuente='archivo' (página/párrafo/sección/cita/método); si la fuente falla, el ítem se borra. Why: EXTRAER ≠ VALIDAR y sin fuente no hay trazabilidad.
+- Estado de documento, copia no controlada y revisión distinta solo se guardan como propuestas desde la extracción; solo admin/RS de la empresa activa las confirman (triggers brain_documents_estado_guard / org_documentos_copia_guard). Why: la IA nunca cambia un estado oficial.
+- Cada extracción deja su registro en brain_extracciones (texto enviado, salvo visión) y cada fuente guarda extraccion_id. Why: quien valida debe poder cotejar lo que la IA leyó.
