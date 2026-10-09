@@ -23,7 +23,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import {
   ClipboardList, LayoutTemplate, Upload, Download, Trash2,
-  FileText, Eye, Inbox, RotateCcw, Shield, History, Copy, CheckCircle2, AlertTriangle, Loader2,
+  FileText, Eye, Inbox, RotateCcw, Archive, Shield, History, Copy, CheckCircle2, AlertTriangle, Loader2,
 } from "lucide-react";
 import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
@@ -54,6 +54,8 @@ interface OrgDocumento {
   version_num?: number;
   parent_doc_id?: string | null;
   es_version_actual?: boolean;
+  retirado_en?: string | null;
+  motivo_retiro?: string | null;
 }
 
 interface ReferenciaDoc {
@@ -188,11 +190,15 @@ function diasParaPurga(deletedAt: string): number {
 }
 
 export default function Recursos() {
-  const { org, user, hasRole } = useAuth();
+  const { org, user, hasRole, orgRole } = useAuth();
   const isTrial = useIsTrial();
   const { toast } = useToast();
   const [docs, setDocs] = useState<OrgDocumento[]>([]);
   const [docsPapelera, setDocsPapelera] = useState<OrgDocumento[]>([]);
+  const [docsRetirados, setDocsRetirados] = useState<OrgDocumento[]>([]);
+  const [retenidos, setRetenidos] = useState<Record<string, string>>({});
+  const [retirarDoc, setRetirarDoc] = useState<OrgDocumento | null>(null);
+  const [motivoRetiro, setMotivoRetiro] = useState("");
   const [loading, setLoading] = useState(true);
   const [uploadOpen, setUploadOpen] = useState(false);
   const [previewDoc, setPreviewDoc] = useState<ReferenciaDoc | null>(null);
@@ -236,6 +242,7 @@ export default function Recursos() {
   const [parentDocId, setParentDocId] = useState<string | null>(null);
 
   const puedeEliminar = hasRole("admin");
+  const puedeRetirar = orgRole === "admin" || orgRole === "responsable_sanitario" || orgRole === "super_admin";
 
   /** Selección de referencias según la norma aplicable de la organización. */
   const norma = org?.norma_aplicable ?? "NOM-241";
@@ -257,12 +264,21 @@ export default function Recursos() {
       .select("*")
       .eq("org_id", org.id)
       .is("deleted_at", null)
+      .is("retirado_en", null)
       .eq("es_version_actual", true)
       .order("created_at", { ascending: false });
     if (errA) {
       toast({ title: "Error", description: errA.message, variant: "destructive" });
     } else {
       setDocs((activos ?? []) as OrgDocumento[]);
+    }
+    // Retención: documentos controlados o enlazados/citados en Cerebro solo se pueden retirar.
+    const ids = ((activos ?? []) as OrgDocumento[]).map((d) => d.id);
+    if (ids.length > 0) {
+      const { data: ret } = await sb.rpc("documentos_retenidos", { p_ids: ids });
+      setRetenidos(Object.fromEntries(((ret ?? []) as any[]).map((r) => [r.id, r.motivo])));
+    } else {
+      setRetenidos({});
     }
     // Papelera (solo admins por RLS)
     if (puedeEliminar) {
@@ -274,7 +290,34 @@ export default function Recursos() {
         .order("deleted_at", { ascending: false });
       setDocsPapelera((trash ?? []) as OrgDocumento[]);
     }
+    if (puedeRetirar) {
+      const { data: ret } = await sb
+        .from("org_documentos")
+        .select("*")
+        .eq("org_id", org.id)
+        .not("retirado_en", "is", null)
+        .order("retirado_en", { ascending: false });
+      setDocsRetirados((ret ?? []) as OrgDocumento[]);
+    }
     setLoading(false);
+  };
+
+  const confirmarRetiro = async () => {
+    if (!retirarDoc) return;
+    if (!motivoRetiro.trim()) {
+      toast({ title: "El motivo es obligatorio", variant: "destructive" });
+      return;
+    }
+    const { error } = await (supabase as any).rpc("retirar_documento", {
+      p_doc_id: retirarDoc.id, p_motivo: motivoRetiro.trim(),
+    });
+    if (error) {
+      toast({ title: "No se pudo retirar", description: error.message, variant: "destructive" });
+      return;
+    }
+    toast({ title: "Documento retirado", description: "Queda fuera de uso y se conserva con su registro de retiro." });
+    setRetirarDoc(null);
+    cargarDocs();
   };
 
   useEffect(() => {
@@ -352,6 +395,7 @@ export default function Recursos() {
       clasificacion,
       version: version.trim() || "1.0",
       storage_path: path,
+      nombre_archivo_original: file.name.slice(0, 300),
       mime_type: file.type,
       size_bytes: file.size,
       usar_en_ia: usarEnIa,
@@ -429,7 +473,11 @@ export default function Recursos() {
       } as any)
       .eq("id", doc.id);
     if (error) {
-      toast({ title: "Error eliminando documento", description: error.message, variant: "destructive" });
+      toast({
+        title: error.message.includes("RETENCION") ? "Este documento no se puede eliminar" : "Error eliminando documento",
+        description: error.message.replace("RETENCION: ", ""),
+        variant: "destructive",
+      });
       return;
     }
     toast({
@@ -1049,7 +1097,18 @@ export default function Recursos() {
                               <Upload className="h-4 w-4" />
                             </Button>
                           )}
-                          {puedeEliminar && (
+                          {puedeRetirar && retenidos[doc.id] && (
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="text-destructive hover:text-destructive"
+                              title="Retirar (documento con retención)"
+                              onClick={() => { setRetirarDoc(doc); setMotivoRetiro(""); }}
+                            >
+                              <Archive className="h-4 w-4" />
+                            </Button>
+                          )}
+                          {puedeEliminar && !retenidos[doc.id] && (
                             <AlertDialog>
                               <AlertDialogTrigger asChild>
                                 <Button
@@ -1199,6 +1258,50 @@ export default function Recursos() {
           )}
         </DialogContent>
       </Dialog>
+      <Dialog open={!!retirarDoc} onOpenChange={(o) => !o && setRetirarDoc(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Retirar documento</DialogTitle>
+            <DialogDescription>
+              "{retirarDoc?.nombre}" no se puede eliminar porque{" "}
+              {retirarDoc && retenidos[retirarDoc.id] === "controlado"
+                ? "es un documento controlado"
+                : "está enlazado o citado en Cerebro"}
+              . Al retirarlo queda fuera de uso y de las listas, pero se conserva con quién, cuándo y el motivo.
+            </DialogDescription>
+          </DialogHeader>
+          <div>
+            <Label htmlFor="motivo-retiro">Motivo (obligatorio)</Label>
+            <Input id="motivo-retiro" value={motivoRetiro} onChange={(e) => setMotivoRetiro(e.target.value)} />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRetirarDoc(null)}>Cancelar</Button>
+            <Button variant="destructive" onClick={confirmarRetiro}>Retirar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {puedeRetirar && docsRetirados.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2"><Archive className="h-4 w-4" /> Documentos retirados</CardTitle>
+            <CardDescription>Fuera de uso. Se conservan por retención y no se pueden borrar.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {docsRetirados.map((d) => (
+              <div key={d.id} className="flex items-start justify-between gap-3 border-b pb-2 last:border-0">
+                <div>
+                  <p className="text-sm font-medium">{d.nombre}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {d.tipo} · v{d.version} · retirado el {d.retirado_en ? formatDate(d.retirado_en) : "—"} · Motivo: {d.motivo_retiro ?? "—"}
+                  </p>
+                </div>
+                <Badge variant="secondary">Retirado</Badge>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
       </TooltipProvider>
     </div>
   );

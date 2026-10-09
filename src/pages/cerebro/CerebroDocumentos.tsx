@@ -2,9 +2,9 @@ import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Upload, Undo2 } from "lucide-react";
+import { Upload, Undo2, Paperclip } from "lucide-react";
 import { toast } from "sonner";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { CerebroPage, CerebroVacio } from "@/components/cerebro/CerebroPage";
 import { ImportarListadoDialog } from "@/components/cerebro/ImportarListadoDialog";
@@ -13,7 +13,7 @@ import { useAuth } from "@/hooks/useAuth";
 
 export default function CerebroDocumentos() {
   const qc = useQueryClient();
-  const { hasRole, orgId } = useAuth();
+  const { hasRole, orgId, orgRole } = useAuth();
   const { data: docs = [], isLoading } = useBrainDocuments();
   const { data: batches = [] } = useBrainImportBatches();
   const { data: propuestas = [] } = useBrainImportPropuestas();
@@ -21,7 +21,53 @@ export default function CerebroDocumentos() {
   const [trabajando, setTrabajando] = useState<string | null>(null);
 
   const puedeImportar = hasRole("admin") || hasRole("responsable_sanitario");
+  const puedeEnlazar = orgRole === "admin" || orgRole === "responsable_sanitario" || orgRole === "super_admin";
   const pendientes = (propuestas as any[]).filter((p) => p.estado === "propuesta");
+
+  // Archivos vigentes de Recursos (para mostrar enlace y la sección "Sin registro oficial").
+  const { data: archivos = [] } = useQuery({
+    queryKey: ["brain", "archivos-recursos", orgId],
+    enabled: !!orgId,
+    queryFn: async () => {
+      const { data } = await (supabase as any).from("org_documentos")
+        .select("id, nombre, tipo, version, nombre_archivo_original")
+        .eq("org_id", orgId).is("deleted_at", null).is("retirado_en", null).eq("es_version_actual", true);
+      return data ?? [];
+    },
+  });
+  const { data: tipos = [] } = useQuery({
+    queryKey: ["documento-tipos", orgId],
+    enabled: !!orgId,
+    queryFn: async () => {
+      const { data } = await (supabase as any).from("documento_tipos").select("clave, nombre").eq("org_id", orgId);
+      return data ?? [];
+    },
+  });
+  const { data: sugerencias = [] } = useQuery({
+    queryKey: ["brain", "sugerencias-enlace", orgId],
+    enabled: !!orgId && puedeEnlazar,
+    queryFn: async () => {
+      const { data, error } = await (supabase as any).rpc("brain_sugerencias_enlace");
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+  const nombreTipo: Record<string, string> = Object.fromEntries((tipos as any[]).map((t) => [t.clave, t.nombre]));
+  const archivoPorId: Record<string, any> = Object.fromEntries((archivos as any[]).map((a) => [a.id, a]));
+  const enlazados = new Set((docs as any[]).map((d) => d.archivo_id).filter(Boolean));
+  const sinRegistro = (archivos as any[]).filter((a) => !enlazados.has(a.id));
+
+  const resolverEnlace = async (s: any, confirmar: boolean) => {
+    if (confirmar && !window.confirm(`¿Enlazar "${s.archivo_nombre}" al registro ${s.codigo}?`)) return;
+    setTrabajando(s.archivo_id);
+    const { error } = await (supabase as any).rpc("brain_resolver_enlace", {
+      p_documento_id: s.documento_id, p_archivo_id: s.archivo_id, p_confirmar: confirmar,
+    });
+    setTrabajando(null);
+    if (error) return toast.error(error.message);
+    toast.success(confirmar ? "Enlace confirmado." : "Sugerencia descartada.");
+    qc.invalidateQueries({ queryKey: ["brain"] });
+  };
 
   const revertir = async (batchId: string) => {
     setTrabajando(batchId);
@@ -89,6 +135,31 @@ export default function CerebroDocumentos() {
         </Card>
       )}
 
+      {puedeEnlazar && (sugerencias as any[]).length > 0 && (
+        <section className="space-y-2">
+          <h2 className="text-sm font-semibold">Enlaces sugeridos por nombre de archivo</h2>
+          <p className="text-xs text-muted-foreground">
+            El código del registro aparece en el nombre del archivo de Recursos. Nada se enlaza hasta que lo confirmes.
+          </p>
+          {(sugerencias as any[]).map((s) => (
+            <Card key={`${s.documento_id}-${s.archivo_id}`}>
+              <CardContent className="p-4 flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-medium">{s.codigo} · {s.documento_nombre}</p>
+                  <p className="text-xs text-muted-foreground">
+                    Archivo: {s.archivo_nombre}{s.nombre_archivo ? ` (${s.nombre_archivo})` : ""}
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <Button size="sm" disabled={trabajando === s.archivo_id} onClick={() => resolverEnlace(s, true)}>Confirmar</Button>
+                  <Button size="sm" variant="ghost" disabled={trabajando === s.archivo_id} onClick={() => resolverEnlace(s, false)}>Descartar</Button>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </section>
+      )}
+
       {isLoading ? null : docs.length === 0 ? (
         <CerebroVacio mensaje="Aún no hay documentos registrados." />
       ) : (
@@ -99,7 +170,13 @@ export default function CerebroDocumentos() {
                 <div>
                   <p className="text-sm font-medium">{d.nombre}</p>
                   <p className="text-xs text-muted-foreground">
-                    {[d.tipo, d.codigo, d.revision].filter(Boolean).join(" · ")}
+                    {[nombreTipo[d.tipo_clave] ?? d.tipo, d.codigo, d.revision].filter(Boolean).join(" · ")}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                    <Paperclip className="h-3 w-3" />
+                    {d.archivo_id
+                      ? `Archivo enlazado: ${archivoPorId[d.archivo_id]?.nombre ?? "en Recursos"}`
+                      : "Sin archivo enlazado"}
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -110,6 +187,26 @@ export default function CerebroDocumentos() {
             </Card>
           ))}
         </div>
+      )}
+
+      {sinRegistro.length > 0 && (
+        <section className="space-y-2">
+          <h2 className="text-sm font-semibold">Sin registro oficial</h2>
+          <p className="text-xs text-muted-foreground">
+            Archivos de Recursos que no están enlazados a ningún registro del Listado Maestro.
+          </p>
+          {sinRegistro.map((a: any) => (
+            <Card key={a.id}>
+              <CardContent className="p-4 flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-medium">{a.nombre}</p>
+                  <p className="text-xs text-muted-foreground">{[a.tipo, `v${a.version}`, a.nombre_archivo_original].filter(Boolean).join(" · ")}</p>
+                </div>
+                <Badge variant="outline">Sin registro oficial</Badge>
+              </CardContent>
+            </Card>
+          ))}
+        </section>
       )}
 
       {(batches as any[]).length > 0 && (

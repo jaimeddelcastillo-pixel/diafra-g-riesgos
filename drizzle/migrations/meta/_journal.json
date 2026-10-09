@@ -106,6 +106,13 @@
       "when": 1791581197436,
       "tag": "0014_c6a1_catalogo_tipos_documento",
       "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1791582475077,
+      "tag": "0015_c6a2_retencion_enlace_vigencia",
+      "breakpoints": true
     }
   ]
 }
