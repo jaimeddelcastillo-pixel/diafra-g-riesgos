@@ -1016,7 +1016,7 @@ export default function Admin() {
                         className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
                         title="Desactivar usuario"
                         disabled={(u as any).activo === false}
-                        onClick={() => { setDeleteUserTarget(u); setDeleteMotivo(""); setDeleteUserOpen(true); }}
+                        onClick={() => { setDeleteUserTarget(u); setDeleteUserOpen(true); }}
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>
