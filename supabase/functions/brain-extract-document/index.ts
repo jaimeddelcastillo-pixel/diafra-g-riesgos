@@ -428,9 +428,13 @@ Reglas: "pagina" es el número de página real del archivo PDF (la primera pági
       paginas_totales: totalPaginas,
       truncado,
       sugerencia_enlace: sugerencia,
-      mensaje: creados > 0
+      extraccion_id: extraccion.id,
+      propuestas,
+      mensaje: (creados > 0
         ? `Se propusieron ${creados} conocimientos. Quedan en Validación hasta que una persona los valide.`
-        : "El documento no aportó conocimiento institucional nuevo.",
+        : "El documento no aportó conocimiento institucional nuevo.")
+        + (truncado ? ` Se leyeron solo las primeras ${paginasMax} de ${totalPaginas} páginas (tope del plan).` : "")
+        + (propuestas.length ? ` Hay propuestas por confirmar en Cerebro → Documentos: ${propuestas.join(", ")}.` : ""),
     });
   } catch (e) {
     console.error("brain-extract-document", e);
