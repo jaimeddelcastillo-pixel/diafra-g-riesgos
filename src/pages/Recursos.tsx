@@ -33,19 +33,13 @@ import { Link } from "react-router-dom";
 import { Lock } from "lucide-react";
 import { descargarArchivoStorage } from "@/lib/descargarArchivo";
 
-type DocTipo =
-  | "PNO"
-  | "Formato interno"
-  | "Política de calidad"
-  | "Manual de calidad"
-  | "Instrucción de trabajo"
-  | "Otro";
-
 interface OrgDocumento {
   id: string;
   org_id: string;
   nombre: string;
   tipo: string;
+  tipo_clave?: string | null;
+  clasificacion?: string | null;
   version: string;
   storage_path: string;
   mime_type: string | null;
@@ -56,6 +50,7 @@ interface OrgDocumento {
   deleted_at?: string | null;
   deleted_by?: string | null;
   sha256?: string | null;
+  sha256_servidor?: string | null;
   version_num?: number;
   parent_doc_id?: string | null;
   es_version_actual?: boolean;
@@ -164,14 +159,7 @@ const REFERENCIAS_NOM059: ReferenciaDoc[] = [
   },
 ];
 
-const TIPOS_DOC: DocTipo[] = [
-  "PNO",
-  "Formato interno",
-  "Política de calidad",
-  "Manual de calidad",
-  "Instrucción de trabajo",
-  "Otro",
-];
+type Clasificacion = "controlado" | "trabajo" | "referencia";
 
 function formatBytes(bytes: number | null) {
   if (!bytes) return "—";
@@ -222,9 +210,27 @@ export default function Recursos() {
   // Form upload state
   const [file, setFile] = useState<File | null>(null);
   const [nombre, setNombre] = useState("");
-  const [tipo, setTipo] = useState<DocTipo>("PNO");
+  const [tipo, setTipo] = useState<string>("");
+  const [clasificacion, setClasificacion] = useState<Clasificacion>("trabajo");
+  const [catalogo, setCatalogo] = useState<{ clave: string; nombre: string }[]>([]);
   const [version, setVersion] = useState("1.0");
   const [usarEnIa, setUsarEnIa] = useState(true);
+
+  // Catálogo de tipos de la empresa activa (núcleo, no depende de Cerebro).
+  useEffect(() => {
+    if (!org?.id) return;
+    (supabase as any)
+      .from("documento_tipos")
+      .select("clave, nombre, orden")
+      .eq("org_id", org.id)
+      .eq("activo", true)
+      .order("orden")
+      .then(({ data }: any) => {
+        const lista = (data ?? []) as { clave: string; nombre: string }[];
+        setCatalogo(lista);
+        setTipo((t) => t || lista.find((x) => x.clave === "pno")?.clave || lista[0]?.clave || "");
+      });
+  }, [org?.id]);
   const [uploading, setUploading] = useState(false);
   /** Si está definido, la subida se hace como nueva versión del documento padre. */
   const [parentDocId, setParentDocId] = useState<string | null>(null);
@@ -303,7 +309,16 @@ export default function Recursos() {
     }
     const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
     if (!["pdf", "docx"].includes(ext)) {
-      toast({ title: "Solo se aceptan archivos PDF o DOCX", variant: "destructive" });
+      toast({
+        title: "Formato no aceptado",
+        description: "Solo se aceptan PDF (con texto o escaneado) y Word (.docx).",
+        variant: "destructive",
+      });
+      return;
+    }
+    const tipoSel = catalogo.find((t) => t.clave === tipo);
+    if (!tipoSel) {
+      toast({ title: "Selecciona el tipo de documento", variant: "destructive" });
       return;
     }
 
@@ -311,12 +326,11 @@ export default function Recursos() {
     const safeName = nombre.trim().replace(/[^a-zA-Z0-9._-]/g, "_");
     const path = `${org.id}/${Date.now()}-${safeName}.${ext}`;
 
-    // Hash SHA-256 para garantía de integridad FEUM / ISO 14971 / COFEPRIS
+    // Huella SHA-256 en el navegador; el servidor la vuelve a calcular y la guarda.
     let hash: string | null = null;
     try {
       hash = await sha256OfFile(file);
     } catch {
-      // Si el navegador no soporta WebCrypto seguimos sin hash
       hash = null;
     }
 
@@ -330,10 +344,12 @@ export default function Recursos() {
       return;
     }
 
-    const { error: dbErr } = await supabase.from("org_documentos").insert({
+    const { data: nuevo, error: dbErr } = await supabase.from("org_documentos").insert({
       org_id: org.id,
       nombre: nombre.trim(),
-      tipo,
+      tipo: tipoSel.nombre,
+      tipo_clave: tipoSel.clave,
+      clasificacion,
       version: version.trim() || "1.0",
       storage_path: path,
       mime_type: file.type,
@@ -342,27 +358,42 @@ export default function Recursos() {
       creado_por: user.id,
       sha256: hash,
       parent_doc_id: parentDocId,
-    } as any);
+    } as any).select("id").single();
 
-    setUploading(false);
-
-    if (dbErr) {
-      toast({ title: "Error registrando documento", description: dbErr.message, variant: "destructive" });
-      // limpiar archivo huérfano
+    if (dbErr || !nuevo) {
+      setUploading(false);
+      toast({ title: "Error registrando documento", description: dbErr?.message, variant: "destructive" });
       await supabase.storage.from("org-documentos").remove([path]);
       return;
     }
 
-    toast({
-      title: parentDocId ? "Nueva versión registrada" : "Documento subido",
-      description: hash
-        ? `${nombre.trim()} · SHA-256: ${hash.slice(0, 12)}…`
-        : nombre.trim(),
+    const { data: huella, error: hErr } = await supabase.functions.invoke("org-documento-huella", {
+      body: { doc_id: (nuevo as any).id },
     });
+    setUploading(false);
+
+    if (hErr || !huella?.sha256_servidor) {
+      toast({
+        title: "Documento subido",
+        description: "No se pudo confirmar la huella en el servidor. Se reintentará al extraer.",
+      });
+    } else if (huella.coincide === false) {
+      toast({
+        title: "La huella no coincide",
+        description: "El archivo recibido es distinto al que se calculó en tu equipo. Quedó registrado en la bitácora.",
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: parentDocId ? "Nueva versión registrada" : "Documento subido",
+        description: `${nombre.trim()} · SHA-256 verificado en servidor: ${String(huella.sha256_servidor).slice(0, 12)}…`,
+      });
+    }
     setUploadOpen(false);
     setFile(null);
     setNombre("");
-    setTipo("PNO");
+    setTipo(catalogo.find((t) => t.clave === "pno")?.clave ?? catalogo[0]?.clave ?? "");
+    setClasificacion("trabajo");
     setVersion("1.0");
     setUsarEnIa(true);
     setParentDocId(null);
@@ -450,7 +481,8 @@ export default function Recursos() {
   const subirNuevaVersion = (doc: OrgDocumento) => {
     setParentDocId(doc.parent_doc_id || doc.id);
     setNombre(doc.nombre);
-    setTipo(doc.tipo as DocTipo);
+    setTipo(doc.tipo_clave ?? "");
+    setClasificacion((doc.clasificacion as Clasificacion) ?? "trabajo");
     const [maj, min] = (doc.version || "1.0").split(".");
     const nextMin = (parseInt(min || "0", 10) + 1).toString();
     setVersion(`${maj || "1"}.${nextMin}`);
@@ -703,14 +735,27 @@ export default function Recursos() {
                 </div>
                 <div>
                   <Label htmlFor="tipo">Tipo de documento</Label>
-                  <Select value={tipo} onValueChange={(v) => setTipo(v as DocTipo)}>
+                  <Select value={tipo} onValueChange={setTipo}>
                     <SelectTrigger id="tipo">
+                      <SelectValue placeholder="Selecciona un tipo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {catalogo.map((t) => (
+                        <SelectItem key={t.clave} value={t.clave}>{t.nombre}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="clasificacion">Clasificación</Label>
+                  <Select value={clasificacion} onValueChange={(v) => setClasificacion(v as Clasificacion)}>
+                    <SelectTrigger id="clasificacion">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {TIPOS_DOC.map((t) => (
-                        <SelectItem key={t} value={t}>{t}</SelectItem>
-                      ))}
+                      <SelectItem value="controlado">Controlado</SelectItem>
+                      <SelectItem value="trabajo">De trabajo</SelectItem>
+                      <SelectItem value="referencia">Referencia</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -730,7 +775,10 @@ export default function Recursos() {
                     onCheckedChange={(c) => setUsarEnIa(c === true)}
                   />
                   <Label htmlFor="ia" className="text-sm leading-snug cursor-pointer">
-                    Usar como contexto para el Asistente IA
+                    Usar en IA
+                    <span className="block text-xs text-muted-foreground font-normal">
+                      Cerebro podrá leer este archivo y proponer conocimiento.
+                    </span>
                   </Label>
                 </div>
               </div>

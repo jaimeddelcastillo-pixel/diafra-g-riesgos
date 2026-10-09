@@ -99,6 +99,13 @@
       "when": 1791575805516,
       "tag": "0013_c3_3_validacion_rechazado",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1791581197436,
+      "tag": "0014_c6a1_catalogo_tipos_documento",
+      "breakpoints": true
     }
   ]
 }

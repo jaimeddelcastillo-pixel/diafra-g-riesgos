@@ -20,31 +20,15 @@ function normalizar(s: string) {
     .toLowerCase().replace(/[^a-z0-9\s]/g, " ").replace(/\s+/g, " ").trim();
 }
 
-// Catálogo válido de brain_documents.tipo y sinónimos (comparación sin mayúsculas ni acentos).
-const SINONIMOS_TIPO: Record<string, string[]> = {
-  pno: ["pno", "procedimiento", "procedimientos", "procedimiento normalizado de operacion",
-    "procedimiento normalizado de operaciones", "procedimiento estandar de operacion", "sop", "poe"],
-  formato: ["formato", "formatos", "registro", "registros"],
-  manual_calidad: ["manual", "manual de calidad", "manual calidad", "manual_calidad"],
-  organigrama: ["organigrama"],
-  mapa_procesos: ["mapa de procesos", "mapa procesos", "mapa_procesos"],
-  auditoria: ["auditoria", "auditorias"],
-  capa: ["capa", "accion correctiva", "accion preventiva", "acciones correctivas y preventivas"],
-  riesgo: ["riesgo", "riesgos", "analisis de riesgo", "analisis de riesgos"],
-  protocolo: ["protocolo", "protocolos"],
-  informe: ["informe", "informes", "reporte", "reportes"],
-  autorizacion_regulatoria: ["autorizacion regulatoria", "autorizacion_regulatoria", "registro sanitario", "licencia sanitaria"],
-  otro: ["otro", "otros"],
+// C6a.1: el tipo se clasifica con el catálogo de la empresa (documento_tipos, regla única en
+// la base: clasificar_tipos_documento). La columna vieja `tipo` conserva su restricción de
+// 12 valores, así que se deriva de la clave del catálogo.
+const TIPO_LEGADO: Record<string, string> = {
+  pno: "pno", for: "formato", man: "manual_calidad", org: "organigrama", mpr: "mapa_procesos",
+  capa: "capa", ari: "riesgo", prt: "protocolo", intec: "informe", rep: "informe",
+  aut: "autorizacion_regulatoria",
 };
-const TIPO_POR_SINONIMO = new Map<string, string>();
-for (const [tipo, lista] of Object.entries(SINONIMOS_TIPO)) {
-  for (const s of lista) TIPO_POR_SINONIMO.set(normalizar(s), tipo);
-}
-function mapearTipo(valor: string): string {
-  const k = normalizar(valor ?? "");
-  if (!k) return "otro";
-  return TIPO_POR_SINONIMO.get(k) ?? "otro";
-}
+const tipoLegado = (clave: string) => TIPO_LEGADO[clave] ?? "otro";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: cors });
@@ -273,11 +257,20 @@ Deno.serve(async (req) => {
 
   for (let i = 0; i < registros.length; i += LOTE) {
     const lote = registros.slice(i, i + LOTE);
-    const filas = lote.map((r) => {
+    const { data: claves, error: clsErr } = await admin.rpc("clasificar_tipos_documento", {
+      p_org: orgId,
+      p_items: lote.map((r) => ({ codigo: r.codigo ?? "", tipo: r.tipo != null ? String(r.tipo) : "" })),
+    });
+    if (clsErr) {
+      for (const r of lote) errores.push({ fila: r.fila ?? "?", error: `No se pudo clasificar el tipo: ${clsErr.message}` });
+      continue;
+    }
+    const filas = lote.map((r, idx) => {
       const clave = r.codigo ? `${normalizar(r.codigo)}|${normalizar(r.revision ?? "")}` : "";
       if (clave && porCodigoRev.has(clave)) { duplicados++; return null; }
       if (clave) porCodigoRev.add(clave);
       const tipoOriginal = r.tipo != null ? String(r.tipo).trim() : "";
+      const tipoClave = String((claves as string[])[idx] ?? "otro");
       const notas = [
         tipoOriginal ? `Tipo en listado: ${tipoOriginal.slice(0, 200)}` : null,
         r.responsable ? `Responsable: ${r.responsable}` : null,
@@ -285,7 +278,8 @@ Deno.serve(async (req) => {
       return {
         org_id: orgId,
         nombre: String(r.nombre ?? "").slice(0, 500),
-        tipo: mapearTipo(tipoOriginal),
+        tipo: tipoLegado(tipoClave),
+        tipo_clave: tipoClave,
         codigo: r.codigo ?? null,
         revision: r.revision ?? null,
         estado: r.estado ? String(r.estado).slice(0, 60) : "vigente",
