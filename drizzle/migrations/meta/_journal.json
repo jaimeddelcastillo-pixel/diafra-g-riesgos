@@ -127,6 +127,13 @@
       "when": 1791584580927,
       "tag": "0017_c6a3_crear_sesion_limites",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1791584906287,
+      "tag": "0018_migration",
+      "breakpoints": true
     }
   ]
 }
