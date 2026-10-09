@@ -16,8 +16,8 @@ export default function CerebroDashboard() {
   const { data: contras = [] } = useBrainContradictions();
   const { data: sesiones = [] } = useBrainSessions();
 
-  // C3: obsoletos y sustituidos no cuentan como vigentes.
-  const vigentes = items.filter((i: any) => i.estado !== "obsoleto" && i.estado !== "sustituido");
+  // C3: obsoletos, sustituidos y rechazados no cuentan como vigentes.
+  const vigentes = items.filter((i: any) => !["obsoleto", "sustituido", "rechazado"].includes(i.estado));
   const validados = vigentes.filter((i: any) => i.estado === "validado").length;
   const capturados = vigentes.length;
   const gapsAbiertos = gaps.filter((g: any) => g.estado === "abierta").length;
