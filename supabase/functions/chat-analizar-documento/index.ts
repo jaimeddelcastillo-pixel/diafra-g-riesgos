@@ -4,7 +4,7 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { resolverContextoOrg } from "../_shared/contexto-org.ts";
-import JSZip from "npm:jszip@3.10.1";
+import { bloqueImagen, bloquePdf, extractDocxText, isWordMime } from "../_shared/documento-contenido.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -58,17 +58,9 @@ Deno.serve(async (req) => {
 
     let userContent: any[] = [];
     if (mime_type === "application/pdf") {
-      const base64 = arrayBufferToBase64(buffer);
-      userContent.push({
-        type: "document",
-        source: { type: "base64", media_type: "application/pdf", data: base64 },
-      });
+      userContent.push(bloquePdf(buffer));
     } else if ((mime_type as string).startsWith("image/")) {
-      const base64 = arrayBufferToBase64(buffer);
-      userContent.push({
-        type: "image",
-        source: { type: "base64", media_type: mime_type, data: base64 },
-      });
+      userContent.push(bloqueImagen(buffer, mime_type));
     } else if (isWordMime(mime_type, nombre_archivo)) {
       const extracted = await extractDocxText(buffer);
       if (!extracted.trim()) return j({ error: "No se pudo extraer texto del Word" }, 422);
@@ -162,34 +154,4 @@ function j(obj: any, status = 200) {
   });
 }
 
-function arrayBufferToBase64(buffer: ArrayBuffer) {
-  const bytes = new Uint8Array(buffer);
-  const chunkSize = 0x8000;
-  let binary = "";
-  for (let i = 0; i < bytes.length; i += chunkSize) {
-    binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
-  }
-  return btoa(binary);
-}
-
-function isWordMime(mimeType: string, fileName: string) {
-  return mimeType === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" || fileName.toLowerCase().endsWith(".docx");
-}
-
-async function extractDocxText(buffer: ArrayBuffer) {
-  const zip = await JSZip.loadAsync(buffer);
-  const documentXml = await zip.file("word/document.xml")?.async("text");
-  if (!documentXml) return "";
-  return documentXml
-    .replace(/<w:tab\/>/g, "\t")
-    .replace(/<w:br\/>/g, "\n")
-    .replace(/<\/w:p>/g, "\n")
-    .replace(/<[^>]+>/g, "")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&amp;/g, "&")
-    .replace(/&quot;/g, '"')
-    .replace(/&apos;/g, "'")
-    .replace(/\n{3,}/g, "\n\n")
-    .trim();
-}
+// Los helpers de lectura de archivos viven en ../_shared/documento-contenido.ts (C6a.3).
