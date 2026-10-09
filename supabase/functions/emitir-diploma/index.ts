@@ -11,6 +11,7 @@ import { jsPDF } from "https://esm.sh/jspdf@2.5.2";
 import QRCode from "https://esm.sh/qrcode@1.5.4";
 import { FIRMA_JDC_PNG_BASE64, FIRMA_JDC_WIDTH_MM, FIRMA_JDC_HEIGHT_MM } from "./firma.ts";
 import { LOGO_TRACEA_PNG_BASE64, LOGO_W, LOGO_H } from "./logo.ts";
+import { resolverContextoOrg, ContextoOrgError } from "../_shared/contexto-org.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -344,12 +345,9 @@ Deno.serve(async (req) => {
     const alumnoEmail = perfil?.email || user.email!;
 
     // Org
-    const { data: orgMember } = await admin
-      .from("org_members")
-      .select("org_id")
-      .eq("user_id", user.id)
-      .maybeSingle();
-    const orgIdAlumno = orgMember?.org_id ?? null;
+    let orgIdAlumno: string | null = null;
+    try { orgIdAlumno = (await resolverContextoOrg(req)).orgId; }
+    catch (e) { if (!(e instanceof ContextoOrgError)) throw e; }
 
     // Folio + hash: si es regeneración, conservamos folio/hash existentes para que
     // QR y verificación previa sigan siendo válidos. Si no, generamos nuevos.

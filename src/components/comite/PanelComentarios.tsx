@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { nombresPersonas } from "@/lib/nombresPersonas";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -83,7 +84,13 @@ export function PanelComentarios({
         .select("id, nombre, cargo")
         .in("id", autoresIds);
       if (error) throw error;
-      return data || [];
+      const lista: any[] = data || [];
+      const faltantes = autoresIds.filter((id) => !lista.some((p) => p.id === id));
+      if (faltantes.length) {
+        const n = await nombresPersonas(faltantes);
+        Object.entries(n).forEach(([id, nombre]) => lista.push({ id, nombre, cargo: null }));
+      }
+      return lista;
     },
   });
   const perfilMap = new Map(perfiles.map((p) => [p.id, p]));

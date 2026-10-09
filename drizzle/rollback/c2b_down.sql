@@ -1,4 +1,16 @@
--- C2b rollback. Ejecutar en orden inverso a las partes aplicadas.
+-- C2b rollback. Ejecutar en orden inverso: F, C, A.
+
+-- ===== Parte F (0009_c2b_f_nombres_personas.sql) =====
+DROP FUNCTION IF EXISTS public.nombres_personas(uuid[]);
+
+-- ===== Parte C (0008_c2b_c_varias_membresias.sql) =====
+-- Requiere que ningún usuario tenga más de una membresía; si las hay, falla a propósito:
+DO $$ BEGIN
+  IF EXISTS (SELECT user_id FROM public.org_members GROUP BY user_id HAVING count(*) > 1) THEN
+    RAISE EXCEPTION 'Hay usuarios con varias empresas; quita las membresías extra antes de deshacer C';
+  END IF;
+END $$;
+ALTER TABLE public.org_members ADD CONSTRAINT org_members_user_id_key UNIQUE (user_id);
 
 -- ===== Parte A (0007_c2b_a_preparacion.sql) =====
 DROP POLICY IF EXISTS "Admins update same-org profiles" ON public.profiles;

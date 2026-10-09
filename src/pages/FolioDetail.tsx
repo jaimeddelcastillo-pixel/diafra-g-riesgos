@@ -22,6 +22,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { CancelarFolioDialog } from "@/components/CancelarFolioDialog";
 import { getMotivoLabel } from "@/config/motivos-cancelacion";
 import { supabase } from "@/integrations/supabase/client";
+import { nombresPersonas } from "@/lib/nombresPersonas";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { generateFolioPDF } from "@/lib/generateFolioPDF";
@@ -1545,12 +1546,8 @@ function SeccionVersiones({
     queryKey: ["folio-versiones-creadores", folioId, creadoresIds.join(",")],
     enabled: creadoresIds.length > 0,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("id, nombre")
-        .in("id", creadoresIds);
-      if (error) throw error;
-      return data;
+      const n = await nombresPersonas(creadoresIds);
+      return Object.entries(n).map(([id, nombre]) => ({ id, nombre }));
     },
   });
 

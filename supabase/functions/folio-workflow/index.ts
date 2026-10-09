@@ -7,6 +7,7 @@
 //   5. cerrar           → pasa de Aprobado → Cerrado (archivo de gestión de riesgos bloqueado)
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { resolverContextoOrg, ContextoOrgError } from "../_shared/contexto-org.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -329,14 +330,12 @@ Deno.serve(async (req) => {
   const body = await req.json();
   const { accion, folio_id, motivo } = body;
 
-  // Get caller's org membership
-  const { data: callerMember } = await admin
-    .from("org_members")
-    .select("org_id, role")
-    .eq("user_id", user.id)
-    .maybeSingle();
-  const callerOrgId = callerMember?.org_id ?? null;
-  const callerRole = callerMember?.role ?? null;
+  // Empresa y rol de la sesión (C2b): siempre del servidor.
+  let ctx;
+  try { ctx = await resolverContextoOrg(req); }
+  catch (e) { if (e instanceof ContextoOrgError) return json({ error: e.message }, e.status); throw e; }
+  const callerOrgId: string | null = ctx.orgId;
+  const callerRole: string | null = ctx.rolEnOrg;
 
   // ─── ACCIÓN 0: Solicitar votación del comité (folio en Borrador) ─────────────
   if (accion === "solicitar-votacion") {

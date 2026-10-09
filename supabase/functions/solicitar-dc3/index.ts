@@ -7,6 +7,7 @@
 // - Notifica al alumno (dc3-solicitud-recibida) y al equipo TRACEA (dc3-solicitud-interna).
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { resolverContextoOrg, ContextoOrgError } from "../_shared/contexto-org.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -46,7 +47,7 @@ Deno.serve(async (req) => {
     // Diploma
     const { data: diploma, error: dErr } = await admin
       .from("curso_diplomas")
-      .select("id, user_id, curso_id, curso_titulo, curso_norma, calificacion, intento_id, alumno_nombre, alumno_email")
+      .select("id, user_id, org_id, curso_id, curso_titulo, curso_norma, calificacion, intento_id, alumno_nombre, alumno_email")
       .eq("id", diplomaId)
       .maybeSingle();
     if (dErr || !diploma) return json({ error: "Diploma no encontrado" }, 404);
@@ -66,14 +67,12 @@ Deno.serve(async (req) => {
     }
 
     // Org y saldo
-    const { data: member } = await admin
-      .from("org_members")
-      .select("org_id")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: true })
-      .limit(1)
-      .maybeSingle();
-    const orgId = member?.org_id ?? null;
+    let orgId: string | null = null;
+    try { orgId = (await resolverContextoOrg(req)).orgId; }
+    catch (e) { if (e instanceof ContextoOrgError) return json({ error: e.message }, e.status); throw e; }
+    if (diploma.org_id && diploma.org_id !== orgId) {
+      return json({ error: "El diploma no pertenece a la empresa activa" }, 403);
+    }
 
     let orgRow: any = null;
     if (orgId) {
