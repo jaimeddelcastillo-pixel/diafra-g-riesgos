@@ -1,3 +1,4 @@
 - Document types are classified only by the SQL function clasificar_tipo_documento over each org's documento_tipos catalog (template rows have org_id NULL and are never used to classify); why: one rule for imports, Recursos and reclassification.
 - Recursos (org_documentos) never references brain_* tables, and file/hash columns are immutable by trigger; why: Recursos must work without Cerebro and originals must stay intact.
 - Retention of Recursos files is decided only by org_documento_retencion (DB-enforced by trigger and in purge functions); why: no path may delete a controlled or Cerebro-linked file.
+- Per-plan caps (interviews, export, document extraction, pages) live only in table plan_limites, read via plan_limite/mi_plan_limite (NULL = unlimited); why: limits change by data, not code. Server-side export, when built, must enforce `exportar` from this table, not only the UI.
