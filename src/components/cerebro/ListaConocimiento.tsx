@@ -14,6 +14,43 @@ import {
   Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
 import { CerebroVacio } from "@/components/cerebro/CerebroPage";
+import { Input } from "@/components/ui/input";
+import { FileText } from "lucide-react";
+
+/** C6a.4: abre el archivo de Recursos con URL firmada, en la página si es PDF. */
+async function verFuente(f: any) {
+  const { data: arch, error } = await (supabase as any).from("org_documentos")
+    .select("storage_path, mime_type").eq("id", f.archivo_id).maybeSingle();
+  if (error || !arch) return toast.error("No se encontró el archivo en Recursos.");
+  const { data, error: uErr } = await supabase.storage.from("org-documentos").createSignedUrl(arch.storage_path, 600);
+  if (uErr || !data?.signedUrl) return toast.error("No se pudo abrir el archivo.");
+  const pagina = arch.mime_type === "application/pdf" && f.pagina ? `#page=${f.pagina}` : "";
+  window.open(`${data.signedUrl}${pagina}`, "_blank", "noopener");
+}
+
+function FuenteArchivo({ f }: { f: any }) {
+  const ubicacion = f.pagina
+    ? `Página ${f.pagina}`
+    : f.parrafo ? `Párrafo ${f.parrafo}${f.seccion ? ` · Sección: ${f.seccion}` : ""}` : null;
+  return (
+    <div className="text-xs space-y-1 border-l-2 border-accent pl-2">
+      <p className="flex items-center gap-1 text-muted-foreground">
+        <FileText className="h-3 w-3" />
+        {[f.documento_codigo, f.documento_revision ? `rev. ${f.documento_revision}` : null, f.nombre_fuente].filter(Boolean).join(" · ")}
+        {ubicacion ? ` · ${ubicacion}` : ""}
+      </p>
+      {f.cita_textual && <p className="italic">“{f.cita_textual}”</p>}
+      {f.metodo === "vision" && (
+        <p className="text-muted-foreground">Texto obtenido por lectura de imagen (OCR): cotejar contra el documento</p>
+      )}
+      {f.archivo_id && (
+        <Button size="sm" variant="link" className="h-auto p-0 text-xs" onClick={() => verFuente(f)}>
+          {f.pagina ? "Ver página" : "Ver archivo"}
+        </Button>
+      )}
+    </div>
+  );
+}
 
 /** No cuentan como vigentes. */
 export const ESTADOS_RETIRADOS = ["obsoleto", "sustituido", "rechazado"];
@@ -47,6 +84,37 @@ export function ListaConocimiento({
   const [motivo, setMotivo] = useState("");
   const [sustitutoId, setSustitutoId] = useState("");
   const [guardando, setGuardando] = useState(false);
+  const [atender, setAtender] = useState<any>(null);
+  const [opcionRev, setOpcionRev] = useState<"vigente" | "cambio">("vigente");
+  const [revVigente, setRevVigente] = useState("");
+  const [comentarioRev, setComentarioRev] = useState("");
+
+  const abrirAtender = (item: any) => {
+    const rev = (item.fuentes ?? []).find((f: any) => f.documento_revision)?.documento_revision ?? "";
+    setAtender(item); setOpcionRev("vigente"); setRevVigente(rev); setComentarioRev("");
+  };
+  const confirmarAtender = async () => {
+    if (!atender) return;
+    if (opcionRev === "cambio") {
+      const item = atender;
+      setAtender(null);
+      // "Requiere cambio" no quita la marca: lleva a obsoleto/sustituir (validado) o a rechazar.
+      abrir(item.estado === "validado" ? "obsoleto" : "rechazado", item);
+      return;
+    }
+    if (!revVigente.trim()) return toast.error("Indica la revisión que sigue vigente");
+    setGuardando(true);
+    const { error } = await supabase.from("brain_knowledge_items").update({
+      requiere_revision: false,
+      revision_confirmada: revVigente.trim(),
+      revision_comentario: comentarioRev.trim() || null,
+    } as any).eq("id", atender.id);
+    setGuardando(false);
+    if (error) return toast.error(error.message);
+    toast.success("Revisión atendida: sigue vigente");
+    setAtender(null);
+    qc.invalidateQueries({ queryKey: ["brain", "knowledge"] });
+  };
 
   const porId = useMemo(() => Object.fromEntries(items.map((i) => [i.id, i])), [items]);
   const visibles = items.filter((i) => {
@@ -56,7 +124,7 @@ export function ListaConocimiento({
   });
   const validados = items.filter((i) => i.estado === "validado" && i.id !== accion?.item?.id);
 
-  const ids = visibles.flatMap((i) => [i.estado_cambiado_por, i.validado_por]).filter(Boolean);
+  const ids = visibles.flatMap((i) => [i.estado_cambiado_por, i.validado_por, i.revision_confirmada_por]).filter(Boolean);
   const { data: nombres = {} } = useQuery({
     queryKey: ["cerebro-nombres-estado", ids],
     enabled: ids.length > 0,
@@ -121,8 +189,22 @@ export function ListaConocimiento({
                     <div className="text-xs border-l-2 border-destructive/60 pl-2">
                       <Badge variant="destructive" className="mr-2">Requiere revisión</Badge>
                       {i.motivo_revision}
+                      {puedeGobernar && (
+                        <Button size="sm" variant="outline" className="ml-2 h-7" onClick={() => abrirAtender(i)}>
+                          Revisión atendida
+                        </Button>
+                      )}
                     </div>
                   )}
+                  {!i.requiere_revision && i.revision_confirmada && (
+                    <p className="text-xs text-muted-foreground">
+                      Sigue vigente con la revisión {i.revision_confirmada} · {nombre(i.revision_confirmada_por)} · {fecha(i.revision_confirmada_en)}
+                      {i.revision_comentario ? ` · ${i.revision_comentario}` : ""}
+                    </p>
+                  )}
+                  {(i.fuentes ?? []).filter((f: any) => f.tipo_fuente === "archivo").map((f: any) => (
+                    <FuenteArchivo key={f.id} f={f} />
+                  ))}
                   {mostrarValidacion && (
                     <div className="text-xs text-muted-foreground space-y-0.5 border-l-2 border-primary/40 pl-2">
                       <p><span className="font-medium">Validado por:</span> {nombre(i.validado_por)} · {fecha(i.validado_en)}</p>
@@ -163,6 +245,37 @@ export function ListaConocimiento({
           })}
         </div>
       )}
+
+      <Dialog open={!!atender} onOpenChange={(o) => !o && setAtender(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Revisión atendida</DialogTitle>
+            <DialogDescription>Queda registrado a tu nombre, con fecha y hora.</DialogDescription>
+          </DialogHeader>
+          {atender && <p className="text-sm border-l-2 pl-2">{texto(atender).slice(0, 300)}</p>}
+          <div className="space-y-2 text-sm">
+            <label className="flex items-center gap-2">
+              <input type="radio" checked={opcionRev === "vigente"} onChange={() => setOpcionRev("vigente")} />
+              Sigue vigente con la revisión
+              <Input className="h-8 w-28" value={revVigente} onChange={(e) => setRevVigente(e.target.value)} disabled={opcionRev !== "vigente"} />
+            </label>
+            <label className="flex items-center gap-2">
+              <input type="radio" checked={opcionRev === "cambio"} onChange={() => setOpcionRev("cambio")} />
+              Requiere cambio ({atender?.estado === "validado" ? "marcar obsoleto o sustituir" : "rechazar"})
+            </label>
+          </div>
+          {opcionRev === "vigente" && (
+            <div className="space-y-1">
+              <Label className="text-xs">Comentario</Label>
+              <Textarea value={comentarioRev} onChange={(e) => setComentarioRev(e.target.value)} rows={3} />
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAtender(null)}>Cancelar</Button>
+            <Button onClick={confirmarAtender} disabled={guardando}>{opcionRev === "cambio" ? "Continuar" : "Confirmar"}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={!!accion} onOpenChange={(o) => !o && setAccion(null)}>
         <DialogContent>
