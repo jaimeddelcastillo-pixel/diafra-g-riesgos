@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { DesactivarUsuarioDialog } from "@/components/DesactivarUsuarioDialog";
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -436,24 +437,6 @@ export default function Admin() {
       setResetPwOpen(false);
       setResetPwValue("");
       setResetPwUser(null);
-    },
-    onError: (e: any) => toast.error(e.message),
-  });
-
-  const deleteTraceaMutation = useMutation({
-    mutationFn: async ({ user_id, motivo }: { user_id: string; motivo: string }) => {
-      const { data, error } = await supabase.functions.invoke("delete-user", {
-        body: { user_id, motivo },
-      });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
-    },
-    onSuccess: () => {
-      refetchTracea();
-      toast.success("Usuario desactivado.");
-      setDeleteMotivo("");
-      setDeleteUserOpen(false);
-      setDeleteUserTarget(null);
     },
     onError: (e: any) => toast.error(e.message),
   });
@@ -1245,33 +1228,12 @@ export default function Admin() {
       </Dialog>
 
       {/* ── Dialog desactivar usuario TRACEA ── */}
-      <Dialog open={deleteUserOpen} onOpenChange={setDeleteUserOpen}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Desactivar usuario</DialogTitle></DialogHeader>
-          <div className="space-y-3 py-2">
-            <p className="text-sm">
-              ¿Confirmas desactivar a <strong>{deleteUserTarget?.nombre}</strong> ({deleteUserTarget?.email})?
-            </p>
-            <p className="text-xs text-muted-foreground">
-              La persona ya no podrá entrar. Su nombre se conserva en todos los registros que creó, firmó o validó.
-            </p>
-            <div className="space-y-1">
-              <Label htmlFor="motivo-desactivar">Motivo *</Label>
-              <Textarea id="motivo-desactivar" value={deleteMotivo} onChange={(e) => setDeleteMotivo(e.target.value)} maxLength={1000} placeholder="Ej. Baja de la empresa" />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteUserOpen(false)}>Cancelar</Button>
-            <Button
-              variant="destructive"
-              onClick={() => deleteUserTarget && deleteTraceaMutation.mutate({ user_id: deleteUserTarget.id, motivo: deleteMotivo.trim() })}
-              disabled={deleteTraceaMutation.isPending || !deleteMotivo.trim()}
-            >
-              {deleteTraceaMutation.isPending ? "Desactivando…" : "Desactivar usuario"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <DesactivarUsuarioDialog
+        open={deleteUserOpen}
+        onOpenChange={(v) => { setDeleteUserOpen(v); if (!v) setDeleteUserTarget(null); }}
+        target={deleteUserTarget}
+        onDone={() => refetchTracea()}
+      />
 
       {/* ── Dialog editar usuario TRACEA ── */}
       <Dialog open={editUserOpen} onOpenChange={setEditUserOpen}>

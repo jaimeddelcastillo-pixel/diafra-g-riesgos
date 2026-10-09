@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Users, Bell, Pencil, UserPlus, Upload, X, KeyRound, Lock, Mail } from "lucide-react";
+import { DesactivarUsuarioDialog } from "@/components/DesactivarUsuarioDialog";
 import { UsuariosDesactivadosCard } from "@/components/UsuariosDesactivadosCard";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -181,7 +182,9 @@ function FirmaUpload({
 }
 
 export default function Configuracion() {
-  const { hasRole, orgId, isSuperAdmin } = useAuth();
+  const { hasRole, orgId, isSuperAdmin, user, orgRole } = useAuth();
+  const puedeDesactivar = orgRole === "admin" || orgRole === "responsable_sanitario";
+  const [desactivarTarget, setDesactivarTarget] = useState<{ id: string; nombre: string; email: string } | null>(null);
   const isAdmin = hasRole("admin") || hasRole("responsable_sanitario") || isSuperAdmin();
   const queryClient = useQueryClient();
 
@@ -437,6 +440,12 @@ export default function Configuracion() {
                           <Button variant="ghost" size="icon" className="h-7 w-7" title="Reenviar correo de bienvenida" onClick={() => handleSendWelcome(u)}>
                             <Mail className="h-3.5 w-3.5" />
                           </Button>
+                          {puedeDesactivar && u.id !== user?.id && (
+                            <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-destructive" title="Desactivar usuario"
+                              onClick={() => setDesactivarTarget({ id: u.id, nombre: u.nombre, email: u.email })}>
+                              Desactivar
+                            </Button>
+                          )}
                         </div>
                       </td>
                     )}
@@ -447,6 +456,16 @@ export default function Configuracion() {
           )}
         </CardContent>
       </Card>
+
+      <DesactivarUsuarioDialog
+        open={!!desactivarTarget}
+        onOpenChange={(v) => { if (!v) setDesactivarTarget(null); }}
+        target={desactivarTarget}
+        onDone={() => {
+          queryClient.invalidateQueries({ queryKey: ["org-users", orgId] });
+          queryClient.invalidateQueries({ queryKey: ["usuarios-desactivados", orgId] });
+        }}
+      />
 
       {isAdmin && <UsuariosDesactivadosCard puedeReactivar={hasRole("admin") || isSuperAdmin()} />}
 
