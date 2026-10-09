@@ -433,7 +433,14 @@ export type Database = {
           area_id: string | null
           codigo: string | null
           created_at: string
+          enlace_evidencia: string | null
+          enlace_por_confirmar: boolean
+          enlace_revision_detectada: string | null
           estado: string
+          estado_confianza: string | null
+          estado_evidencia: string | null
+          estado_propuesto: string | null
+          estado_propuesto_en: string | null
           fecha_documento: string | null
           id: string
           import_batch_id: string | null
@@ -444,6 +451,7 @@ export type Database = {
           org_id: string
           origen: string
           proceso_id: string | null
+          requiere_confirmacion: boolean
           revision: string | null
           storage_path: string | null
           tipo: string
@@ -457,7 +465,14 @@ export type Database = {
           area_id?: string | null
           codigo?: string | null
           created_at?: string
+          enlace_evidencia?: string | null
+          enlace_por_confirmar?: boolean
+          enlace_revision_detectada?: string | null
           estado?: string
+          estado_confianza?: string | null
+          estado_evidencia?: string | null
+          estado_propuesto?: string | null
+          estado_propuesto_en?: string | null
           fecha_documento?: string | null
           id?: string
           import_batch_id?: string | null
@@ -468,6 +483,7 @@ export type Database = {
           org_id: string
           origen?: string
           proceso_id?: string | null
+          requiere_confirmacion?: boolean
           revision?: string | null
           storage_path?: string | null
           tipo?: string
@@ -481,7 +497,14 @@ export type Database = {
           area_id?: string | null
           codigo?: string | null
           created_at?: string
+          enlace_evidencia?: string | null
+          enlace_por_confirmar?: boolean
+          enlace_revision_detectada?: string | null
           estado?: string
+          estado_confianza?: string | null
+          estado_evidencia?: string | null
+          estado_propuesto?: string | null
+          estado_propuesto_en?: string | null
           fecha_documento?: string | null
           id?: string
           import_batch_id?: string | null
@@ -492,6 +515,7 @@ export type Database = {
           org_id?: string
           origen?: string
           proceso_id?: string | null
+          requiere_confirmacion?: boolean
           revision?: string | null
           storage_path?: string | null
           tipo?: string
@@ -638,6 +662,76 @@ export type Database = {
           },
           {
             foreignKeyName: "brain_exports_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      brain_extracciones: {
+        Row: {
+          archivo_id: string
+          created_at: string
+          documento_id: string | null
+          id: string
+          metodo: string
+          modelo: string
+          org_id: string
+          paginas_leidas: number | null
+          paginas_totales: number | null
+          sha256: string
+          solicitado_por: string
+          texto: string | null
+          truncado: boolean
+        }
+        Insert: {
+          archivo_id: string
+          created_at?: string
+          documento_id?: string | null
+          id?: string
+          metodo: string
+          modelo: string
+          org_id: string
+          paginas_leidas?: number | null
+          paginas_totales?: number | null
+          sha256: string
+          solicitado_por: string
+          texto?: string | null
+          truncado?: boolean
+        }
+        Update: {
+          archivo_id?: string
+          created_at?: string
+          documento_id?: string | null
+          id?: string
+          metodo?: string
+          modelo?: string
+          org_id?: string
+          paginas_leidas?: number | null
+          paginas_totales?: number | null
+          sha256?: string
+          solicitado_por?: string
+          texto?: string | null
+          truncado?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brain_extracciones_archivo_id_fkey"
+            columns: ["archivo_id"]
+            isOneToOne: false
+            referencedRelation: "org_documentos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brain_extracciones_documento_id_fkey"
+            columns: ["documento_id"]
+            isOneToOne: false
+            referencedRelation: "brain_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brain_extracciones_org_id_fkey"
             columns: ["org_id"]
             isOneToOne: false
             referencedRelation: "organizations"
@@ -1204,6 +1298,10 @@ export type Database = {
           org_id: string
           proceso_id: string | null
           requiere_revision: boolean
+          revision_comentario: string | null
+          revision_confirmada: string | null
+          revision_confirmada_en: string | null
+          revision_confirmada_por: string | null
           riesgo_id: string | null
           sustituido_por_id: string | null
           tipo: string
@@ -1233,6 +1331,10 @@ export type Database = {
           org_id: string
           proceso_id?: string | null
           requiere_revision?: boolean
+          revision_comentario?: string | null
+          revision_confirmada?: string | null
+          revision_confirmada_en?: string | null
+          revision_confirmada_por?: string | null
           riesgo_id?: string | null
           sustituido_por_id?: string | null
           tipo: string
@@ -1262,6 +1364,10 @@ export type Database = {
           org_id?: string
           proceso_id?: string | null
           requiere_revision?: boolean
+          revision_comentario?: string | null
+          revision_confirmada?: string | null
+          revision_confirmada_en?: string | null
+          revision_confirmada_por?: string | null
           riesgo_id?: string | null
           sustituido_por_id?: string | null
           tipo?: string
@@ -1345,6 +1451,7 @@ export type Database = {
           documento_codigo: string | null
           documento_id: string | null
           documento_revision: string | null
+          extraccion_id: string | null
           id: string
           knowledge_item_id: string
           metodo: string | null
@@ -1365,6 +1472,7 @@ export type Database = {
           documento_codigo?: string | null
           documento_id?: string | null
           documento_revision?: string | null
+          extraccion_id?: string | null
           id?: string
           knowledge_item_id: string
           metodo?: string | null
@@ -1385,6 +1493,7 @@ export type Database = {
           documento_codigo?: string | null
           documento_id?: string | null
           documento_revision?: string | null
+          extraccion_id?: string | null
           id?: string
           knowledge_item_id?: string
           metodo?: string | null
@@ -1410,6 +1519,13 @@ export type Database = {
             columns: ["documento_id"]
             isOneToOne: false
             referencedRelation: "brain_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brain_knowledge_sources_extraccion_id_fkey"
+            columns: ["extraccion_id"]
+            isOneToOne: false
+            referencedRelation: "brain_extracciones"
             referencedColumns: ["id"]
           },
           {
@@ -2925,6 +3041,9 @@ export type Database = {
       org_documentos: {
         Row: {
           clasificacion: string
+          copia_no_controlada: boolean
+          copia_no_controlada_evidencia: string | null
+          copia_no_controlada_propuesta: boolean
           creado_por: string | null
           created_at: string
           deleted_at: string | null
@@ -2953,6 +3072,9 @@ export type Database = {
         }
         Insert: {
           clasificacion?: string
+          copia_no_controlada?: boolean
+          copia_no_controlada_evidencia?: string | null
+          copia_no_controlada_propuesta?: boolean
           creado_por?: string | null
           created_at?: string
           deleted_at?: string | null
@@ -2981,6 +3103,9 @@ export type Database = {
         }
         Update: {
           clasificacion?: string
+          copia_no_controlada?: boolean
+          copia_no_controlada_evidencia?: string | null
+          copia_no_controlada_propuesta?: boolean
           creado_por?: string | null
           created_at?: string
           deleted_at?: string | null

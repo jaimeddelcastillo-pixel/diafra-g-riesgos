@@ -56,6 +56,9 @@ interface OrgDocumento {
   es_version_actual?: boolean;
   retirado_en?: string | null;
   motivo_retiro?: string | null;
+  copia_no_controlada?: boolean;
+  copia_no_controlada_propuesta?: boolean;
+  copia_no_controlada_evidencia?: string | null;
 }
 
 interface ReferenciaDoc {
@@ -252,6 +255,22 @@ export default function Recursos() {
       : norma === "MULTI"
       ? [...REFERENCIAS_NOM241, ...REFERENCIAS_NOM059]
       : REFERENCIAS_NOM241;
+
+  // C6a.4: propuesta de "Copia no controlada" (sobre el archivo). Solo admin/RS confirman o descartan.
+  const resolverCopia = async (doc: OrgDocumento, confirmar: boolean) => {
+    if (confirmar && !window.confirm(
+      `¿Confirmar que "${doc.nombre}" es una copia no controlada?` +
+      (doc.clasificacion === "controlado" ? " Dejará de estar clasificado como Controlado y pasará a Referencia." : ""),
+    )) return;
+    const cambios: Record<string, unknown> = confirmar
+      ? { copia_no_controlada: true, copia_no_controlada_propuesta: false,
+          ...(doc.clasificacion === "controlado" ? { clasificacion: "referencia" } : {}) }
+      : { copia_no_controlada_propuesta: false, copia_no_controlada_evidencia: null };
+    const { error } = await (supabase as any).from("org_documentos").update(cambios).eq("id", doc.id);
+    if (error) return toast({ title: "Error", description: error.message, variant: "destructive" });
+    toast({ title: confirmar ? "Marcado como copia no controlada" : "Propuesta descartada" });
+    cargarDocs();
+  };
 
   const cargarDocs = async () => {
     if (!org?.id) return;
@@ -979,6 +998,20 @@ export default function Recursos() {
                             <div className="text-xs text-muted-foreground md:hidden">
                               {doc.tipo} · {formatDate(doc.created_at)}
                             </div>
+                            {doc.copia_no_controlada && (
+                              <div className="text-xs font-medium text-destructive">Copia no controlada</div>
+                            )}
+                            {doc.copia_no_controlada_propuesta && (
+                              <div className="text-xs border-l-2 border-destructive/60 pl-2 my-1 space-y-1">
+                                <div>Propuesta: copia no controlada. {doc.copia_no_controlada_evidencia}</div>
+                                {puedeRetirar && (
+                                  <div className="flex gap-2">
+                                    <Button size="sm" variant="outline" className="h-6 text-xs" onClick={() => resolverCopia(doc, true)}>Confirmar</Button>
+                                    <Button size="sm" variant="ghost" className="h-6 text-xs" onClick={() => resolverCopia(doc, false)}>Descartar</Button>
+                                  </div>
+                                )}
+                              </div>
+                            )}
                             <div className="text-xs text-muted-foreground">
                               {formatBytes(doc.size_bytes)}
                               {doc.usar_en_ia && (

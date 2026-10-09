@@ -78,7 +78,7 @@ export function useBrainKnowledge() {
   return useOrgQuery("knowledge", async (orgId) => {
     const { data, error } = await supabase
       .from("brain_knowledge_items")
-      .select("*")
+      .select("*, fuentes:brain_knowledge_sources(id, tipo_fuente, archivo_id, documento_codigo, documento_revision, nombre_fuente, pagina, parrafo, seccion, cita_textual, metodo, extraccion_id)")
       .eq("org_id", orgId)
       .order("created_at", { ascending: false });
     if (error) throw error;

@@ -148,6 +148,13 @@
       "when": 1791586326732,
       "tag": "0020_plan_limites_select_own_plan",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1791587958079,
+      "tag": "0021_c6a4_extracciones_propuestas_revision",
+      "breakpoints": true
     }
   ]
 }
