@@ -87,7 +87,7 @@ export default function Dashboard() {
   const { data: folios, isLoading: loadingFolios } = useFolios();
   const { data: allRisks, isLoading: loadingRisks } = useAllRiesgos();
 
-  if (!loading && isSuperAdmin() && !isImpersonating) return <Navigate to="/admin" replace />;
+  // P1b: la redirección del super_admin vive ahora en Inicio (/).
 
   const allRisksData = allRisks || [];
   const fols = folios || [];
