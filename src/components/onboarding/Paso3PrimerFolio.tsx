@@ -32,6 +32,7 @@ export function Paso3PrimerFolio({ onCompletar, onSaltar }: Props) {
 
   const elegirExplorar = () => {
     onCompletar("explorar");
+    navigate("/riesgos");
   };
 
   return (
@@ -66,7 +67,7 @@ export function Paso3PrimerFolio({ onCompletar, onSaltar }: Props) {
             icon={Compass}
             titulo="Explorar por mi cuenta"
             texto="Prefiero explorar primero."
-            botonLabel="Ir al Dashboard"
+            botonLabel="Ir al Tablero"
             onClick={elegirExplorar}
             variant="outline"
           />

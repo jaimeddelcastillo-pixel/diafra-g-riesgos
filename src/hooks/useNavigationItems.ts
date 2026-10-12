@@ -1,8 +1,7 @@
 import { useMemo } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useCerebroAcceso } from "@/hooks/useCerebroAcceso";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { useMisModulos } from "@/hooks/useMisModulos";
 import { ordenarModulos } from "@/modules";
 import {
   construirNavegacion,
@@ -26,6 +25,8 @@ export interface NavContext {
  */
 export function isItemVisible(item: NavItem, ctx: NavContext): boolean {
   if (item.status === "proximamente") return false;
+  // Página compartida: no duplicarla si la empresa ya la ve desde otro módulo.
+  if (item.soloSinModulo && ctx.features[item.soloSinModulo]) return false;
   if (ctx.isSuperAdmin) return true;
   if (item.feature && !ctx.features[item.feature]) return false;
   if (item.roles && !item.roles.some((r) => ctx.roles.includes(r))) return false;
@@ -60,16 +61,16 @@ export function useNavigationItems(): {
   const { org, roles, isSuperAdmin, isImpersonating } = useAuth();
   const { tieneCerebro, loading } = useCerebroAcceso();
 
-  // Orden de módulos desde el catálogo (modulos.orden).
-  const { data: ordenDb } = useQuery({
-    queryKey: ["modulos-orden"],
-    staleTime: 5 * 60_000,
-    queryFn: async () => {
-      const { data, error } = await supabase.from("modulos").select("clave, orden");
-      if (error) throw error;
-      return Object.fromEntries((data ?? []).map((r: any) => [r.clave, r.orden as number]));
-    },
-  });
+  // Catálogo con orden (modulos.orden) y acceso de la empresa activa.
+  const { data: catalogo } = useMisModulos();
+  const ordenDb = useMemo(
+    () => (catalogo ? Object.fromEntries(catalogo.map((m) => [m.clave, m.orden ?? 999])) : undefined),
+    [catalogo],
+  );
+  const accesos = useMemo(
+    () => Object.fromEntries((catalogo ?? []).map((m) => [m.clave, m.tiene_acceso])),
+    [catalogo],
+  );
 
   const superAdmin = isSuperAdmin();
   const isAdminNav = superAdmin && !isImpersonating;
@@ -80,9 +81,10 @@ export function useNavigationItems(): {
       roles: roles as string[],
       isSuperAdmin: superAdmin,
       // Mapa de features: ampliable sin tocar la lógica de filtrado.
-      features: { institutional_brain: tieneCerebro },
+      // riesgos mientras carga el catálogo: true (todas las empresas activas lo tienen; evita parpadeo).
+      features: { riesgos: true, ...accesos, institutional_brain: tieneCerebro },
     }),
-    [org?.plan, roles, superAdmin, tieneCerebro],
+    [org?.plan, roles, superAdmin, tieneCerebro, accesos],
   );
 
   const sections = useMemo(() => {

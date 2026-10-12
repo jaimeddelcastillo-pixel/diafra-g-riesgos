@@ -6,16 +6,24 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 
-/** Guardia genérica de rutas de un módulo. UX: el enforcement real es RLS + edge functions. */
-export function ModuloGuard({ clave, mensaje }: { clave: string; mensaje: string }) {
-  const { orgId, user, isSuperAdmin } = useAuth();
+/**
+ * Guardia genérica de rutas. Deja pasar si la empresa activa tiene AL MENOS UNO
+ * de los módulos indicados (un módulo = su clave; páginas de plataforma = varias).
+ * UX: el enforcement real es RLS + edge functions.
+ */
+export function ModuloGuard({ clave, mensaje }: { clave: string | string[]; mensaje: string }) {
+  const { orgId, user } = useAuth();
+  const claves = Array.isArray(clave) ? clave : [clave];
   const { data, isLoading } = useQuery({
-    queryKey: ["mi-org-tiene-modulo", orgId, user?.id, clave],
+    queryKey: ["mi-org-tiene-modulo", orgId, user?.id, claves.join(",")],
     enabled: !!user,
     queryFn: async () => {
-      const { data, error } = await supabase.rpc("mi_org_tiene_modulo", { _modulo: clave });
-      if (error) throw error;
-      return !!data;
+      for (const c of claves) {
+        const { data, error } = await supabase.rpc("mi_org_tiene_modulo", { _modulo: c });
+        if (error) throw error;
+        if (data) return true;
+      }
+      return false;
     },
   });
 
@@ -26,7 +34,7 @@ export function ModuloGuard({ clave, mensaje }: { clave: string; mensaje: string
       </Card>
     );
   }
-  if (!isSuperAdmin() && !data) {
+  if (!data) {
     return (
       <Card>
         <CardContent className="p-8 text-center space-y-3">

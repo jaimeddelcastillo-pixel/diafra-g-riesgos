@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useOnboardingTextos } from "./useOnboardingTextos";
+import { EVENTO_ABRIR_GRUPO } from "@/components/AppSidebar";
 
 interface Props {
   onFinish: () => void;
@@ -46,6 +47,12 @@ export function Paso2Tour({ onFinish, onSaltar }: Props) {
     const paso = pasos[idx];
     if (!paso) return;
 
+    // Si el elemento está dentro de un grupo cerrado del menú, abrir ese grupo antes de resaltarlo.
+    const clave = paso.selector.match(/data-onboarding="([^"]+)"/)?.[1];
+    if (clave && !document.querySelector(paso.selector)) {
+      window.dispatchEvent(new CustomEvent(EVENTO_ABRIR_GRUPO, { detail: clave }));
+    }
+
     const update = () => {
       const el = document.querySelector(paso.selector) as HTMLElement | null;
       if (el) {
@@ -57,11 +64,13 @@ export function Paso2Tour({ onFinish, onSaltar }: Props) {
     };
 
     update();
-    const t = setTimeout(update, 350); // re-medir tras scroll
+    const t = setTimeout(update, 350); // re-medir tras scroll / apertura del grupo
+    const t2 = setTimeout(update, 700);
     window.addEventListener("resize", update);
     window.addEventListener("scroll", update, true);
     return () => {
       clearTimeout(t);
+      clearTimeout(t2);
       window.removeEventListener("resize", update);
       window.removeEventListener("scroll", update, true);
     };

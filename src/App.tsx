@@ -38,7 +38,8 @@ import Privacidad from "./pages/Privacidad";
 import NotFound from "./pages/NotFound";
 import GuiaLanding from "./pages/GuiaLanding";
 import { ModuloGuard } from "./components/ModuloGuard";
-import { modulos } from "./modules";
+import { modulos, rutasPlataforma, clavesModulos } from "./modules";
+import Inicio from "./pages/Inicio";
 
 const queryClient = new QueryClient();
 
@@ -64,6 +65,12 @@ const App = () => (
             <Route path="/diploma/verificar/:hash" element={<DiplomaVerificar />} />
             <Route path="/guia-:tipo" element={<GuiaLanding />} />
             <Route element={<AppLayout />}>
+              <Route path="/" element={<Inicio />} />
+              <Route element={<ModuloGuard clave={clavesModulos} mensaje="Tu organización no tiene ningún módulo activo." />}>
+                {rutasPlataforma.map(({ path, Component }) => (
+                  <Route key={path} path={path} element={<Component />} />
+                ))}
+              </Route>
               {modulos.map((m) => (
                 <Route key={m.clave} element={<ModuloGuard clave={m.clave} mensaje={m.mensajeNoContratado} />}>
                   {m.rutas.map(({ path, Component }) => (

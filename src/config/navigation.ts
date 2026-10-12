@@ -1,12 +1,10 @@
 import {
-  LayoutDashboard, FolderOpen, Settings, BookOpen, ShieldCheck, LifeBuoy, Ticket,
-  Library, Sparkles, GraduationCap, FileBadge, FileText, Search, Award, BarChart3,
-  ClipboardCheck, Wrench, Brain, MessagesSquare, Lightbulb, BadgeCheck, Files,
-  GitCompare, CircleAlert, Download, ShieldAlert, type LucideIcon,
+  Home, Settings, ShieldCheck, LifeBuoy, Ticket, Library, Sparkles, GraduationCap, FileBadge,
+  FileText, ClipboardCheck, Wrench, type LucideIcon,
 } from "lucide-react";
 import { modulos } from "@/modules";
 
-export type NavSection = "nucleo" | "modulos" | "admin";
+export type NavSection = "inicio" | "modulos" | "empresa" | "admin";
 export type NavStatus = "activo" | "beta" | "proximamente";
 
 export interface NavItem {
@@ -19,8 +17,10 @@ export interface NavItem {
   exact?: boolean;
   children?: NavItem[];
   section: NavSection;
-  /** feature_key de organization_features requerida. */
+  /** Clave de módulo (o feature) requerida: acceso de la empresa activa. */
   feature?: string;
+  /** Oculta el ítem si la empresa SÍ tiene este módulo (evita duplicar una página compartida). */
+  soloSinModulo?: string;
   /** Cualquiera de estos roles habilita el ítem. */
   roles?: string[];
   /** Planes que habilitan el ítem. */
@@ -28,37 +28,30 @@ export interface NavItem {
   status?: NavStatus;
   /** Atributo data-onboarding para el tour. */
   onboarding?: string;
-  /** Tratamiento visual sutilmente distinto (Núcleo). */
+  /** Tratamiento visual sutilmente distinto. */
   highlight?: boolean;
 }
 
 export const SECTION_LABELS: Record<NavSection, string> = {
-  nucleo: "Núcleo",
+  inicio: "",
   modulos: "Módulos",
+  empresa: "",
   admin: "Administración",
 };
 
-export const SECTION_ORDER: NavSection[] = ["nucleo", "modulos", "admin"];
+export const SECTION_ORDER: NavSection[] = ["inicio", "modulos", "empresa", "admin"];
 
-/** Grupos de menú de los módulos registrados (src/modules), en el orden recibido. */
+/** Inicio arriba, los grupos de módulos (en el orden recibido) y Configuración/Ayuda. */
 export function construirNavegacion(gruposModulos: NavItem[]): NavItem[] {
-  return [...gruposModulos, ...navegacionPlataforma];
+  return [itemInicio, ...gruposModulos, ...navegacionEmpresa];
 }
 
-/** Ítems de plataforma (fuera de los módulos). */
-const navegacionPlataforma: NavItem[] = [
-  {
-    id: "capacitacion-grupo",
-    label: "Capacitación",
-    icon: GraduationCap,
-    section: "modulos",
-    children: [
-      { id: "capacitacion", label: "Capacitación", icon: GraduationCap, route: "/capacitacion", section: "modulos", onboarding: "capacitacion" },
-      { id: "mis-diplomas", label: "Mis Diplomas", icon: Award, route: "/mis-diplomas", section: "modulos" },
-    ],
-  },
-  { id: "configuracion", label: "Configuración", icon: Settings, route: "/configuracion", section: "admin" },
-  { id: "soporte", label: "Ayuda", icon: LifeBuoy, route: "/soporte", section: "admin", roles: ["admin", "responsable_sanitario"] },
+const itemInicio: NavItem = { id: "inicio", label: "Inicio", icon: Home, route: "/", exact: true, section: "inicio" };
+
+/** De la empresa, no de un módulo. */
+const navegacionEmpresa: NavItem[] = [
+  { id: "configuracion", label: "Configuración", icon: Settings, route: "/configuracion", section: "empresa" },
+  { id: "soporte", label: "Ayuda", icon: LifeBuoy, route: "/soporte", section: "empresa", roles: ["admin", "responsable_sanitario"] },
 ];
 
 /** Navegación de organización (usuarios de cliente e impersonación). */

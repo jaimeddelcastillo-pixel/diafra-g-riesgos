@@ -1,6 +1,7 @@
 import type { ComponentType } from "react";
 import type { LucideIcon } from "lucide-react";
 import type { NavItem } from "@/config/navigation";
+import type { OrgInfo } from "@/hooks/useAuth";
 
 export interface ModuloRuta {
   path: string;
@@ -9,12 +10,21 @@ export interface ModuloRuta {
 
 export interface ModuloPendiente {
   etiqueta: string;
-  cantidad: number;
+  /** Conteo; si falta, se muestra solo la etiqueta (p. ej. "Examen pendiente"). */
+  cantidad?: number;
   ruta?: string;
+}
+
+export interface PendientesContexto {
+  org: OrgInfo | null;
 }
 
 export interface ModuloTarjetaProps {
   modulo: ModuloDef;
+  pendientes?: ModuloPendiente[];
+  cargando?: boolean;
+  /** La consulta de pendientes falló: la tarjeta muestra "No disponible". */
+  error?: boolean;
 }
 
 export interface ModuloDef {
@@ -28,11 +38,12 @@ export interface ModuloDef {
   mensajeNoContratado: string;
   /** Orden de respaldo si el catálogo aún no carga; manda modulos.orden. */
   ordenPorDefecto: number;
-  /** Grupo de menú con sus ítems. */
+  /** Grupo de menú con sus ítems (plantilla: Tablero … Auditoría · Capacitación). */
   menu: NavItem;
   rutas: ModuloRuta[];
   /** Reservada para P2. */
   tourClave: string;
-  obtenerPendientes: () => Promise<ModuloPendiente[]>;
+  /** Pendientes del usuario en la empresa activa. Solo conteos. */
+  obtenerPendientes: (ctx: PendientesContexto) => Promise<ModuloPendiente[]>;
   Tarjeta: ComponentType<ModuloTarjetaProps>;
 }
