@@ -5,18 +5,11 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/hooks/useAuth";
 import { AppLayout } from "@/components/AppLayout";
-import Index from "./pages/Index";
-import Folios from "./pages/Folios";
-import FolioDetail from "./pages/FolioDetail";
-import Auditoria from "./pages/Auditoria";
-import Catalogos from "./pages/Catalogos";
-import Recursos from "./pages/Recursos.tsx";
 import Capacitacion from "./pages/Capacitacion";
 import ExamenFinal from "./pages/ExamenFinal";
 import DiplomaVerificar from "./pages/DiplomaVerificar";
 import Confianza from "./pages/Confianza";
 import MisDiplomas from "./pages/MisDiplomas";
-import Cumplimiento from "./pages/Cumplimiento";
 import Configuracion from "./pages/Configuracion";
 import Admin from "./pages/Admin";
 import AdminOrg from "./pages/AdminOrg";
@@ -31,7 +24,6 @@ import AdminCursoEvaluacion from "./pages/AdminCursoEvaluacion";
 import AdminFolios from "./pages/AdminFolios";
 import AdminFoliosCancelados from "./pages/AdminFoliosCancelados";
 import AdminReeditarCodigos from "./pages/AdminReeditarCodigos";
-import MisProtocolos from "./pages/MisProtocolos";
 import Soporte from "./pages/Soporte";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
@@ -45,16 +37,8 @@ import Terminos from "./pages/Terminos";
 import Privacidad from "./pages/Privacidad";
 import NotFound from "./pages/NotFound";
 import GuiaLanding from "./pages/GuiaLanding";
-import CerebroDashboard from "./pages/cerebro/CerebroDashboard";
-import CerebroEntrevistas from "./pages/cerebro/CerebroEntrevistas";
-import CerebroConocimiento from "./pages/cerebro/CerebroConocimiento";
-import CerebroValidacion from "./pages/cerebro/CerebroValidacion";
-import CerebroDocumentos from "./pages/cerebro/CerebroDocumentos";
-import CerebroContradicciones from "./pages/cerebro/CerebroContradicciones";
-import CerebroBrechas from "./pages/cerebro/CerebroBrechas";
-import CerebroExportar from "./pages/cerebro/CerebroExportar";
-import CerebroAuditoria from "./pages/cerebro/CerebroAuditoria";
-import { CerebroGuard } from "./components/cerebro/CerebroGuard";
+import { ModuloGuard } from "./components/ModuloGuard";
+import { modulos } from "./modules";
 
 const queryClient = new QueryClient();
 
@@ -80,28 +64,17 @@ const App = () => (
             <Route path="/diploma/verificar/:hash" element={<DiplomaVerificar />} />
             <Route path="/guia-:tipo" element={<GuiaLanding />} />
             <Route element={<AppLayout />}>
-              <Route path="/" element={<Index />} />
-              <Route path="/folios" element={<Folios />} />
-              <Route path="/folios/:id" element={<FolioDetail />} />
-              <Route path="/auditoria" element={<Auditoria />} />
-              <Route path="/catalogos" element={<Catalogos />} />
-              <Route path="/recursos" element={<Recursos />} />
+              {modulos.map((m) => (
+                <Route key={m.clave} element={<ModuloGuard clave={m.clave} mensaje={m.mensajeNoContratado} />}>
+                  {m.rutas.map(({ path, Component }) => (
+                    <Route key={path} path={path} element={<Component />} />
+                  ))}
+                </Route>
+              ))}
               <Route path="/capacitacion" element={<Capacitacion />} />
               <Route path="/capacitacion/:cursoId/examen" element={<ExamenFinal />} />
               <Route path="/mis-diplomas" element={<MisDiplomas />} />
-              <Route path="/cumplimiento" element={<Cumplimiento />} />
               <Route path="/configuracion" element={<Configuracion />} />
-              <Route element={<CerebroGuard />}>
-                <Route path="/cerebro" element={<CerebroDashboard />} />
-                <Route path="/cerebro/entrevistas" element={<CerebroEntrevistas />} />
-                <Route path="/cerebro/conocimiento" element={<CerebroConocimiento />} />
-                <Route path="/cerebro/validacion" element={<CerebroValidacion />} />
-                <Route path="/cerebro/documentos" element={<CerebroDocumentos />} />
-                <Route path="/cerebro/contradicciones" element={<CerebroContradicciones />} />
-                <Route path="/cerebro/brechas" element={<CerebroBrechas />} />
-                <Route path="/cerebro/exportar" element={<CerebroExportar />} />
-                <Route path="/cerebro/auditoria" element={<CerebroAuditoria />} />
-              </Route>
               <Route path="/admin" element={<Admin />} />
               <Route path="/admin/org/:id" element={<AdminOrg />} />
               <Route path="/admin/tickets" element={<AdminTickets />} />
@@ -115,7 +88,6 @@ const App = () => (
               <Route path="/admin/folios" element={<AdminFolios />} />
               <Route path="/admin/folios-cancelados" element={<AdminFoliosCancelados />} />
               <Route path="/admin/super/reeditar-codigos" element={<AdminReeditarCodigos />} />
-              <Route path="/mis-protocolos" element={<MisProtocolos />} />
               <Route path="/soporte" element={<Soporte />} />
               <Route path="/soporte/:id" element={<Soporte />} />
             </Route>

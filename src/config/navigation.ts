@@ -4,6 +4,7 @@ import {
   ClipboardCheck, Wrench, Brain, MessagesSquare, Lightbulb, BadgeCheck, Files,
   GitCompare, CircleAlert, Download, ShieldAlert, type LucideIcon,
 } from "lucide-react";
+import { modulos } from "@/modules";
 
 export type NavSection = "nucleo" | "modulos" | "admin";
 export type NavStatus = "activo" | "beta" | "proximamente";
@@ -39,42 +40,13 @@ export const SECTION_LABELS: Record<NavSection, string> = {
 
 export const SECTION_ORDER: NavSection[] = ["nucleo", "modulos", "admin"];
 
-/** Navegación de organización (usuarios de cliente e impersonación). */
-export const navigationConfig: NavItem[] = [
-  {
-    id: "cerebro",
-    label: "Cerebro Institucional",
-    icon: Brain,
-    section: "nucleo",
-    feature: "institutional_brain",
-    highlight: true,
-    children: [
-      { id: "cerebro-panorama", label: "Panorama", icon: Brain, route: "/cerebro", exact: true, section: "nucleo" },
-      { id: "cerebro-entrevistas", label: "Entrevistas", icon: MessagesSquare, route: "/cerebro/entrevistas", section: "nucleo" },
-      { id: "cerebro-conocimiento", label: "Conocimiento", icon: Lightbulb, route: "/cerebro/conocimiento", section: "nucleo" },
-      { id: "cerebro-validacion", label: "Validación", icon: BadgeCheck, route: "/cerebro/validacion", section: "nucleo" },
-      { id: "cerebro-documentos", label: "Documentos", icon: Files, route: "/cerebro/documentos", section: "nucleo" },
-      { id: "cerebro-contradicciones", label: "Contradicciones", icon: GitCompare, route: "/cerebro/contradicciones", section: "nucleo" },
-      { id: "cerebro-brechas", label: "Brechas", icon: CircleAlert, route: "/cerebro/brechas", section: "nucleo" },
-      { id: "cerebro-exportar", label: "Exportar", icon: Download, route: "/cerebro/exportar", section: "nucleo" },
-      { id: "cerebro-auditoria", label: "Auditoría", icon: Search, route: "/cerebro/auditoria", section: "nucleo", roles: ["admin", "responsable_sanitario"] },
-    ],
-  },
-  {
-    id: "riesgos",
-    label: "Gestión de Riesgos",
-    icon: ShieldAlert,
-    section: "modulos",
-    children: [
-      { id: "dashboard", label: "Dashboard", icon: LayoutDashboard, route: "/", exact: true, section: "modulos" },
-      { id: "folios", label: "Mis Folios", icon: FolderOpen, route: "/folios", section: "modulos", onboarding: "folios" },
-      { id: "catalogos", label: "Catálogos", icon: BookOpen, route: "/catalogos", section: "modulos" },
-      { id: "mis-protocolos", label: "Mis Protocolos", icon: FileBadge, route: "/mis-protocolos", section: "modulos" },
-      { id: "cumplimiento", label: "Cumplimiento", icon: BarChart3, route: "/cumplimiento", section: "modulos", roles: ["admin", "responsable_sanitario"] },
-      { id: "auditoria", label: "Auditoría", icon: Search, route: "/auditoria", section: "modulos" },
-      { id: "recursos", label: "Recursos", icon: Library, route: "/recursos", section: "modulos", onboarding: "recursos" },
-    ],
-  },
+/** Grupos de menú de los módulos registrados (src/modules), en el orden recibido. */
+export function construirNavegacion(gruposModulos: NavItem[]): NavItem[] {
+  return [...gruposModulos, ...navegacionPlataforma];
+}
+
+/** Ítems de plataforma (fuera de los módulos). */
+const navegacionPlataforma: NavItem[] = [
   {
     id: "capacitacion-grupo",
     label: "Capacitación",
@@ -88,6 +60,9 @@ export const navigationConfig: NavItem[] = [
   { id: "configuracion", label: "Configuración", icon: Settings, route: "/configuracion", section: "admin" },
   { id: "soporte", label: "Ayuda", icon: LifeBuoy, route: "/soporte", section: "admin", roles: ["admin", "responsable_sanitario"] },
 ];
+
+/** Navegación de organización (usuarios de cliente e impersonación). */
+export const navigationConfig: NavItem[] = construirNavegacion(modulos.map((m) => m.menu));
 
 /** Navegación del panel TRACEA (super admin sin impersonar). */
 export const adminNavigationConfig: NavItem[] = [

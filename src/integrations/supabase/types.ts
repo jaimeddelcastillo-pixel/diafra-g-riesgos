@@ -3025,19 +3025,25 @@ export type Database = {
           activo: boolean
           clave: string
           descripcion: string | null
+          estado: string
           nombre: string
+          orden: number
         }
         Insert: {
           activo?: boolean
           clave: string
           descripcion?: string | null
+          estado?: string
           nombre: string
+          orden?: number
         }
         Update: {
           activo?: boolean
           clave?: string
           descripcion?: string | null
+          estado?: string
           nombre?: string
+          orden?: number
         }
         Relationships: []
       }
