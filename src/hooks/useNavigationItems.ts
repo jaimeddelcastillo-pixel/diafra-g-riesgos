@@ -1,8 +1,11 @@
 import { useMemo } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useCerebroAcceso } from "@/hooks/useCerebroAcceso";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { ordenarModulos } from "@/modules";
 import {
-  navigationConfig,
+  construirNavegacion,
   adminNavigationConfig,
   SECTION_ORDER,
   type NavItem,
@@ -57,6 +60,17 @@ export function useNavigationItems(): {
   const { org, roles, isSuperAdmin, isImpersonating } = useAuth();
   const { tieneCerebro, loading } = useCerebroAcceso();
 
+  // Orden de módulos desde el catálogo (modulos.orden).
+  const { data: ordenDb } = useQuery({
+    queryKey: ["modulos-orden"],
+    staleTime: 5 * 60_000,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("modulos").select("clave, orden");
+      if (error) throw error;
+      return Object.fromEntries((data ?? []).map((r: any) => [r.clave, r.orden as number]));
+    },
+  });
+
   const superAdmin = isSuperAdmin();
   const isAdminNav = superAdmin && !isImpersonating;
 
@@ -72,13 +86,15 @@ export function useNavigationItems(): {
   );
 
   const sections = useMemo(() => {
-    const source = isAdminNav ? adminNavigationConfig : navigationConfig;
+    const source = isAdminNav
+      ? adminNavigationConfig
+      : construirNavegacion(ordenarModulos(ordenDb).map((m) => m.menu));
     const visible = filterTree(source, ctx);
     return SECTION_ORDER.map((section) => ({
       section,
       items: visible.filter((i) => i.section === section),
     })).filter((g) => g.items.length > 0);
-  }, [ctx, isAdminNav]);
+  }, [ctx, isAdminNav, ordenDb]);
 
   return { sections, isAdminNav, loading };
 }
