@@ -1,4 +1,4 @@
-// Cron diario: detecta folios Cerrado con >12 meses desde última aprobación
+// Cron diario: detecta folios Cerrado con updated_at anterior al corte de 12 meses
 // y notifica al Responsable Sanitario para revisión periódica (NOM-241 §6.5 / ISO 14971 §10).
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
@@ -14,19 +14,23 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   const admin = createClient(
-    Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+    Deno.env.get("SUPABASE_URL") ?? "",
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
   );
 
-  // 1) Folios Cerrado con updated_at > 12 meses
-  const haceUnAnio = new Date();
-  haceUnAnio.setMonth(haceUnAnio.getMonth() - 12);
+  // Shared with the Inicio card; preserves the original UTC setMonth overflow.
+  const { data: fechaCorte, error: corteError } = await admin.rpc("folios_revision_corte");
+  if (corteError || !fechaCorte) {
+    return new Response(JSON.stringify({ error: corteError?.message ?? "No se pudo calcular la fecha de corte" }), {
+      status: 500, headers: corsHeaders,
+    });
+  }
 
   const { data: folios, error } = await admin
     .from("folios")
     .select("id, codigo, proceso_equipo, org_id, updated_at, norma_folio")
     .eq("estado", "Cerrado")
-    .lt("updated_at", haceUnAnio.toISOString());
+    .lt("updated_at", fechaCorte);
 
   if (error) {
     return new Response(JSON.stringify({ error: error.message }), { status: 500, headers: corsHeaders });

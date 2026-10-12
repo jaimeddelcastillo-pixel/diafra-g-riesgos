@@ -1,4 +1,4 @@
-import { Link, Outlet } from "react-router-dom";
+import { Link, Navigate, Outlet } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { Lock } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -12,11 +12,12 @@ import { useAuth } from "@/hooks/useAuth";
  * UX: el enforcement real es RLS + edge functions.
  */
 export function ModuloGuard({ clave, mensaje }: { clave: string | string[]; mensaje: string }) {
-  const { orgId, user } = useAuth();
+  const { orgId, user, isSuperAdmin, isImpersonating, loading } = useAuth();
+  const panelTracea = !loading && isSuperAdmin() && !isImpersonating;
   const claves = Array.isArray(clave) ? clave : [clave];
   const { data, isLoading } = useQuery({
     queryKey: ["mi-org-tiene-modulo", orgId, user?.id, claves.join(",")],
-    enabled: !!user,
+    enabled: !!user && !panelTracea,
     queryFn: async () => {
       for (const c of claves) {
         const { data, error } = await supabase.rpc("mi_org_tiene_modulo", { _modulo: c });
@@ -27,7 +28,8 @@ export function ModuloGuard({ clave, mensaje }: { clave: string | string[]; mens
     },
   });
 
-  if (isLoading) {
+  if (panelTracea) return <Navigate to="/admin" replace />;
+  if (loading || isLoading) {
     return (
       <Card>
         <CardContent className="p-6 text-sm text-muted-foreground">Cargando…</CardContent>

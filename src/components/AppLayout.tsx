@@ -1,6 +1,6 @@
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
-import { Outlet, useNavigate } from "react-router-dom";
+import { Navigate, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { LogOut, Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
@@ -8,6 +8,9 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { Badge } from "@/components/ui/badge";
 import { FloatingAssistantButton } from "@/components/FloatingAssistantButton";
 import { OnboardingController } from "@/components/onboarding/OnboardingController";
+import { useMisModulos } from "@/hooks/useMisModulos";
+import { modulos } from "@/modules";
+import { encabezadoModulo, moduloEnRuta } from "@/modules/contexto";
 
 const roleLabels: Record<string, string> = {
   admin: "Administrador",
@@ -19,8 +22,14 @@ const roleLabels: Record<string, string> = {
 };
 
 export function AppLayout() {
-  const { user, profile, roles, org, signOut, isImpersonating, impersonatedOrg, stopImpersonation } = useAuth();
+  const { user, profile, roles, org, signOut, isImpersonating, impersonatedOrg, stopImpersonation, isSuperAdmin, loading } = useAuth();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
+  const { data: catalogo } = useMisModulos();
+  const accesos = Object.fromEntries((catalogo ?? []).map((m) => [m.clave, m.estado === "activo" && m.tiene_acceso]));
+  const moduloActual = moduloEnRuta(pathname, modulos, accesos);
+  // Include menu-only module pages (training) and shared platform pages.
+  const rutaDeModulo = !!moduloActual || modulos.some((m) => m.menu.children?.some((i) => i.route === pathname));
   const actuandoComo = (() => {
     try {
       const v = JSON.parse(localStorage.getItem("tracea-actuando-como") ?? "null");
@@ -34,13 +43,13 @@ export function AppLayout() {
 
   const primaryRole = roles.find((r) => r === "super_admin") ?? roles[0];
 
-  const norma = org?.norma_aplicable;
-  const headerLabel =
-    norma === "NOM-241"
-      ? "GESTIÓN DE RIESGOS / NOM-241 / FEUM"
-      : norma === "NOM-059"
-      ? "GESTIÓN DE RIESGOS / NOM-059 / FEUM"
-      : "GESTIÓN DE RIESGOS";
+  const headerLabel = pathname === "/"
+    ? ["TRACEA", org?.nombre].filter(Boolean).join(" · ")
+    : encabezadoModulo(moduloActual, org?.norma_aplicable);
+
+  if (!loading && isSuperAdmin() && !isImpersonating && rutaDeModulo) {
+    return <Navigate to="/admin" replace />;
+  }
 
   return (
     <ProtectedRoute>
@@ -57,24 +66,24 @@ export function AppLayout() {
 
             {/* Banner de impersonación */}
             {isImpersonating && (
-              <div className="bg-amber-500 text-white flex items-center justify-between px-4 py-1.5 text-xs shrink-0">
+              <div className="bg-accent text-accent-foreground flex items-center justify-between gap-3 px-4 py-1.5 text-xs shrink-0">
                 <span className="flex items-center gap-1.5 font-medium">
                   <Building2 className="h-3 w-3" />
                   Modo soporte — empresa: <strong>{impersonatedOrg?.nombre}</strong>
                 </span>
-                <button
-                  className="underline hover:no-underline text-white font-medium"
+                <Button variant="ghost" size="sm"
+                  className="underline hover:no-underline text-xs shrink-0"
                   onClick={async () => { await stopImpersonation(); navigate("/admin"); }}
                 >
                   Terminar soporte
-                </button>
+                </Button>
               </div>
             )}
 
             <header className="h-14 flex items-center justify-between border-b bg-card px-4 shrink-0">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 min-w-0">
                 <SidebarTrigger />
-                <span className="text-xs text-muted-foreground font-medium tracking-wide">
+                <span className="text-xs text-muted-foreground font-medium truncate">
                   {headerLabel}
                 </span>
               </div>

@@ -176,6 +176,13 @@
       "when": 1791847620487,
       "tag": "0024_p1b_inicio_pendientes",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1791849148657,
+      "tag": "0025_p1b1_revision_corte_compartido",
+      "breakpoints": true
     }
   ]
 }

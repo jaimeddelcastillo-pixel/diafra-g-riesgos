@@ -31,6 +31,8 @@ export interface ModuloDef {
   /** Debe coincidir con modulos.clave en la base de datos. */
   clave: string;
   nombre: string;
+  /** Optional normative context for this module's header; absent means no norm. */
+  normaEnEncabezado?: (norma: string | null | undefined) => string | undefined;
   descripcion: string;
   icono: LucideIcon;
   rutaInicio: string;

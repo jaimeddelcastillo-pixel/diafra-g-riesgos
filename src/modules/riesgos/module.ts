@@ -22,6 +22,7 @@ const SUB_STATUS_TRIAL_OK = ["", "active", "trialing", "trial", "past_due"];
 export const riesgosModule: ModuloDef = {
   clave: "riesgos",
   nombre: "Gestión de Riesgos",
+  normaEnEncabezado: (norma) => norma === "NOM-241" || norma === "NOM-059" ? `${norma} / FEUM` : undefined,
   descripcion: "Folios y matriz de riesgos",
   icono: ShieldAlert,
   rutaInicio: "/riesgos",
