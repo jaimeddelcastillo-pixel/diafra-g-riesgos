@@ -75,8 +75,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const isImpersonating = soporteLogId !== null;
   const impersonatedOrg = isImpersonating ? org : null;
 
+  // Las demás pestañas adoptan el soporte vigente para no cerrarlo al recargar.
   const broadcast = (tipo: string) => {
-    try { channelRef.current?.postMessage({ tipo }); } catch { /* noop */ }
+    try {
+      channelRef.current?.postMessage({ tipo, soporte: sessionStorage.getItem(SOPORTE_KEY) });
+    } catch { /* noop */ }
   };
 
   const cargarContexto = useCallback(async (u: User) => {
@@ -128,7 +131,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (typeof BroadcastChannel !== "undefined") {
       const ch = new BroadcastChannel("tracea-org");
-      ch.onmessage = () => window.location.reload();
+      ch.onmessage = (ev) => {
+        const soporte = ev?.data?.soporte;
+        if (ev?.data?.tipo !== "signout" && typeof soporte === "string" && soporte) {
+          sessionStorage.setItem(SOPORTE_KEY, soporte);
+        } else {
+          sessionStorage.removeItem(SOPORTE_KEY);
+        }
+        window.location.reload();
+      };
       channelRef.current = ch;
     }
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
