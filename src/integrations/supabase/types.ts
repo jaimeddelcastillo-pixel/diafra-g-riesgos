@@ -4194,6 +4194,7 @@ export type Database = {
       }
       examen_iniciar: { Args: { p_curso_id: string }; Returns: Json }
       examen_validar_banco: { Args: { p_curso_id: string }; Returns: Json }
+      folios_revision_corte: { Args: { p_ahora?: string }; Returns: string }
       get_user_org_id: { Args: never; Returns: string }
       has_role: {
         Args: {
