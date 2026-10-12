@@ -16,7 +16,8 @@ import {
   SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarHeader, useSidebar,
 } from "@/components/ui/sidebar";
 
-const STORAGE_KEY = "tracea_sidebar_open_group";
+/** Evento para abrir el grupo que contiene un ítem con cierto data-onboarding (tour). */
+export const EVENTO_ABRIR_GRUPO = "tracea:abrir-grupo-menu";
 
 const ROL_LABEL: Record<string, string> = {
   admin: "Administrador", responsable_sanitario: "Resp. Sanitario", comite_tecnico: "Comité Técnico",
@@ -50,9 +51,8 @@ export function AppSidebar() {
   const { sections, isAdminNav } = useNavigationItems();
   const mostrarBadgeFolios = useBadgeFolios();
 
-  const [openId, setOpenId] = useState<string | null>(
-    () => (typeof window !== "undefined" ? localStorage.getItem(STORAGE_KEY) : null),
-  );
+  // Solo se abre el grupo del módulo donde está la persona (en Inicio, ninguno).
+  const [openId, setOpenId] = useState<string | null>(null);
 
   // La ruta activa tiene prioridad absoluta sobre el estado persistido.
   const activeGroupId = useMemo(() => {
@@ -64,15 +64,23 @@ export function AppSidebar() {
   }, [sections, pathname]);
 
   useEffect(() => {
-    if (activeGroupId) setOpenId(activeGroupId);
+    setOpenId(activeGroupId);
   }, [activeGroupId]);
 
-  const setOpen = (id: string, open: boolean) => {
-    const next = open ? id : null;
-    setOpenId(next);
-    if (next) localStorage.setItem(STORAGE_KEY, next);
-    else localStorage.removeItem(STORAGE_KEY);
-  };
+  // Tour: abrir el grupo que contiene el elemento a resaltar.
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const clave = (e as CustomEvent<string>).detail;
+      for (const s of sections) {
+        const g = s.items.find((i) => i.children?.some((c) => c.onboarding === clave));
+        if (g) { setOpenId(g.id); return; }
+      }
+    };
+    window.addEventListener(EVENTO_ABRIR_GRUPO, handler);
+    return () => window.removeEventListener(EVENTO_ABRIR_GRUPO, handler);
+  }, [sections]);
+
+  const setOpen = (id: string, open: boolean) => setOpenId(open ? id : null);
 
   const orgLogo = !isAdminNav ? getOrgLogoUrl(org?.logo_url) : null;
 
@@ -135,14 +143,11 @@ export function AppSidebar() {
       <SidebarContent>
         {sections.map(({ section, items }) => (
           <SidebarGroup key={section}>
-            <SidebarGroupLabel
-              className={cn(
-                "text-[10px] uppercase tracking-widest",
-                section === "nucleo" ? "text-sidebar-primary/70" : "text-sidebar-foreground/50",
-              )}
-            >
-              {!collapsed && SECTION_LABELS[section]}
-            </SidebarGroupLabel>
+            {SECTION_LABELS[section] && (
+              <SidebarGroupLabel className={cn("text-[10px] uppercase tracking-widest text-sidebar-foreground/50")}>
+                {!collapsed && SECTION_LABELS[section]}
+              </SidebarGroupLabel>
+            )}
             <SidebarGroupContent>
               <SidebarMenu>
                 {items.map((item) =>
