@@ -17,7 +17,8 @@
  */
 import { riesgosModule } from "./riesgos/module";
 import { cerebroModule } from "./cerebro/module";
-import type { ModuloDef } from "./tipos";
+import Recursos from "@/pages/Recursos";
+import type { ModuloDef, ModuloRuta } from "./tipos";
 
 export type { ModuloDef } from "./tipos";
 
@@ -30,3 +31,11 @@ export function ordenarModulos(ordenDb?: Record<string, number> | null): ModuloD
 }
 
 export const modulos: ModuloDef[] = ordenarModulos();
+
+/**
+ * Páginas de plataforma que usan varios módulos (no pertenecen a uno solo).
+ * Abren si la empresa tiene al menos un módulo registrado activo.
+ * En el menú aparecen como ítems de los módulos que las usan, apuntando a la misma ruta.
+ */
+export const rutasPlataforma: ModuloRuta[] = [{ path: "/recursos", Component: Recursos }];
+export const clavesModulos: string[] = modulosRegistrados.map((m) => m.clave);
