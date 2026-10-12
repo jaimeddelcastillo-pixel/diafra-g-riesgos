@@ -1,6 +1,5 @@
 import { useMemo } from "react";
 import { useAuth } from "@/hooks/useAuth";
-import { useCerebroAcceso } from "@/hooks/useCerebroAcceso";
 import { useMisModulos } from "@/hooks/useMisModulos";
 import { ordenarModulos } from "@/modules";
 import {
@@ -59,16 +58,15 @@ export function useNavigationItems(): {
   loading: boolean;
 } {
   const { org, roles, isSuperAdmin, isImpersonating } = useAuth();
-  const { tieneCerebro, loading } = useCerebroAcceso();
 
   // Catálogo con orden (modulos.orden) y acceso de la empresa activa.
-  const { data: catalogo } = useMisModulos();
+  const { data: catalogo, isLoading: loading } = useMisModulos();
   const ordenDb = useMemo(
     () => (catalogo ? Object.fromEntries(catalogo.map((m) => [m.clave, m.orden ?? 999])) : undefined),
     [catalogo],
   );
   const accesos = useMemo(
-    () => Object.fromEntries((catalogo ?? []).map((m) => [m.clave, m.tiene_acceso])),
+    () => Object.fromEntries((catalogo ?? []).map((m) => [m.clave, m.estado === "activo" && m.tiene_acceso])),
     [catalogo],
   );
 
@@ -78,13 +76,12 @@ export function useNavigationItems(): {
   const ctx: NavContext = useMemo(
     () => ({
       plan: org?.plan ?? null,
-      roles: roles as string[],
-      isSuperAdmin: superAdmin,
-      // Mapa de features: ampliable sin tocar la lógica de filtrado.
-      // riesgos mientras carga el catálogo: true (todas las empresas activas lo tienen; evita parpadeo).
-      features: { riesgos: true, ...accesos, institutional_brain: tieneCerebro },
+      // Support presents the supported company's admin UX, not the global bypass.
+      roles: isImpersonating ? ["admin"] : roles as string[],
+      isSuperAdmin: superAdmin && !isImpersonating,
+      features: accesos,
     }),
-    [org?.plan, roles, superAdmin, tieneCerebro, accesos],
+    [org?.plan, roles, superAdmin, isImpersonating, accesos],
   );
 
   const sections = useMemo(() => {
