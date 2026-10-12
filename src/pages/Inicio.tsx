@@ -38,7 +38,7 @@ export default function Inicio() {
   const registrados = ordenarModulos(ordenDb);
   const contratados = registrados.filter((m) => acceso.has(m.clave));
   const disponibles = (catalogo ?? []).filter((m) => !m.tiene_acceso);
-  const nombre = profile?.nombre?.split(" ")[0] ?? "";
+  const nombre = profile?.nombre?.trim() ?? "";
 
   return (
     <div className="space-y-8 max-w-6xl">
