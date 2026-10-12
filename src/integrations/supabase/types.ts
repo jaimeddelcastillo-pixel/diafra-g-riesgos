@@ -4205,6 +4205,17 @@ export type Database = {
       is_super_admin: { Args: never; Returns: boolean }
       mi_org_tiene_modulo: { Args: { _modulo: string }; Returns: boolean }
       mi_plan_limite: { Args: { p_clave: string }; Returns: Json }
+      mis_modulos: {
+        Args: never
+        Returns: {
+          clave: string
+          descripcion: string
+          estado: string
+          nombre: string
+          orden: number
+          tiene_acceso: boolean
+        }[]
+      }
       mis_organizaciones: {
         Args: never
         Returns: {
@@ -4243,6 +4254,8 @@ export type Database = {
         Args: { _modulo: string; _org: string }
         Returns: boolean
       }
+      pendientes_cerebro: { Args: never; Returns: Json }
+      pendientes_riesgos: { Args: never; Returns: Json }
       plan_limite: { Args: { p_clave: string; p_org: string }; Returns: Json }
       puede_editar_catalogo_documentos: { Args: never; Returns: boolean }
       purgar_documentos_eliminados: { Args: never; Returns: number }
