@@ -16,6 +16,19 @@ const mocks = vi.hoisted(() => ({
 vi.mock("@/hooks/useAuth", () => ({ useAuth: () => mocks.auth }));
 vi.mock("@/hooks/useMisModulos", () => ({ useMisModulos: () => ({ data: mocks.catalogo, isLoading: false }) }));
 vi.mock("@/integrations/supabase/client", () => ({ supabase: { rpc: mocks.rpc } }));
+// Navigation fixtures avoid loading PDF/document pages in the DOM test runtime.
+vi.mock("@/modules", () => {
+  const registry = [
+    { menu: { id: "riesgos", label: "Gestión de Riesgos", section: "modulos", feature: "riesgos", children: [
+      { id: "cumplimiento", label: "Cumplimiento", section: "modulos", roles: ["admin", "responsable_sanitario"] },
+      { id: "recursos", label: "Recursos", section: "modulos", route: "/recursos" },
+    ] } },
+    { menu: { id: "cerebro", label: "Cerebro Institucional", section: "modulos", feature: "institutional_brain", children: [
+      { id: "cerebro-recursos", label: "Recursos", section: "modulos", route: "/recursos", soloSinModulo: "riesgos" },
+    ] } },
+  ];
+  return { modulos: registry, ordenarModulos: () => registry };
+});
 
 const definition = (clave: string, nombre: string, path: string, children: ModuloDef["menu"]["children"]): ModuloDef => ({
   clave, nombre, descripcion: "", icono: Brain, rutaInicio: path, mensajeNoContratado: "", ordenPorDefecto: 10,
