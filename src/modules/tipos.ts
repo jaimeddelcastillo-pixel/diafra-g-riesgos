@@ -21,6 +21,10 @@ export interface PendientesContexto {
 
 export interface ModuloTarjetaProps {
   modulo: ModuloDef;
+  pendientes?: ModuloPendiente[];
+  cargando?: boolean;
+  /** La consulta de pendientes falló: la tarjeta muestra "No disponible". */
+  error?: boolean;
 }
 
 export interface ModuloDef {
