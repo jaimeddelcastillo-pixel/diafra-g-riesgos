@@ -74,7 +74,6 @@ const App = () => (
               <Route path="/capacitacion" element={<Capacitacion />} />
               <Route path="/capacitacion/:cursoId/examen" element={<ExamenFinal />} />
               <Route path="/mis-diplomas" element={<MisDiplomas />} />
-              <Route path="/cumplimiento" element={<Cumplimiento />} />
               <Route path="/configuracion" element={<Configuracion />} />
               <Route path="/admin" element={<Admin />} />
               <Route path="/admin/org/:id" element={<AdminOrg />} />
@@ -89,7 +88,6 @@ const App = () => (
               <Route path="/admin/folios" element={<AdminFolios />} />
               <Route path="/admin/folios-cancelados" element={<AdminFoliosCancelados />} />
               <Route path="/admin/super/reeditar-codigos" element={<AdminReeditarCodigos />} />
-              <Route path="/mis-protocolos" element={<MisProtocolos />} />
               <Route path="/soporte" element={<Soporte />} />
               <Route path="/soporte/:id" element={<Soporte />} />
             </Route>
