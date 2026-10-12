@@ -1,8 +1,8 @@
 # Roadmap
 
-- [ ] P1b.1 Redirigir super_admin fuera de soporte en rutas de módulos
-- [ ] P1b.1 Encabezado contextual desde el registro y menú de soporte con acceso empresarial
-- [ ] P1b.1 Alinear revisión vencida con check-folios-revision; reversión y pruebas QA
+- [x] P1b.1 Redirigir super_admin fuera de soporte en rutas de módulos (7 rutas comprobadas)
+- [x] P1b.1 Encabezado contextual desde el registro y menú de soporte con acceso empresarial (QA Starter y adminqa)
+- [x] P1b.1 Alinear revisión vencida con check-folios-revision; reversión p1b1_down.sql (archivo previo protegido), 29 pruebas
 
 - [x] C6a.1 Catálogo de tipos, Recursos (clasificación, huella en servidor)
 - [x] C6a.2 Retención, enlace sugerido, Sin registro oficial, vigencia
