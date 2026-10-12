@@ -30,6 +30,7 @@ export interface OrgInfo {
   curso_expira_en?: string | null;
   dc3_emitidos?: number | null;
   dc3_adicionales_disponibles?: number | null;
+  subscription_status?: string | null;
 }
 
 interface AuthContextType {
