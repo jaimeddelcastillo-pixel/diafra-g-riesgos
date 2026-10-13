@@ -24,7 +24,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { TRIAL_DOWNLOAD_TOOLTIP } from "@/lib/trialRestrictions";
 import { useNavigate } from "react-router-dom";
-import { useCurso, type CursoDB, type LeccionDB } from "@/hooks/useCurso";
+import { useCurso, type AccesoCurso, type CursoDB, type LeccionDB } from "@/hooks/useCurso";
 import { descargarArchivoStorage } from "@/lib/descargarArchivo";
 
 type Guia = {
@@ -744,7 +744,7 @@ export default function Capacitacion() {
           )}
         </div>
 
-        {tieneCurso && cursoExpira && (
+        {tieneCurso && cursoExpira && new Date(cursoExpira) > new Date() && (
           <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/40 rounded-md px-3 py-2">
             <CalendarClock className="h-4 w-4" />
             <span>
