@@ -1,5 +1,8 @@
 # Roadmap
 
+- [ ] P1c Preparar capacitación por módulo sin cambiar derechos comerciales ni progreso existente
+- [ ] Posterior a P1c (no corregir ahora): revisión vencida debe contar desde cierre o última revisión periódica registrada, no updated_at; identificar campos actuales
+
 - [x] P1b.1 Redirigir super_admin fuera de soporte en rutas de módulos (7 rutas comprobadas)
 - [x] P1b.1 Encabezado contextual desde el registro y menú de soporte con acceso empresarial (QA Starter y adminqa)
 - [x] P1b.1 Alinear revisión vencida con check-folios-revision; reversión p1b1_down.sql (archivo previo protegido), 29 pruebas
