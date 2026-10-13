@@ -4166,6 +4166,12 @@ export type Database = {
           user_id: string
         }[]
       }
+      cursos_ids_modulo: {
+        Args: { p_modulo: string }
+        Returns: {
+          id: string
+        }[]
+      }
       delete_email: {
         Args: { message_id: number; queue_name: string }
         Returns: boolean
