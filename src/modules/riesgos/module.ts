@@ -9,6 +9,9 @@ import Catalogos from "@/pages/Catalogos";
 import MisProtocolos from "@/pages/MisProtocolos";
 import Cumplimiento from "@/pages/Cumplimiento";
 import Auditoria from "@/pages/Auditoria";
+import Capacitacion from "@/pages/Capacitacion";
+import ExamenFinal from "@/pages/ExamenFinal";
+import MisDiplomas from "@/pages/MisDiplomas";
 import { supabase } from "@/integrations/supabase/client";
 import { ModuloTarjeta } from "../ModuloTarjeta";
 import type { ModuloDef, ModuloPendiente } from "../tipos";
@@ -55,6 +58,9 @@ export const riesgosModule: ModuloDef = {
     { path: "/mis-protocolos", Component: MisProtocolos },
     { path: "/cumplimiento", Component: Cumplimiento },
     { path: "/auditoria", Component: Auditoria },
+    { path: "/capacitacion", Component: Capacitacion },
+    { path: "/capacitacion/:cursoId/examen", Component: ExamenFinal },
+    { path: "/mis-diplomas", Component: MisDiplomas },
   ],
   obtenerPendientes: async ({ org }) => {
     const { data, error } = await supabase.rpc("pendientes_riesgos" as any);

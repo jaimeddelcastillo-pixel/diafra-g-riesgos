@@ -44,16 +44,32 @@ export default function MisDiplomas() {
       setLoading(false);
       return;
     }
+    // Identifiers only: expired course access must not hide historical diplomas.
+    const { data: cursosModulo, error: moduloError } = await supabase.rpc("cursos_ids_modulo", { p_modulo: "riesgos" });
+    if (moduloError) {
+      toast.error("No se pudieron cargar tus diplomas");
+      setLoading(false);
+      return;
+    }
+    const cursoIdsModulo = (cursosModulo ?? []).map((c) => c.id);
+    if (cursoIdsModulo.length === 0) {
+      setDiplomas([]);
+      setPendientes([]);
+      setLoading(false);
+      return;
+    }
     const [dipRes, intRes] = await Promise.all([
       supabase
         .from("curso_diplomas")
         .select("id, folio, curso_titulo, curso_norma, fecha_emision, calificacion, hash_verificacion, pdf_path, curso_id, intento_id")
         .eq("user_id", user.id)
+        .in("curso_id", cursoIdsModulo)
         .order("fecha_emision", { ascending: false }),
       supabase
         .from("curso_examen_intentos")
         .select("id, curso_id, calificacion, finished_at")
         .eq("user_id", user.id)
+        .in("curso_id", cursoIdsModulo)
         .eq("aprobado", true)
         .order("finished_at", { ascending: false }),
     ]);
