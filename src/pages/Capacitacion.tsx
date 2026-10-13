@@ -22,7 +22,7 @@ import {
   DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { useIsTrial, TRIAL_DOWNLOAD_TOOLTIP } from "@/lib/trialRestrictions";
+import { TRIAL_DOWNLOAD_TOOLTIP } from "@/lib/trialRestrictions";
 import { useNavigate } from "react-router-dom";
 import { useCurso, type CursoDB, type LeccionDB } from "@/hooks/useCurso";
 import { descargarArchivoStorage } from "@/lib/descargarArchivo";
@@ -204,23 +204,11 @@ export default function Capacitacion() {
   const { org, orgRole } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const isTrial = useIsTrial();
   const [progreso, setProgreso] = useState<Record<string, boolean>>({});
   const [loadingCheckout, setLoadingCheckout] = useState(false);
   const [dc3DialogOpen, setDc3DialogOpen] = useState(false);
   const [dc3Qty, setDc3Qty] = useState(1);
 
-  const planLower = org?.plan?.toLowerCase() ?? "";
-  const subStatus = ((org as any)?.subscription_status as string | null | undefined)?.toLowerCase() ?? "";
-  // Planes de pago: acceso siempre disponible al curso, sin importar el subscription_status
-  // (los flujos de cobro/cancelación se manejan en otras pantallas; aquí no bloqueamos capacitación).
-  const PLANES_PAGADOS = ["starter", "professional", "enterprise"];
-  // Trial: acceso parcial (Introducción + Módulo 1) gestionado más abajo con `isTrial` / `bloqueadoTrial`.
-  const SUB_STATUS_TRIAL_OK = ["", "active", "trialing", "trial", "past_due"];
-  const planActivo =
-    PLANES_PAGADOS.includes(planLower) ||
-    (planLower === "trial" && SUB_STATUS_TRIAL_OK.includes(subStatus));
-  const tieneCurso = planActivo || (org as any)?.tiene_curso_pagado === true;
   const cursoExpira = (org as any)?.curso_expira_en as string | null | undefined;
   const dc3Emitidos = ((org as any)?.dc3_emitidos as number | null | undefined) ?? 0;
   const dc3Saldo =
@@ -232,8 +220,13 @@ export default function Capacitacion() {
   const showMed = norma === "NOM-059" || norma === "MULTI" || !norma;
   const isMulti = norma === "MULTI" || !norma;
 
-  const { curso: cursoDM, loading: loadingDM } = useCurso(showDM ? "NOM-241" : null);
-  const { curso: cursoMed, loading: loadingMed } = useCurso(showMed ? "NOM-059" : null);
+  const { curso: cursoDM, acceso: accesoDM, loading: loadingDM } = useCurso(showDM ? "NOM-241" : null);
+  const { curso: cursoMed, acceso: accesoMed, loading: loadingMed } = useCurso(showMed ? "NOM-059" : null);
+  // P1c.1: la pantalla solo usa mi_acceso_curso (vía useCurso); nada de plan ni tiene_curso_pagado.
+  const accesos = [showDM ? accesoDM : null, showMed ? accesoMed : null].filter(Boolean);
+  const tieneCurso = accesos.includes("completo");
+  // Sin acceso completo: descargas restringidas y examen bloqueado.
+  const isTrial = !tieneCurso;
 
   const guiasDM = GUIAS.filter((g) => g.norma === "NOM-241");
   const guiasMed = GUIAS.filter((g) => g.norma === "NOM-059");
@@ -404,7 +397,7 @@ export default function Capacitacion() {
     }
   };
 
-  const renderCurso = (curso: CursoDB | null, loading: boolean, defaultOpen = false) => {
+  const renderCurso = (curso: CursoDB | null, acceso: AccesoCurso, loading: boolean, defaultOpen = false) => {
     if (loading) {
       return (
         <Card>
@@ -456,7 +449,7 @@ export default function Capacitacion() {
             className="w-full"
           >
             {curso.modulos.map((m, mIdx) => {
-              const bloqueadoTrial = isTrial && mIdx >= 2;
+              const bloqueadoTrial = acceso !== "completo" && mIdx >= 2;
               return (
               <AccordionItem key={m.id} value={m.id}>
                 <AccordionTrigger className="text-sm font-medium">
@@ -544,7 +537,7 @@ export default function Capacitacion() {
           </Accordion>
 
           {/* Evaluación final + diploma cuando se completaron todas las lecciones */}
-          {!isTrial && total > 0 && completadas === total && (
+          {acceso === "completo" && total > 0 && completadas === total && (
             <div className="mt-6 rounded-md border border-[hsl(var(--primary))] bg-[hsl(var(--primary))]/5 p-4 flex items-center justify-between gap-3">
               <div>
                 <p className="text-sm font-semibold flex items-center gap-2">
@@ -813,8 +806,8 @@ export default function Capacitacion() {
           </Card>
         ) : (
           <div className="space-y-4">
-            {showDM && renderCurso(cursoDM, loadingDM, true)}
-            {showMed && renderCurso(cursoMed, loadingMed, !showDM)}
+            {showDM && renderCurso(cursoDM, accesoDM, loadingDM, true)}
+            {showMed && renderCurso(cursoMed, accesoMed, loadingMed, !showDM)}
           </div>
         )}
       </section>
