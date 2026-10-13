@@ -227,6 +227,7 @@ export default function Capacitacion() {
   const tieneCurso = accesos.includes("completo");
   // Sin acceso completo: descargas restringidas y examen bloqueado.
   const isTrial = !tieneCurso;
+  const puedeVerCurso = accesos.some((a) => a !== "ninguno");
 
   const guiasDM = GUIAS.filter((g) => g.norma === "NOM-241");
   const guiasMed = GUIAS.filter((g) => g.norma === "NOM-059");
@@ -760,7 +761,7 @@ export default function Capacitacion() {
           </div>
         )}
 
-        {!tieneCurso ? (
+        {!puedeVerCurso && !loadingDM && !loadingMed ? (
           <Card className="border-2 border-dashed">
             <CardContent className="pt-6 text-center space-y-4">
               <div className="mx-auto h-12 w-12 rounded-full bg-[hsl(var(--primary))]/10 flex items-center justify-center">
