@@ -136,8 +136,13 @@ export default function ExamenFinal() {
         .from("cursos")
         .select("id, titulo, norma")
         .eq("id", cursoId)
+        .eq("modulo_clave", "riesgos")
         .single();
       setCurso(c as any);
+      if (!c) {
+        setLoading(false);
+        return;
+      }
 
       const { data: prev } = await supabase
         .from("curso_examen_intentos")

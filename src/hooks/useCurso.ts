@@ -33,7 +33,7 @@ export type CursoDB = {
   modulos: ModuloDB[];
 };
 
-export function useCurso(norma: "NOM-241" | "NOM-059" | null) {
+export function useCurso(norma: "NOM-241" | "NOM-059" | null, moduloClave = "riesgos") {
   const [curso, setCurso] = useState<CursoDB | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -50,6 +50,7 @@ export function useCurso(norma: "NOM-241" | "NOM-059" | null) {
         .from("cursos")
         .select("id, norma, titulo, descripcion, activo")
         .eq("norma", norma)
+        .eq("modulo_clave", moduloClave)
         .eq("activo", true)
         .maybeSingle();
       if (!c || cancelled) {
@@ -103,7 +104,7 @@ export function useCurso(norma: "NOM-241" | "NOM-059" | null) {
     return () => {
       cancelled = true;
     };
-  }, [norma]);
+  }, [norma, moduloClave]);
 
   return { curso, loading };
 }

@@ -5,11 +5,8 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/hooks/useAuth";
 import { AppLayout } from "@/components/AppLayout";
-import Capacitacion from "./pages/Capacitacion";
-import ExamenFinal from "./pages/ExamenFinal";
 import DiplomaVerificar from "./pages/DiplomaVerificar";
 import Confianza from "./pages/Confianza";
-import MisDiplomas from "./pages/MisDiplomas";
 import Configuracion from "./pages/Configuracion";
 import Admin from "./pages/Admin";
 import AdminOrg from "./pages/AdminOrg";
@@ -78,9 +75,6 @@ const App = () => (
                   ))}
                 </Route>
               ))}
-              <Route path="/capacitacion" element={<Capacitacion />} />
-              <Route path="/capacitacion/:cursoId/examen" element={<ExamenFinal />} />
-              <Route path="/mis-diplomas" element={<MisDiplomas />} />
               <Route path="/configuracion" element={<Configuracion />} />
               <Route path="/admin" element={<Admin />} />
               <Route path="/admin/org/:id" element={<AdminOrg />} />

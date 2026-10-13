@@ -183,6 +183,27 @@
       "when": 1791849148657,
       "tag": "0025_p1b1_revision_corte_compartido",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1791849846866,
+      "tag": "0026_p1c_cursos_por_modulo",
+      "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1791849870659,
+      "tag": "0027_p1c_identificadores_cursos_modulo",
+      "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1791849942597,
+      "tag": "0028_p1c_pendientes_cursos_riesgos",
+      "breakpoints": true
     }
   ]
 }

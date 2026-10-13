@@ -2397,6 +2397,7 @@ export type Database = {
           descripcion: string
           duracion_horas: number | null
           id: string
+          modulo_clave: string | null
           norma: string
           orden: number
           titulo: string
@@ -2408,6 +2409,7 @@ export type Database = {
           descripcion?: string
           duracion_horas?: number | null
           id?: string
+          modulo_clave?: string | null
           norma: string
           orden?: number
           titulo: string
@@ -2419,12 +2421,21 @@ export type Database = {
           descripcion?: string
           duracion_horas?: number | null
           id?: string
+          modulo_clave?: string | null
           norma?: string
           orden?: number
           titulo?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "cursos_modulo_clave_fkey"
+            columns: ["modulo_clave"]
+            isOneToOne: false
+            referencedRelation: "modulos"
+            referencedColumns: ["clave"]
+          },
+        ]
       }
       dc3_solicitudes: {
         Row: {
@@ -4153,6 +4164,12 @@ export type Database = {
           nombre: string
           rol: string
           user_id: string
+        }[]
+      }
+      cursos_ids_modulo: {
+        Args: { p_modulo: string }
+        Returns: {
+          id: string
         }[]
       }
       delete_email: {
