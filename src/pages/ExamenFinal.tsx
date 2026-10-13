@@ -8,7 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Award, ArrowLeft, RefreshCw, CheckCircle2, XCircle, Clock, Flag, Eye } from "lucide-react";
+import { Award, ArrowLeft, RefreshCw, CheckCircle2, XCircle, Clock, Flag, Eye, Lock } from "lucide-react";
+import { obtenerAccesoCurso, type AccesoCurso } from "@/hooks/useCurso";
 import SolicitarDC3Card from "@/components/SolicitarDC3Card";
 import {
   AlertDialog,
