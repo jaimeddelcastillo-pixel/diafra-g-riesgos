@@ -211,6 +211,13 @@
       "when": 1791850861236,
       "tag": "0029_p1c1_acceso_curso_unico",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1791850884419,
+      "tag": "0030_p1c1_examen_banco_acceso",
+      "breakpoints": true
     }
   ]
 }
