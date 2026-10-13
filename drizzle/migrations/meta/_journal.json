@@ -183,6 +183,13 @@
       "when": 1791849148657,
       "tag": "0025_p1b1_revision_corte_compartido",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1791849846866,
+      "tag": "0026_p1c_cursos_por_modulo",
+      "breakpoints": true
     }
   ]
 }
