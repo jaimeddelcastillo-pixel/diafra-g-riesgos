@@ -281,6 +281,18 @@ Deno.serve(async (req) => {
     if (!intento) return json({ error: "Intento no encontrado" }, 404);
     if (!intento.aprobado) return json({ error: "El intento no está aprobado" }, 400);
 
+    // P1c.1: emitir un diploma nuevo exige acceso completo (regla única mi_acceso_curso).
+    // Un diploma ya emitido siempre se conserva y se puede regenerar.
+    const { data: dipPrevio } = await admin
+      .from("curso_diplomas").select("id").eq("user_id", user.id).eq("curso_id", intento.curso_id).limit(1).maybeSingle();
+    if (!dipPrevio) {
+      const { data: acceso, error: accErr } = await userClient.rpc("mi_acceso_curso", { p_curso_id: intento.curso_id });
+      if (accErr) return json({ error: "No se pudo validar el acceso al curso" }, 500);
+      if (acceso !== "completo") {
+        return json({ error: "El diploma requiere acceso completo al curso" }, 403);
+      }
+    }
+
     // Idempotencia: dos lookups simples (evita parseo .or con and anidado).
     let yaExiste: any = null;
     {

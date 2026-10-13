@@ -8,7 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Award, ArrowLeft, RefreshCw, CheckCircle2, XCircle, Clock, Flag, Eye } from "lucide-react";
+import { Award, ArrowLeft, RefreshCw, CheckCircle2, XCircle, Clock, Flag, Eye, Lock } from "lucide-react";
+import { obtenerAccesoCurso, type AccesoCurso } from "@/hooks/useCurso";
 import SolicitarDC3Card from "@/components/SolicitarDC3Card";
 import {
   AlertDialog,
@@ -125,6 +126,7 @@ export default function ExamenFinal() {
       correcta: boolean;
     }>;
   } | null>(null);
+  const [acceso, setAcceso] = useState<AccesoCurso | null>(null);
   const [diplomaFolio, setDiplomaFolio] = useState<string | null>(null);
   const [diplomaId, setDiplomaId] = useState<string | null>(null);
   const [emitiendoDiploma, setEmitiendoDiploma] = useState(false);
@@ -140,6 +142,13 @@ export default function ExamenFinal() {
         .single();
       setCurso(c as any);
       if (!c) {
+        setLoading(false);
+        return;
+      }
+      // P1c.1: regla única de acceso; sin acceso completo el examen queda bloqueado.
+      const nivel = await obtenerAccesoCurso(cursoId);
+      setAcceso(nivel);
+      if (nivel !== "completo") {
         setLoading(false);
         return;
       }
@@ -322,6 +331,22 @@ export default function ExamenFinal() {
 
   if (loading) return <div className="p-6"><Skeleton className="h-64 w-full" /></div>;
   if (!curso) return <div className="p-6 text-center text-muted-foreground">Curso no encontrado</div>;
+  if (acceso !== "completo") {
+    return (
+      <div className="container max-w-2xl py-10">
+        <Card>
+          <CardContent className="py-10 text-center space-y-3">
+            <Lock className="h-8 w-8 mx-auto text-muted-foreground" />
+            <p className="font-medium">Evaluación bloqueada</p>
+            <p className="text-sm text-muted-foreground">
+              El examen y el diploma están disponibles con acceso completo al curso.
+            </p>
+            <Button variant="outline" onClick={() => navigate("/capacitacion")}>Volver a Capacitación</Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   const intentosRestantes = MAX_INTENTOS - numIntentoPrevio;
 

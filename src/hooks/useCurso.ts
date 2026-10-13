@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 export type LeccionTipo = "video" | "descarga" | "practica" | "evaluacion";
+/** Resultado de la regla única mi_acceso_curso (base de datos). */
+export type AccesoCurso = "completo" | "vista_previa" | "ninguno";
 
 export type LeccionDB = {
   id: string;
@@ -33,13 +35,22 @@ export type CursoDB = {
   modulos: ModuloDB[];
 };
 
+/** Lee el acceso del usuario a un curso desde la única regla de la base de datos. */
+export async function obtenerAccesoCurso(cursoId: string): Promise<AccesoCurso> {
+  const { data, error } = await (supabase as any).rpc("mi_acceso_curso", { p_curso_id: cursoId });
+  if (error) return "ninguno";
+  return data === "completo" || data === "vista_previa" ? data : "ninguno";
+}
+
 export function useCurso(norma: "NOM-241" | "NOM-059" | null, moduloClave = "riesgos") {
   const [curso, setCurso] = useState<CursoDB | null>(null);
+  const [acceso, setAcceso] = useState<AccesoCurso>("ninguno");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!norma) {
       setCurso(null);
+      setAcceso("ninguno");
       setLoading(false);
       return;
     }
@@ -56,10 +67,12 @@ export function useCurso(norma: "NOM-241" | "NOM-059" | null, moduloClave = "rie
       if (!c || cancelled) {
         if (!cancelled) {
           setCurso(null);
+          setAcceso("ninguno");
           setLoading(false);
         }
         return;
       }
+      const nivel = await obtenerAccesoCurso(c.id);
       const { data: mods } = await (supabase as any)
         .from("curso_modulos")
         .select("id, titulo, descripcion, orden, activo")
@@ -84,6 +97,7 @@ export function useCurso(norma: "NOM-241" | "NOM-059" | null, moduloClave = "rie
         arr.push(l as LeccionDB);
         byModulo.set(l.modulo_id, arr);
       });
+      setAcceso(nivel);
       setCurso({
         id: c.id,
         norma: c.norma,
@@ -106,5 +120,5 @@ export function useCurso(norma: "NOM-241" | "NOM-059" | null, moduloClave = "rie
     };
   }, [norma, moduloClave]);
 
-  return { curso, loading };
+  return { curso, acceso, loading };
 }

@@ -4021,6 +4021,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      acceso_curso_org: {
+        Args: { p_curso_id: string; p_org: string }
+        Returns: string
+      }
       archivar_version_folio: {
         Args: { p_folio_id: string; p_motivo?: string }
         Returns: string
@@ -4166,6 +4170,10 @@ export type Database = {
           user_id: string
         }[]
       }
+      curso_modulo_en_vista_previa: {
+        Args: { p_modulo_id: string }
+        Returns: boolean
+      }
       cursos_ids_modulo: {
         Args: { p_modulo: string }
         Returns: {
@@ -4210,6 +4218,10 @@ export type Database = {
         Returns: Json
       }
       examen_iniciar: { Args: { p_curso_id: string }; Returns: Json }
+      examen_validar_acceso: {
+        Args: { p_curso_id: string }
+        Returns: undefined
+      }
       examen_validar_banco: { Args: { p_curso_id: string }; Returns: Json }
       folios_revision_corte: { Args: { p_ahora?: string }; Returns: string }
       get_user_org_id: { Args: never; Returns: string }
@@ -4221,8 +4233,17 @@ export type Database = {
         Returns: boolean
       }
       is_super_admin: { Args: never; Returns: boolean }
+      mi_acceso_curso: { Args: { p_curso_id: string }; Returns: string }
       mi_org_tiene_modulo: { Args: { _modulo: string }; Returns: boolean }
       mi_plan_limite: { Args: { p_clave: string }; Returns: Json }
+      mis_cursos_certificados: {
+        Args: never
+        Returns: {
+          id: string
+          modulo_clave: string
+          titulo: string
+        }[]
+      }
       mis_modulos: {
         Args: never
         Returns: {

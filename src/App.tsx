@@ -37,6 +37,7 @@ import GuiaLanding from "./pages/GuiaLanding";
 import { ModuloGuard } from "./components/ModuloGuard";
 import { modulos, rutasPlataforma, clavesModulos } from "./modules";
 import Inicio from "./pages/Inicio";
+import MisDiplomas from "./pages/MisDiplomas";
 
 const queryClient = new QueryClient();
 
@@ -75,6 +76,8 @@ const App = () => (
                   ))}
                 </Route>
               ))}
+              {/* P1c.1: los diplomas y DC-3 de cada persona no dependen del módulo contratado. */}
+              <Route path="/mis-diplomas" element={<MisDiplomas />} />
               <Route path="/configuracion" element={<Configuracion />} />
               <Route path="/admin" element={<Admin />} />
               <Route path="/admin/org/:id" element={<AdminOrg />} />
