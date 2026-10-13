@@ -134,7 +134,7 @@ const badgeTone = (norma: "NOM-241" | "NOM-059"): "navy" | "orange" =>
   norma === "NOM-241" ? "navy" : "orange";
 
 // Acceso al curso completo (videos + evaluación + DC-3):
-// solo organizaciones que pagaron el curso explícitamente o que tienen plan Enterprise.
+// lo decide solo mi_acceso_curso en la base de datos (completo / vista_previa / ninguno).
 // Guías y PNOs siguen siendo accesibles para todos los planes.
 const CURSO_PRICE_ID = "price_1TQ7kVKfwzAg4OKvjU9mVaun";
 const DC3_EXTRA_PRICE_ID = "price_1TbRUHKfwzAg4OKvWE8uMR6y";
