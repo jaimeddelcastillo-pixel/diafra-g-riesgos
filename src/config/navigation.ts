@@ -51,7 +51,7 @@ const itemInicio: NavItem = { id: "inicio", label: "Inicio", icon: Home, route: 
 /** De la empresa, no de un módulo. */
 const navegacionEmpresa: NavItem[] = [
   { id: "configuracion", label: "Configuración", icon: Settings, route: "/configuracion", section: "empresa" },
-  { id: "soporte", label: "Ayuda", icon: LifeBuoy, route: "/soporte", section: "empresa", roles: ["admin", "responsable_sanitario"] },
+  { id: "soporte", label: "Ayuda", icon: LifeBuoy, route: "/soporte", section: "empresa", roles: ["admin", "responsable_sanitario"], onboarding: "ayuda" },
 ];
 
 /** Navegación de organización (usuarios de cliente e impersonación). */
