@@ -5,6 +5,7 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { resolverContextoOrg, ContextoOrgError } from "../_shared/contexto-org.ts";
+import { enviarYRegistrar } from "../_shared/transactional-email-templates/enviar-y-registrar.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -121,33 +122,22 @@ Deno.serve(async (req) => {
     const rolDB = (targetMember?.role as string) ?? "";
     const rolHumano = rolLabelMap[rolDB] ?? "";
 
-    // Disparar plantilla transaccional. Reenviamos el JWT del caller
-    // (super_admin/admin) para pasar verify_jwt del gateway.
-    const sendRes = await fetch(`${supabaseUrl}/functions/v1/send-transactional-email`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: authHeader,
-        apikey: anonKey,
+    const { error: sendErr } = await enviarYRegistrar({
+      templateName: "bienvenida-usuario",
+      recipientEmail,
+      idempotencyKey: `welcome-${target_user_id}-${Date.now()}`,
+      templateData: {
+        nombre: targetProfile?.nombre ?? "",
+        organizacion: orgNombre ?? "",
+        rol: rolHumano,
+        setupUrl,
+        loginUrl: `${APP_URL}/login`,
       },
-      body: JSON.stringify({
-        templateName: "bienvenida-usuario",
-        recipientEmail,
-        idempotencyKey: `welcome-${target_user_id}-${Date.now()}`,
-        templateData: {
-          nombre: targetProfile?.nombre ?? "",
-          organizacion: orgNombre ?? "",
-          rol: rolHumano,
-          setupUrl,
-          loginUrl: `${APP_URL}/login`,
-        },
-      }),
     });
 
-    if (!sendRes.ok) {
-      const errTxt = await sendRes.text();
-      console.error("send-transactional-email failed:", sendRes.status, errTxt);
-      return json({ error: "Error enviando correo", detail: errTxt }, 502);
+    if (sendErr) {
+      console.error("bienvenida-usuario send failed:", sendErr.message);
+      return json({ error: "Error enviando correo", detail: sendErr.message }, 502);
     }
 
     return json({
