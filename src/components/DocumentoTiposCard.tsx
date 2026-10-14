@@ -172,6 +172,20 @@ export function DocumentoTiposCard() {
           </div>
         </div>
 
+        <div className="flex flex-wrap items-center gap-3 rounded-md border p-3">
+          <div className="flex-1 min-w-[14rem] text-xs text-muted-foreground">
+            {revision?.en
+              ? <span className="text-foreground">Revisado por {revision.por ?? "—"} el {new Date(revision.en).toLocaleDateString("es-MX")}</span>
+              : "El catálogo aún no se ha confirmado."}
+            <div>Al confirmar, das por revisados a la vez los tipos activos y la posición del tipo en el código.</div>
+          </div>
+          {puedeConfirmar && (
+            <Button size="sm" className="gap-1" disabled={ocupado} onClick={confirmarRevision}>
+              <CheckCircle2 className="h-3.5 w-3.5" /> Confirmar catálogo revisado
+            </Button>
+          )}
+        </div>
+
         {cargando ? <p className="text-sm text-muted-foreground">Cargando…</p> : (
           <div className="overflow-x-auto">
             <Table>

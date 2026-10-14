@@ -8,6 +8,7 @@ import { AppLayout } from "@/components/AppLayout";
 import DiplomaVerificar from "./pages/DiplomaVerificar";
 import Confianza from "./pages/Confianza";
 import Configuracion from "./pages/Configuracion";
+import ConfiguracionAsistente from "./pages/ConfiguracionAsistente";
 import Admin from "./pages/Admin";
 import AdminOrg from "./pages/AdminOrg";
 import AdminTickets from "./pages/AdminTickets";
@@ -77,6 +78,7 @@ const App = () => (
               {/* P1c.1: los diplomas y DC-3 de cada persona no dependen del módulo contratado. */}
               <Route path="/mis-diplomas" element={<MisDiplomas />} />
               <Route path="/configuracion" element={<Configuracion />} />
+              <Route path="/configuracion/asistente" element={<ConfiguracionAsistente />} />
               <Route path="/admin" element={<Admin />} />
               <Route path="/admin/org/:id" element={<AdminOrg />} />
               <Route path="/admin/tickets" element={<AdminTickets />} />
