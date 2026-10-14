@@ -1,90 +1,38 @@
 /// <reference types="npm:@types/react@18.3.1" />
-
 import * as React from 'npm:react@18.3.1'
+import { Button, Heading, Hr, Section, Text } from 'npm:@react-email/components@0.0.22'
+import { TraceaShell, h1, text, smallText, linkFallback, button, hrStyle } from './_tracea-shell.tsx'
 
-import {
-  Body,
-  Button,
-  Container,
-  Head,
-  Heading,
-  Html,
-  Link,
-  Preview,
-  Text,
-} from 'npm:@react-email/components@0.0.22'
-
-interface InviteEmailProps {
-  siteName: string
-  siteUrl: string
-  confirmationUrl: string
+interface Props {
+  siteName?: string
+  siteUrl?: string
+  confirmationUrl?: string
 }
 
-export const InviteEmail = ({
-  siteName,
-  siteUrl,
-  confirmationUrl,
-}: InviteEmailProps) => (
-  <Html lang="en" dir="ltr">
-    <Head>
-      <style>{darkModeCss}</style>
-    </Head>
-    <Preview>You've been invited to join {siteName}</Preview>
-    <Body style={main}>
-      <Container style={container}>
-        <Heading style={h1}>You've been invited</Heading>
-        <Text style={text}>
-          You've been invited to join{' '}
-          <Link href={siteUrl} style={link}>
-            <strong>{siteName}</strong>
-          </Link>
-          . Click the button below to accept the invitation and create your
-          account.
-        </Text>
-        <Button className="dm-btn" style={button} href={confirmationUrl}>
-          Accept Invitation
-        </Button>
-        <Text style={footer}>
-          If you weren't expecting this invitation, you can safely ignore this
-          email.
-        </Text>
-      </Container>
-    </Body>
-  </Html>
+export const InviteEmail: React.FC<Props> = ({ confirmationUrl = '#' }) => (
+  <TraceaShell preview="Te invitaron a colaborar en TRACEA">
+    <Heading style={h1}>Te invitaron a TRACEA</Heading>
+    <Text style={text}>
+      Has sido invitado(a) a colaborar en <strong>TRACEA</strong>, la plataforma de gestión de
+      calidad y riesgos para industrias reguladas por COFEPRIS (NOM-241, NOM-059, ISO 14971).
+    </Text>
+    <Text style={text}>
+      Acepta la invitación y crea tu contraseña para empezar a participar en los flujos de tu
+      organización (matriz de riesgos, firmas, dictámenes, evidencias).
+    </Text>
+
+    <Section style={{ textAlign: 'center', margin: '32px 0' }}>
+      <Button href={confirmationUrl} style={button}>Aceptar invitación</Button>
+    </Section>
+
+    <Text style={smallText}>Si el botón no funciona, copia y pega este enlace en tu navegador:</Text>
+    <Text style={linkFallback}>{confirmationUrl}</Text>
+
+    <Hr style={hrStyle} />
+    <Text style={smallText}>
+      Si no esperabas esta invitación puedes ignorar este correo.
+    </Text>
+  </TraceaShell>
 )
 
 export default InviteEmail
-
-const main = { backgroundColor: '#ffffff', fontFamily: 'Arial, sans-serif' }
-const container = { padding: '20px 25px' }
-const h1 = {
-  fontSize: '22px',
-  fontWeight: 'bold' as const,
-  color: '#000000',
-  margin: '0 0 20px',
-}
-const text = {
-  fontSize: '14px',
-  color: '#55575d',
-  lineHeight: '1.5',
-  margin: '0 0 25px',
-}
-const link = { color: 'inherit', textDecoration: 'underline' }
-const button = {
-  backgroundColor: '#000000',
-  color: '#ffffff',
-  fontSize: '14px',
-  border: '1px solid #000000',
-  borderRadius: '8px',
-  padding: '12px 20px',
-  textDecoration: 'none',
-}
-const footer = { fontSize: '12px', color: '#999999', margin: '30px 0 0' }
-// Rendered as a text child, which React may HTML-escape: keep this CSS free of >, &, and quotes.
-const darkModeCss = `
-  @media (prefers-color-scheme: dark) {
-    .dm-btn { background-color: #ffffff !important; color: #000000 !important; }
-  }
-  [data-ogsc] .dm-btn { background-color: #ffffff !important; color: #000000 !important; }
-  [data-ogsb] .dm-btn { background-color: #ffffff !important; color: #000000 !important; }
-`
