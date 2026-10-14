@@ -9,7 +9,8 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { FileStack, Plus, Pencil, Trash2, RotateCcw, RefreshCw, Loader2 } from "lucide-react";
+import { FileStack, Plus, Pencil, Trash2, RotateCcw, RefreshCw, Loader2, CheckCircle2 } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 interface Tipo {
@@ -29,7 +30,10 @@ const lista = (s: string) => s.split(",").map((x) => x.trim()).filter(Boolean);
 export function DocumentoTiposCard() {
   const { orgId, orgRole } = useAuth();
   const puede = orgRole === "admin" || orgRole === "responsable_sanitario" || orgRole === "super_admin";
+  const puedeConfirmar = orgRole === "admin" || orgRole === "responsable_sanitario";
   const sb = supabase as any;
+  const qc = useQueryClient();
+  const [revision, setRevision] = useState<{ en: string; por: string | null } | null>(null);
   const [tipos, setTipos] = useState<Tipo[]>([]);
   const [uso, setUso] = useState<Record<string, number>>({});
   const [posicion, setPosicion] = useState(1);
@@ -44,14 +48,29 @@ export function DocumentoTiposCard() {
     const [{ data: t }, { data: u }, { data: c }] = await Promise.all([
       sb.from("documento_tipos").select("*").eq("org_id", orgId).order("orden").order("clave"),
       sb.rpc("documento_tipos_uso"),
-      sb.from("documento_tipos_config").select("posicion_tipo_en_codigo").eq("org_id", orgId).maybeSingle(),
+      sb.from("documento_tipos_config").select("posicion_tipo_en_codigo, revisado_por, revisado_en").eq("org_id", orgId).maybeSingle(),
     ]);
     setTipos((t ?? []) as Tipo[]);
     const m: Record<string, number> = {};
     for (const r of (u ?? []) as any[]) m[r.clave] = Number(r.documentos) + Number(r.archivos);
     setUso(m);
     setPosicion(c?.posicion_tipo_en_codigo ?? 1);
+    if (c?.revisado_en) {
+      const { data: n } = await sb.rpc("nombres_personas", { _ids: [c.revisado_por] });
+      setRevision({ en: c.revisado_en, por: n?.[0]?.nombre ?? null });
+    } else setRevision(null);
     setCargando(false);
+  };
+
+  const confirmarRevision = async () => {
+    if (!window.confirm("Confirmas que revisaste los tipos activos y la posición del tipo en el código. ¿Continuar?")) return;
+    setOcupado(true);
+    const { error } = await sb.rpc("confirmar_catalogo_documentos");
+    setOcupado(false);
+    if (error) return toast.error(error.message);
+    toast.success("Catálogo confirmado como revisado.");
+    qc.invalidateQueries({ queryKey: ["pendientes-configuracion"] });
+    cargar();
   };
 
   useEffect(() => { cargar(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [orgId]);
@@ -170,6 +189,20 @@ export function DocumentoTiposCard() {
               {ocupado ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />} Reclasificar documentos
             </Button>
           </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3 rounded-md border p-3">
+          <div className="flex-1 min-w-[14rem] text-xs text-muted-foreground">
+            {revision?.en
+              ? <span className="text-foreground">Revisado por {revision.por ?? "—"} el {new Date(revision.en).toLocaleDateString("es-MX")}</span>
+              : "El catálogo aún no se ha confirmado."}
+            <div>Al confirmar, das por revisados a la vez los tipos activos y la posición del tipo en el código.</div>
+          </div>
+          {puedeConfirmar && (
+            <Button size="sm" className="gap-1" disabled={ocupado} onClick={confirmarRevision}>
+              <CheckCircle2 className="h-3.5 w-3.5" /> Confirmar catálogo revisado
+            </Button>
+          )}
         </div>
 
         {cargando ? <p className="text-sm text-muted-foreground">Cargando…</p> : (

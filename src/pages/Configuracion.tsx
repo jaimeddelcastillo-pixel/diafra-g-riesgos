@@ -18,6 +18,9 @@ import { OrgFolioCodigoCard } from "@/components/OrgFolioCodigoCard";
 import { OrgTiposFolioCard } from "@/components/OrgTiposFolioCard";
 import { DocumentoTiposCard } from "@/components/DocumentoTiposCard";
 import { PlanSubscriptionCard } from "@/components/PlanSubscriptionCard";
+import { DatosFiscalesCard } from "@/components/DatosFiscalesCard";
+import { Link, useLocation } from "react-router-dom";
+import { ListChecks } from "lucide-react";
 import type { Database } from "@/integrations/supabase/types";
 
 type AppRole = Database["public"]["Enums"]["app_role"];
@@ -187,6 +190,12 @@ export default function Configuracion() {
   const puedeDesactivar = orgRole === "admin" || orgRole === "responsable_sanitario";
   const [desactivarTarget, setDesactivarTarget] = useState<{ id: string; nombre: string; email: string } | null>(null);
   const isAdmin = hasRole("admin") || hasRole("responsable_sanitario") || isSuperAdmin();
+  const { hash } = useLocation();
+  useEffect(() => {
+    if (!hash) return;
+    const t = setTimeout(() => document.getElementById(hash.slice(1))?.scrollIntoView({ behavior: "smooth", block: "start" }), 400);
+    return () => clearTimeout(t);
+  }, [hash]);
   const queryClient = useQueryClient();
 
   const [editUser, setEditUser] = useState<OrgUser | null>(null);
@@ -379,6 +388,11 @@ export default function Configuracion() {
           <p className="text-sm text-muted-foreground">Gestión de usuarios y roles de la organización</p>
         </div>
         <div className="flex gap-2">
+          {(orgRole === "admin" || orgRole === "responsable_sanitario" || isSuperAdmin()) && (
+            <Button asChild variant="outline" className="gap-2">
+              <Link to="/configuracion/asistente"><ListChecks className="h-4 w-4" /> Asistente de configuración</Link>
+            </Button>
+          )}
           <Button variant="outline" onClick={() => setPwDialogOpen(true)} className="gap-2">
             <Lock className="h-4 w-4" /> Mi Contraseña
           </Button>
@@ -390,7 +404,7 @@ export default function Configuracion() {
         </div>
       </div>
 
-      <Card>
+      <Card id="usuarios" className="scroll-mt-20">
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
             <Users className="h-4 w-4" /> Usuarios de la Organización
@@ -483,14 +497,16 @@ export default function Configuracion() {
 
       {isAdmin && <PlanSubscriptionCard />}
 
-      <OrgLogoCard />
+      <div id="datos-fiscales" className="scroll-mt-20"><DatosFiscalesCard /></div>
 
-      <OrgFormatoCard />
+      <div id="logo" className="scroll-mt-20"><OrgLogoCard /></div>
+
+      <div id="formato" className="scroll-mt-20"><OrgFormatoCard /></div>
 
       <OrgFolioCodigoCard />
 
       <OrgTiposFolioCard />
-      <DocumentoTiposCard />
+      <div id="tipos-documento" className="scroll-mt-20"><DocumentoTiposCard /></div>
 
       {/* Edit User Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>

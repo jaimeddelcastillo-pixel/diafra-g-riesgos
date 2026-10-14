@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/useAuth";
 import { useMisModulos } from "@/hooks/useMisModulos";
 import { ordenarModulos, type ModuloDef } from "@/modules";
+import { TarjetaConfiguracionInicio } from "@/components/TarjetaConfiguracionInicio";
 
 const ROL_LABEL: Record<string, string> = {
   admin: "Administrador", responsable_sanitario: "Responsable Sanitario", comite_tecnico: "Comité Técnico",
@@ -49,6 +50,8 @@ export default function Inicio() {
           {orgRole && <> · {ROL_LABEL[orgRole] ?? orgRole}</>}
         </p>
       </header>
+
+      <TarjetaConfiguracionInicio />
 
       {isLoading || loading ? (
         <div className="grid gap-4 md:grid-cols-2">

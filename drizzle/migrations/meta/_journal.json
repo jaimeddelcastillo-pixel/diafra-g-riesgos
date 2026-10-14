@@ -239,6 +239,20 @@
       "when": 1791998887796,
       "tag": "0033_p2_onboarding_estado",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1792010825705,
+      "tag": "0034_p3_asistente_configuracion",
+      "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1792010850080,
+      "tag": "0035_p3_guard_catalogo",
+      "breakpoints": true
     }
   ]
 }

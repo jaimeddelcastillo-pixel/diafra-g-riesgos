@@ -2603,18 +2603,24 @@ export type Database = {
           id: string
           org_id: string
           posicion_tipo_en_codigo: number
+          revisado_en: string | null
+          revisado_por: string | null
           updated_at: string
         }
         Insert: {
           id?: string
           org_id: string
           posicion_tipo_en_codigo?: number
+          revisado_en?: string | null
+          revisado_por?: string | null
           updated_at?: string
         }
         Update: {
           id?: string
           org_id?: string
           posicion_tipo_en_codigo?: number
+          revisado_en?: string | null
+          revisado_por?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -3354,6 +3360,8 @@ export type Database = {
           plan: string
           privacidad_aceptada_en: string | null
           privacidad_version: string | null
+          razon_social: string | null
+          rfc: string | null
           slug: string
           stripe_customer_id: string | null
           stripe_subscription_id: string | null
@@ -3402,6 +3410,8 @@ export type Database = {
           plan?: string
           privacidad_aceptada_en?: string | null
           privacidad_version?: string | null
+          razon_social?: string | null
+          rfc?: string | null
           slug: string
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
@@ -3450,6 +3460,8 @@ export type Database = {
           plan?: string
           privacidad_aceptada_en?: string | null
           privacidad_version?: string | null
+          razon_social?: string | null
+          rfc?: string | null
           slug?: string
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
@@ -4171,6 +4183,7 @@ export type Database = {
         Returns: Json
       }
       codigo_tokens: { Args: { _t: string }; Returns: string }
+      confirmar_catalogo_documentos: { Args: never; Returns: string }
       contexto_org_actual: {
         Args: never
         Returns: {
@@ -4333,6 +4346,19 @@ export type Database = {
         Returns: boolean
       }
       pendientes_cerebro: { Args: never; Returns: Json }
+      pendientes_configuracion: {
+        Args: never
+        Returns: {
+          clave: string
+          detalle: string
+          hecho: boolean
+          modulo: string
+          obligatorio: boolean
+          quien: string
+          ruta: string
+          titulo: string
+        }[]
+      }
       pendientes_riesgos: { Args: never; Returns: Json }
       plan_limite: { Args: { p_clave: string; p_org: string }; Returns: Json }
       puede_editar_catalogo_documentos: { Args: never; Returns: boolean }
