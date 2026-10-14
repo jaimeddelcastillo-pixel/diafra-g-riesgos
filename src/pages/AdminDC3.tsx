@@ -73,18 +73,8 @@ export default function AdminDC3() {
       if (error) throw error;
       if (notificar) {
         try {
-          await supabase.functions.invoke("send-transactional-email", {
-            body: {
-              templateName: "dc3-enviado",
-              recipientEmail: target.email_destino,
-              idempotencyKey: `dc3-enviado-${target.id}`,
-              templateData: {
-                nombre: target.alumno_nombre,
-                curso_titulo: target.curso_titulo,
-                dc3_url: dc3Url.trim() || undefined,
-                notas: notas.trim() || undefined,
-              },
-            },
+          await supabase.functions.invoke("notificar-dc3-enviado", {
+            body: { solicitud_id: target.id },
           });
         } catch (e) { console.error(e); }
       }
