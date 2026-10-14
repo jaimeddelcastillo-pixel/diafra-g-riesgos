@@ -125,7 +125,7 @@ export function AppSidebar() {
                 catch (e: any) { toast.error(e?.message ?? "No se pudo cambiar de empresa"); }
               }}
             >
-              <SelectTrigger className="h-8 text-xs" aria-label="Cambiar de empresa">
+              <SelectTrigger className="h-8 text-xs" aria-label="Cambiar de empresa" data-onboarding="selector-empresa">
                 <SelectValue placeholder="Empresa" />
               </SelectTrigger>
               <SelectContent>
@@ -140,7 +140,7 @@ export function AppSidebar() {
         )}
       </SidebarHeader>
 
-      <SidebarContent>
+      <SidebarContent data-onboarding="menu-modulos">
         {sections.map(({ section, items }) => (
           <SidebarGroup key={section}>
             {SECTION_LABELS[section] && (

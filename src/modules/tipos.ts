@@ -3,6 +3,31 @@ import type { LucideIcon } from "lucide-react";
 import type { NavItem } from "@/config/navigation";
 import type { OrgInfo } from "@/hooks/useAuth";
 
+/** Paso de un tour. Sin selector, se muestra centrado; si el elemento no está visible, se salta. */
+export interface PasoTour {
+  selector?: string;
+  titulo: string;
+  texto: string;
+}
+
+export interface TourProps {
+  onTerminar: () => void;
+  onSaltar: () => void;
+}
+
+/** Tour de módulo (clave en onboarding_estado: modulo:<x>). */
+export interface TourDef {
+  clave: string;
+  titulo: string;
+  /** Rutas (patrones) donde se dispara la primera vez. */
+  rutas: string[];
+  /** Ruta a la que se navega para verlo de nuevo desde Ayuda. */
+  rutaInicio: string;
+  pasos?: PasoTour[];
+  /** Tour con flujo propio (Riesgos: bienvenida, recorrido y primer folio). */
+  Componente?: ComponentType<TourProps>;
+}
+
 export interface ModuloRuta {
   path: string;
   Component: ComponentType;
@@ -43,8 +68,9 @@ export interface ModuloDef {
   /** Grupo de menú con sus ítems (plantilla: Tablero … Auditoría · Capacitación). */
   menu: NavItem;
   rutas: ModuloRuta[];
-  /** Reservada para P2. */
   tourClave: string;
+  /** Tours del módulo (P2), en orden de prioridad. */
+  tours: TourDef[];
   /** Pendientes del usuario en la empresa activa. Solo conteos. */
   obtenerPendientes: (ctx: PendientesContexto) => Promise<ModuloPendiente[]>;
   Tarjeta: ComponentType<ModuloTarjetaProps>;

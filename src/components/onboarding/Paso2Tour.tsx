@@ -2,22 +2,19 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useOnboardingTextos } from "./useOnboardingTextos";
 import { EVENTO_ABRIR_GRUPO } from "@/components/AppSidebar";
+import type { PasoTour } from "@/modules/tipos";
 
 interface Props {
   onFinish: () => void;
   onSaltar: () => void;
+  /** Pasos propios (tours de plataforma/módulos). Sin ellos, el recorrido original de Riesgos. */
+  pasos?: PasoTour[];
 }
 
-interface PasoTour {
-  selector: string;
-  titulo: string;
-  texto: string;
-}
-
-export function Paso2Tour({ onFinish, onSaltar }: Props) {
+export function Paso2Tour({ onFinish, onSaltar, pasos: pasosProp }: Props) {
   const { normaCorta } = useOnboardingTextos();
 
-  const pasos: PasoTour[] = [
+  const pasos: PasoTour[] = pasosProp ?? [
     {
       selector: '[data-onboarding="folios"]',
       titulo: "Mis Folios",
@@ -46,18 +43,21 @@ export function Paso2Tour({ onFinish, onSaltar }: Props) {
   useEffect(() => {
     const paso = pasos[idx];
     if (!paso) return;
+    if (!paso.selector) { setRect(null); return; }
+    const selector = paso.selector;
 
     // Si el elemento está dentro de un grupo cerrado del menú, abrir ese grupo antes de resaltarlo.
-    const clave = paso.selector.match(/data-onboarding="([^"]+)"/)?.[1];
-    if (clave && !document.querySelector(paso.selector)) {
+    const clave = selector.match(/data-onboarding="([^"]+)"/)?.[1];
+    if (clave && !document.querySelector(selector)) {
       window.dispatchEvent(new CustomEvent(EVENTO_ABRIR_GRUPO, { detail: clave }));
     }
 
+    const visible = (el: HTMLElement | null) => !!el && el.getClientRects().length > 0;
     const update = () => {
-      const el = document.querySelector(paso.selector) as HTMLElement | null;
-      if (el) {
-        el.scrollIntoView({ behavior: "smooth", block: "center", inline: "nearest" });
-        setRect(el.getBoundingClientRect());
+      const el = document.querySelector(selector) as HTMLElement | null;
+      if (visible(el)) {
+        el!.scrollIntoView({ behavior: "smooth", block: "center", inline: "nearest" });
+        setRect(el!.getBoundingClientRect());
       } else {
         setRect(null);
       }
@@ -66,11 +66,18 @@ export function Paso2Tour({ onFinish, onSaltar }: Props) {
     update();
     const t = setTimeout(update, 350); // re-medir tras scroll / apertura del grupo
     const t2 = setTimeout(update, 700);
+    // Elemento no visible (rol, celular o menú colapsado): se salta el paso.
+    const t3 = setTimeout(() => {
+      if (!visible(document.querySelector(selector) as HTMLElement | null)) {
+        setIdx((i) => (i === idx ? i + 1 : i));
+      }
+    }, 900);
     window.addEventListener("resize", update);
     window.addEventListener("scroll", update, true);
     return () => {
       clearTimeout(t);
       clearTimeout(t2);
+      clearTimeout(t3);
       window.removeEventListener("resize", update);
       window.removeEventListener("scroll", update, true);
     };
@@ -82,13 +89,22 @@ export function Paso2Tour({ onFinish, onSaltar }: Props) {
   };
 
   const paso = pasos[idx];
+  useEffect(() => {
+    if (idx >= pasos.length) onFinish();
+  }, [idx]);
+  if (!paso) return null;
 
   // Posición del tooltip
   const tooltipPos = (() => {
-    if (!rect) return { top: 80, left: 80 };
+    if (!rect) {
+      if (!paso.selector) {
+        return { top: Math.max(20, window.innerHeight / 2 - 100), left: Math.max(16, window.innerWidth / 2 - 160) };
+      }
+      return { top: 80, left: 80 };
+    }
     const isMobile = window.innerWidth < 768;
     // Para el botón flotante (esquina inferior derecha) → arriba-izquierda
-    if (paso.selector.includes("asistente")) {
+    if (paso.selector?.includes("asistente")) {
       return {
         top: Math.max(20, rect.top - 180),
         left: Math.max(20, rect.left - 280),

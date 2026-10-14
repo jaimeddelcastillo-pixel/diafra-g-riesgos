@@ -70,7 +70,7 @@ export default function Inicio() {
           </CardContent>
         </Card>
       ) : (
-        <section className="grid gap-4 md:grid-cols-2" aria-label="Módulos contratados">
+        <section className="grid gap-4 md:grid-cols-2" aria-label="Módulos contratados" data-onboarding="tarjetas-modulos">
           {contratados.map((m) => <TarjetaConPendientes key={m.clave} modulo={m} />)}
         </section>
       )}

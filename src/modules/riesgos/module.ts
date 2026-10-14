@@ -11,6 +11,7 @@ import Cumplimiento from "@/pages/Cumplimiento";
 import Auditoria from "@/pages/Auditoria";
 import Capacitacion from "@/pages/Capacitacion";
 import ExamenFinal from "@/pages/ExamenFinal";
+import { TourRiesgos } from "@/components/onboarding/TourRiesgos";
 import { supabase } from "@/integrations/supabase/client";
 import { ModuloTarjeta } from "../ModuloTarjeta";
 import type { ModuloDef, ModuloPendiente } from "../tipos";
@@ -46,7 +47,7 @@ export const riesgosModule: ModuloDef = {
       { id: "recursos", label: "Recursos", icon: Library, route: "/recursos", section: "modulos", onboarding: "recursos" },
       { id: "auditoria", label: "Auditoría de Riesgos", icon: Search, route: "/auditoria", section: "modulos" },
       { id: "capacitacion", label: "Capacitación", icon: GraduationCap, route: "/capacitacion", section: "modulos", onboarding: "capacitacion" },
-      { id: "mis-diplomas", label: "Mis Diplomas", icon: Award, route: "/mis-diplomas", section: "modulos" },
+      { id: "mis-diplomas", label: "Mis Diplomas", icon: Award, route: "/mis-diplomas", section: "modulos", onboarding: "mis-diplomas" },
     ],
   },
   rutas: [
@@ -59,6 +60,28 @@ export const riesgosModule: ModuloDef = {
     { path: "/auditoria", Component: Auditoria },
     { path: "/capacitacion", Component: Capacitacion },
     { path: "/capacitacion/:cursoId/examen", Component: ExamenFinal },
+  ],
+  tours: [
+    {
+      clave: "modulo:riesgos",
+      titulo: "Gestión de Riesgos",
+      rutas: ["/riesgos", "/folios", "/folios/:id", "/catalogos", "/mis-protocolos", "/cumplimiento", "/auditoria"],
+      rutaInicio: "/riesgos",
+      Componente: TourRiesgos,
+    },
+    {
+      clave: "modulo:capacitacion",
+      titulo: "Capacitación",
+      rutas: ["/capacitacion", "/capacitacion/:cursoId/examen"],
+      rutaInicio: "/capacitacion",
+      pasos: [
+        { titulo: "El curso", texto: "Aquí está el curso de tu norma, organizado en módulos y lecciones. Tu avance se guarda lección por lección." },
+        { titulo: "Vista previa", texto: "En empresas en prueba puedes ver la Introducción y el Módulo 1. El resto aparece con candado hasta tener el curso completo." },
+        { titulo: "Examen final", texto: "Al terminar las lecciones presentas el examen. Se habilita solo con acceso completo al curso." },
+        { titulo: "Diploma", texto: "Si apruebas, emites tu diploma con folio y código de verificación. También puedes solicitar tu constancia DC-3." },
+        { selector: '[data-onboarding="mis-diplomas"]', titulo: "Mis Diplomas", texto: "Tus diplomas y DC-3 son tuyos: siempre puedes verlos y descargarlos aquí." },
+      ],
+    },
   ],
   obtenerPendientes: async ({ org }) => {
     const { data, error } = await supabase.rpc("pendientes_riesgos" as any);
