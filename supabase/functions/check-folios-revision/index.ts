@@ -1,6 +1,7 @@
 // Cron diario: detecta folios Cerrado con updated_at anterior al corte de 12 meses
 // y notifica al Responsable Sanitario para revisión periódica (NOM-241 §6.5 / ISO 14971 §10).
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { enviarYRegistrar } from "../_shared/transactional-email-templates/enviar-y-registrar.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -78,8 +79,7 @@ Deno.serve(async (req) => {
         .maybeSingle();
       if (!perfil?.email) continue;
 
-      await admin.functions.invoke("send-transactional-email", {
-        body: {
+      await enviarYRegistrar({
           templateName: "folio-revision-pendiente",
           recipientEmail: perfil.email,
           idempotencyKey: `folio-revision-${folio.id}-${new Date().toISOString().slice(0, 7)}`,
@@ -92,8 +92,7 @@ Deno.serve(async (req) => {
             norma_nombre: folio.norma_folio ?? "NOM-241",
             link: `${APP_URL}/folios/${folio.id}`,
           },
-        },
-      });
+        });
       notificados++;
     }
 

@@ -3,6 +3,7 @@
 // org_member admin, and pushes contact to Brevo list 3 via connector gateway.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
+import { enviarYRegistrar } from "../_shared/transactional-email-templates/enviar-y-registrar.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -135,9 +136,7 @@ Deno.serve(async (req) => {
       const actionLink = linkData?.properties?.action_link;
       if (actionLink) {
         // Reutilizamos la plantilla bienvenida-demo con el link.
-        supabase.functions
-          .invoke("send-transactional-email", {
-            body: {
+        enviarYRegistrar({
               templateName: "bienvenida-demo",
               recipientEmail: email,
               idempotencyKey: `magic-existing-${email}-${Date.now()}`,
@@ -148,8 +147,7 @@ Deno.serve(async (req) => {
                 trial_days: TRIAL_DAYS,
                 link: actionLink,
               },
-            },
-          })
+            })
           .catch((e) => console.error("send-transactional-email magic-link error:", e));
         magicLinkSent = true;
       }

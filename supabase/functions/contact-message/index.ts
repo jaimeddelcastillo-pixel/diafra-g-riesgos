@@ -1,8 +1,9 @@
 // Public contact form handler — envía mensaje al soporte vía Lovable Emails
-// (send-transactional-email + plantilla 'contacto-soporte').
+// (envío directo + plantilla 'contacto-soporte').
 // No JWT required (verify_jwt = false in config.toml).
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
+import { enviarYRegistrar } from "../_shared/transactional-email-templates/enviar-y-registrar.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -58,10 +59,7 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
-    const { error: invokeErr } = await supabase.functions.invoke(
-      "send-transactional-email",
-      {
-        body: {
+    const { error: invokeErr } = await enviarYRegistrar({
           templateName: "contacto-soporte",
           // recipientEmail se omite: la plantilla define `to: 'soporte@tracea.com.mx'`
           recipientEmail: "soporte@tracea.com.mx",
@@ -74,9 +72,7 @@ Deno.serve(async (req) => {
             mensaje,
             fecha: new Date().toISOString(),
           },
-        },
-      },
-    );
+        });
 
     if (invokeErr) {
       console.error("contact-message: send-transactional-email error", invokeErr);

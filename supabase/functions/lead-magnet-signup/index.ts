@@ -12,6 +12,7 @@
 //       titulo_ebook, url_descarga }
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
+import { enviarYRegistrar } from "../_shared/transactional-email-templates/enviar-y-registrar.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -211,9 +212,7 @@ Deno.serve(async (req) => {
       telefono,
     }).catch(() => {});
 
-    supabase.functions
-      .invoke("send-transactional-email", {
-        body: {
+    enviarYRegistrar({
           templateName: "ebook-descarga",
           recipientEmail: email,
           idempotencyKey: `ebook-existing-${email}-${Date.now()}`,
@@ -224,8 +223,7 @@ Deno.serve(async (req) => {
             url_descarga: ebook.url,
             password_temporal: "(usa tu contraseña actual o el enlace de acceso directo)",
           },
-        },
-      })
+        })
       .catch((e) => console.error("send-transactional-email error:", e));
 
     await supabase.from("audit_trail").insert({
@@ -335,9 +333,7 @@ Deno.serve(async (req) => {
     telefono,
   }).catch(() => {});
 
-  supabase.functions
-    .invoke("send-transactional-email", {
-      body: {
+  enviarYRegistrar({
         templateName: "ebook-descarga",
         recipientEmail: email,
         idempotencyKey: `ebook-${org.id}`,
@@ -348,8 +344,7 @@ Deno.serve(async (req) => {
           url_descarga: ebook.url,
           password_temporal: tempPassword,
         },
-      },
-    })
+      })
     .catch((e) => console.error("send-transactional-email error:", e));
 
   return json({

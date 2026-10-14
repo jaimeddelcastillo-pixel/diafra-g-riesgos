@@ -26,7 +26,6 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Recuperar from "./pages/Recuperar";
 import ResetPassword from "./pages/ResetPassword";
-import Unsubscribe from "./pages/Unsubscribe";
 import Precios from "./pages/Precios";
 import CheckoutSuccess from "./pages/CheckoutSuccess";
 import PagoPendiente from "./pages/PagoPendiente";
@@ -54,7 +53,6 @@ const App = () => (
             <Route path="/recuperar" element={<Recuperar />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/precios" element={<Precios />} />
-            <Route path="/unsubscribe" element={<Unsubscribe />} />
             <Route path="/checkout/success" element={<CheckoutSuccess />} />
             <Route path="/pago-pendiente" element={<PagoPendiente />} />
             <Route path="/terminos" element={<Terminos />} />

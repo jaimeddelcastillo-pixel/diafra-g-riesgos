@@ -8,6 +8,7 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { createRemoteJWKSet, jwtVerify } from "https://esm.sh/jose@5.9.6";
+import { enviarYRegistrar } from "../_shared/transactional-email-templates/enviar-y-registrar.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -169,8 +170,7 @@ Deno.serve(async (req) => {
 
         for (const r of recipients) {
           try {
-            const { error: sendErr } = await admin.functions.invoke("send-transactional-email", {
-              body: {
+            const { error: sendErr } = await enviarYRegistrar({
                 templateName: "recordatorio-pago",
                 recipientEmail: r.email,
                 idempotencyKey: `recordatorio-pago-${org_id}-${r.id}-${Date.now()}`,
@@ -181,8 +181,7 @@ Deno.serve(async (req) => {
                   pagoUrl: `${APP_URL}/pago-pendiente`,
                   soporteEmail: "soporte@tracea.com.mx",
                 },
-              },
-            });
+              });
             if (sendErr) throw sendErr;
             sentTo.push(r.email);
           } catch (e: any) {
@@ -233,8 +232,7 @@ Deno.serve(async (req) => {
 
         for (const r of recipients) {
           try {
-            const { error: sendErr } = await admin.functions.invoke("send-transactional-email", {
-              body: {
+            const { error: sendErr } = await enviarYRegistrar({
                 templateName: "reactivacion-cuenta",
                 recipientEmail: r.email,
                 idempotencyKey: `reactivacion-${org_id}-${r.id}-${Date.now()}`,
@@ -246,8 +244,7 @@ Deno.serve(async (req) => {
                   loginUrl: `${APP_URL}/login`,
                   soporteEmail: "soporte@tracea.com.mx",
                 },
-              },
-            });
+              });
             if (sendErr) throw sendErr;
             sentTo.push(r.email);
           } catch (e: any) {

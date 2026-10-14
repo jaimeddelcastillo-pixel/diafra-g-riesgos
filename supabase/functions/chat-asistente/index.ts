@@ -4,6 +4,7 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { resolverContextoOrg } from "../_shared/contexto-org.ts";
+import { enviarYRegistrar } from "../_shared/transactional-email-templates/enviar-y-registrar.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -399,8 +400,7 @@ async function maybeEnviarAviso80(
     const restantes = Math.max(0, limit - usage);
     const now = new Date();
     const idem = `consultas-ia-aviso-80-${org.id}-${now.getUTCFullYear()}-${now.getUTCMonth() + 1}`;
-    await adminClient.functions.invoke("send-transactional-email", {
-      body: {
+    await enviarYRegistrar({
         templateName: "consultas-ia-aviso-80",
         recipientEmail: email,
         idempotencyKey: idem,
@@ -413,8 +413,7 @@ async function maybeEnviarAviso80(
           fecha_renovacion: fechaRenovacionTexto(),
           link: `https://tracea.com.mx/precios?from=limite`,
         },
-      },
-    });
+      });
     await adminClient
       .from("organizations")
       .update({ alerta_80_enviada: true })

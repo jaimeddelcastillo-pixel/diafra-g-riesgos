@@ -8,6 +8,7 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { resolverContextoOrg, ContextoOrgError } from "../_shared/contexto-org.ts";
+import { enviarYRegistrar } from "../_shared/transactional-email-templates/enviar-y-registrar.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -158,8 +159,7 @@ Deno.serve(async (req) => {
 
     // Notificar al alumno y a TRACEA (no romper el flujo si falla)
     try {
-      await admin.functions.invoke("send-transactional-email", {
-        body: {
+      await enviarYRegistrar({
           templateName: "dc3-solicitud-recibida",
           recipientEmail: emailDestino,
           idempotencyKey: `dc3-recibida-${ins.id}`,
@@ -169,13 +169,11 @@ Deno.serve(async (req) => {
             fuente,
             plataforma_url: `${APP_URL}/mis-diplomas`,
           },
-        },
-      });
+        });
     } catch (e) { console.error("email alumno error", e); }
 
     try {
-      await admin.functions.invoke("send-transactional-email", {
-        body: {
+      await enviarYRegistrar({
           templateName: "dc3-solicitud-interna",
           recipientEmail: SOPORTE_EMAIL,
           idempotencyKey: `dc3-interna-${ins.id}`,
@@ -190,8 +188,7 @@ Deno.serve(async (req) => {
             fuente,
             admin_url: `${APP_URL}/admin/dc3`,
           },
-        },
-      });
+        });
     } catch (e) { console.error("email interno error", e); }
 
     return json({ ok: true, solicitud_id: ins.id, fuente });
