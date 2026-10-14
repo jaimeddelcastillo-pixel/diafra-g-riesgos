@@ -24,7 +24,7 @@ type Solicitud = {
 
 const DC3_PRICE_ID = "price_1TbRUHKfwzAg4OKvWE8uMR6y";
 
-export default function SolicitarDC3Card({ diplomaId, cursoId, cursoTitulo, compact }: Props) {
+export default function SolicitarDC3Card({ diplomaId, cursoId, cursoTitulo, compact, soloLectura }: Props & { soloLectura?: boolean }) {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [paying, setPaying] = useState(false);
@@ -120,6 +120,9 @@ export default function SolicitarDC3Card({ diplomaId, cursoId, cursoTitulo, comp
       </div>
     );
   }
+
+  // P1c.2: empresa suspendida → solo se consultan DC-3 existentes, sin solicitar nuevas.
+  if (soloLectura) return null;
 
   return (
     <div className={`rounded-lg border border-[#0B2545]/20 bg-[#0B2545]/5 ${compact ? "p-3" : "p-4"} space-y-3`}>
