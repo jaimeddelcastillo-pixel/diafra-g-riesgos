@@ -253,6 +253,13 @@
       "when": 1792010850080,
       "tag": "0035_p3_guard_catalogo",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1792018075346,
+      "tag": "0036_p3_1_organizations_lista_blanca_firmas_opcional",
+      "breakpoints": true
     }
   ]
 }
