@@ -1,5 +1,9 @@
 # Roadmap
 
+- [x] P1c.1 Regla única mi_acceso_curso (RLS, examen, diploma, pantallas); Mis diplomas sin filtro por módulo; reversión p1c1_down.sql
+- [ ] Motor futuro: el webhook de Stripe cambia trial → starter al comprar el curso; revisar ese efecto comercial al definir precios
+- [ ] Revisar (sin corregir): la pantalla «Suscripción suspendida» impide abrir Mis diplomas/DC-3 en empresas suspendidas
+
 - [x] P1c Preparar capacitación por módulo sin cambiar derechos comerciales ni progreso existente; reporte p1c_reporte.md, reversión p1c_down.sql, 34 pruebas y QA adminqa/Starter
 - [ ] Posterior a P1c (espera aprobación; no corregir ahora): revisión vencida debe contar desde cierre o última revisión periódica registrada, no updated_at; existe folios.fecha_cierre (date nullable), no fecha explícita de última revisión periódica
 - [ ] Verificación P1c pendiente: descarga de diploma/DC-3 histórico y pantalla sin acceso a curso (bloqueada por falta de esos casos en las membresías QA del consultor)
