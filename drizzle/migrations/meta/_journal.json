@@ -246,6 +246,13 @@
       "when": 1792010825705,
       "tag": "0034_p3_asistente_configuracion",
       "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1792010850080,
+      "tag": "0035_p3_guard_catalogo",
+      "breakpoints": true
     }
   ]
 }
