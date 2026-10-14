@@ -190,6 +190,12 @@ export default function Configuracion() {
   const puedeDesactivar = orgRole === "admin" || orgRole === "responsable_sanitario";
   const [desactivarTarget, setDesactivarTarget] = useState<{ id: string; nombre: string; email: string } | null>(null);
   const isAdmin = hasRole("admin") || hasRole("responsable_sanitario") || isSuperAdmin();
+  const { hash } = useLocation();
+  useEffect(() => {
+    if (!hash) return;
+    const t = setTimeout(() => document.getElementById(hash.slice(1))?.scrollIntoView({ behavior: "smooth", block: "start" }), 400);
+    return () => clearTimeout(t);
+  }, [hash]);
   const queryClient = useQueryClient();
 
   const [editUser, setEditUser] = useState<OrgUser | null>(null);
