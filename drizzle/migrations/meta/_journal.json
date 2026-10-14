@@ -232,6 +232,13 @@
       "when": 1791994974267,
       "tag": "0032_p1c3_diplomas_storage_lectura_empresa",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1791998887796,
+      "tag": "0033_p2_onboarding_estado",
+      "breakpoints": true
     }
   ]
 }

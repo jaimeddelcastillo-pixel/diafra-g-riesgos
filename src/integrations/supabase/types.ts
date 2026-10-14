@@ -3058,6 +3058,44 @@ export type Database = {
         }
         Relationships: []
       }
+      onboarding_estado: {
+        Row: {
+          clave: string
+          completado_en: string
+          created_at: string
+          id: string
+          org_id: string | null
+          saltado: boolean
+          user_id: string
+        }
+        Insert: {
+          clave: string
+          completado_en?: string
+          created_at?: string
+          id?: string
+          org_id?: string | null
+          saltado?: boolean
+          user_id: string
+        }
+        Update: {
+          clave?: string
+          completado_en?: string
+          created_at?: string
+          id?: string
+          org_id?: string | null
+          saltado?: boolean
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "onboarding_estado_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       org_documentos: {
         Row: {
           clasificacion: string
