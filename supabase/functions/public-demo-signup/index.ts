@@ -20,6 +20,7 @@
 //   8. Audita en audit_trail con accion='demo_signup_from_landing'
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
+import { enviarYRegistrar } from "../_shared/transactional-email-templates/enviar-y-registrar.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -301,9 +302,7 @@ Deno.serve(async (req) => {
       ? "NOM-241, NOM-059 y FEUM"
       : "NOM-241 y FEUM";
 
-  supabase.functions
-    .invoke("send-transactional-email", {
-      body: {
+  enviarYRegistrar({
         templateName: "bienvenida-demo",
         recipientEmail: email,
         idempotencyKey: `demo-${org.id}`,
@@ -314,8 +313,7 @@ Deno.serve(async (req) => {
           trial_days: TRIAL_DAYS,
           link: magicLink,
         },
-      },
-    })
+      })
     .catch((e) => console.error("send-transactional-email error:", e));
 
   return json({

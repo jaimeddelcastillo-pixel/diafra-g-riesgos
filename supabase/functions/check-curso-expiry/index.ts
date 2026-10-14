@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
+import { enviarYRegistrar } from "../_shared/transactional-email-templates/enviar-y-registrar.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -50,9 +51,7 @@ async function sendTplEmail(
   idempotencyKey: string,
 ) {
   try {
-    const { error } = await supabase.functions.invoke("send-transactional-email", {
-      body: { templateName, recipientEmail, idempotencyKey, templateData },
-    });
+    const { error } = await enviarYRegistrar({ templateName, recipientEmail, idempotencyKey, templateData });
     if (error) console.warn(`send-transactional-email[${templateName}] error`, error);
   } catch (err) {
     console.warn(`send-transactional-email[${templateName}] threw`, err);

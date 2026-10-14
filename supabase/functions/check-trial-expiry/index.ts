@@ -4,6 +4,7 @@
 // envío por umbral aunque el cron corra varias veces.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
+import { enviarYRegistrar } from "../_shared/transactional-email-templates/enviar-y-registrar.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -76,10 +77,7 @@ Deno.serve(async (req) => {
     if (!perfil?.email) continue;
 
     try {
-      const { error: invokeErr } = await supabase.functions.invoke(
-        "send-transactional-email",
-        {
-          body: {
+      const { error: invokeErr } = await enviarYRegistrar({
             templateName: "trial-por-vencer",
             recipientEmail: perfil.email,
             idempotencyKey: `trial-${org.id}-d${dias}`,
@@ -90,9 +88,7 @@ Deno.serve(async (req) => {
               fecha_fin: fechaFin.toISOString().slice(0, 10),
               link: `${APP_URL}/precios`,
             },
-          },
-        },
-      );
+          });
 
       if (invokeErr) {
         errores.push({ org_id: org.id, dias, error: invokeErr.message });

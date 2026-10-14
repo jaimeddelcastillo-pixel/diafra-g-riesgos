@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { resolverContextoOrg, ContextoOrgError } from "../_shared/contexto-org.ts";
+import { enviarYRegistrar } from "../_shared/transactional-email-templates/enviar-y-registrar.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -199,8 +200,7 @@ Deno.serve(async (req) => {
           ip,
         });
         try {
-          await adminClient.functions.invoke("send-transactional-email", {
-            body: {
+          await enviarYRegistrar({
               templateName: "usuario-agregado-empresa",
               recipientEmail: target,
               idempotencyKey: `agregado-${orgIdToUse}-${existing.id}-${Date.now()}`,
@@ -210,8 +210,7 @@ Deno.serve(async (req) => {
                 rol: ROL_LABEL[rol] ?? rol,
                 loginUrl: "https://tracea.com.mx/login",
               },
-            },
-          });
+            });
         } catch (e) { console.warn("correo usuario-agregado-empresa:", e); }
         return json({ success: true, user: { id: existing.id }, agregado: true });
       }

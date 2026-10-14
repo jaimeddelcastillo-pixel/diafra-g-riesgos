@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 import Stripe from "https://esm.sh/stripe@17.5.0?target=deno";
+import { enviarYRegistrar } from "../_shared/transactional-email-templates/enviar-y-registrar.ts";
 
 // Mapa de Price IDs → producto interno
 const PRICE_TO_PRODUCT: Record<string, string> = {
@@ -44,9 +45,7 @@ async function sendTplEmail(
   idempotencyKey: string,
 ) {
   try {
-    const { error } = await supabase.functions.invoke("send-transactional-email", {
-      body: { templateName, recipientEmail, idempotencyKey, templateData },
-    });
+    const { error } = await enviarYRegistrar({ templateName, recipientEmail, idempotencyKey, templateData });
     if (error) console.warn(`send-transactional-email[${templateName}] error`, error);
   } catch (err) {
     console.warn(`send-transactional-email[${templateName}] threw`, err);

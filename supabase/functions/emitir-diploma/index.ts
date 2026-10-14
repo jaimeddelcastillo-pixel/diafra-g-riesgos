@@ -12,6 +12,7 @@ import QRCode from "https://esm.sh/qrcode@1.5.4";
 import { FIRMA_JDC_PNG_BASE64, FIRMA_JDC_WIDTH_MM, FIRMA_JDC_HEIGHT_MM } from "./firma.ts";
 import { LOGO_TRACEA_PNG_BASE64, LOGO_W, LOGO_H } from "./logo.ts";
 import { resolverContextoOrg, ContextoOrgError } from "../_shared/contexto-org.ts";
+import { enviarYRegistrar } from "../_shared/transactional-email-templates/enviar-y-registrar.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -463,8 +464,7 @@ Deno.serve(async (req) => {
 
     // Email con PDF adjunto
     try {
-      await admin.functions.invoke("send-transactional-email", {
-        body: {
+      await enviarYRegistrar({
           templateName: "diploma-emitido",
           recipientEmail: alumnoEmail,
           idempotencyKey: `diploma-${folio}`,
@@ -478,8 +478,7 @@ Deno.serve(async (req) => {
             verificacion_url: verificacionUrl,
             plataforma_url: `${APP_URL}/mis-diplomas`,
           },
-        },
-      });
+        });
     } catch (e) {
       console.warn("Email diploma falló (continúa)", e);
     }

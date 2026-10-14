@@ -8,6 +8,7 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { resolverContextoOrg, ContextoOrgError } from "../_shared/contexto-org.ts";
+import { enviarYRegistrar } from "../_shared/transactional-email-templates/enviar-y-registrar.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -120,14 +121,12 @@ async function sendTplEmail(
   idempotencyKey: string,
 ) {
   try {
-    const { error } = await admin.functions.invoke("send-transactional-email", {
-      body: {
+    const { error } = await enviarYRegistrar({
         templateName,
         recipientEmail,
         idempotencyKey,
         templateData,
-      },
-    });
+      });
     if (error) console.warn(`send-transactional-email[${templateName}] error`, error);
   } catch (err) {
     console.warn(`send-transactional-email[${templateName}] threw`, err);
