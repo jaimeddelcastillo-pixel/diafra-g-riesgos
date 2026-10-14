@@ -33,7 +33,7 @@ vi.mock("@/modules", () => {
 const definition = (clave: string, nombre: string, path: string, children: ModuloDef["menu"]["children"]): ModuloDef => ({
   clave, nombre, descripcion: "", icono: Brain, rutaInicio: path, mensajeNoContratado: "", ordenPorDefecto: 10,
   menu: { id: clave, label: nombre, icon: Brain, section: "modulos", children },
-  rutas: [{ path, Component: () => null }], tourClave: clave, obtenerPendientes: async () => [], Tarjeta: () => null,
+  rutas: [{ path, Component: () => null }], tourClave: clave, tours: [], obtenerPendientes: async () => [], Tarjeta: () => null,
 });
 const riesgos = definition("riesgos", "Gestión de Riesgos", "/riesgos", [{ id: "recursos", label: "Recursos", icon: Brain, route: "/recursos", section: "modulos" }]);
 riesgos.normaEnEncabezado = (norma) => norma === "NOM-241" || norma === "NOM-059" ? `${norma} / FEUM` : undefined;
