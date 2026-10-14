@@ -33,6 +33,8 @@ export type CursoDB = {
   descripcion: string;
   activo: boolean;
   modulos: ModuloDB[];
+  /** Total real de lecciones del curso (curso_total_lecciones), aunque la vista previa vea menos. */
+  totalLecciones: number | null;
 };
 
 /** Lee el acceso del usuario a un curso desde la única regla de la base de datos. */
@@ -73,6 +75,9 @@ export function useCurso(norma: "NOM-241" | "NOM-059" | null, moduloClave = "rie
         return;
       }
       const nivel = await obtenerAccesoCurso(c.id);
+      const { data: totalReal } = nivel === "vista_previa"
+        ? await (supabase as any).rpc("curso_total_lecciones", { p_curso_id: c.id })
+        : { data: null };
       const { data: mods } = await (supabase as any)
         .from("curso_modulos")
         .select("id, titulo, descripcion, orden, activo")
@@ -104,6 +109,7 @@ export function useCurso(norma: "NOM-241" | "NOM-059" | null, moduloClave = "rie
         titulo: c.titulo,
         descripcion: c.descripcion,
         activo: c.activo,
+        totalLecciones: typeof totalReal === "number" ? totalReal : null,
         modulos: (mods ?? []).map((m: any) => ({
           id: m.id,
           titulo: m.titulo,
