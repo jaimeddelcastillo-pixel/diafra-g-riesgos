@@ -742,9 +742,6 @@ export default function Capacitacion() {
             </div>
           ) : (
             <div className="flex items-center gap-2">
-              <Badge variant="outline" className="border-orange-500/30 text-orange-600 bg-orange-500/10">
-                Lanzamiento — primeros 20 clientes
-              </Badge>
             </div>
           )}
         </div>
