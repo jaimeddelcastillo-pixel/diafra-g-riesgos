@@ -218,6 +218,13 @@
       "when": 1791850884419,
       "tag": "0030_p1c1_examen_banco_acceso",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1791994490164,
+      "tag": "0031_p1c2_curso_sin_vencimiento_total_lecciones",
+      "breakpoints": true
     }
   ]
 }
