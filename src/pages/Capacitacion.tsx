@@ -430,7 +430,11 @@ export default function Capacitacion() {
             <div>
               <CardTitle className="text-lg">{curso.titulo}</CardTitle>
               <CardDescription>
-                {curso.modulos.length} módulos · {totalLecciones} lecciones · {descripcionSuffix}
+                {curso.modulos.length} módulos ·{" "}
+                {acceso === "vista_previa" && curso.totalLecciones != null
+                  ? `${curso.totalLecciones} lecciones · vista previa: ${totalLecciones}`
+                  : `${totalLecciones} lecciones`}{" "}
+                · {descripcionSuffix}
               </CardDescription>
             </div>
             <GuiaBadge tone={tone}>{curso.norma}</GuiaBadge>

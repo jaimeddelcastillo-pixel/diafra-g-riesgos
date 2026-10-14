@@ -4174,6 +4174,7 @@ export type Database = {
         Args: { p_modulo_id: string }
         Returns: boolean
       }
+      curso_total_lecciones: { Args: { p_curso_id: string }; Returns: number }
       cursos_ids_modulo: {
         Args: { p_modulo: string }
         Returns: {

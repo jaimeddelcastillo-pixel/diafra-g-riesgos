@@ -1,9 +1,11 @@
 import { useAuth } from "@/hooks/useAuth";
-import { Navigate } from "react-router-dom";
+import { Navigate, useLocation, useNavigate } from "react-router-dom";
+import MisDiplomas from "@/pages/MisDiplomas";
 import { Button } from "@/components/ui/button";
 
-function BlockScreen({ title, message }: { title: string; message: string }) {
+function BlockScreen({ title, message, verDiplomas }: { title: string; message: string; verDiplomas?: boolean }) {
   const { signOut } = useAuth();
+  const navigate = useNavigate();
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <div className="max-w-sm w-full text-center space-y-6">
@@ -27,6 +29,11 @@ function BlockScreen({ title, message }: { title: string; message: string }) {
             soporte@tracea.com.mx
           </a>
         </p>
+        {verDiplomas && (
+          <Button onClick={() => navigate("/mis-diplomas")} className="w-full">
+            Ver mis diplomas
+          </Button>
+        )}
         <Button variant="outline" onClick={signOut} className="w-full">
           Cerrar sesión
         </Button>
@@ -37,6 +44,8 @@ function BlockScreen({ title, message }: { title: string; message: string }) {
 
 export function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading, org, isSuperAdmin } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
 
   if (loading) {
     return (
@@ -68,8 +77,20 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
     }
 
     if (org.estado === "suspendido") {
+      // P1c.2: diplomas y DC-3 son de la persona; solo esta página abre, en modo lectura.
+      if (location.pathname === "/mis-diplomas") {
+        return (
+          <div className="min-h-screen bg-background">
+            <div className="container max-w-4xl pt-6">
+              <Button variant="outline" size="sm" onClick={() => navigate("/")}>Volver</Button>
+            </div>
+            <MisDiplomas soloLectura />
+          </div>
+        );
+      }
       return (
         <BlockScreen
+          verDiplomas
           title="Suscripción suspendida"
           message="Tu pago no se procesó correctamente. Actualiza tu método de pago o contacta a soporte para reactivar tu cuenta."
         />

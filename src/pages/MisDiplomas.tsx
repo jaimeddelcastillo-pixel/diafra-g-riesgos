@@ -30,7 +30,8 @@ type IntentoPendiente = {
   curso_titulo?: string;
 };
 
-export default function MisDiplomas() {
+/** soloLectura: empresa activa suspendida — ver, descargar y regenerar propios; sin emitir ni solicitar nuevos. */
+export default function MisDiplomas({ soloLectura = false }: { soloLectura?: boolean } = {}) {
   const [loading, setLoading] = useState(true);
   const [diplomas, setDiplomas] = useState<DiplomaRow[]>([]);
   const [descargando, setDescargando] = useState<string | null>(null);
@@ -152,7 +153,7 @@ export default function MisDiplomas() {
         </div>
       </div>
 
-      {pendientes.length > 0 && (
+      {!soloLectura && pendientes.length > 0 && (
         <Card className="border-amber-400/50 bg-amber-50/40 dark:bg-amber-950/20">
           <CardHeader className="pb-2">
             <CardTitle className="text-base flex items-center gap-2 text-amber-900 dark:text-amber-300">
@@ -186,14 +187,16 @@ export default function MisDiplomas() {
           <Skeleton className="h-28 w-full" />
           <Skeleton className="h-28 w-full" />
         </div>
-      ) : diplomas.length === 0 && pendientes.length === 0 ? (
+      ) : diplomas.length === 0 && (soloLectura || pendientes.length === 0) ? (
         <Card>
           <CardContent className="py-12 text-center text-muted-foreground space-y-3">
             <FileText className="h-10 w-10 mx-auto opacity-50" />
             <p>Aún no tienes diplomas emitidos.</p>
-            <Button asChild variant="outline">
-              <Link to="/capacitacion">Ir a Capacitación</Link>
-            </Button>
+            {!soloLectura && (
+              <Button asChild variant="outline">
+                <Link to="/capacitacion">Ir a Capacitación</Link>
+              </Button>
+            )}
           </CardContent>
         </Card>
       ) : (
@@ -252,7 +255,7 @@ export default function MisDiplomas() {
                 </div>
               </CardContent>
               <CardContent className="pt-0">
-                <SolicitarDC3Card diplomaId={d.id} cursoTitulo={d.curso_titulo} />
+                <SolicitarDC3Card diplomaId={d.id} cursoTitulo={d.curso_titulo} soloLectura={soloLectura} />
               </CardContent>
             </Card>
           ))}

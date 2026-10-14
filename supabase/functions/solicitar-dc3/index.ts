@@ -78,10 +78,15 @@ Deno.serve(async (req) => {
     if (orgId) {
       const { data } = await admin
         .from("organizations")
-        .select("id, nombre, plan, tiene_curso_pagado, dc3_adicionales_disponibles, dc3_emitidos")
+        .select("id, nombre, plan, estado, tiene_curso_pagado, dc3_adicionales_disponibles, dc3_emitidos")
         .eq("id", orgId)
         .maybeSingle();
       orgRow = data;
+    }
+
+    // P1c.2: con la empresa suspendida solo se consultan DC-3 existentes; no se solicitan nuevas.
+    if (orgRow?.estado === "suspendido") {
+      return json({ error: "La empresa está suspendida: no se pueden solicitar nuevas DC-3" }, 403);
     }
 
     const tieneIncluido = orgRow?.tiene_curso_pagado === true;

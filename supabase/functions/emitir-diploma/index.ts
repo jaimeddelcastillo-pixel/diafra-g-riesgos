@@ -286,6 +286,14 @@ Deno.serve(async (req) => {
     const { data: dipPrevio } = await admin
       .from("curso_diplomas").select("id").eq("user_id", user.id).eq("curso_id", intento.curso_id).limit(1).maybeSingle();
     if (!dipPrevio) {
+      // P1c.2: con la empresa activa suspendida no se emiten diplomas nuevos (sí se regeneran los propios).
+      const { data: orgActiva } = await userClient.rpc("get_user_org_id");
+      if (orgActiva) {
+        const { data: o } = await admin.from("organizations").select("estado").eq("id", orgActiva).maybeSingle();
+        if (o?.estado === "suspendido") {
+          return json({ error: "La empresa está suspendida: no se pueden emitir diplomas nuevos" }, 403);
+        }
+      }
       const { data: acceso, error: accErr } = await userClient.rpc("mi_acceso_curso", { p_curso_id: intento.curso_id });
       if (accErr) return json({ error: "No se pudo validar el acceso al curso" }, 500);
       if (acceso !== "completo") {
