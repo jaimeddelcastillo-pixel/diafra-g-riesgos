@@ -225,6 +225,13 @@
       "when": 1791994490164,
       "tag": "0031_p1c2_curso_sin_vencimiento_total_lecciones",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1791994974267,
+      "tag": "0032_p1c3_diplomas_storage_lectura_empresa",
+      "breakpoints": true
     }
   ]
 }
