@@ -1,5 +1,5 @@
 // Public contact form handler — envía mensaje al soporte vía Lovable Emails
-// (send-transactional-email + plantilla 'contacto-soporte').
+// (envío directo + plantilla 'contacto-soporte').
 // No JWT required (verify_jwt = false in config.toml).
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";

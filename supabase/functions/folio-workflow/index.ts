@@ -112,7 +112,7 @@ async function getOrgInfo(
   };
 }
 
-// ─── Helper: invocar send-transactional-email (Lovable Emails unificado) ────
+// ─── Helper: envío directo (Lovable Emails unificado) ────
 async function sendTplEmail(
   admin: ReturnType<typeof createClient>,
   templateName: string,
