@@ -19,6 +19,7 @@ import { toast } from "sonner";
 import {
   Plus, ArrowLeft, MessageSquare, Clock, AlertTriangle, CheckCircle2, Send, LifeBuoy,
 } from "lucide-react";
+import { VerToursCard } from "@/components/onboarding/VerToursCard";
 
 // ── Tipos ────────────────────────────────────────────────────────────────────
 type Prioridad = "Baja" | "Normal" | "Alta" | "Crítica";
@@ -139,6 +140,8 @@ function ListaTickets({ puedeCrear }: { puedeCrear: boolean }) {
           </Dialog>
         )}
       </div>
+
+      <VerToursCard />
 
       {isLoading ? (
         <div className="space-y-2">{[...Array(3)].map((_, i) => <div key={i} className="h-20 animate-pulse bg-muted rounded" />)}</div>
