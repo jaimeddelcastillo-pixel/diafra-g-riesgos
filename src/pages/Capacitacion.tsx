@@ -222,7 +222,7 @@ export default function Capacitacion() {
 
   const { curso: cursoDM, acceso: accesoDM, loading: loadingDM } = useCurso(showDM ? "NOM-241" : null);
   const { curso: cursoMed, acceso: accesoMed, loading: loadingMed } = useCurso(showMed ? "NOM-059" : null);
-  // P1c.1: la pantalla solo usa mi_acceso_curso (vía useCurso); nada de plan ni tiene_curso_pagado.
+  // P1c.1: la pantalla solo usa mi_acceso_curso (vía useCurso); sin leer plan ni pago del curso.
   const accesos = [showDM ? accesoDM : null, showMed ? accesoMed : null].filter(Boolean);
   const tieneCurso = accesos.includes("completo");
   // Sin acceso completo: descargas restringidas y examen bloqueado.
