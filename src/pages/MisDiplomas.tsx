@@ -19,6 +19,7 @@ type DiplomaRow = {
   hash_verificacion: string;
   pdf_path: string;
   intento_id: string | null;
+  modulo_clave?: string | null;
 };
 
 type IntentoPendiente = {
@@ -44,37 +45,31 @@ export default function MisDiplomas() {
       setLoading(false);
       return;
     }
-    // Identifiers only: expired course access must not hide historical diplomas.
-    const { data: cursosModulo, error: moduloError } = await supabase.rpc("cursos_ids_modulo", { p_modulo: "riesgos" });
-    if (moduloError) {
-      toast.error("No se pudieron cargar tus diplomas");
-      setLoading(false);
-      return;
-    }
-    const cursoIdsModulo = (cursosModulo ?? []).map((c) => c.id);
-    if (cursoIdsModulo.length === 0) {
-      setDiplomas([]);
-      setPendientes([]);
-      setLoading(false);
-      return;
-    }
+    // P1c.1: nunca se ocultan diplomas por módulo; el módulo solo sirve para agrupar.
+    const { data: cursosPropios } = await (supabase as any).rpc("mis_cursos_certificados");
+    const infoCurso = new Map<string, { titulo: string; modulo_clave: string | null }>(
+      ((cursosPropios ?? []) as any[]).map((c) => [c.id, { titulo: c.titulo, modulo_clave: c.modulo_clave }]),
+    );
     const [dipRes, intRes] = await Promise.all([
       supabase
         .from("curso_diplomas")
         .select("id, folio, curso_titulo, curso_norma, fecha_emision, calificacion, hash_verificacion, pdf_path, curso_id, intento_id")
         .eq("user_id", user.id)
-        .in("curso_id", cursoIdsModulo)
         .order("fecha_emision", { ascending: false }),
       supabase
         .from("curso_examen_intentos")
         .select("id, curso_id, calificacion, finished_at")
         .eq("user_id", user.id)
-        .in("curso_id", cursoIdsModulo)
         .eq("aprobado", true)
         .order("finished_at", { ascending: false }),
     ]);
     if (dipRes.error) toast.error("No se pudieron cargar tus diplomas");
-    const dips = (dipRes.data ?? []) as Array<DiplomaRow & { curso_id: string }>;
+    const dips = ((dipRes.data ?? []) as Array<DiplomaRow & { curso_id: string }>).map((d) => ({
+      ...d,
+      modulo_clave: infoCurso.get(d.curso_id)?.modulo_clave ?? null,
+    }));
+    // Agrupar por módulo (orden estable), sin filtrar.
+    dips.sort((x, y) => (x.modulo_clave ?? "").localeCompare(y.modulo_clave ?? ""));
     setDiplomas(dips);
 
     // intentos aprobados sin diploma emitido para ese curso
@@ -82,12 +77,7 @@ export default function MisDiplomas() {
     const intentos = (intRes.data ?? []) as IntentoPendiente[];
     const pend = intentos.filter((i) => !cursosConDip.has(i.curso_id));
     if (pend.length > 0) {
-      const cursoIds = Array.from(new Set(pend.map((p) => p.curso_id)));
-      const { data: cursos } = await supabase
-        .from("cursos")
-        .select("id, titulo")
-        .in("id", cursoIds);
-      const titulos = new Map((cursos ?? []).map((c: any) => [c.id, c.titulo]));
+      const titulos = new Map(Array.from(infoCurso.entries()).map(([id, c]) => [id, c.titulo]));
       setPendientes(pend.map((p) => ({ ...p, curso_titulo: titulos.get(p.curso_id) })));
     } else {
       setPendientes([]);
