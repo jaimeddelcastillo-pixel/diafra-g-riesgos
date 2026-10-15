@@ -21,7 +21,7 @@ const ESTADO_VAR: Record<string, "default" | "secondary" | "outline" | "destruct
 };
 const vencido = (a: any) => a.estado === "activo" && new Date(a.expira_en) <= new Date();
 const TIPO_LABEL: Record<string, string> = { folio: "Folio", documento: "Documento", conocimiento: "Conocimiento" };
-const ACCION_LABEL: Record<string, string> = { AUDITOR_CONSULTO: "Consultó", AUDITOR_DESCARGO: "Descargó", AUDITORIA_ACTIVADA: "Expediente activado", AUDITORIA_DUPLICADA: "Expediente creado por duplicado" };
+const ACCION_LABEL: Record<string, string> = { AUDITOR_CONSULTO: "Consultó", AUDITOR_DESCARGO: "Descargó", AUDITORIA_ACTIVADA: "Expediente activado", AUDITORIA_DUPLICADA: "Expediente creado por duplicado", AUDITORIA_CORREO_REENVIADO: "Correo reenviado" };
 
 function usePuedeGestionar() {
   const { hasRole, orgRole } = useAuth();

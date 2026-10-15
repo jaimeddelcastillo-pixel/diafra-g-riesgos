@@ -128,7 +128,6 @@ Deno.serve(async (req) => {
       cuenta_nueva: cuentaNueva, expira_en: aud.expira_en, items: nItems },
   });
 
-  const fmt = (d: string) => new Date(d).toLocaleDateString("es-MX", { day: "numeric", month: "long", year: "numeric", timeZone: "America/Mexico_City" });
   const { error: mailErr } = await enviarYRegistrar({
     templateName: "auditoria-invitacion", recipientEmail: email,
     idempotencyKey: `auditoria-${auditoriaId}`,
