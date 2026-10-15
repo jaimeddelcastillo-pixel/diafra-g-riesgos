@@ -8,7 +8,11 @@
         try {
           if (location.pathname !== "/reset-password") return;
           var h = location.hash || "";
-          if (/access_token=|error_description=|error=/.test(h)) sessionStorage.setItem("tracea_enlace_auth", h.slice(1));
+          if (/access_token=|error_description=|error=/.test(h)) {
+            sessionStorage.setItem("tracea_enlace_auth", h.slice(1));
+            // Se quita del URL para que la sesión principal nunca tome (ni revoque) el token del enlace.
+            history.replaceState(null, "", location.pathname + location.search);
+          }
         } catch (e) {}
       })();
     </script>
