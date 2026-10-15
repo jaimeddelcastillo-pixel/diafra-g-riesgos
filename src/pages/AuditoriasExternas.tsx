@@ -33,16 +33,34 @@ async function errorFuncion(error: any) {
   return error?.message ?? "Error";
 }
 
-function NuevoExpediente({ open, onOpenChange }: { open: boolean; onOpenChange: (v: boolean) => void }) {
+// El servicio de invitación rechaza correos con espacios o puntos al final: se limpian al capturar.
+export const limpiarCorreo = (e: string) => e.trim().toLowerCase().replace(/[\s.]+$/, "");
+export const correoValido = (e: string) => /^[a-z0-9._%+'-]+@[a-z0-9-]+(\.[a-z0-9-]+)*\.[a-z]{2,}$/i.test(e);
+
+type Modo = "nuevo" | "editar" | "duplicar";
+
+function ExpedienteDialog({ open, onOpenChange, modo, base, onGuardado }: {
+  open: boolean; onOpenChange: (v: boolean) => void; modo: Modo; base?: any; onGuardado?: () => void;
+}) {
   const { orgId } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
-  const hoy = new Date();
   const iso = (d: Date) => new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
-  const [f, setF] = useState({ nombre: "", auditor_nombre: "", auditor_organizacion: "", auditor_email: "",
-    inicia_en: iso(hoy), expira_en: iso(new Date(hoy.getTime() + 7 * 86400000)), permite_descarga: true });
+  const inicial = () => {
+    const hoy = new Date();
+    const fechas = { inicia_en: iso(hoy), expira_en: iso(new Date(hoy.getTime() + 7 * 86400000)) };
+    if (modo === "editar" && base) return { nombre: base.nombre, auditor_nombre: base.auditor_nombre,
+      auditor_organizacion: base.auditor_organizacion ?? "", auditor_email: base.auditor_email,
+      inicia_en: iso(new Date(base.inicia_en)), expira_en: iso(new Date(base.expira_en)), permite_descarga: base.permite_descarga };
+    if (modo === "duplicar" && base) return { nombre: `${base.nombre} (copia)`.slice(0, 200), auditor_nombre: "",
+      auditor_organizacion: "", auditor_email: "", ...fechas, permite_descarga: base.permite_descarga };
+    return { nombre: "", auditor_nombre: "", auditor_organizacion: "", auditor_email: "", ...fechas, permite_descarga: true };
+  };
+  const [f, setF] = useState(inicial);
   const [guardando, setGuardando] = useState(false);
   const set = (k: string, v: any) => setF((p) => ({ ...p, [k]: v }));
+  const email = limpiarCorreo(f.auditor_email);
+  const emailMal = f.auditor_email.trim() !== "" && !correoValido(email);
 
   const guardar = async () => {
     const ini = new Date(f.inicia_en), fin = new Date(f.expira_en);
@@ -50,39 +68,72 @@ function NuevoExpediente({ open, onOpenChange }: { open: boolean; onOpenChange: 
       toast({ title: "Vigencia inválida", description: "El vencimiento debe ser posterior al inicio y como máximo 30 días después.", variant: "destructive" });
       return;
     }
+    const datos = { nombre: f.nombre.trim(), auditor_nombre: f.auditor_nombre.trim(),
+      auditor_organizacion: f.auditor_organizacion.trim() || null, auditor_email: email,
+      inicia_en: ini.toISOString(), expira_en: fin.toISOString(), permite_descarga: f.permite_descarga };
     setGuardando(true);
-    const { data, error } = await sb.from("auditorias_externas").insert({
-      org_id: orgId, nombre: f.nombre.trim(), auditor_nombre: f.auditor_nombre.trim(),
-      auditor_organizacion: f.auditor_organizacion.trim() || null, auditor_email: f.auditor_email.trim(),
-      inicia_en: ini.toISOString(), expira_en: fin.toISOString(), permite_descarga: f.permite_descarga,
-    }).select("id").single();
+    if (modo === "editar") {
+      const { error } = await sb.from("auditorias_externas").update(datos).eq("id", base.id);
+      setGuardando(false);
+      if (error) { toast({ title: "No se pudo guardar", description: error.message, variant: "destructive" }); return; }
+      toast({ title: "Datos actualizados" });
+      onOpenChange(false); onGuardado?.();
+      return;
+    }
+    if (modo === "duplicar") {
+      const { data, error } = await sb.rpc("duplicar_auditoria", { p_origen: base.id, p_nombre: datos.nombre,
+        p_auditor_nombre: datos.auditor_nombre, p_auditor_organizacion: datos.auditor_organizacion ?? "",
+        p_auditor_email: datos.auditor_email, p_inicia_en: datos.inicia_en, p_expira_en: datos.expira_en,
+        p_permite_descarga: datos.permite_descarga });
+      setGuardando(false);
+      if (error) { toast({ title: "No se pudo duplicar", description: error.message, variant: "destructive" }); return; }
+      const om = (data.omitidos ?? []) as { tipo: string; titulo: string; motivo: string }[];
+      toast({
+        title: `Preparación duplicada: ${data.copiados} ítem(s) copiados`,
+        description: om.length ? `Se omitieron ${om.length}: ${om.map((o) => `${TIPO_LABEL[o.tipo]} «${String(o.titulo).slice(0, 50)}» (${o.motivo})`).join("; ")}` : undefined,
+        duration: om.length ? 15000 : 5000,
+      });
+      onOpenChange(false);
+      navigate(`/configuracion/auditorias/${data.id}`);
+      return;
+    }
+    const { data, error } = await sb.from("auditorias_externas").insert({ org_id: orgId, ...datos }).select("id").single();
     setGuardando(false);
     if (error) { toast({ title: "No se pudo crear", description: error.message, variant: "destructive" }); return; }
     onOpenChange(false);
     navigate(`/configuracion/auditorias/${data.id}`);
   };
 
+  const titulo = modo === "editar" ? "Editar datos del expediente" : modo === "duplicar" ? "Duplicar preparación para otro auditor" : "Nuevo expediente de auditoría";
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader><DialogTitle>Nuevo expediente de auditoría</DialogTitle></DialogHeader>
+      <DialogContent className="max-h-[90vh] overflow-y-auto">
+        <DialogHeader><DialogTitle>{titulo}</DialogTitle></DialogHeader>
+        {modo === "duplicar" && (
+          <p className="text-sm text-muted-foreground">Se crea un borrador nuevo con los ítems de este expediente que sigan vigentes. Los que ya no lo estén se omiten y se te avisa cuáles.</p>
+        )}
         <div className="space-y-3">
           <div><Label>Nombre</Label><Input placeholder="Auditoría COFEPRIS oct-2026" value={f.nombre} onChange={(e) => set("nombre", e.target.value)} /></div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div><Label>Auditor</Label><Input value={f.auditor_nombre} onChange={(e) => set("auditor_nombre", e.target.value)} /></div>
             <div><Label>Organización del auditor</Label><Input value={f.auditor_organizacion} onChange={(e) => set("auditor_organizacion", e.target.value)} /></div>
           </div>
-          <div><Label>Correo del auditor</Label><Input type="email" value={f.auditor_email} onChange={(e) => set("auditor_email", e.target.value)} /></div>
-          <div className="grid grid-cols-2 gap-3">
+          <div>
+            <Label>Correo del auditor</Label>
+            <Input type="email" value={f.auditor_email} onChange={(e) => set("auditor_email", e.target.value)} onBlur={() => set("auditor_email", email)} />
+            {emailMal && <p className="text-xs text-destructive mt-1">Correo no válido</p>}
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div><Label>Inicia</Label><Input type="datetime-local" value={f.inicia_en} onChange={(e) => set("inicia_en", e.target.value)} /></div>
             <div><Label>Vence (máx. 30 días)</Label><Input type="datetime-local" value={f.expira_en} onChange={(e) => set("expira_en", e.target.value)} /></div>
           </div>
           <div className="flex items-center gap-2"><Switch checked={f.permite_descarga} onCheckedChange={(v) => set("permite_descarga", v)} /><Label>Permitir descargas con marca de agua</Label></div>
+          {!f.permite_descarga && <p className="text-xs text-muted-foreground">Sin descargas, el auditor ve los PDF en pantalla con la misma marca de agua.</p>}
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-          <Button disabled={guardando || f.nombre.trim().length < 3 || !f.auditor_nombre.trim() || !f.auditor_email.includes("@")} onClick={guardar}>
-            Crear borrador
+          <Button disabled={guardando || f.nombre.trim().length < 3 || f.auditor_nombre.trim().length < 2 || !correoValido(email)} onClick={guardar}>
+            {modo === "editar" ? "Guardar" : modo === "duplicar" ? "Duplicar" : "Crear borrador"}
           </Button>
         </DialogFooter>
       </DialogContent>
