@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { nombresPersonas } from "@/lib/nombresPersonas";
 import type { Folio, Riesgo, FolioComite } from "@/hooks/useFolios";
 import { fetchOrgLogoDataUrl } from "@/lib/orgLogo";
+import { dibujarMarcaAguaCentrada } from "@/lib/pdfMarcaAgua";
 import { getNormaConfig, calcularNPR, getNPRLevelByNorma, getClasificacionMode } from "@/config/normas";
 import { getMotivoLabel } from "@/config/motivos-cancelacion";
 import { getEtiquetasControles } from "@/config/wizard-content";
@@ -365,22 +366,7 @@ export async function generateFolioPDF(
   function addMarcaAgua() {
     const marca = opciones?.marcaAgua;
     if (!marca) return;
-    const gs = (doc as any).GState ? new (doc as any).GState({ opacity: 0.25 }) : null;
-    if (gs) (doc as any).setGState(gs);
-    doc.setTextColor(180, 0, 0);
-    doc.setFont("helvetica", "bold");
-    let size = 26;
-    doc.setFontSize(size);
-    while (size > 8 && doc.getTextWidth(marca) > Math.hypot(pageW, pageH) * 0.85) {
-      size -= 1;
-      doc.setFontSize(size);
-    }
-    doc.text(pdfSafeText(marca), pageW / 2, pageH / 2, {
-      align: "center",
-      angle: (Math.atan2(pageH, pageW) * 180) / Math.PI,
-    });
-    if (gs) (doc as any).setGState(new (doc as any).GState({ opacity: 1 }));
-    doc.setTextColor(0);
+    dibujarMarcaAguaCentrada(doc, pdfSafeText(marca));
   }
 
   // Tira informativa con datos de cancelación (sólo página 1)
