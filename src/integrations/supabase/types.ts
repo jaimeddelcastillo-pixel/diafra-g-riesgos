@@ -4555,6 +4555,10 @@ export type Database = {
         }
         Returns: Json
       }
+      registrar_cambio_contrasena: {
+        Args: { _origen: string }
+        Returns: undefined
+      }
       reordenar_riesgos: {
         Args: { p_folio_id: string; p_orden: string[] }
         Returns: Json

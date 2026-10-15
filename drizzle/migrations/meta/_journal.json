@@ -288,6 +288,13 @@
       "when": 1792088030132,
       "tag": "0040_c6c2_portal_presentacion",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1792088540450,
+      "tag": "0041_c6c3_contrasena_cambiada",
+      "breakpoints": true
     }
   ]
 }
