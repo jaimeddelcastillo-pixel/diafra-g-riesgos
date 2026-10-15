@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Plus, Trash2, Download, Search, Pencil, Copy } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Download, Search, Pencil, Copy, Mail } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -245,7 +245,7 @@ function Buscador({ auditoriaId, orgId, onAgregado }: { auditoriaId: string; org
 
 function Detalle({ id }: { id: string }) {
   const { orgId } = useAuth();
-  const { esRS } = usePuedeGestionar();
+  const { esRS, gestiona } = usePuedeGestionar();
   const { toast } = useToast();
   const qc = useQueryClient();
   const [cierre, setCierre] = useState<null | "cerrado" | "revocado">(null);
@@ -300,6 +300,14 @@ function Detalle({ id }: { id: string }) {
     toast({ title: "Expediente activado", description: "Se envió la invitación al auditor." });
     refetch(); qc.invalidateQueries({ queryKey: ["auditoria-actividad", id] });
   };
+  const reenviar = async () => {
+    setOcupado(true);
+    const { error } = await supabase.functions.invoke("auditoria-invitar", { body: { auditoria_id: id, reenviar: true } });
+    setOcupado(false);
+    if (error) { toast({ title: "No se pudo reenviar", description: await errorFuncion(error), variant: "destructive" }); return; }
+    toast({ title: "Correo reenviado", description: `Se envió un enlace nuevo a ${a.auditor_email}.` });
+    qc.invalidateQueries({ queryKey: ["auditoria-actividad", id] });
+  };
   const cerrar = async () => {
     setOcupado(true);
     const { error } = await sb.from("auditorias_externas").update({ estado: cierre, motivo_cierre: motivo.trim() }).eq("id", id);
@@ -341,6 +349,7 @@ function Detalle({ id }: { id: string }) {
           {a.estado === "borrador" && <Button size="sm" variant="outline" onClick={() => setDialogo("editar")}><Pencil className="h-4 w-4 mr-1" />Editar datos</Button>}
           <Button size="sm" variant="outline" onClick={() => setDialogo("duplicar")}><Copy className="h-4 w-4 mr-1" />Duplicar preparación</Button>
           {esRS && a.estado === "borrador" && <Button size="sm" disabled={ocupado || !(items ?? []).length} onClick={activar}>Activar e invitar</Button>}
+          {gestiona && a.estado === "activo" && !vencido(a) && <Button size="sm" variant="outline" disabled={ocupado} onClick={reenviar}><Mail className="h-4 w-4 mr-1" />Reenviar correo</Button>}
           {esRS && editable && <Button size="sm" variant="outline" onClick={() => setCierre("cerrado")}>Cerrar</Button>}
           {esRS && editable && <Button size="sm" variant="destructive" onClick={() => setCierre("revocado")}>Revocar</Button>}
         </div>
