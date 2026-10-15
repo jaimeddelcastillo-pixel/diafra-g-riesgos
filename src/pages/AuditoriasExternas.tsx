@@ -317,8 +317,8 @@ function Detalle({ id }: { id: string }) {
   };
   const exportarCSV = () => {
     const esc = (v: any) => `"${String(v ?? "").replace(/"/g, '""')}"`;
-    const filas = [["fecha", "accion", "item", "archivo", "sha256", "ip"],
-      ...(actividad ?? []).map((r) => [r.fecha, ACCION_LABEL[r.accion] ?? r.accion, titulos[r.item_id] ?? r.item_id ?? "", r.archivo ?? "", r.sha256 ?? "", r.ip ?? ""])];
+    const filas = [["fecha", "grupo", "quien", "accion", "item", "archivo", "sha256", "ip"],
+      ...(actividad ?? []).map((r) => [r.fecha, r.es_auditor ? "Auditor" : "Empresa", r.persona ?? "", ACCION_LABEL[r.accion] ?? r.accion, titulos[r.item_id] ?? r.item_id ?? "", r.archivo ?? "", r.sha256 ?? "", r.ip ?? ""])];
     const blob = new Blob(["\ufeff" + filas.map((f) => f.map(esc).join(",")).join("\n")], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const el = document.createElement("a"); el.href = url; el.download = `actividad_${a.nombre.replace(/[^\w-]+/g, "_")}.csv`; el.click();
@@ -377,26 +377,33 @@ function Detalle({ id }: { id: string }) {
 
       <Card>
         <CardHeader className="py-3 flex flex-row items-center justify-between">
-          <CardTitle className="text-sm">Actividad del auditor</CardTitle>
+          <CardTitle className="text-sm">Actividad del expediente</CardTitle>
           <Button size="sm" variant="outline" disabled={!(actividad ?? []).length} onClick={exportarCSV}><Download className="h-4 w-4 mr-1" />CSV</Button>
         </CardHeader>
-        <CardContent className="pt-0 overflow-x-auto">
-          {(actividad ?? []).length === 0 ? <p className="text-sm text-muted-foreground">Sin actividad registrada.</p> : (
-            <table className="w-full text-xs">
-              <thead><tr className="text-left text-muted-foreground">{["Fecha", "Acción", "Ítem", "Archivo", "SHA-256"].map((h) => <th key={h} className="p-1.5">{h}</th>)}</tr></thead>
-              <tbody>
-                {(actividad ?? []).map((r, n) => (
-                  <tr key={n} className="border-t align-top">
-                    <td className="p-1.5 whitespace-nowrap">{fmt(r.fecha)}</td>
-                    <td className="p-1.5">{ACCION_LABEL[r.accion] ?? r.accion}{r.modo === "vista_60s" || r.modo === "vista_pdf" ? " (vista)" : ""}</td>
-                    <td className="p-1.5">{titulos[r.item_id] ?? "—"}</td>
-                    <td className="p-1.5">{r.archivo ?? "—"}</td>
-                    <td className="p-1.5 font-mono break-all">{r.sha256 ? `${r.sha256.slice(0, 16)}…` : "—"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
+        <CardContent className="pt-0 space-y-4 overflow-x-auto">
+          {[{ titulo: "Acciones del auditor", filas: (actividad ?? []).filter((r) => r.es_auditor) },
+            { titulo: "Acciones de la empresa", filas: (actividad ?? []).filter((r) => !r.es_auditor) }].map(({ titulo, filas }) => (
+            <section key={titulo}>
+              <h3 className="text-xs font-semibold mb-1">{titulo} ({filas.length})</h3>
+              {filas.length === 0 ? <p className="text-sm text-muted-foreground">Sin actividad registrada.</p> : (
+                <table className="w-full text-xs">
+                  <thead><tr className="text-left text-muted-foreground">{["Fecha", "Quién", "Acción", "Ítem", "Archivo", "SHA-256"].map((h) => <th key={h} className="p-1.5">{h}</th>)}</tr></thead>
+                  <tbody>
+                    {filas.map((r, n) => (
+                      <tr key={n} className="border-t align-top">
+                        <td className="p-1.5 whitespace-nowrap">{fmt(r.fecha)}</td>
+                        <td className="p-1.5">{r.persona ?? "—"}</td>
+                        <td className="p-1.5">{ACCION_LABEL[r.accion] ?? r.accion}{r.modo === "vista_60s" || r.modo === "vista_pdf" ? " (vista)" : ""}</td>
+                        <td className="p-1.5">{titulos[r.item_id] ?? "—"}</td>
+                        <td className="p-1.5">{r.archivo ?? "—"}</td>
+                        <td className="p-1.5 font-mono break-all">{r.sha256 ? `${r.sha256.slice(0, 16)}…` : "—"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </section>
+          ))}
         </CardContent>
       </Card>
 
