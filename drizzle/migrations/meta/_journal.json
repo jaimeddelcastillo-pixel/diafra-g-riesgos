@@ -302,6 +302,13 @@
       "when": 1792089765972,
       "tag": "0042_c6c4_actividad_persona",
       "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1792095379908,
+      "tag": "0043_p3_2_rs_configuracion_empresa",
+      "breakpoints": true
     }
   ]
 }
