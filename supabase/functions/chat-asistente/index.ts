@@ -5,6 +5,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { resolverContextoOrg } from "../_shared/contexto-org.ts";
 import { enviarYRegistrar } from "../_shared/transactional-email-templates/enviar-y-registrar.ts";
+import { cargarSkill, registrarSkillFaltante } from "../_shared/skills.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -423,15 +424,6 @@ async function maybeEnviarAviso80(
   }
 }
 
-async function getActivePrompt(supabase: any, nombre: "dm" | "farma") {
-  const { data } = await supabase
-    .from("agent_prompts")
-    .select("system_prompt, version")
-    .eq("nombre", nombre)
-    .eq("activo", true)
-    .maybeSingle();
-  return data;
-}
 
 async function bumpUsage(supabase: any, orgId: string) {
   const now = new Date();
@@ -518,10 +510,39 @@ Deno.serve(async (req) => {
     }
     const org = member.organizations as any;
 
-    // Determinar agente — SELECCIÓN ESTRICTA por norma de la organización.
-    // El override solo se respeta cuando la org es MULTI.
+    // C4a punto 5: la norma la decide el servidor. Con folio activo manda la
+    // norma del folio (folios.norma_folio) y se ignora lo que mande la pantalla;
+    // sin folio decide la organización y, en MULTI, el override de la pantalla.
+    let folioNorma: string | null = null;
+    if (folio_id) {
+      const { data: fNorma } = await adminClient
+        .from("folios").select("norma_folio").eq("id", folio_id).eq("org_id", org.id).maybeSingle();
+      if (fNorma?.norma_folio) folioNorma = fNorma.norma_folio;
+    } else if (conversacion_id) {
+      const { data: convPeek } = await adminClient
+        .from("chat_conversaciones").select("folio_id")
+        .eq("id", conversacion_id).eq("org_id", org.id).eq("created_by", user.id).maybeSingle();
+      if (convPeek?.folio_id) {
+        const { data: fNorma } = await adminClient
+          .from("folios").select("norma_folio").eq("id", convPeek.folio_id).eq("org_id", org.id).maybeSingle();
+        if (fNorma?.norma_folio) folioNorma = fNorma.norma_folio;
+      }
+    }
+
+    // Determinar agente — SELECCIÓN ESTRICTA por norma.
+    let agentePorFolio = false;
     let agente: "dm" | "farma";
-    if (org.norma_aplicable === "NOM-059") {
+    if (folioNorma === "NOM-241") {
+      agente = "dm"; agentePorFolio = true;
+      if (agente_override && agente_override !== "dm") {
+        console.warn(`[agente] override="${agente_override}" ignorado: el folio activo tiene norma NOM-241; se fuerza "dm"`);
+      }
+    } else if (folioNorma === "NOM-059") {
+      agente = "farma"; agentePorFolio = true;
+      if (agente_override && agente_override !== "farma") {
+        console.warn(`[agente] override="${agente_override}" ignorado: el folio activo tiene norma NOM-059; se fuerza "farma"`);
+      }
+    } else if (org.norma_aplicable === "NOM-059") {
       agente = "farma";
       if (agente_override && agente_override !== "farma") {
         console.warn(
@@ -554,10 +575,17 @@ Deno.serve(async (req) => {
       }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // Cargar system prompt
-    const promptRow = await getActivePrompt(adminClient, agente);
-    if (!promptRow) {
-      return new Response(JSON.stringify({ error: "Agente no configurado" }), {
+    // C4a: cargar la skill vigente desde la base (sin texto de respaldo en código).
+    let skillBase = "";
+    let skillsUsadasOut: { clave: string; version: string; sha256: string }[] = [];
+    try {
+      const skill = await cargarSkill(adminClient, agente);
+      skillBase = skill.texto;
+      skillsUsadasOut = [{ clave: skill.clave, version: skill.version, sha256: skill.sha256 }];
+    } catch (e) {
+      console.error("C4a: skill no vigente", e);
+      await registrarSkillFaltante(adminClient, org.id, agente, "chat-asistente");
+      return new Response(JSON.stringify({ error: `Skill no vigente: ${agente}. Publícala en el panel Skills de IA.` }), {
         status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -575,12 +603,17 @@ Deno.serve(async (req) => {
         .maybeSingle();
       if (!conv) conversacion_id = null;
       else if (conv.agente && conv.agente !== agente) {
-        // Mismatch de norma/agente: no reanudar — se crea conversación nueva
-        // para evitar contaminación cruzada de citas regulatorias.
-        console.warn(
-          `[agente] conversación ${conv.id} tiene agente="${conv.agente}" pero la org requiere "${agente}". Se crea nueva conversación.`,
-        );
-        conversacion_id = null;
+        if (agentePorFolio) {
+          // C4a: la norma del folio manda; la conversación se alinea con ella.
+          await adminClient.from("chat_conversaciones").update({ agente }).eq("id", conv.id);
+        } else {
+          // Mismatch de norma/agente: no reanudar — se crea conversación nueva
+          // para evitar contaminación cruzada de citas regulatorias.
+          console.warn(
+            `[agente] conversación ${conv.id} tiene agente="${conv.agente}" pero la org requiere "${agente}". Se crea nueva conversación.`,
+          );
+          conversacion_id = null;
+        }
       } else {
         const fecha = new Date(conv.ultimo_mensaje_en).toLocaleDateString("es-MX", { day: "numeric", month: "long" });
         resumeNote = `\n\n## CONTINUACIÓN DE CONVERSACIÓN\nRetomando nuestra conversación del ${fecha} sobre "${conv.titulo}". Mantén la coherencia con el historial previo.`;
@@ -651,7 +684,7 @@ Deno.serve(async (req) => {
         "NUNCA cites, sugieras ni mezcles NOM-241-SSA1-2025 salvo que el usuario pregunte explícitamente por comparación regulatoria.\n\n";
     }
 
-    const systemPrompt = normaAncla + (promptRow as any).system_prompt + orgCtx + folioCtx + resumeNote + TOOL_RULES_ADDENDUM;
+    const systemPrompt = normaAncla + skillBase + orgCtx + folioCtx + resumeNote + TOOL_RULES_ADDENDUM;
 
     // Persistir el último mensaje user + bump
     const lastUser = [...messages].reverse().find((m) => m.role === "user");
@@ -921,6 +954,7 @@ Deno.serve(async (req) => {
               contenido: fullText,
               tokens_usados: tokensIn + tokensOut,
               agente,
+              skills_usadas: skillsUsadasOut.length ? skillsUsadasOut : null,
               documentos_adjuntos: allToolUses.length ? { tool_uses: allToolUses } : null,
             });
 
