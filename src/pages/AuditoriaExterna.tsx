@@ -41,7 +41,9 @@ function useAccion() {
   return { ocupado, correr };
 }
 
-function VisorFolio({ itemId, d, permiteDescarga }: { itemId: string; d: any; permiteDescarga: boolean }) {
+type VerPdf = (r: ResultadoArchivo, titulo: string) => void;
+
+function VisorFolio({ itemId, d, permiteDescarga, verPdf }: { itemId: string; d: any; permiteDescarga: boolean; verPdf: VerPdf }) {
   const f = d.folio;
   const { ocupado, correr } = useAccion();
   return (
@@ -51,12 +53,16 @@ function VisorFolio({ itemId, d, permiteDescarga }: { itemId: string; d: any; pe
           <h2 className="text-lg font-bold">{f.codigo}</h2>
           <p className="text-sm text-muted-foreground">{f.proceso_equipo}</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Badge variant="outline">{f.estado}</Badge>
           <Badge variant="secondary">Versión {f.numero_version || "1.0"}</Badge>
+          <Button size="sm" variant="outline" disabled={!!ocupado}
+            onClick={() => correr("ver", async () => verPdf(await folioPdfAuditor(itemId, d, false), f.codigo))}>
+            <Eye className="h-4 w-4 mr-1" /> {ocupado === "ver" ? "Generando…" : "Ver PDF"}
+          </Button>
           {permiteDescarga && (
-            <Button size="sm" disabled={!!ocupado} onClick={() => correr("pdf", () => descargarFolioAuditor(itemId, d))}>
-              <Download className="h-4 w-4 mr-1" /> {ocupado === "pdf" ? "Generando…" : "PDF"}
+            <Button size="sm" disabled={!!ocupado} onClick={() => correr("pdf", () => folioPdfAuditor(itemId, d, true))}>
+              <Download className="h-4 w-4 mr-1" /> {ocupado === "pdf" ? "Generando…" : "Descargar"}
             </Button>
           )}
         </div>
