@@ -66,3 +66,118 @@ export async function registrarSkillFaltante(
     `Skill no vigente: ${clave}. Publica una versión en el panel Skills de IA (contexto: ${contexto}).`,
   );
 }
+
+// ═══════════════════════════════════════════════════════════════════
+// C4b · Armador por bloques (Riesgos). No sustituye la composición
+// monolítica (dm/farma): chat-asistente lo usa solo si la empresa está en
+// 'bloques' (ia_config_org) y las piezas obligatorias tienen versión vigente.
+// ═══════════════════════════════════════════════════════════════════
+
+export type PiezaUsada = SkillUso & { id?: string; estado?: string };
+
+/** Módulo comercial → fragmento de alcance. Capacitación acompaña a todo módulo. */
+const ALCANCES: { clave: string; modulo: string | null; etiqueta: string }[] = [
+  { clave: "alcance_riesgos", modulo: "riesgos", etiqueta: "Gestión de Riesgos (análisis AMEF, folios, matriz de riesgos)" },
+  { clave: "alcance_cerebro", modulo: "institutional_brain", etiqueta: "Cerebro Institucional (Listado Maestro, conocimiento validado, entrevistas)" },
+  { clave: "alcance_capacitacion", modulo: null, etiqueta: "Capacitación" },
+];
+
+export type OrgBloques = {
+  id: string; nombre: string; norma_aplicable: string | null; metodologia: string | null;
+  usar_detectabilidad: boolean | null; umbral_npr_alto: number | null; umbral_npr_medio: number | null;
+};
+
+export type ResultadoBloques =
+  | {
+      ok: true;
+      /** Bloques 1–3, idénticos entre llamadas (se marcan para caché). */
+      fijo: string;
+      /** [CONTEXTO_EMPRESA] + [ALCANCE_TRACEA]. */
+      variable: string;
+      skills_usadas: PiezaUsada[];
+      norma: "NOM-241" | "NOM-059";
+    }
+  | { ok: false; faltantes: string[] };
+
+async function cargarPorId(admin: any, id: string): Promise<SkillCargada & { id: string; estado: string }> {
+  const { data, error } = await admin
+    .from("agent_prompts").select("id, nombre, system_prompt, version, sha256, estado")
+    .eq("id", id).maybeSingle();
+  if (error || !data) throw new Error(`Versión de skill no encontrada: ${id}`);
+  return { id: data.id, estado: data.estado, clave: data.nombre, version: data.version, sha256: data.sha256, texto: data.system_prompt };
+}
+
+async function cargarVigenteOpcional(admin: any, clave: string) {
+  try { return await cargarSkill(admin, clave); } catch { return null; }
+}
+
+/** Norma de bloques: folio manda; sin folio, la selección vigente (dm/farma). */
+export function normaBloques(folioNorma: string | null, folioCategoria: string | null, agente: "dm" | "farma"): "NOM-241" | "NOM-059" {
+  if (folioNorma === "NOM-059") return "NOM-059";
+  if (folioNorma === "NOM-241") return "NOM-241";
+  if (folioNorma === "MULTI") return folioCategoria === "medicamento" ? "NOM-059" : "NOM-241";
+  return agente === "farma" ? "NOM-059" : "NOM-241";
+}
+
+/**
+ * armarRiesgos({ org, norma }) — orden fijo:
+ * plataforma · riesgos_amef · norma_nom241|norma_nom059 · [CONTEXTO_EMPRESA] · [ALCANCE_TRACEA]
+ * El contexto del folio, la nota de continuidad y las reglas de herramientas
+ * las añade quien llama, igual que hoy.
+ * `versiones` (solo para pruebas) fija ids de agent_prompts por clave (vigente o borrador).
+ */
+export async function armarRiesgos(
+  admin: any,
+  args: { org: OrgBloques; norma: "NOM-241" | "NOM-059"; versiones?: Record<string, string> },
+): Promise<ResultadoBloques> {
+  const { org, norma, versiones = {} } = args;
+  const claveNorma = norma === "NOM-059" ? "norma_nom059" : "norma_nom241";
+  const obligatorias = ["plataforma", "riesgos_amef", claveNorma];
+
+  const piezas: (SkillCargada & { id?: string; estado?: string })[] = [];
+  const faltantes: string[] = [];
+  for (const clave of obligatorias) {
+    const s = versiones[clave]
+      ? await cargarPorId(admin, versiones[clave]).catch(() => null)
+      : await cargarVigenteOpcional(admin, clave);
+    if (!s || s.clave !== clave || !s.texto?.trim()) faltantes.push(clave);
+    else piezas.push(s);
+  }
+  if (faltantes.length) return { ok: false, faltantes };
+
+  // [CONTEXTO_EMPRESA]
+  const contexto =
+    `[CONTEXTO_EMPRESA]\nNombre: ${org.nombre}\nNorma(s): ${org.norma_aplicable ?? "—"}` +
+    `${org.norma_aplicable === "MULTI" ? ` (norma de esta conversación: ${norma})` : ""}\n` +
+    `Metodología: ${org.metodologia ?? "—"}\nUsa detectabilidad: ${org.usar_detectabilidad}\n` +
+    `Umbral NPR alto: ${org.umbral_npr_alto}\nUmbral NPR medio: ${org.umbral_npr_medio}`;
+
+  // [ALCANCE_TRACEA]
+  const fragmentos: string[] = [];
+  const noEstan: string[] = [];
+  const usadosAlcance: (SkillCargada & { id?: string; estado?: string })[] = [];
+  for (const a of ALCANCES) {
+    let activo = true;
+    if (a.modulo) {
+      const { data } = await admin.rpc("org_tiene_modulo", { _org: org.id, _modulo: a.modulo });
+      activo = !!data;
+    }
+    if (!activo) { noEstan.push(a.etiqueta); continue; }
+    const s = versiones[a.clave]
+      ? await cargarPorId(admin, versiones[a.clave]).catch(() => null)
+      : await cargarVigenteOpcional(admin, a.clave);
+    if (s && s.clave === a.clave && s.texto?.trim()) { fragmentos.push(s.texto); usadosAlcance.push(s); }
+  }
+  const alcance =
+    `[ALCANCE_TRACEA]\n${fragmentos.join("\n\n")}${fragmentos.length ? "\n\n" : ""}` +
+    `Funciones que NO están en TRACEA para esta empresa: ${noEstan.length ? noEstan.join("; ") : "ninguna"}.`;
+
+  const todas = [...piezas, ...usadosAlcance];
+  return {
+    ok: true,
+    fijo: piezas.map((p) => p.texto).join("\n\n"),
+    variable: `${contexto}\n\n${alcance}`,
+    skills_usadas: todas.map((p) => ({ clave: p.clave, version: p.version, sha256: p.sha256, ...(p.id ? { id: p.id, estado: p.estado } : {}) })),
+    norma,
+  };
+}
