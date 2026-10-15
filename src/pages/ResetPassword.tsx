@@ -110,8 +110,7 @@ export default function ResetPassword() {
       }
       await e2.client.rpc("registrar_cambio_contrasena", { _origen: e2.origen });
       toast.success("Contraseña guardada.");
-      // Destino según la cuenta: con empresa → Inicio; solo expedientes de auditoría → portal.
-      const { data: m } = await e2.client.from("org_members").select("id").eq("user_id", cuenta.id).limit(1);
+      // Tras guardar se entra con la contraseña nueva en el inicio de sesión.
       await e2.client.auth.signOut({ scope: "local" });
       window.location.replace("/login");
     } catch (err: any) {
