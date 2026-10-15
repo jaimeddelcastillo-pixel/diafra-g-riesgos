@@ -25,10 +25,10 @@ export default function AdminAgentes() {
       <header>
         <h1 className="text-2xl font-bold flex items-center gap-2">
           <Sparkles className="h-5 w-5 text-accent" />
-          Agentes IA
+          Skills de IA
         </h1>
         <p className="text-sm text-muted-foreground">
-          Gestión de los System Prompts del Asistente IA. Solo super admin.
+          Instrucciones versionadas que usa la IA de TRACEA. Cada publicación queda en el historial. Solo super admin.
         </p>
       </header>
       <AgentEditor nombre="dm" titulo="Agent DM (NOM-241 / Dispositivos Médicos)" />
