@@ -50,6 +50,7 @@ Deno.serve(async (req) => {
 
   let auditorId: string;
   let cuentaNueva = false;
+  let enlaceInvitacion: string | null = null;
   if (perfil) {
     if (perfil.activo === false) return json({ error: "La cuenta de ese correo está desactivada" }, 409);
     const { data: sa } = await admin.from("user_roles").select("role").eq("user_id", perfil.id).eq("role", "super_admin").maybeSingle();
@@ -59,12 +60,17 @@ Deno.serve(async (req) => {
     if (miembro) return json({ error: "Ese correo ya es integrante de la empresa; un auditor externo no puede serlo" }, 409);
     auditorId = perfil.id;
   } else {
-    const { data: inv, error: invErr } = await admin.auth.admin.inviteUserByEmail(email, {
-      data: { nombre: aud.auditor_nombre },
-      redirectTo: `${SITE}/reset-password`,
+  // C6c.2: el enlace de invitación se genera sin que el sistema de cuentas envíe su correo genérico;
+  // se manda dentro de la plantilla auditoria-invitacion (en español).
+    const { data: inv, error: invErr } = await admin.auth.admin.generateLink({
+      type: "invite", email,
+      options: { data: { nombre: aud.auditor_nombre }, redirectTo: `${SITE}/reset-password` },
     });
-    if (invErr || !inv?.user) return json({ error: `No se pudo invitar: ${invErr?.message ?? "sin usuario"}` }, 500);
+    if (invErr || !inv?.user || !inv.properties?.action_link) {
+      return json({ error: `No se pudo invitar: ${invErr?.message ?? "sin usuario"}` }, 500);
+    }
     auditorId = inv.user.id;
+    enlaceInvitacion = inv.properties.action_link;
     cuentaNueva = true;
     // La alta automática da un rol global por omisión; el auditor no debe tener ninguno.
     await admin.from("user_roles").delete().eq("user_id", auditorId).neq("role", "super_admin");
@@ -84,16 +90,14 @@ Deno.serve(async (req) => {
       cuenta_nueva: cuentaNueva, expira_en: aud.expira_en, items: nItems },
   });
 
-  if (!cuentaNueva) {
-    const expira = new Date(aud.expira_en).toLocaleDateString("es-MX", { day: "numeric", month: "long", year: "numeric", timeZone: "America/Mexico_City" });
-    try {
-      await enviarYRegistrar({
-        templateName: "auditoria-invitacion", recipientEmail: email,
-        idempotencyKey: `auditoria-${auditoriaId}`,
-        templateData: { nombre: aud.auditor_nombre, organizacion: org?.nombre ?? "", expediente: aud.nombre, expira,
-          portalUrl: `${SITE}/auditoria-externa` },
-      });
-    } catch (e) { console.warn("correo auditoria-invitacion:", e); }
-  }
-  return json({ success: true, cuenta_nueva: cuentaNueva });
+  const fmt = (d: string) => new Date(d).toLocaleDateString("es-MX", { day: "numeric", month: "long", year: "numeric", timeZone: "America/Mexico_City" });
+  const { error: mailErr } = await enviarYRegistrar({
+    templateName: "auditoria-invitacion", recipientEmail: email,
+    idempotencyKey: `auditoria-${auditoriaId}`,
+    templateData: { nombre: aud.auditor_nombre, organizacion: org?.nombre ?? "", expediente: aud.nombre,
+      inicia: fmt(aud.inicia_en), expira: fmt(aud.expira_en), permiteDescarga: !!aud.permite_descarga,
+      cuentaNueva, portalUrl: enlaceInvitacion ?? `${SITE}/auditoria-externa` },
+  });
+  if (mailErr) console.warn("correo auditoria-invitacion:", mailErr.message);
+  return json({ success: true, cuenta_nueva: cuentaNueva, correo_enviado: !mailErr });
 });
