@@ -179,6 +179,8 @@ export function RiesgoFormDialog({ open, onClose, folioId, riesgo, nextNumeroId,
   const [activeTab, setActiveTab] = useState("identificacion");
   const [causaRaizOpen, setCausaRaizOpen] = useState(false);
   const [causaRaizAplicado, setCausaRaizAplicado] = useState(false);
+  // C4b: skills y modelo de sugerencias IA aceptadas, se guardan en riesgos.ia_origen.
+  const [iaOrigenNuevo, setIaOrigenNuevo] = useState<unknown[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Resolver configuración de norma (MULTI → NOM-241 por default)
@@ -414,6 +416,10 @@ export function RiesgoFormDialog({ open, onClose, folioId, riesgo, nextNumeroId,
       anexos: form.anexos,
       updated_at: new Date().toISOString(),
     };
+    if (iaOrigenNuevo.length) {
+      const previo = Array.isArray((riesgo as any)?.ia_origen) ? (riesgo as any).ia_origen : [];
+      payload.ia_origen = [...previo, ...iaOrigenNuevo];
+    }
 
     let error;
     let savedRow: { id: string } | null = null;
@@ -481,6 +487,7 @@ export function RiesgoFormDialog({ open, onClose, folioId, riesgo, nextNumeroId,
       ),
     }));
     setCausaRaizAplicado(true);
+    if (p.iaOrigen?.length) setIaOrigenNuevo((prev) => [...prev, ...p.iaOrigen!]);
     toast({
       title: "Análisis aplicado",
       description: `Causa raíz: ${p.causaRaiz}`,

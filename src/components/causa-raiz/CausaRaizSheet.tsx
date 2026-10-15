@@ -20,6 +20,7 @@ import {
   type PorquesState,
 } from "./CincoPorquesPanel";
 import { getNormaLabel, type Categoria6M } from "@/config/wizard-content";
+import { reiniciarOrigenesIA, origenesIA, type OrigenIA } from "./useCausaRaizAI";
 
 export type CausaRaizPayload = {
   causaRaiz: string;
