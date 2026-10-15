@@ -194,6 +194,8 @@ export async function generateFolioPDF(
     marcaAgua?: string;
     /** C6c: versiones ya resueltas (el auditor no lee folio_versiones directamente). */
     versiones?: VersionRow[];
+    /** C6c.1: devuelve el PDF en memoria para verlo en pantalla, sin descargarlo. */
+    soloBlob?: boolean;
   },
 ) {
   const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "letter" });
@@ -1038,5 +1040,6 @@ export async function generateFolioPDF(
     addMarcaAgua();
   }
 
+  if (opciones?.soloBlob) return doc.output("blob") as Blob;
   doc.save(`${folio.codigo}_${folio.proceso_equipo.replace(/[^a-zA-Z0-9]/g, "_")}.pdf`);
 }
