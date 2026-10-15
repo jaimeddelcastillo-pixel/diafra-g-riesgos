@@ -91,16 +91,25 @@ Deno.serve(async (req) => {
     const pdf = await PDFDocument.load(original, { ignoreEncryption: true });
     const font = await pdf.embedFont(StandardFonts.HelveticaBold);
     for (const page of pdf.getPages()) {
-      const { width, height } = page.getSize();
-      const diag = Math.sqrt(width * width + height * height);
+      // Centrado según el área visible real (CropBox con su origen) y la rotación de la página.
+      const box = page.getCropBox();
+      const rot = ((page.getRotation().angle % 360) + 360) % 360;
+      const girada = rot === 90 || rot === 270;
+      const visW = girada ? box.height : box.width;
+      const visH = girada ? box.width : box.height;
+      const diag = Math.sqrt(visW * visW + visH * visH);
       let size = 28;
       while (size > 8 && font.widthOfTextAtSize(marca, size) > diag * 0.85) size -= 1;
       const w = font.widthOfTextAtSize(marca, size);
-      const ang = Math.atan2(height, width);
+      const capH = font.heightAtSize(size, { descender: false });
+      // Ángulo visual de la diagonal; en el espacio de la página se suma la rotación de visualización.
+      const phi = Math.atan2(visH, visW) + (rot * Math.PI) / 180;
+      const cx = box.x + box.width / 2;
+      const cy = box.y + box.height / 2;
       page.drawText(marca, {
-        x: width / 2 - (w / 2) * Math.cos(ang) + (size / 2) * Math.sin(ang),
-        y: height / 2 - (w / 2) * Math.sin(ang) - (size / 2) * Math.cos(ang),
-        size, font, color: rgb(0.75, 0, 0), opacity: 0.28, rotate: degrees((ang * 180) / Math.PI),
+        x: cx - (w / 2) * Math.cos(phi) + (capH / 2) * Math.sin(phi),
+        y: cy - (w / 2) * Math.sin(phi) - (capH / 2) * Math.cos(phi),
+        size, font, color: rgb(0.75, 0, 0), opacity: 0.28, rotate: degrees((phi * 180) / Math.PI),
       });
     }
     salida = await pdf.save();
