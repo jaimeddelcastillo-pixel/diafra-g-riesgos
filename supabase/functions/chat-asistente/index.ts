@@ -514,18 +514,19 @@ Deno.serve(async (req) => {
     // norma del folio (folios.norma_folio) y se ignora lo que mande la pantalla;
     // sin folio decide la organización y, en MULTI, el override de la pantalla.
     let folioNorma: string | null = null;
+    let folioCategoria: string | null = null;
     if (folio_id) {
       const { data: fNorma } = await adminClient
-        .from("folios").select("norma_folio").eq("id", folio_id).eq("org_id", org.id).maybeSingle();
-      if (fNorma?.norma_folio) folioNorma = fNorma.norma_folio;
+        .from("folios").select("norma_folio, clasificacion_categoria").eq("id", folio_id).eq("org_id", org.id).maybeSingle();
+      if (fNorma?.norma_folio) { folioNorma = fNorma.norma_folio; folioCategoria = fNorma.clasificacion_categoria ?? null; }
     } else if (conversacion_id) {
       const { data: convPeek } = await adminClient
         .from("chat_conversaciones").select("folio_id")
         .eq("id", conversacion_id).eq("org_id", org.id).eq("created_by", user.id).maybeSingle();
       if (convPeek?.folio_id) {
         const { data: fNorma } = await adminClient
-          .from("folios").select("norma_folio").eq("id", convPeek.folio_id).eq("org_id", org.id).maybeSingle();
-        if (fNorma?.norma_folio) folioNorma = fNorma.norma_folio;
+          .from("folios").select("norma_folio, clasificacion_categoria").eq("id", convPeek.folio_id).eq("org_id", org.id).maybeSingle();
+        if (fNorma?.norma_folio) { folioNorma = fNorma.norma_folio; folioCategoria = fNorma.clasificacion_categoria ?? null; }
       }
     }
 
