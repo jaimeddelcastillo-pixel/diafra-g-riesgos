@@ -10,7 +10,7 @@ import { toast } from "sonner";
 
 export function OrgFormatoCard() {
   const { orgId, hasRole } = useAuth();
-  const canEdit = hasRole("admin");
+  const canEdit = hasRole("admin") || hasRole("responsable_sanitario");
   const queryClient = useQueryClient();
 
   const { data: orgRow } = useQuery({

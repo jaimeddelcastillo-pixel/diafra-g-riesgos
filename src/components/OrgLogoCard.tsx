@@ -12,7 +12,7 @@ const MAX_BYTES = 1024 * 1024; // 1 MB
 
 export function OrgLogoCard() {
   const { orgId, hasRole } = useAuth();
-  const canEdit = hasRole("admin");
+  const canEdit = hasRole("admin") || hasRole("responsable_sanitario");
   const inputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
