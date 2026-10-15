@@ -242,6 +242,9 @@ export default function AuditoriaExterna() {
   const [detalle, setDetalle] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
   const [cargando, setCargando] = useState(false);
+  const [pdf, setPdf] = useState<{ url: string; titulo: string } | null>(null);
+  const verPdf: VerPdf = (r, titulo) => { if (r.modo === "vista_pdf") setPdf({ url: r.url, titulo }); };
+  const cerrarPdf = () => { if (pdf) URL.revokeObjectURL(pdf.url); setPdf(null); };
 
   const exp = useMemo(() => (expedientes ?? []).find((e) => e.id === expId) ?? (expedientes ?? [])[0], [expedientes, expId]);
 
@@ -334,12 +337,18 @@ export default function AuditoriaExterna() {
                 {!itemId && <p className="text-sm text-muted-foreground">Elige un ítem del expediente.</p>}
                 {cargando && <p className="text-sm text-muted-foreground">Cargando…</p>}
                 {error && <p className="text-sm text-destructive">{error}</p>}
-                {detalle && detalle.tipo === "folio" && <VisorFolio itemId={detalle.item_id} d={detalle.datos} permiteDescarga={detalle.permite_descarga} />}
-                {detalle && detalle.tipo === "documento" && <VisorDocumento itemId={detalle.item_id} d={detalle.datos} permiteDescarga={detalle.permite_descarga} />}
+                {detalle && detalle.tipo === "folio" && <VisorFolio itemId={detalle.item_id} d={detalle.datos} permiteDescarga={detalle.permite_descarga} verPdf={verPdf} />}
+                {detalle && detalle.tipo === "documento" && <VisorDocumento itemId={detalle.item_id} d={detalle.datos} permiteDescarga={detalle.permite_descarga} verPdf={verPdf} />}
                 {detalle && detalle.tipo === "conocimiento" && <VisorConocimiento d={detalle.datos} />}
               </CardContent>
             </Card>
           </div>
+          <Dialog open={!!pdf} onOpenChange={(v) => { if (!v) cerrarPdf(); }}>
+            <DialogContent className="max-w-5xl w-[95vw] h-[90vh] flex flex-col p-3">
+              <DialogHeader><DialogTitle className="text-sm truncate pr-6">{pdf?.titulo} · copia con marca de agua</DialogTitle></DialogHeader>
+              {pdf && <iframe title={pdf.titulo} src={`${pdf.url}#toolbar=0`} className="flex-1 w-full rounded border" />}
+            </DialogContent>
+          </Dialog>
         </main>
       )}
     </div>
