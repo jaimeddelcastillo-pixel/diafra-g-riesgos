@@ -4,10 +4,11 @@ import { ClipboardCheck, FileText, Brain, ShieldAlert, LogOut, Download, Eye, Ar
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuditorExpedientes, type ItemExpediente } from "@/hooks/useAuditorExpedientes";
-import { abrirArchivoAuditor, descargarFolioAuditor } from "@/lib/auditoriaDescargas";
+import { abrirArchivoAuditor, folioPdfAuditor, type ResultadoArchivo } from "@/lib/auditoriaDescargas";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 
 const fmtFecha = (d?: string | null, hora = false) =>
