@@ -100,9 +100,14 @@ export type Database = {
       agent_prompts: {
         Row: {
           activo: boolean
+          aprobado_en: string | null
+          aprobado_por: string | null
           created_at: string
+          estado: string
           id: string
+          motivo_cambio: string | null
           nombre: string
+          sha256: string | null
           system_prompt: string
           updated_at: string
           updated_by: string | null
@@ -110,9 +115,14 @@ export type Database = {
         }
         Insert: {
           activo?: boolean
+          aprobado_en?: string | null
+          aprobado_por?: string | null
           created_at?: string
+          estado?: string
           id?: string
+          motivo_cambio?: string | null
           nombre: string
+          sha256?: string | null
           system_prompt: string
           updated_at?: string
           updated_by?: string | null
@@ -120,15 +130,28 @@ export type Database = {
         }
         Update: {
           activo?: boolean
+          aprobado_en?: string | null
+          aprobado_por?: string | null
           created_at?: string
+          estado?: string
           id?: string
+          motivo_cambio?: string | null
           nombre?: string
+          sha256?: string | null
           system_prompt?: string
           updated_at?: string
           updated_by?: string | null
           version?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "agent_prompts_nombre_fkey"
+            columns: ["nombre"]
+            isOneToOne: false
+            referencedRelation: "ia_skills"
+            referencedColumns: ["clave"]
+          },
+        ]
       }
       audit_trail: {
         Row: {
@@ -813,6 +836,7 @@ export type Database = {
           paginas_leidas: number | null
           paginas_totales: number | null
           sha256: string
+          skills_usadas: Json | null
           solicitado_por: string
           texto: string | null
           truncado: boolean
@@ -828,6 +852,7 @@ export type Database = {
           paginas_leidas?: number | null
           paginas_totales?: number | null
           sha256: string
+          skills_usadas?: Json | null
           solicitado_por: string
           texto?: string | null
           truncado?: boolean
@@ -843,6 +868,7 @@ export type Database = {
           paginas_leidas?: number | null
           paginas_totales?: number | null
           sha256?: string
+          skills_usadas?: Json | null
           solicitado_por?: string
           texto?: string | null
           truncado?: boolean
@@ -1355,6 +1381,7 @@ export type Database = {
           operations: Json
           org_id: string
           session_id: string
+          skills_usadas: Json | null
           transcript_persisted: boolean
         }
         Insert: {
@@ -1372,6 +1399,7 @@ export type Database = {
           operations?: Json
           org_id: string
           session_id: string
+          skills_usadas?: Json | null
           transcript_persisted?: boolean
         }
         Update: {
@@ -1389,6 +1417,7 @@ export type Database = {
           operations?: Json
           org_id?: string
           session_id?: string
+          skills_usadas?: Json | null
           transcript_persisted?: boolean
         }
         Relationships: [
@@ -2073,6 +2102,7 @@ export type Database = {
           id: string
           org_id: string
           role: string
+          skills_usadas: Json | null
           tokens_usados: number | null
           user_id: string | null
         }
@@ -2086,6 +2116,7 @@ export type Database = {
           id?: string
           org_id: string
           role: string
+          skills_usadas?: Json | null
           tokens_usados?: number | null
           user_id?: string | null
         }
@@ -2099,6 +2130,7 @@ export type Database = {
           id?: string
           org_id?: string
           role?: string
+          skills_usadas?: Json | null
           tokens_usados?: number | null
           user_id?: string | null
         }
@@ -3102,6 +3134,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      ia_skills: {
+        Row: {
+          activo: boolean
+          ambito: string
+          clave: string
+          descripcion: string | null
+          modulo: string | null
+          nombre: string
+          norma: string | null
+        }
+        Insert: {
+          activo?: boolean
+          ambito: string
+          clave: string
+          descripcion?: string | null
+          modulo?: string | null
+          nombre: string
+          norma?: string | null
+        }
+        Update: {
+          activo?: boolean
+          ambito?: string
+          clave?: string
+          descripcion?: string | null
+          modulo?: string | null
+          nombre?: string
+          norma?: string | null
+        }
+        Relationships: []
       }
       impersonation_logs: {
         Row: {
