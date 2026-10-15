@@ -150,12 +150,18 @@ function VisorFolio({ itemId, d, permiteDescarga, verPdf }: { itemId: string; d:
             {d.evidencias.map((e: any) => (
               <li key={e.path} className="flex items-center justify-between gap-2 text-sm border rounded-md px-3 py-2">
                 <span className="truncate">Riesgo {e.riesgo_numero} · {e.nombre}</span>
-                {(!e.es_pdf || permiteDescarga) && (
+                <div className="flex gap-1 shrink-0">
                   <Button size="sm" variant="outline" disabled={!!ocupado}
-                    onClick={() => correr(e.path, () => abrirArchivoAuditor(itemId, e.nombre, e.path))}>
-                    {e.es_pdf ? <><Download className="h-4 w-4 mr-1" />Descargar</> : <><Eye className="h-4 w-4 mr-1" />Ver</>}
+                    onClick={() => correr(e.path, async () => verPdf(await abrirArchivoAuditor(itemId, e.nombre, e.path), e.nombre))}>
+                    <Eye className="h-4 w-4 mr-1" />Ver
                   </Button>
-                )}
+                  {e.es_pdf && permiteDescarga && (
+                    <Button size="sm" variant="outline" disabled={!!ocupado} aria-label="Descargar"
+                      onClick={() => correr(e.path + ":d", () => abrirArchivoAuditor(itemId, e.nombre, e.path, true))}>
+                      <Download className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
               </li>
             ))}
           </ul>
@@ -165,17 +171,23 @@ function VisorFolio({ itemId, d, permiteDescarga, verPdf }: { itemId: string; d:
   );
 }
 
-function VisorDocumento({ itemId, d, permiteDescarga }: { itemId: string; d: any; permiteDescarga: boolean }) {
+function VisorDocumento({ itemId, d, permiteDescarga, verPdf }: { itemId: string; d: any; permiteDescarga: boolean; verPdf: VerPdf }) {
   const { ocupado, correr } = useAccion();
+  const nombre = d.nombre_archivo || d.nombre;
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-lg font-bold">{d.registro?.codigo ? `${d.registro.codigo} · ` : ""}{d.nombre}</h2>
-        {(!d.es_pdf || permiteDescarga) && (
-          <Button size="sm" disabled={!!ocupado} onClick={() => correr("doc", () => abrirArchivoAuditor(itemId, d.nombre_archivo || d.nombre))}>
-            {d.es_pdf ? <><Download className="h-4 w-4 mr-1" />Descargar copia</> : <><Eye className="h-4 w-4 mr-1" />Ver</>}
+        <div className="flex gap-2">
+          <Button size="sm" variant="outline" disabled={!!ocupado} onClick={() => correr("ver", async () => verPdf(await abrirArchivoAuditor(itemId, nombre), d.nombre))}>
+            <Eye className="h-4 w-4 mr-1" />{ocupado === "ver" ? "Abriendo…" : "Ver"}
           </Button>
-        )}
+          {d.es_pdf && permiteDescarga && (
+            <Button size="sm" disabled={!!ocupado} onClick={() => correr("doc", () => abrirArchivoAuditor(itemId, nombre, undefined, true))}>
+              <Download className="h-4 w-4 mr-1" />Descargar copia
+            </Button>
+          )}
+        </div>
       </div>
       {d.copia_no_controlada && <Badge variant="destructive">Copia no controlada</Badge>}
       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
