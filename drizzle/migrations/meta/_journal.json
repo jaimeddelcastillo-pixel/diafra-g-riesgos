@@ -267,6 +267,13 @@
       "when": 1792075178271,
       "tag": "0037_c6c_auditoria_externa",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1792075220249,
+      "tag": "0038_c6c_lista_blanca_metodologia",
+      "breakpoints": true
     }
   ]
 }
