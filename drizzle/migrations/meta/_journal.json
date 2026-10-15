@@ -295,6 +295,13 @@
       "when": 1792088540450,
       "tag": "0041_c6c3_contrasena_cambiada",
       "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1792089765972,
+      "tag": "0042_c6c4_actividad_persona",
+      "breakpoints": true
     }
   ]
 }

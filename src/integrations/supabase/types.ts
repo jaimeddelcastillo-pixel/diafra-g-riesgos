@@ -4244,10 +4244,12 @@ export type Database = {
         Returns: {
           accion: string
           archivo: string
+          es_auditor: boolean
           fecha: string
           ip: string
           item_id: string
           modo: string
+          persona: string
           sha256: string
           tipo: string
         }[]
