@@ -20,7 +20,7 @@ import { toast } from "sonner";
 
 export function OrgTiposFolioCard() {
   const { orgId, hasRole } = useAuth();
-  const canEdit = hasRole("admin");
+  const canEdit = hasRole("admin") || hasRole("responsable_sanitario");
   const queryClient = useQueryClient();
   const { data: tipos = [], isLoading } = useOrgTiposFolio(false);
 

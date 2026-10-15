@@ -15,7 +15,7 @@ export const RFC_RE = /^[A-ZÑ&]{3,4}[0-9]{2}(0[1-9]|1[0-2])(0[1-9]|[12][0-9]|3[
 export function DatosFiscalesCard() {
   const { orgId, orgRole, isSuperAdmin } = useAuth();
   const qc = useQueryClient();
-  const puedeEditar = orgRole === "admin" || isSuperAdmin();
+  const puedeEditar = orgRole === "admin" || orgRole === "responsable_sanitario" || isSuperAdmin();
   const puedeVer = puedeEditar || orgRole === "responsable_sanitario";
   const [nombre, setNombre] = useState("");
   const [razon, setRazon] = useState("");
@@ -57,7 +57,7 @@ export function DatosFiscalesCard() {
     <Card>
       <CardHeader>
         <CardTitle className="text-base flex items-center gap-2"><Landmark className="h-4 w-4" /> Datos fiscales</CardTitle>
-        <CardDescription>Se usan en la constancia DC-3.{!puedeEditar && " Solo el administrador puede editarlos."}</CardDescription>
+        <CardDescription>Se usan en la constancia DC-3.{!puedeEditar && " Solo el administrador o el Responsable Sanitario pueden editarlos."}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-3 max-w-xl">
         <div>

@@ -41,7 +41,7 @@ export function previewCodigo(prefijo: string, tipo: string, formato: Periodo, d
 
 export function OrgFolioCodigoCard() {
   const { orgId, hasRole } = useAuth();
-  const canEdit = hasRole("admin");
+  const canEdit = hasRole("admin") || hasRole("responsable_sanitario");
   const queryClient = useQueryClient();
   const { data: tipos } = useOrgTiposFolio(true);
 
