@@ -10,6 +10,17 @@ export type EvaluacionPorque = {
   sugerencia: string | null;
 };
 
+/** C4b: trazabilidad de las sugerencias IA de la sesión de causa raíz abierta. */
+export type OrigenIA = { funcion: string; modo: string; skills_usadas: unknown[]; modelo: string; en: string };
+let origenesSesion: OrigenIA[] = [];
+export function reiniciarOrigenesIA() { origenesSesion = []; }
+export function origenesIA(): OrigenIA[] { return [...origenesSesion]; }
+function separarOrigen<T>(data: any, modo: string): T {
+  const { _ia, ...resto } = data ?? {};
+  if (_ia) origenesSesion.push({ funcion: "causa-raiz-ai", modo, skills_usadas: _ia.skills_usadas ?? [], modelo: _ia.modelo, en: new Date().toISOString() });
+  return resto as T;
+}
+
 export function useCausaRaizAI() {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
@@ -33,7 +44,7 @@ export function useCausaRaizAI() {
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
-      return data as IshikawaIA;
+      return separarOrigen<IshikawaIA>(data, "ishikawa");
     } catch (e) {
       toast({
         title: "No se pudo consultar la IA",
@@ -63,7 +74,7 @@ export function useCausaRaizAI() {
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
-      return data as EvaluacionPorque;
+      return separarOrigen<EvaluacionPorque>(data, "evaluar_porque");
     } catch (e) {
       toast({
         title: "No se pudo evaluar con IA",

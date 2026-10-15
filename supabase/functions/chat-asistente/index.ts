@@ -5,7 +5,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { resolverContextoOrg } from "../_shared/contexto-org.ts";
 import { enviarYRegistrar } from "../_shared/transactional-email-templates/enviar-y-registrar.ts";
-import { cargarSkill, registrarSkillFaltante } from "../_shared/skills.ts";
+import { cargarSkill, registrarSkillFaltante, armarRiesgos, normaBloques, type ResultadoBloques } from "../_shared/skills.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -514,18 +514,19 @@ Deno.serve(async (req) => {
     // norma del folio (folios.norma_folio) y se ignora lo que mande la pantalla;
     // sin folio decide la organización y, en MULTI, el override de la pantalla.
     let folioNorma: string | null = null;
+    let folioCategoria: string | null = null;
     if (folio_id) {
       const { data: fNorma } = await adminClient
-        .from("folios").select("norma_folio").eq("id", folio_id).eq("org_id", org.id).maybeSingle();
-      if (fNorma?.norma_folio) folioNorma = fNorma.norma_folio;
+        .from("folios").select("norma_folio, clasificacion_categoria").eq("id", folio_id).eq("org_id", org.id).maybeSingle();
+      if (fNorma?.norma_folio) { folioNorma = fNorma.norma_folio; folioCategoria = fNorma.clasificacion_categoria ?? null; }
     } else if (conversacion_id) {
       const { data: convPeek } = await adminClient
         .from("chat_conversaciones").select("folio_id")
         .eq("id", conversacion_id).eq("org_id", org.id).eq("created_by", user.id).maybeSingle();
       if (convPeek?.folio_id) {
         const { data: fNorma } = await adminClient
-          .from("folios").select("norma_folio").eq("id", convPeek.folio_id).eq("org_id", org.id).maybeSingle();
-        if (fNorma?.norma_folio) folioNorma = fNorma.norma_folio;
+          .from("folios").select("norma_folio, clasificacion_categoria").eq("id", convPeek.folio_id).eq("org_id", org.id).maybeSingle();
+        if (fNorma?.norma_folio) { folioNorma = fNorma.norma_folio; folioCategoria = fNorma.clasificacion_categoria ?? null; }
       }
     }
 
@@ -575,19 +576,45 @@ Deno.serve(async (req) => {
       }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
+    // C4b: composición por bloques solo si la empresa está en 'bloques' y las
+    // piezas obligatorias tienen versión vigente; si falta alguna, dm/farma.
+    let skillsUsadasOut: { clave: string; version: string; sha256: string }[] = [];
+    let bloques: Extract<ResultadoBloques, { ok: true }> | null = null;
+    {
+      const { data: iaCfg } = await adminClient
+        .from("ia_config_org").select("composicion_riesgos").eq("org_id", org.id).maybeSingle();
+      if (iaCfg?.composicion_riesgos === "bloques") {
+        const r = await armarRiesgos(adminClient, { org, norma: normaBloques(folioNorma, folioCategoria, agente) });
+        if (r.ok) {
+          bloques = r;
+          skillsUsadasOut = r.skills_usadas;
+        } else {
+          console.warn("C4b: composición por bloques incompleta, se usa", agente, r.faltantes);
+          try {
+            await adminClient.from("audit_trail").insert({
+              org_id: org.id, user_id: user.id, tabla: "ia_config_org", registro_id: org.id,
+              accion: "COMPOSICION_BLOQUES_INCOMPLETA",
+              valor_nuevo: { faltantes: r.faltantes, se_usa: agente, contexto: "chat-asistente" },
+            });
+          } catch (e) { console.error("audit COMPOSICION_BLOQUES_INCOMPLETA", e); }
+        }
+      }
+    }
+
     // C4a: cargar la skill vigente desde la base (sin texto de respaldo en código).
     let skillBase = "";
-    let skillsUsadasOut: { clave: string; version: string; sha256: string }[] = [];
-    try {
-      const skill = await cargarSkill(adminClient, agente);
-      skillBase = skill.texto;
-      skillsUsadasOut = [{ clave: skill.clave, version: skill.version, sha256: skill.sha256 }];
-    } catch (e) {
-      console.error("C4a: skill no vigente", e);
-      await registrarSkillFaltante(adminClient, org.id, agente, "chat-asistente");
-      return new Response(JSON.stringify({ error: `Skill no vigente: ${agente}. Publícala en el panel Skills de IA.` }), {
-        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    if (!bloques) {
+      try {
+        const skill = await cargarSkill(adminClient, agente);
+        skillBase = skill.texto;
+        skillsUsadasOut = [{ clave: skill.clave, version: skill.version, sha256: skill.sha256 }];
+      } catch (e) {
+        console.error("C4a: skill no vigente", e);
+        await registrarSkillFaltante(adminClient, org.id, agente, "chat-asistente");
+        return new Response(JSON.stringify({ error: `Skill no vigente: ${agente}. Publícala en el panel Skills de IA.` }), {
+          status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
     }
 
     // --- Conversación: crear o reanudar antes de construir contexto de folio ---
@@ -684,7 +711,9 @@ Deno.serve(async (req) => {
         "NUNCA cites, sugieras ni mezcles NOM-241-SSA1-2025 salvo que el usuario pregunte explícitamente por comparación regulatoria.\n\n";
     }
 
-    const systemPrompt = normaAncla + skillBase + orgCtx + folioCtx + resumeNote + TOOL_RULES_ADDENDUM;
+    const systemPrompt = bloques
+      ? bloques.variable + folioCtx + resumeNote + TOOL_RULES_ADDENDUM
+      : normaAncla + skillBase + orgCtx + folioCtx + resumeNote + TOOL_RULES_ADDENDUM;
 
     // Persistir el último mensaje user + bump
     const lastUser = [...messages].reverse().find((m) => m.role === "user");
@@ -777,9 +806,14 @@ Deno.serve(async (req) => {
 
             // --- Prompt caching ephemeral (5 min TTL) ---
             // 1) Cache del system prompt (siempre). Requiere ≥1024 tokens en Sonnet — se cumple.
-            const systemForApi = [
-              { type: "text", text: sysForCall, cache_control: { type: "ephemeral" } },
-            ];
+            // C4b: en bloques, la marca de caché va en el último bloque fijo
+            // (plataforma · riesgos_amef · norma); lo variable va después.
+            const systemForApi: any[] = bloques
+              ? [
+                  { type: "text", text: bloques.fijo, cache_control: { type: "ephemeral" } },
+                  { type: "text", text: sysForCall },
+                ]
+              : [{ type: "text", text: sysForCall, cache_control: { type: "ephemeral" } }];
             // 2) Cache del historial cuando supera 10 mensajes: marcar último bloque
             //    del último mensaje del historial original (no los tool_results del loop).
             let messagesForApi: any[] = turnMessages;
@@ -955,6 +989,7 @@ Deno.serve(async (req) => {
               tokens_usados: tokensIn + tokensOut,
               agente,
               skills_usadas: skillsUsadasOut.length ? skillsUsadasOut : null,
+              modelo_ia: modelToUse,
               documentos_adjuntos: allToolUses.length ? { tool_uses: allToolUses } : null,
             });
 

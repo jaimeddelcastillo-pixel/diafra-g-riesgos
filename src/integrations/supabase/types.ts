@@ -832,6 +832,7 @@ export type Database = {
           id: string
           metodo: string
           modelo: string
+          modelo_ia: string | null
           org_id: string
           paginas_leidas: number | null
           paginas_totales: number | null
@@ -848,6 +849,7 @@ export type Database = {
           id?: string
           metodo: string
           modelo: string
+          modelo_ia?: string | null
           org_id: string
           paginas_leidas?: number | null
           paginas_totales?: number | null
@@ -864,6 +866,7 @@ export type Database = {
           id?: string
           metodo?: string
           modelo?: string
+          modelo_ia?: string | null
           org_id?: string
           paginas_leidas?: number | null
           paginas_totales?: number | null
@@ -1378,6 +1381,7 @@ export type Database = {
           institutional_effects: boolean
           interviewees_suggested: number
           knowledge_created: number
+          modelo_ia: string | null
           operations: Json
           org_id: string
           session_id: string
@@ -1396,6 +1400,7 @@ export type Database = {
           institutional_effects?: boolean
           interviewees_suggested?: number
           knowledge_created?: number
+          modelo_ia?: string | null
           operations?: Json
           org_id: string
           session_id: string
@@ -1414,6 +1419,7 @@ export type Database = {
           institutional_effects?: boolean
           interviewees_suggested?: number
           knowledge_created?: number
+          modelo_ia?: string | null
           operations?: Json
           org_id?: string
           session_id?: string
@@ -2100,6 +2106,7 @@ export type Database = {
           documentos_adjuntos: Json | null
           folio_id: string | null
           id: string
+          modelo_ia: string | null
           org_id: string
           role: string
           skills_usadas: Json | null
@@ -2114,6 +2121,7 @@ export type Database = {
           documentos_adjuntos?: Json | null
           folio_id?: string | null
           id?: string
+          modelo_ia?: string | null
           org_id: string
           role: string
           skills_usadas?: Json | null
@@ -2128,6 +2136,7 @@ export type Database = {
           documentos_adjuntos?: Json | null
           folio_id?: string | null
           id?: string
+          modelo_ia?: string | null
           org_id?: string
           role?: string
           skills_usadas?: Json | null
@@ -3135,6 +3144,136 @@ export type Database = {
           },
         ]
       }
+      ia_config_org: {
+        Row: {
+          cambiado_en: string
+          cambiado_por: string | null
+          composicion_riesgos: string
+          org_id: string
+        }
+        Insert: {
+          cambiado_en?: string
+          cambiado_por?: string | null
+          composicion_riesgos?: string
+          org_id: string
+        }
+        Update: {
+          cambiado_en?: string
+          cambiado_por?: string | null
+          composicion_riesgos?: string
+          org_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ia_config_org_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ia_skill_casos: {
+        Row: {
+          activo: boolean
+          codigo: string
+          created_at: string
+          debe: string
+          entrada: string
+          id: string
+          no_debe: string
+          norma: string
+          requiere_herramientas: boolean
+        }
+        Insert: {
+          activo?: boolean
+          codigo: string
+          created_at?: string
+          debe: string
+          entrada: string
+          id?: string
+          no_debe: string
+          norma: string
+          requiere_herramientas?: boolean
+        }
+        Update: {
+          activo?: boolean
+          codigo?: string
+          created_at?: string
+          debe?: string
+          entrada?: string
+          id?: string
+          no_debe?: string
+          norma?: string
+          requiere_herramientas?: boolean
+        }
+        Relationships: []
+      }
+      ia_skill_pruebas: {
+        Row: {
+          caso_id: string
+          composicion: Json
+          corrida_id: string
+          creado_por: string | null
+          created_at: string
+          evaluado_en: string | null
+          evaluado_por: string | null
+          id: string
+          modelo_ia: string | null
+          norma: string
+          nota: string | null
+          org_id: string
+          referencia: Json | null
+          respuesta: string | null
+          respuesta_referencia: string | null
+          resultado: string
+        }
+        Insert: {
+          caso_id: string
+          composicion: Json
+          corrida_id: string
+          creado_por?: string | null
+          created_at?: string
+          evaluado_en?: string | null
+          evaluado_por?: string | null
+          id?: string
+          modelo_ia?: string | null
+          norma: string
+          nota?: string | null
+          org_id: string
+          referencia?: Json | null
+          respuesta?: string | null
+          respuesta_referencia?: string | null
+          resultado?: string
+        }
+        Update: {
+          caso_id?: string
+          composicion?: Json
+          corrida_id?: string
+          creado_por?: string | null
+          created_at?: string
+          evaluado_en?: string | null
+          evaluado_por?: string | null
+          id?: string
+          modelo_ia?: string | null
+          norma?: string
+          nota?: string | null
+          org_id?: string
+          referencia?: Json | null
+          respuesta?: string | null
+          respuesta_referencia?: string | null
+          resultado?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ia_skill_pruebas_caso_id_fkey"
+            columns: ["caso_id"]
+            isOneToOne: false
+            referencedRelation: "ia_skill_casos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ia_skills: {
         Row: {
           activo: boolean
@@ -3918,6 +4057,7 @@ export type Database = {
           fecha_evidencia: string | null
           fecha_verificacion: string | null
           folio_id: string
+          ia_origen: Json | null
           id: string
           justificacion_aceptabilidad: string
           npr: number | null
@@ -3957,6 +4097,7 @@ export type Database = {
           fecha_evidencia?: string | null
           fecha_verificacion?: string | null
           folio_id: string
+          ia_origen?: Json | null
           id?: string
           justificacion_aceptabilidad?: string
           npr?: number | null
@@ -3996,6 +4137,7 @@ export type Database = {
           fecha_evidencia?: string | null
           fecha_verificacion?: string | null
           folio_id?: string
+          ia_origen?: Json | null
           id?: string
           justificacion_aceptabilidad?: string
           npr?: number | null
@@ -4529,6 +4671,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      ia_skill_casos_faltantes: {
+        Args: { p_prompt_id: string }
+        Returns: number
+      }
       is_super_admin: { Args: never; Returns: boolean }
       mi_acceso_curso: { Args: { p_curso_id: string }; Returns: string }
       mi_org_tiene_modulo: { Args: { _modulo: string }; Returns: boolean }
@@ -4598,6 +4744,10 @@ export type Database = {
       }
       pendientes_riesgos: { Args: never; Returns: Json }
       plan_limite: { Args: { p_clave: string; p_org: string }; Returns: Json }
+      publicar_skill: {
+        Args: { p_motivo: string; p_prompt_id: string }
+        Returns: undefined
+      }
       puede_editar_catalogo_documentos: { Args: never; Returns: boolean }
       purgar_documentos_eliminados: { Args: never; Returns: number }
       purgar_documentos_expirados: {

@@ -20,6 +20,7 @@ import {
   type PorquesState,
 } from "./CincoPorquesPanel";
 import { getNormaLabel, type Categoria6M } from "@/config/wizard-content";
+import { reiniciarOrigenesIA, origenesIA, type OrigenIA } from "./useCausaRaizAI";
 
 export type CausaRaizPayload = {
   causaRaiz: string;
@@ -27,6 +28,8 @@ export type CausaRaizPayload = {
   resumen6M: Record<Categoria6M, string[]>;
   cadenaPorques: string[];
   origen: "ishikawa" | "5porques" | "ambos";
+  /** C4b: skills y modelo de las sugerencias IA usadas en esta sesión. */
+  iaOrigen?: OrigenIA[];
 };
 
 interface Props {
@@ -58,6 +61,7 @@ export function CausaRaizSheet({
       setIsh(emptyIshikawa());
       setPq(emptyPorques(""));
       setTab("ishikawa");
+      reiniciarOrigenesIA();
     }
   }, [open]);
 
@@ -88,6 +92,7 @@ export function CausaRaizSheet({
       resumen6M: resumen,
       cadenaPorques: cadena,
       origen: usaIsh && usaPq ? "ambos" : usaPq ? "5porques" : "ishikawa",
+      iaOrigen: origenesIA(),
     });
     onClose();
   };

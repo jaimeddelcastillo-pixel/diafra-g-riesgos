@@ -107,8 +107,10 @@ Deno.serve(async (req) => {
       const { peligro, proceso, norma, causa_actual } = body;
       // C4a: la instrucción vive en la base (skill causa_raiz_ishikawa, vigente).
       let sys = "";
+      let uso: any = null;
       try {
         const skill = await cargarSkill(adminClient, "causa_raiz_ishikawa");
+        uso = { clave: skill.clave, version: skill.version, sha256: skill.sha256 };
         sys = interpolar(skill.texto, { norma });
       } catch (e) {
         console.error("C4a: causa_raiz_ishikawa no vigente", e);
@@ -124,7 +126,7 @@ Deno.serve(async (req) => {
       const text = await askClaude(sys, user);
       const json = extractJson(text);
       if (!json) throw new Error("Respuesta IA no parseable");
-      return new Response(JSON.stringify(json), {
+      return new Response(JSON.stringify({ ...json, _ia: { skills_usadas: [uso], modelo: CLAUDE_MODEL } }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -134,8 +136,10 @@ Deno.serve(async (req) => {
       const cadena = [causa_inicial, ...porques].filter(Boolean).join(" → ");
       // C4a: la instrucción vive en la base (skill causa_raiz_5porques, vigente).
       let sys = "";
+      let uso: any = null;
       try {
         const skill = await cargarSkill(adminClient, "causa_raiz_5porques");
+        uso = { clave: skill.clave, version: skill.version, sha256: skill.sha256 };
         sys = interpolar(skill.texto, { norma });
       } catch (e) {
         console.error("C4a: causa_raiz_5porques no vigente", e);
@@ -148,7 +152,7 @@ Deno.serve(async (req) => {
       const text = await askClaude(sys, user);
       const json = extractJson(text);
       if (!json) throw new Error("Respuesta IA no parseable");
-      return new Response(JSON.stringify(json), {
+      return new Response(JSON.stringify({ ...json, _ia: { skills_usadas: [uso], modelo: CLAUDE_MODEL } }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }

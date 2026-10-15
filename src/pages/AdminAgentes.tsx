@@ -16,9 +16,10 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
 import { ChevronLeft, Loader2, Sparkles } from "lucide-react";
+import ProbarComposicion from "@/components/admin/ProbarComposicion";
 
 type Skill = {
-  clave: string; nombre: string; ambito: "plataforma" | "norma" | "modulo" | "tarea";
+  clave: string; nombre: string; ambito: "plataforma" | "norma" | "modulo" | "tarea" | "alcance";
   modulo: string | null; norma: string | null; descripcion: string | null;
 };
 type Version = {
@@ -28,7 +29,11 @@ type Version = {
   created_at: string;
 };
 
+/** Piezas de la composición por bloques: se publican solo con todos sus casos en «pasa». */
+export const PIEZAS_CON_PRUEBAS = ["plataforma", "riesgos_amef", "norma_nom241", "norma_nom059"];
+
 const ETIQUETA_AMBITO: Record<Skill["ambito"], string> = {
+  alcance: "Alcance",
   plataforma: "Plataforma",
   norma: "Norma",
   modulo: "Módulo",
@@ -39,6 +44,7 @@ export default function AdminAgentes() {
   const { isSuperAdmin } = useAuth();
   const qc = useQueryClient();
   const [clave, setClave] = useState<string | null>(null);
+  const [vista, setVista] = useState<"skills" | "probar">("skills");
 
   const { data: skills = [], isLoading } = useQuery({
     queryKey: ["ia-skills"],
@@ -63,7 +69,14 @@ export default function AdminAgentes() {
         </p>
       </header>
 
-      {clave ? (
+      <div className="flex gap-1.5">
+        <Button size="sm" variant={vista === "skills" ? "default" : "outline"} onClick={() => setVista("skills")}>Skills</Button>
+        <Button size="sm" variant={vista === "probar" ? "default" : "outline"} onClick={() => { setVista("probar"); setClave(null); }}>Probar composición</Button>
+      </div>
+
+      {vista === "probar" ? (
+        <ProbarComposicion />
+      ) : clave ? (
         <SkillDetalle clave={clave} onVolver={() => { setClave(null); qc.invalidateQueries({ queryKey: ["ia-skills"] }); }} />
       ) : isLoading ? (
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -107,7 +120,9 @@ function SkillCard({ skill, onAbrir }: { skill: Skill; onAbrir: () => void }) {
               <p className="text-xs text-muted-foreground mt-1 font-mono">{vigente.sha256?.slice(0, 12)}…</p>
             </>
           ) : (
-            <Badge variant="destructive">Sin versión vigente</Badge>
+            <Badge variant={skill.ambito === "alcance" || PIEZAS_CON_PRUEBAS.includes(skill.clave) ? "secondary" : "destructive"}>
+              Sin versión vigente
+            </Badge>
           )}
         </div>
       </CardContent>
@@ -122,6 +137,8 @@ function SkillDetalle({ clave, onVolver }: { clave: string; onVolver: () => void
   const [guardando, setGuardando] = useState(false);
   const [ver, setVer] = useState<Version | null>(null);
   const [diff, setDiff] = useState<{ a: Version; b: Version } | null>(null);
+  const [publicarBorrador, setPublicarBorrador] = useState(false);
+  const [motivoPub, setMotivoPub] = useState("");
 
   const { data: skill } = useQuery({
     queryKey: ["ia-skills"],
@@ -147,31 +164,63 @@ function SkillDetalle({ clave, onVolver }: { clave: string; onVolver: () => void
   });
   const quien = (id?: string | null) => (id ? (nombres as any)[id] ?? id : "—");
 
-  async function publicarVersion(texto: string, version: string, motivoCambio: string) {
-    setGuardando(true);
-    // Retirar la vigente actual, si existe, y publicar la nueva.
-    if (vigente) {
-      const { error: rErr } = await supabase
-        .from("agent_prompts")
-        .update({ estado: "retirada", motivo_cambio: `Sustituida por v${version}` })
-        .eq("id", vigente.id);
-      if (rErr) {
-        toast({ title: "No se pudo publicar", description: rErr.message, variant: "destructive" });
-        setGuardando(false); return;
-      }
-    }
-    const { error: iErr } = await supabase.from("agent_prompts").insert({
-      nombre: clave, system_prompt: texto, version, estado: "vigente", motivo_cambio: motivoCambio,
-    });
-    if (iErr) {
-      toast({ title: "No se pudo publicar", description: iErr.message, variant: "destructive" });
-      setGuardando(false); return;
-    }
-    toast({ title: `Skill publicada`, description: `v${version} quedó vigente y quedó en la bitácora.` });
-    setPublicar(null); setMotivo("");
-    setGuardando(false);
+  const borrador = versiones.find((v) => v.estado === "borrador");
+  const conPruebas = PIEZAS_CON_PRUEBAS.includes(clave);
+  const { data: faltantes } = useQuery({
+    queryKey: ["ia-skill-faltantes", borrador?.id, borrador?.sha256],
+    enabled: !!borrador && conPruebas,
+    queryFn: async () => {
+      const { data } = await supabase.rpc("ia_skill_casos_faltantes", { p_prompt_id: borrador!.id });
+      return (data ?? 0) as number;
+    },
+  });
+
+  function refrescar() {
     qc.invalidateQueries({ queryKey: ["ia-skill-versiones", clave] });
     qc.invalidateQueries({ queryKey: ["ia-skills"] });
+    qc.invalidateQueries({ queryKey: ["ia-skill-vigente", clave] });
+    qc.invalidateQueries({ queryKey: ["ia-skill-faltantes"] });
+  }
+
+  /** Guarda (o actualiza) el único borrador de la skill. Devuelve su id. */
+  async function guardarBorrador(texto: string, version: string, motivoCambio: string): Promise<string | null> {
+    if (borrador) {
+      const { error } = await supabase.from("agent_prompts")
+        .update({ system_prompt: texto, version, motivo_cambio: motivoCambio || null })
+        .eq("id", borrador.id);
+      if (error) { toast({ title: "No se pudo guardar el borrador", description: error.message, variant: "destructive" }); return null; }
+      return borrador.id;
+    }
+    const { data, error } = await supabase.from("agent_prompts")
+      .insert({ nombre: clave, system_prompt: texto, version, estado: "borrador", motivo_cambio: motivoCambio || null })
+      .select("id").single();
+    if (error) { toast({ title: "No se pudo guardar el borrador", description: error.message, variant: "destructive" }); return null; }
+    return data.id;
+  }
+
+  async function onGuardarBorrador(texto: string, version: string, motivoCambio: string) {
+    setGuardando(true);
+    const id = await guardarBorrador(texto, version, motivoCambio);
+    setGuardando(false);
+    if (!id) return;
+    toast({ title: "Borrador guardado", description: "La IA no lo usa hasta que se publique." });
+    setPublicar(null); setMotivo("");
+    refrescar();
+  }
+
+  async function publicarBorradorId(id: string, motivoCambio: string) {
+    const { error } = await supabase.rpc("publicar_skill", { p_prompt_id: id, p_motivo: motivoCambio });
+    if (error) { toast({ title: "No se pudo publicar", description: error.message, variant: "destructive" }); return false; }
+    toast({ title: "Skill publicada", description: "Quedó vigente y quedó en la bitácora." });
+    return true;
+  }
+
+  async function publicarVersion(texto: string, version: string, motivoCambio: string) {
+    setGuardando(true);
+    const id = await guardarBorrador(texto, version, motivoCambio);
+    if (id && (await publicarBorradorId(id, motivoCambio))) { setPublicar(null); setMotivo(""); }
+    setGuardando(false);
+    refrescar();
   }
 
   async function restaurar(v: Version) {
@@ -198,19 +247,37 @@ function SkillDetalle({ clave, onVolver }: { clave: string; onVolver: () => void
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-base">Historial de versiones</CardTitle>
-            <Button
-              size="sm"
-              onClick={() => {
-                setMotivo("");
-                setPublicar({
-                  texto: vigente?.system_prompt ?? "",
-                  version: siguienteVersion(versiones.map((v) => v.version)),
-                  baseVersion: vigente?.version ?? null,
-                });
-              }}
-            >
-              Publicar nueva versión
-            </Button>
+            <div className="flex gap-1.5">
+              {borrador ? (
+                <>
+                  <Button size="sm" variant="outline" onClick={() => {
+                    setMotivo(borrador.motivo_cambio ?? "");
+                    setPublicar({ texto: borrador.system_prompt, version: borrador.version, baseVersion: vigente?.version ?? null });
+                  }}>Editar borrador</Button>
+                  <Button
+                    size="sm"
+                    disabled={guardando || (conPruebas && (faltantes ?? 1) > 0)}
+                    onClick={() => setPublicarBorrador(true)}
+                  >
+                    {conPruebas && (faltantes ?? 0) > 0 ? `Publicar borrador (faltan ${faltantes} casos)` : "Publicar borrador"}
+                  </Button>
+                </>
+              ) : (
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    setMotivo("");
+                    setPublicar({
+                      texto: vigente?.system_prompt ?? "",
+                      version: siguienteVersion(versiones.map((v) => v.version)),
+                      baseVersion: vigente?.version ?? null,
+                    });
+                  }}
+                >
+                  {conPruebas ? "Nuevo borrador" : "Publicar nueva versión"}
+                </Button>
+              )}
+            </div>
           </CardHeader>
           <CardContent className="space-y-2">
             {versiones.length === 0 && (
@@ -259,7 +326,9 @@ function SkillDetalle({ clave, onVolver }: { clave: string; onVolver: () => void
           <DialogHeader>
             <DialogTitle>Publicar nueva versión</DialogTitle>
             <DialogDescription>
-              La versión vigente pasa a retirada y la nueva queda vigente. Todo queda en la bitácora.
+              {conPruebas
+                ? "Esta pieza se guarda como borrador. Se publica desde su ficha cuando todos sus casos pasen en «Probar composición»."
+                : "La versión vigente pasa a retirada y la nueva queda vigente. Todo queda en la bitácora."}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
@@ -287,12 +356,50 @@ function SkillDetalle({ clave, onVolver }: { clave: string; onVolver: () => void
           <DialogFooter>
             <Button variant="outline" onClick={() => setPublicar(null)}>Cancelar</Button>
             <Button
-              disabled={guardando || !publicar?.texto?.trim() || !publicar?.version?.trim() || !motivo.trim()}
-              onClick={() => void publicarVersion(publicar!.texto.trim(), publicar!.version.trim(), motivo.trim())}
+              variant="secondary"
+              disabled={guardando || !publicar?.texto?.trim() || !publicar?.version?.trim()}
+              onClick={() => void onGuardarBorrador(publicar!.texto.trim(), publicar!.version.trim(), motivo.trim())}
             >
-              {guardando ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-              Publicar
+              Guardar borrador
             </Button>
+            {!conPruebas && (
+              <Button
+                disabled={guardando || !publicar?.texto?.trim() || !publicar?.version?.trim() || !motivo.trim()}
+                onClick={() => void publicarVersion(publicar!.texto.trim(), publicar!.version.trim(), motivo.trim())}
+              >
+                {guardando ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                Publicar
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Publicar borrador */}
+      <Dialog open={publicarBorrador} onOpenChange={(o) => { if (!o) { setPublicarBorrador(false); setMotivoPub(""); } }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Publicar borrador v{borrador?.version}</DialogTitle>
+            <DialogDescription>
+              La versión vigente pasa a retirada y el borrador queda vigente. Huella {borrador?.sha256?.slice(0, 16)}…
+            </DialogDescription>
+          </DialogHeader>
+          <div>
+            <Label>Motivo del cambio (obligatorio)</Label>
+            <Textarea value={motivoPub} onChange={(e) => setMotivoPub(e.target.value)} rows={2} />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPublicarBorrador(false)}>Cancelar</Button>
+            <Button
+              disabled={guardando || !motivoPub.trim()}
+              onClick={async () => {
+                setGuardando(true);
+                const ok = await publicarBorradorId(borrador!.id, motivoPub.trim());
+                setGuardando(false);
+                if (ok) { setPublicarBorrador(false); setMotivoPub(""); }
+                refrescar();
+              }}
+            >Publicar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
