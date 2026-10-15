@@ -1584,6 +1584,7 @@ Deno.serve(async (req) => {
           await admin.from("brain_interview_turns").update({
             estado: "completado",
             skills_usadas: skillsUsadas,
+            modelo_ia: MODEL,
             transcript_persisted: metrics.transcript_persisted,
             institutional_effects: metrics.institutional_effects,
             knowledge_created: metrics.knowledge_created,
@@ -1619,6 +1620,7 @@ Deno.serve(async (req) => {
         await admin.from("brain_interview_turns").update({
           estado: "completado",
           skills_usadas: skillsUsadas,
+            modelo_ia: MODEL,
           transcript_persisted: metrics.transcript_persisted,
           institutional_effects: metrics.institutional_effects,
           knowledge_created: metrics.knowledge_created,

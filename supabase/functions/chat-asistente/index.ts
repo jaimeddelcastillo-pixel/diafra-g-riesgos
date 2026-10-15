@@ -862,9 +862,6 @@ Deno.serve(async (req) => {
             const data = await anthRes.json();
             tokensIn += data.usage?.input_tokens ?? 0;
             tokensOut += data.usage?.output_tokens ?? 0;
-            if (bloques) {
-              console.log(`[cache] bloques creación=${data.usage?.cache_creation_input_tokens ?? 0} lectura=${data.usage?.cache_read_input_tokens ?? 0}`);
-            }
             const cacheCreate = data.usage?.cache_creation_input_tokens ?? 0;
             const cacheRead = data.usage?.cache_read_input_tokens ?? 0;
             if (cacheCreate || cacheRead) {

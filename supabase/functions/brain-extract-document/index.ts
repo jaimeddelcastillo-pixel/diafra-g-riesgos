@@ -286,6 +286,7 @@ Deno.serve(async (req) => {
       truncado,
       texto: metodo === "vision" ? null : textoPlano.slice(0, 120000),
       skills_usadas,
+      modelo_ia: CLAUDE_MODEL,
       solicitado_por: user.id,
     }).select("id").single();
     if (eErr || !extraccion) {
