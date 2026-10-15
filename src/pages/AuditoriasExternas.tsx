@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Plus, Trash2, Download, Search } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Download, Search, Pencil, Copy } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -182,7 +182,7 @@ function Lista() {
           ))}
         </CardContent>
       </Card>
-      <NuevoExpediente open={nuevo} onOpenChange={setNuevo} />
+      {nuevo && <ExpedienteDialog open modo="nuevo" onOpenChange={setNuevo} />}
     </div>
   );
 }
@@ -249,6 +249,7 @@ function Detalle({ id }: { id: string }) {
   const { toast } = useToast();
   const qc = useQueryClient();
   const [cierre, setCierre] = useState<null | "cerrado" | "revocado">(null);
+  const [dialogo, setDialogo] = useState<null | "editar" | "duplicar">(null);
   const [motivo, setMotivo] = useState("");
   const [ocupado, setOcupado] = useState(false);
 
@@ -333,9 +334,12 @@ function Detalle({ id }: { id: string }) {
           <p className="text-sm text-muted-foreground">{a.auditor_nombre}{a.auditor_organizacion ? ` (${a.auditor_organizacion})` : ""} · {a.auditor_email}</p>
           <p className="text-sm text-muted-foreground">Vigencia: {fmt(a.inicia_en)} → {fmt(a.expira_en)} · {a.permite_descarga ? "Con descargas" : "Sin descargas"}</p>
           {a.motivo_cierre && <p className="text-sm mt-1">Motivo de {a.estado === "revocado" ? "revocación" : "cierre"}: {a.motivo_cierre} ({fmt(a.cerrado_en)})</p>}
+          {a.duplicado_de && <Link to={`/configuracion/auditorias/${a.duplicado_de}`} className="text-xs text-primary underline">Duplicado de otro expediente</Link>}
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Badge variant={vencido(a) ? "secondary" : ESTADO_VAR[a.estado]}>{vencido(a) ? "vencido" : a.estado}</Badge>
+          {a.estado === "borrador" && <Button size="sm" variant="outline" onClick={() => setDialogo("editar")}><Pencil className="h-4 w-4 mr-1" />Editar datos</Button>}
+          <Button size="sm" variant="outline" onClick={() => setDialogo("duplicar")}><Copy className="h-4 w-4 mr-1" />Duplicar preparación</Button>
           {esRS && a.estado === "borrador" && <Button size="sm" disabled={ocupado || !(items ?? []).length} onClick={activar}>Activar e invitar</Button>}
           {esRS && editable && <Button size="sm" variant="outline" onClick={() => setCierre("cerrado")}>Cerrar</Button>}
           {esRS && editable && <Button size="sm" variant="destructive" onClick={() => setCierre("revocado")}>Revocar</Button>}
@@ -396,6 +400,7 @@ function Detalle({ id }: { id: string }) {
         </CardContent>
       </Card>
 
+      {dialogo && <ExpedienteDialog key={dialogo} open modo={dialogo} base={a} onOpenChange={(v) => !v && setDialogo(null)} onGuardado={() => refetch()} />}
       <Dialog open={!!cierre} onOpenChange={(v) => !v && setCierre(null)}>
         <DialogContent>
           <DialogHeader><DialogTitle>{cierre === "revocado" ? "Revocar expediente" : "Cerrar expediente"}</DialogTitle></DialogHeader>
