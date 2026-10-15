@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, Users, FileText, CheckCircle2, Clock, PenLine, Archive, Gift, Loader2, RotateCcw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import PanelGestionFirmas from "@/components/admin/PanelGestionFirmas";
+import ComposicionIACard from "@/components/admin/ComposicionIACard";
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -268,6 +269,8 @@ export default function AdminOrg() {
           <StatBadge label="Aprobados" value={org.folios_por_estado.aprobado} icon={CheckCircle2} color="text-green-600" />
         </div>
       )}
+
+      {id && <ComposicionIACard orgId={id} />}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* ── Usuarios ── */}
