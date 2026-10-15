@@ -78,8 +78,6 @@ export default function ResetPassword() {
       const { data, error } = await client.auth.setSession({ access_token, refresh_token } as Tokens);
       if (error || !data.user) { setEstado("expirado"); return; }
       enlace.current = { client, origen };
-      // La sesión abierta en el navegador se cierra (sin tocar su contraseña) para no mezclar cuentas al terminar.
-      await supabase.auth.signOut({ scope: "local" });
       setCuenta({ id: data.user.id, email: data.user.email ?? "" });
       setEstado("listo");
     })();
@@ -110,8 +108,11 @@ export default function ResetPassword() {
       }
       await e2.client.rpc("registrar_cambio_contrasena", { _origen: e2.origen });
       toast.success("Contraseña guardada.");
-      // Tras guardar se entra con la contraseña nueva en el inicio de sesión.
-      await e2.client.auth.signOut({ scope: "local" });
+      // Solo tras guardar: se limpia la sesión del enlace (en memoria) y la del navegador, sin llamar al servidor.
+      enlace.current = null;
+      try {
+        for (const k of Object.keys(localStorage)) if (/^sb-.*-auth-token$/.test(k)) localStorage.removeItem(k);
+      } catch { /* noop */ }
       window.location.replace("/login");
     } catch (err: any) {
       toast.error(err.message || "Error al guardar la contraseña");
