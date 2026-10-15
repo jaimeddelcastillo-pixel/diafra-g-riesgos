@@ -1,7 +1,8 @@
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { Navigate, Outlet, useLocation, useNavigate } from "react-router-dom";
-import { LogOut, Building2 } from "lucide-react";
+import { LogOut, Building2, ClipboardCheck } from "lucide-react";
+import { useAuditorExpedientes } from "@/hooks/useAuditorExpedientes";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
@@ -26,6 +27,7 @@ export function AppLayout() {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const { data: catalogo } = useMisModulos();
+  const { data: misExpedientes } = useAuditorExpedientes(!!org && !isImpersonating);
   const accesos = Object.fromEntries((catalogo ?? []).map((m) => [m.clave, m.estado === "activo" && m.tiene_acceso]));
   const moduloActual = moduloEnRuta(pathname, modulos, accesos);
   // Include menu-only module pages (training) and shared platform pages.
@@ -99,6 +101,12 @@ export function AppLayout() {
                     </Badge>
                   )}
                 </div>
+                {(misExpedientes ?? []).length > 0 && (
+                  <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => navigate("/auditoria-externa")}>
+                    <ClipboardCheck className="h-4 w-4 mr-1" />
+                    <span className="hidden sm:inline">Auditorías externas</span>
+                  </Button>
+                )}
                 <Button variant="ghost" size="icon" className="h-8 w-8" onClick={signOut}>
                   <LogOut className="h-4 w-4" />
                 </Button>
