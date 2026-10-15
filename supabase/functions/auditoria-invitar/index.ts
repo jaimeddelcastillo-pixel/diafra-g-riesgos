@@ -23,15 +23,53 @@ Deno.serve(async (req) => {
     const err = e as ContextoOrgError;
     return json({ error: err.message }, err.status ?? 500);
   }
+  const body = await req.json().catch(() => null);
+  const auditoriaId = String(body?.auditoria_id ?? "");
+  const reenviar = body?.reenviar === true;
+  if (!UUID.test(auditoriaId)) return json({ error: "auditoria_id inválido" }, 400);
+  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
+  const fmt = (d: string) => new Date(d).toLocaleDateString("es-MX", { day: "numeric", month: "long", year: "numeric", timeZone: "America/Mexico_City" });
+
+  const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+
+  if (reenviar) {
+    // Reenvío: admin o RS de la empresa activa, solo expedientes activos y vigentes.
+    if (ctx.soporteLogId || !["responsable_sanitario", "admin"].includes(ctx.rolEnOrg ?? "")) {
+      return json({ error: "Solo el Administrador o el Responsable Sanitario reenvían la invitación" }, 403);
+    }
+    const { data: a } = await admin.from("auditorias_externas").select("*")
+      .eq("id", auditoriaId).eq("org_id", ctx.orgId).maybeSingle();
+    if (!a) return json({ error: "Expediente no encontrado" }, 404);
+    if (a.estado !== "activo") return json({ error: `El expediente está ${a.estado}; no se puede reenviar` }, 409);
+    if (new Date(a.expira_en) <= new Date()) return json({ error: "La vigencia ya terminó" }, 409);
+    const correo = String(a.auditor_email).trim().toLowerCase();
+    const { data: o } = await admin.from("organizations").select("nombre").eq("id", ctx.orgId).maybeSingle();
+    // Enlace nuevo para crear/restablecer contraseña (el anterior pudo usarse o expirar).
+    const { data: lk, error: lkErr } = await admin.auth.admin.generateLink({
+      type: "recovery", email: correo, options: { redirectTo: `${SITE}/reset-password` },
+    });
+    if (lkErr || !lk?.properties?.action_link) {
+      return json({ error: `No se pudo generar el enlace: ${lkErr?.message ?? "sin enlace"}` }, 500);
+    }
+    const { error: mErr } = await enviarYRegistrar({
+      templateName: "auditoria-invitacion", recipientEmail: correo,
+      idempotencyKey: `auditoria-${auditoriaId}-reenvio-${Date.now()}`,
+      templateData: { nombre: a.auditor_nombre, organizacion: o?.nombre ?? "", expediente: a.nombre,
+        inicia: fmt(a.inicia_en), expira: fmt(a.expira_en), permiteDescarga: !!a.permite_descarga,
+        cuentaNueva: true, portalUrl: lk.properties.action_link },
+    });
+    await admin.from("audit_trail").insert({
+      accion: "AUDITORIA_CORREO_REENVIADO", tabla: "auditorias_externas", registro_id: auditoriaId,
+      org_id: ctx.orgId, user_id: ctx.userId, ip,
+      valor_nuevo: { auditoria_id: auditoriaId, auditor_email: correo, correo_enviado: !mErr },
+    });
+    if (mErr) return json({ error: `No se pudo enviar el correo: ${mErr.message}` }, 500);
+    return json({ success: true, reenviado: true });
+  }
+
   if (ctx.soporteLogId || ctx.rolEnOrg !== "responsable_sanitario") {
     return json({ error: "Solo el Responsable Sanitario activa el expediente" }, 403);
   }
-  const body = await req.json().catch(() => null);
-  const auditoriaId = String(body?.auditoria_id ?? "");
-  if (!UUID.test(auditoriaId)) return json({ error: "auditoria_id inválido" }, 400);
-  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
-
-  const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
   const { data: aud } = await admin.from("auditorias_externas").select("*")
     .eq("id", auditoriaId).eq("org_id", ctx.orgId).maybeSingle();
   if (!aud) return json({ error: "Expediente no encontrado" }, 404);
@@ -90,7 +128,6 @@ Deno.serve(async (req) => {
       cuenta_nueva: cuentaNueva, expira_en: aud.expira_en, items: nItems },
   });
 
-  const fmt = (d: string) => new Date(d).toLocaleDateString("es-MX", { day: "numeric", month: "long", year: "numeric", timeZone: "America/Mexico_City" });
   const { error: mailErr } = await enviarYRegistrar({
     templateName: "auditoria-invitacion", recipientEmail: email,
     idempotencyKey: `auditoria-${auditoriaId}`,
