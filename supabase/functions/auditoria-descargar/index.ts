@@ -76,7 +76,8 @@ Deno.serve(async (req) => {
     return json({ modo: "vista", url: s.signedUrl, nombre });
   }
 
-  if (!a.permite_descarga) return json({ error: "Este expediente no permite descargas" }, 403);
+  // Vista en pantalla: siempre permitida (misma marca de agua, AUDITOR_CONSULTO). Descarga: solo si el expediente la permite.
+  const soloVer = body?.modo === "vista" || !a.permite_descarga;
   const { data: blob, error: dErr } = await admin.storage.from(bucket).download(path);
   if (dErr || !blob) return json({ error: "No se pudo leer el archivo" }, 500);
   const original = await blob.arrayBuffer();
@@ -109,12 +110,12 @@ Deno.serve(async (req) => {
   }
 
   await admin.from("audit_trail").insert({
-    accion: "AUDITOR_DESCARGO", tabla: "auditoria_items", registro_id: itemId, org_id: a.org_id, user_id: user.id, ip,
+    accion: soloVer ? "AUDITOR_CONSULTO" : "AUDITOR_DESCARGO", tabla: "auditoria_items", registro_id: itemId, org_id: a.org_id, user_id: user.id, ip,
     valor_nuevo: { auditoria_id: a.auditoria_id, tipo: a.tipo, entidad_id: entidad, archivo: nombre, sha256: huella,
-      sha256_copia: await sha256(salida.buffer as ArrayBuffer), marca },
+      sha256_copia: await sha256(salida.buffer as ArrayBuffer), marca, modo: soloVer ? "vista_pdf" : "descarga" },
   });
   return new Response(salida, {
     headers: { ...cors, "Content-Type": "application/pdf",
-      "Content-Disposition": `attachment; filename="${encodeURIComponent(nombre.replace(/\.pdf$/i, ""))}_copia_auditoria.pdf"` },
+      "Content-Disposition": `${soloVer ? "inline" : "attachment"}; filename="${encodeURIComponent(nombre.replace(/\.pdf$/i, ""))}_copia_auditoria.pdf"` },
   });
 });
