@@ -4,7 +4,7 @@ import { ClipboardCheck, FileText, Brain, ShieldAlert, LogOut, Download, Eye, Ar
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuditorExpedientes, type ItemExpediente } from "@/hooks/useAuditorExpedientes";
-import { abrirArchivoAuditor, folioPdfAuditor, type ResultadoArchivo } from "@/lib/auditoriaDescargas";
+import { abrirArchivoAuditor, folioPdfAuditor, fichaConocimientoAuditor, caratulaAuditor, type ResultadoArchivo } from "@/lib/auditoriaDescargas";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -205,12 +205,30 @@ function VisorDocumento({ itemId, d, permiteDescarga, verPdf }: { itemId: string
   );
 }
 
-function VisorConocimiento({ d }: { d: any }) {
+function VisorConocimiento({ itemId, d, permiteDescarga, verPdf }: { itemId: string; d: any; permiteDescarga: boolean; verPdf: VerPdf }) {
+  const { ocupado, correr } = useAccion();
   return (
     <div className="space-y-4">
-      <h2 className="text-lg font-bold">Conocimiento validado</h2>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 className="text-lg font-bold">Conocimiento validado</h2>
+        <div className="flex gap-2">
+          <Button size="sm" variant="outline" disabled={!!ocupado}
+            onClick={() => correr("ver", async () => verPdf(await fichaConocimientoAuditor(itemId, d, false), "Ficha de conocimiento"))}>
+            <Eye className="h-4 w-4 mr-1" />{ocupado === "ver" ? "Generando…" : "Ver ficha PDF"}
+          </Button>
+          {permiteDescarga && (
+            <Button size="sm" disabled={!!ocupado} onClick={() => correr("pdf", () => fichaConocimientoAuditor(itemId, d, true))}>
+              <Download className="h-4 w-4 mr-1" />{ocupado === "pdf" ? "Generando…" : "Descargar"}
+            </Button>
+          )}
+        </div>
+      </div>
       <p className="text-sm whitespace-pre-wrap">{d.contenido}</p>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+        <Campo label="Tipo" valor={d.tipo} />
+        <Campo label="Área" valor={d.area} />
+        <Campo label="Proceso" valor={d.proceso} />
+        <Campo label="Propuso" valor={d.propuso?.nombre ? `${d.propuso.nombre} · ${fmtFecha(d.propuso.fecha, true)}` : null} />
         <Campo label="Validó" valor={d.validado_por} />
         <Campo label="Fecha de validación" valor={fmtFecha(d.validado_en, true)} />
       </div>
