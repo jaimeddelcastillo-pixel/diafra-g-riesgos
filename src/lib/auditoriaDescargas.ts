@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { generateFolioPDF, type VersionRow } from "@/lib/generateFolioPDF";
+import { generarFichaConocimientoPDF, generarCaratulaPDF } from "@/lib/auditoriaPdf";
 
 async function mensajeError(error: any): Promise<string> {
   try {
@@ -66,6 +67,24 @@ export async function folioPdfAuditor(itemId: string, datos: any, descargar: boo
     realizado_por: v.realizado_por || "—",
   }));
   const blob = await generateFolioPDF(datos.folio, datos.riesgos, datos.comite, datos.org, { marcaAgua, versiones, soloBlob: !descargar });
+  if (descargar || !blob) return { modo: "descarga" };
+  return { modo: "vista_pdf", url: URL.createObjectURL(blob) };
+}
+
+/** C6c.2: ficha de conocimiento en PDF (BPD). Valida y registra antes de generar. */
+export async function fichaConocimientoAuditor(itemId: string, datos: any, descargar: boolean): Promise<ResultadoArchivo> {
+  const { data, error } = await supabase.rpc("auditor_registrar_pdf_generado" as any, { p_item_id: itemId, p_descargar: descargar });
+  if (error) throw new Error(error.message);
+  const blob = await generarFichaConocimientoPDF(datos, data as any, !descargar);
+  if (descargar || !blob) return { modo: "descarga" };
+  return { modo: "vista_pdf", url: URL.createObjectURL(blob) };
+}
+
+/** C6c.2: carátula e índice del expediente. La función valida acceso y registra. */
+export async function caratulaAuditor(auditoriaId: string, descargar: boolean): Promise<ResultadoArchivo> {
+  const { data, error } = await supabase.rpc("auditor_caratula" as any, { p_auditoria_id: auditoriaId, p_descargar: descargar });
+  if (error) throw new Error(error.message);
+  const blob = await generarCaratulaPDF(data, !descargar);
   if (descargar || !blob) return { modo: "descarga" };
   return { modo: "vista_pdf", url: URL.createObjectURL(blob) };
 }

@@ -1,6 +1,17 @@
 <!doctype html>
 <html lang="es-MX">
   <head>
+    <script>
+      // C6c.2: guarda el enlace de invitación/recuperación antes de que la app lo procese,
+      // para tomar solo la sesión del enlace aunque haya otra sesión abierta.
+      (function () {
+        try {
+          if (location.pathname !== "/reset-password") return;
+          var h = location.hash || "";
+          if (/access_token=|error_description=|error=/.test(h)) sessionStorage.setItem("tracea_enlace_auth", h.slice(1));
+        } catch (e) {}
+      })();
+    </script>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>TRACEA</title>

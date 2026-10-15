@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { ClipboardCheck, FileText, Brain, ShieldAlert, LogOut, Download, Eye, ArrowLeft } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuditorExpedientes, type ItemExpediente } from "@/hooks/useAuditorExpedientes";
-import { abrirArchivoAuditor, folioPdfAuditor, type ResultadoArchivo } from "@/lib/auditoriaDescargas";
+import { abrirArchivoAuditor, folioPdfAuditor, fichaConocimientoAuditor, caratulaAuditor, type ResultadoArchivo } from "@/lib/auditoriaDescargas";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -205,12 +205,30 @@ function VisorDocumento({ itemId, d, permiteDescarga, verPdf }: { itemId: string
   );
 }
 
-function VisorConocimiento({ d }: { d: any }) {
+function VisorConocimiento({ itemId, d, permiteDescarga, verPdf }: { itemId: string; d: any; permiteDescarga: boolean; verPdf: VerPdf }) {
+  const { ocupado, correr } = useAccion();
   return (
     <div className="space-y-4">
-      <h2 className="text-lg font-bold">Conocimiento validado</h2>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 className="text-lg font-bold">Conocimiento validado</h2>
+        <div className="flex gap-2">
+          <Button size="sm" variant="outline" disabled={!!ocupado}
+            onClick={() => correr("ver", async () => verPdf(await fichaConocimientoAuditor(itemId, d, false), "Ficha de conocimiento"))}>
+            <Eye className="h-4 w-4 mr-1" />{ocupado === "ver" ? "Generando…" : "Ver ficha PDF"}
+          </Button>
+          {permiteDescarga && (
+            <Button size="sm" disabled={!!ocupado} onClick={() => correr("pdf", () => fichaConocimientoAuditor(itemId, d, true))}>
+              <Download className="h-4 w-4 mr-1" />{ocupado === "pdf" ? "Generando…" : "Descargar"}
+            </Button>
+          )}
+        </div>
+      </div>
       <p className="text-sm whitespace-pre-wrap">{d.contenido}</p>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+        <Campo label="Tipo" valor={d.tipo} />
+        <Campo label="Área" valor={d.area} />
+        <Campo label="Proceso" valor={d.proceso} />
+        <Campo label="Propuso" valor={d.propuso?.nombre ? `${d.propuso.nombre} · ${fmtFecha(d.propuso.fecha, true)}` : null} />
         <Campo label="Validó" valor={d.validado_por} />
         <Campo label="Fecha de validación" valor={fmtFecha(d.validado_en, true)} />
       </div>
@@ -247,6 +265,26 @@ export default function AuditoriaExterna() {
   const cerrarPdf = () => { if (pdf) URL.revokeObjectURL(pdf.url); setPdf(null); };
 
   const exp = useMemo(() => (expedientes ?? []).find((e) => e.id === expId) ?? (expedientes ?? [])[0], [expedientes, expId]);
+  const { toast } = useToast();
+  const [caratOcupado, setCaratOcupado] = useState<string | null>(null);
+  const caratulaVista = useRef<Set<string>>(new Set());
+  const abrirCaratula = async (descargar: boolean) => {
+    if (!exp) return;
+    setCaratOcupado(descargar ? "pdf" : "ver");
+    try {
+      const r = await caratulaAuditor(exp.id, descargar);
+      verPdf(r, `Carátula e índice · ${exp.nombre}`);
+    } catch (e: any) {
+      toast({ title: "No se pudo generar la carátula", description: e.message, variant: "destructive" });
+    } finally { setCaratOcupado(null); }
+  };
+  // La carátula se muestra primero al entrar a cada expediente.
+  useEffect(() => {
+    if (!exp || caratulaVista.current.has(exp.id)) return;
+    caratulaVista.current.add(exp.id);
+    abrirCaratula(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [exp?.id]);
 
   useEffect(() => {
     if (!itemId) { setDetalle(null); return; }
@@ -287,6 +325,10 @@ export default function AuditoriaExterna() {
         <div className="max-w-md mx-auto text-center py-24 px-4">
           <h1 className="text-lg font-bold">No tienes accesos vigentes</h1>
           <p className="text-sm text-muted-foreground mt-2">No hay expedientes de auditoría activos para tu cuenta.</p>
+          <p className="text-sm text-muted-foreground mt-2">
+            Si crees que es un error, escribe a{" "}
+            <a href="mailto:soporte@tracea.com.mx" className="text-primary underline">soporte@tracea.com.mx</a>.
+          </p>
         </div>
       ) : (
         <main className="max-w-6xl mx-auto p-4 md:p-6 space-y-4">
@@ -334,12 +376,26 @@ export default function AuditoriaExterna() {
                     <ArrowLeft className="h-4 w-4 mr-1" /> Ítems
                   </Button>
                 )}
-                {!itemId && <p className="text-sm text-muted-foreground">Elige un ítem del expediente.</p>}
+                {!itemId && (
+                  <div className="space-y-3">
+                    <p className="text-sm text-muted-foreground">Elige un ítem del expediente o consulta su carátula e índice.</p>
+                    <div className="flex flex-wrap gap-2">
+                      <Button size="sm" variant="outline" disabled={!!caratOcupado} onClick={() => abrirCaratula(false)}>
+                        <Eye className="h-4 w-4 mr-1" />{caratOcupado === "ver" ? "Generando…" : "Ver carátula e índice"}
+                      </Button>
+                      {exp.permite_descarga && (
+                        <Button size="sm" disabled={!!caratOcupado} onClick={() => abrirCaratula(true)}>
+                          <Download className="h-4 w-4 mr-1" />{caratOcupado === "pdf" ? "Generando…" : "Descargar carátula"}
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                )}
                 {cargando && <p className="text-sm text-muted-foreground">Cargando…</p>}
                 {error && <p className="text-sm text-destructive">{error}</p>}
                 {detalle && detalle.tipo === "folio" && <VisorFolio itemId={detalle.item_id} d={detalle.datos} permiteDescarga={detalle.permite_descarga} verPdf={verPdf} />}
                 {detalle && detalle.tipo === "documento" && <VisorDocumento itemId={detalle.item_id} d={detalle.datos} permiteDescarga={detalle.permite_descarga} verPdf={verPdf} />}
-                {detalle && detalle.tipo === "conocimiento" && <VisorConocimiento d={detalle.datos} />}
+                {detalle && detalle.tipo === "conocimiento" && <VisorConocimiento itemId={detalle.item_id} d={detalle.datos} permiteDescarga={detalle.permite_descarga} verPdf={verPdf} />}
               </CardContent>
             </Card>
           </div>

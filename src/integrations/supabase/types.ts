@@ -4208,6 +4208,10 @@ export type Database = {
         Args: { p_folio_id: string; p_motivo?: string }
         Returns: string
       }
+      auditor_caratula: {
+        Args: { p_auditoria_id: string; p_descargar?: boolean }
+        Returns: Json
+      }
       auditor_mis_expedientes: {
         Args: never
         Returns: {
@@ -4221,11 +4225,16 @@ export type Database = {
           permite_descarga: boolean
         }[]
       }
+      auditor_persona: { Args: { p_id: string }; Returns: Json }
       auditor_registrar_descarga_folio: {
         Args: { p_item_id: string }
         Returns: Json
       }
       auditor_registrar_folio_pdf: {
+        Args: { p_descargar: boolean; p_item_id: string }
+        Returns: Json
+      }
+      auditor_registrar_pdf_generado: {
         Args: { p_descargar: boolean; p_item_id: string }
         Returns: Json
       }
