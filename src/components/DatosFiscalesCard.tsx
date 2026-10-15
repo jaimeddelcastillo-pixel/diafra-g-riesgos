@@ -16,7 +16,7 @@ export function DatosFiscalesCard() {
   const { orgId, orgRole, isSuperAdmin } = useAuth();
   const qc = useQueryClient();
   const puedeEditar = orgRole === "admin" || orgRole === "responsable_sanitario" || isSuperAdmin();
-  const puedeVer = puedeEditar || orgRole === "responsable_sanitario";
+  const puedeVer = puedeEditar;
   const [nombre, setNombre] = useState("");
   const [razon, setRazon] = useState("");
   const [rfc, setRfc] = useState("");
