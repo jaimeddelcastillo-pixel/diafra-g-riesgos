@@ -274,6 +274,13 @@
       "when": 1792075220249,
       "tag": "0038_c6c_lista_blanca_metodologia",
       "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1792077669656,
+      "tag": "0039_c6c1_auditoria_edicion_duplicado",
+      "breakpoints": true
     }
   ]
 }

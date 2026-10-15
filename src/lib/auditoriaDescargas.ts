@@ -20,26 +20,39 @@ function guardarBlob(blob: Blob, nombre: string) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-/** Archivo de un ítem (documento o evidencia): PDF con marca de agua, o vista de 60 s si no es PDF. */
-export async function abrirArchivoAuditor(itemId: string, nombre: string, path?: string) {
+export type ResultadoArchivo =
+  | { modo: "descarga" }
+  | { modo: "vista"; url: string }        // no PDF: URL firmada de 60 s
+  | { modo: "vista_pdf"; url: string };   // PDF con marca de agua en memoria (blob:)
+
+/**
+ * Archivo de un ítem (documento o evidencia).
+ * PDF: siempre con marca de agua servida por la función; `descargar` lo guarda, si no se ve en pantalla.
+ * No PDF: vista de 60 s.
+ */
+export async function abrirArchivoAuditor(itemId: string, nombre: string, path?: string, descargar = false): Promise<ResultadoArchivo> {
   const { data, error } = await supabase.functions.invoke("auditoria-descargar", {
-    body: { item_id: itemId, path: path ?? null },
+    body: { item_id: itemId, path: path ?? null, modo: descargar ? "descarga" : "vista" },
   });
   if (error) throw new Error(await mensajeError(error));
   if (data instanceof Blob) {
-    guardarBlob(data, `${nombre.replace(/\.pdf$/i, "")}_copia_auditoria.pdf`);
-    return "descarga" as const;
+    const pdf = new Blob([data], { type: "application/pdf" });
+    if (descargar) {
+      guardarBlob(pdf, `${nombre.replace(/\.pdf$/i, "")}_copia_auditoria.pdf`);
+      return { modo: "descarga" };
+    }
+    return { modo: "vista_pdf", url: URL.createObjectURL(pdf) };
   }
   if (data?.modo === "vista" && data.url) {
     window.open(data.url, "_blank", "noopener");
-    return "vista" as const;
+    return { modo: "vista", url: data.url };
   }
   throw new Error(data?.error ?? "Respuesta inesperada");
 }
 
-/** PDF del folio generado en el navegador; antes valida y registra la descarga en el servidor. */
-export async function descargarFolioAuditor(itemId: string, datos: any) {
-  const { data, error } = await supabase.rpc("auditor_registrar_descarga_folio" as any, { p_item_id: itemId });
+/** PDF del folio generado en el navegador; antes valida y registra (vista o descarga) en el servidor. */
+export async function folioPdfAuditor(itemId: string, datos: any, descargar: boolean): Promise<ResultadoArchivo> {
+  const { data, error } = await supabase.rpc("auditor_registrar_folio_pdf" as any, { p_item_id: itemId, p_descargar: descargar });
   if (error) throw new Error(error.message);
   const r = data as { expediente: string; auditor: string; fecha: string };
   const fecha = new Date(r.fecha).toLocaleString("es-MX", { dateStyle: "short", timeStyle: "short" });
@@ -52,5 +65,7 @@ export async function descargarFolioAuditor(itemId: string, datos: any) {
     descripcion: v.motivo_revision || "—",
     realizado_por: v.realizado_por || "—",
   }));
-  await generateFolioPDF(datos.folio, datos.riesgos, datos.comite, datos.org, { marcaAgua, versiones });
+  const blob = await generateFolioPDF(datos.folio, datos.riesgos, datos.comite, datos.org, { marcaAgua, versiones, soloBlob: !descargar });
+  if (descargar || !blob) return { modo: "descarga" };
+  return { modo: "vista_pdf", url: URL.createObjectURL(blob) };
 }

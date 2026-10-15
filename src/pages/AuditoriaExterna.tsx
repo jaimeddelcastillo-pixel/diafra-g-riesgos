@@ -4,10 +4,11 @@ import { ClipboardCheck, FileText, Brain, ShieldAlert, LogOut, Download, Eye, Ar
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuditorExpedientes, type ItemExpediente } from "@/hooks/useAuditorExpedientes";
-import { abrirArchivoAuditor, descargarFolioAuditor } from "@/lib/auditoriaDescargas";
+import { abrirArchivoAuditor, folioPdfAuditor, type ResultadoArchivo } from "@/lib/auditoriaDescargas";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 
 const fmtFecha = (d?: string | null, hora = false) =>
@@ -41,7 +42,9 @@ function useAccion() {
   return { ocupado, correr };
 }
 
-function VisorFolio({ itemId, d, permiteDescarga }: { itemId: string; d: any; permiteDescarga: boolean }) {
+type VerPdf = (r: ResultadoArchivo, titulo: string) => void;
+
+function VisorFolio({ itemId, d, permiteDescarga, verPdf }: { itemId: string; d: any; permiteDescarga: boolean; verPdf: VerPdf }) {
   const f = d.folio;
   const { ocupado, correr } = useAccion();
   return (
@@ -51,12 +54,16 @@ function VisorFolio({ itemId, d, permiteDescarga }: { itemId: string; d: any; pe
           <h2 className="text-lg font-bold">{f.codigo}</h2>
           <p className="text-sm text-muted-foreground">{f.proceso_equipo}</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Badge variant="outline">{f.estado}</Badge>
           <Badge variant="secondary">Versión {f.numero_version || "1.0"}</Badge>
+          <Button size="sm" variant="outline" disabled={!!ocupado}
+            onClick={() => correr("ver", async () => verPdf(await folioPdfAuditor(itemId, d, false), f.codigo))}>
+            <Eye className="h-4 w-4 mr-1" /> {ocupado === "ver" ? "Generando…" : "Ver PDF"}
+          </Button>
           {permiteDescarga && (
-            <Button size="sm" disabled={!!ocupado} onClick={() => correr("pdf", () => descargarFolioAuditor(itemId, d))}>
-              <Download className="h-4 w-4 mr-1" /> {ocupado === "pdf" ? "Generando…" : "PDF"}
+            <Button size="sm" disabled={!!ocupado} onClick={() => correr("pdf", () => folioPdfAuditor(itemId, d, true))}>
+              <Download className="h-4 w-4 mr-1" /> {ocupado === "pdf" ? "Generando…" : "Descargar"}
             </Button>
           )}
         </div>
@@ -144,12 +151,18 @@ function VisorFolio({ itemId, d, permiteDescarga }: { itemId: string; d: any; pe
             {d.evidencias.map((e: any) => (
               <li key={e.path} className="flex items-center justify-between gap-2 text-sm border rounded-md px-3 py-2">
                 <span className="truncate">Riesgo {e.riesgo_numero} · {e.nombre}</span>
-                {(!e.es_pdf || permiteDescarga) && (
+                <div className="flex gap-1 shrink-0">
                   <Button size="sm" variant="outline" disabled={!!ocupado}
-                    onClick={() => correr(e.path, () => abrirArchivoAuditor(itemId, e.nombre, e.path))}>
-                    {e.es_pdf ? <><Download className="h-4 w-4 mr-1" />Descargar</> : <><Eye className="h-4 w-4 mr-1" />Ver</>}
+                    onClick={() => correr(e.path, async () => verPdf(await abrirArchivoAuditor(itemId, e.nombre, e.path), e.nombre))}>
+                    <Eye className="h-4 w-4 mr-1" />Ver
                   </Button>
-                )}
+                  {e.es_pdf && permiteDescarga && (
+                    <Button size="sm" variant="outline" disabled={!!ocupado} aria-label="Descargar"
+                      onClick={() => correr(e.path + ":d", () => abrirArchivoAuditor(itemId, e.nombre, e.path, true))}>
+                      <Download className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
               </li>
             ))}
           </ul>
@@ -159,17 +172,23 @@ function VisorFolio({ itemId, d, permiteDescarga }: { itemId: string; d: any; pe
   );
 }
 
-function VisorDocumento({ itemId, d, permiteDescarga }: { itemId: string; d: any; permiteDescarga: boolean }) {
+function VisorDocumento({ itemId, d, permiteDescarga, verPdf }: { itemId: string; d: any; permiteDescarga: boolean; verPdf: VerPdf }) {
   const { ocupado, correr } = useAccion();
+  const nombre = d.nombre_archivo || d.nombre;
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-lg font-bold">{d.registro?.codigo ? `${d.registro.codigo} · ` : ""}{d.nombre}</h2>
-        {(!d.es_pdf || permiteDescarga) && (
-          <Button size="sm" disabled={!!ocupado} onClick={() => correr("doc", () => abrirArchivoAuditor(itemId, d.nombre_archivo || d.nombre))}>
-            {d.es_pdf ? <><Download className="h-4 w-4 mr-1" />Descargar copia</> : <><Eye className="h-4 w-4 mr-1" />Ver</>}
+        <div className="flex gap-2">
+          <Button size="sm" variant="outline" disabled={!!ocupado} onClick={() => correr("ver", async () => verPdf(await abrirArchivoAuditor(itemId, nombre), d.nombre))}>
+            <Eye className="h-4 w-4 mr-1" />{ocupado === "ver" ? "Abriendo…" : "Ver"}
           </Button>
-        )}
+          {d.es_pdf && permiteDescarga && (
+            <Button size="sm" disabled={!!ocupado} onClick={() => correr("doc", () => abrirArchivoAuditor(itemId, nombre, undefined, true))}>
+              <Download className="h-4 w-4 mr-1" />Descargar copia
+            </Button>
+          )}
+        </div>
       </div>
       {d.copia_no_controlada && <Badge variant="destructive">Copia no controlada</Badge>}
       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
@@ -223,6 +242,9 @@ export default function AuditoriaExterna() {
   const [detalle, setDetalle] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
   const [cargando, setCargando] = useState(false);
+  const [pdf, setPdf] = useState<{ url: string; titulo: string } | null>(null);
+  const verPdf: VerPdf = (r, titulo) => { if (r.modo === "vista_pdf") setPdf({ url: r.url, titulo }); };
+  const cerrarPdf = () => { if (pdf) URL.revokeObjectURL(pdf.url); setPdf(null); };
 
   const exp = useMemo(() => (expedientes ?? []).find((e) => e.id === expId) ?? (expedientes ?? [])[0], [expedientes, expId]);
 
@@ -315,12 +337,18 @@ export default function AuditoriaExterna() {
                 {!itemId && <p className="text-sm text-muted-foreground">Elige un ítem del expediente.</p>}
                 {cargando && <p className="text-sm text-muted-foreground">Cargando…</p>}
                 {error && <p className="text-sm text-destructive">{error}</p>}
-                {detalle && detalle.tipo === "folio" && <VisorFolio itemId={detalle.item_id} d={detalle.datos} permiteDescarga={detalle.permite_descarga} />}
-                {detalle && detalle.tipo === "documento" && <VisorDocumento itemId={detalle.item_id} d={detalle.datos} permiteDescarga={detalle.permite_descarga} />}
+                {detalle && detalle.tipo === "folio" && <VisorFolio itemId={detalle.item_id} d={detalle.datos} permiteDescarga={detalle.permite_descarga} verPdf={verPdf} />}
+                {detalle && detalle.tipo === "documento" && <VisorDocumento itemId={detalle.item_id} d={detalle.datos} permiteDescarga={detalle.permite_descarga} verPdf={verPdf} />}
                 {detalle && detalle.tipo === "conocimiento" && <VisorConocimiento d={detalle.datos} />}
               </CardContent>
             </Card>
           </div>
+          <Dialog open={!!pdf} onOpenChange={(v) => { if (!v) cerrarPdf(); }}>
+            <DialogContent className="max-w-5xl w-[95vw] h-[90vh] flex flex-col p-3">
+              <DialogHeader><DialogTitle className="text-sm truncate pr-6">{pdf?.titulo} · copia con marca de agua</DialogTitle></DialogHeader>
+              {pdf && <iframe title={pdf.titulo} src={`${pdf.url}#toolbar=0`} className="flex-1 w-full rounded border" />}
+            </DialogContent>
+          </Dialog>
         </main>
       )}
     </div>

@@ -41,7 +41,10 @@ Deno.serve(async (req) => {
     .select("id", { count: "exact", head: true }).eq("auditoria_id", auditoriaId);
   if (!nItems) return json({ error: "Agrega al menos un ítem antes de activar" }, 409);
 
-  const email = String(aud.auditor_email).trim().toLowerCase();
+  const email = String(aud.auditor_email).trim().toLowerCase().replace(/[\s.]+$/, "");
+  if (!/^[a-z0-9._%+'-]+@[a-z0-9-]+(\.[a-z0-9-]+)*\.[a-z]{2,}$/i.test(email)) {
+    return json({ error: "El correo del auditor no es válido; corrígelo con «Editar datos»" }, 400);
+  }
   const { data: org } = await admin.from("organizations").select("nombre").eq("id", ctx.orgId).maybeSingle();
   const { data: perfil } = await admin.from("profiles").select("id, activo").ilike("email", email).maybeSingle();
 

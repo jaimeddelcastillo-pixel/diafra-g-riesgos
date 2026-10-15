@@ -240,6 +240,7 @@ export type Database = {
           cerrado_por: string | null
           creado_por: string | null
           created_at: string
+          duplicado_de: string | null
           estado: string
           expira_en: string
           id: string
@@ -260,6 +261,7 @@ export type Database = {
           cerrado_por?: string | null
           creado_por?: string | null
           created_at?: string
+          duplicado_de?: string | null
           estado?: string
           expira_en: string
           id?: string
@@ -280,6 +282,7 @@ export type Database = {
           cerrado_por?: string | null
           creado_por?: string | null
           created_at?: string
+          duplicado_de?: string | null
           estado?: string
           expira_en?: string
           id?: string
@@ -290,6 +293,13 @@ export type Database = {
           permite_descarga?: boolean
         }
         Relationships: [
+          {
+            foreignKeyName: "auditorias_externas_duplicado_de_fkey"
+            columns: ["duplicado_de"]
+            isOneToOne: false
+            referencedRelation: "auditorias_externas"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "auditorias_externas_org_id_fkey"
             columns: ["org_id"]
@@ -4215,6 +4225,10 @@ export type Database = {
         Args: { p_item_id: string }
         Returns: Json
       }
+      auditor_registrar_folio_pdf: {
+        Args: { p_descargar: boolean; p_item_id: string }
+        Returns: Json
+      }
       auditor_ver_item: { Args: { p_item_id: string }; Returns: Json }
       auditoria_actividad: {
         Args: { p_auditoria_id: string }
@@ -4401,6 +4415,19 @@ export type Database = {
           motivo: string
         }[]
       }
+      duplicar_auditoria: {
+        Args: {
+          p_auditor_email: string
+          p_auditor_nombre: string
+          p_auditor_organizacion: string
+          p_expira_en: string
+          p_inicia_en: string
+          p_nombre: string
+          p_origen: string
+          p_permite_descarga: boolean
+        }
+        Returns: Json
+      }
       eliminar_documento_permanente: {
         Args: { p_doc_id: string }
         Returns: string
@@ -4474,6 +4501,7 @@ export type Database = {
           nombre: string
         }[]
       }
+      normalizar_email_auditor: { Args: { _e: string }; Returns: string }
       normalizar_txt: { Args: { _t: string }; Returns: string }
       org_documento_retencion: { Args: { p_id: string }; Returns: string }
       org_has_curso_access: { Args: { _org_id: string }; Returns: boolean }
