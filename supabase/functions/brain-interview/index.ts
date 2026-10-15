@@ -7,6 +7,7 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { resolverContextoOrg, ContextoOrgError } from "../_shared/contexto-org.ts";
+import { cargarSkill, registrarSkillFaltante } from "../_shared/skills.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -1238,12 +1239,18 @@ Deno.serve(async (req) => {
       await admin.from("brain_interview_turns").update({ estado: "procesando", error: null }).eq("id", turnId).eq("org_id", orgId);
     }
 
-    // ── Prompt maestro
-    const promptRow = await admin
-      .from("agent_prompts").select("system_prompt, version").eq("nombre", "cerebro_institucional").eq("activo", true).maybeSingle();
-    if (!promptRow.data) {
-      await admin.from("brain_interview_turns").update({ estado: "fallido", error: "database: agente no configurado" }).eq("id", turnId);
-      return json({ error: "Agente Cerebro no configurado" }, 500);
+    // ── Prompt maestro (C4a: skill vigente desde la base, sin texto en código)
+    let promptTexto = "";
+    let skillsUsadas: { clave: string; version: string; sha256: string }[] = [];
+    try {
+      const skill = await cargarSkill(admin, "cerebro_institucional");
+      promptTexto = skill.texto;
+      skillsUsadas = [{ clave: skill.clave, version: skill.version, sha256: skill.sha256 }];
+    } catch (e) {
+      console.error("C4a: cerebro_institucional no vigente", e);
+      await admin.from("brain_interview_turns").update({ estado: "fallido", error: "database: skill cerebro_institucional no vigente" }).eq("id", turnId);
+      await registrarSkillFaltante(admin, orgId, "cerebro_institucional", "brain-interview");
+      return json({ error: "Skill no vigente: cerebro_institucional. Publícala en el panel Skills de IA." }, 500);
     }
 
     const { bloque } = await construirContextoSesion(admin, orgId, sessionId, org);
@@ -1271,7 +1278,7 @@ Deno.serve(async (req) => {
       bloqueAccion = "\n\n[CIERRE DE SESIÓN] Genera el mensaje de cierre según el Prompt Maestro: resume lo capturado, lo pendiente y agradece. No hagas preguntas nuevas ni llames herramientas de persistencia.";
     }
 
-    const systemPromptBase = (promptRow.data as any).system_prompt + bloque + bloqueAccion;
+    const systemPromptBase = promptTexto + bloque + bloqueAccion;
 
     // Mensaje del entrevistado (idempotente por turn_id + role)
     if (action === "mensaje") {
@@ -1576,6 +1583,7 @@ Deno.serve(async (req) => {
 
           await admin.from("brain_interview_turns").update({
             estado: "completado",
+            skills_usadas: skillsUsadas,
             transcript_persisted: metrics.transcript_persisted,
             institutional_effects: metrics.institutional_effects,
             knowledge_created: metrics.knowledge_created,
@@ -1610,6 +1618,7 @@ Deno.serve(async (req) => {
 
         await admin.from("brain_interview_turns").update({
           estado: "completado",
+          skills_usadas: skillsUsadas,
           transcript_persisted: metrics.transcript_persisted,
           institutional_effects: metrics.institutional_effects,
           knowledge_created: metrics.knowledge_created,
