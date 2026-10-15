@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -9,6 +10,31 @@ import { toast } from "sonner";
  * cierra cualquier otra sesión abierta y, si la del enlace no se puede tomar, muestra «expiró o ya se usó».
  */
 type Tokens = { access_token: string; refresh_token: string };
+
+/** C6c.3: cliente aislado, en memoria, que SOLO conoce la sesión creada desde el enlace.
+ * Nunca lee ni escribe la sesión abierta en el navegador (p. ej. la del RS). */
+function clienteDelEnlace(): SupabaseClient {
+  const mem = new Map<string, string>();
+  return createClient(import.meta.env.VITE_SUPABASE_URL, import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY, {
+    auth: {
+      persistSession: false, autoRefreshToken: false, detectSessionInUrl: false,
+      storageKey: "tracea-enlace-" + Math.random().toString(36).slice(2),
+      storage: { getItem: (k) => mem.get(k) ?? null, setItem: (k, v) => { mem.set(k, v); }, removeItem: (k) => { mem.delete(k); } },
+    },
+  });
+}
+
+/** Método con que se creó la sesión (claim amr del token). Solo se aceptan sesiones de enlace. */
+function origenDelToken(at: string): "invitacion" | "recuperacion" | null {
+  try {
+    const b = at.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
+    const claims = JSON.parse(decodeURIComponent(escape(atob(b))));
+    const metodos: string[] = (claims.amr ?? []).map((a: any) => a.method);
+    if (metodos.includes("invite")) return "invitacion";
+    if (metodos.includes("recovery") || metodos.includes("otp") || metodos.includes("magiclink")) return "recuperacion";
+    return null;
+  } catch { return null; }
+}
 
 function CampoPassword({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
   const [ver, setVer] = useState(false);
@@ -37,7 +63,7 @@ export default function ResetPassword() {
   const [submitting, setSubmitting] = useState(false);
   const [estado, setEstado] = useState<"cargando" | "listo" | "expirado">("cargando");
   const [cuenta, setCuenta] = useState<{ id: string; email: string } | null>(null);
-  const tokens = useRef<Tokens | null>(null);
+  const enlace = useRef<{ client: SupabaseClient; origen: "invitacion" | "recuperacion" } | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -46,11 +72,14 @@ export default function ResetPassword() {
       const p = new URLSearchParams(crudo ?? "");
       const access_token = p.get("access_token"); const refresh_token = p.get("refresh_token");
       if (!access_token || !refresh_token || p.get("error")) { setEstado("expirado"); return; }
-      tokens.current = { access_token, refresh_token };
-      // Cierra cualquier sesión abierta en este navegador y toma solo la del enlace.
-      await supabase.auth.signOut({ scope: "local" });
-      const { data, error } = await supabase.auth.setSession(tokens.current);
+      const origen = origenDelToken(access_token);
+      if (!origen) { setEstado("expirado"); return; }
+      const client = clienteDelEnlace();
+      const { data, error } = await client.auth.setSession({ access_token, refresh_token } as Tokens);
       if (error || !data.user) { setEstado("expirado"); return; }
+      enlace.current = { client, origen };
+      // La sesión abierta en el navegador se cierra (sin tocar su contraseña) para no mezclar cuentas al terminar.
+      await supabase.auth.signOut({ scope: "local" });
       setCuenta({ id: data.user.id, email: data.user.email ?? "" });
       setEstado("listo");
     })();
@@ -63,13 +92,11 @@ export default function ResetPassword() {
     if (!cuenta) return;
     setSubmitting(true);
     try {
-      // Si otra pestaña cambió la sesión mientras tanto, se vuelve a tomar la del enlace antes de guardar.
-      const { data: s } = await supabase.auth.getSession();
-      if (s.session?.user.id !== cuenta.id) {
-        const { data: r, error: rErr } = tokens.current ? await supabase.auth.setSession(tokens.current) : { data: null, error: true } as any;
-        if (rErr || r?.user?.id !== cuenta.id) { setEstado("expirado"); return; }
-      }
-      const { error } = await supabase.auth.updateUser({ password });
+      const e2 = enlace.current;
+      if (!e2) { setEstado("expirado"); return; }
+      const { data: u } = await e2.client.auth.getUser();
+      if (u.user?.id !== cuenta.id) { setEstado("expirado"); return; }
+      const { error } = await e2.client.auth.updateUser({ password });
       if (error) {
         const msg = error.message?.toLowerCase() || "";
         if (msg.includes("weak") || msg.includes("pwned") || msg.includes("breach") || msg.includes("known")) {
@@ -81,10 +108,12 @@ export default function ResetPassword() {
         }
         return;
       }
+      await e2.client.rpc("registrar_cambio_contrasena", { _origen: e2.origen });
       toast.success("Contraseña guardada.");
       // Destino según la cuenta: con empresa → Inicio; solo expedientes de auditoría → portal.
-      const { data: m } = await supabase.from("org_members").select("id").eq("user_id", cuenta.id).limit(1);
-      window.location.replace((m ?? []).length > 0 ? "/" : "/auditoria-externa");
+      const { data: m } = await e2.client.from("org_members").select("id").eq("user_id", cuenta.id).limit(1);
+      await e2.client.auth.signOut({ scope: "local" });
+      window.location.replace((m ?? []).length > 0 ? "/login" : "/login?destino=auditoria");
     } catch (err: any) {
       toast.error(err.message || "Error al guardar la contraseña");
     } finally {
