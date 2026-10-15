@@ -329,6 +329,7 @@ export default function Configuracion() {
     const { error } = await supabase.auth.updateUser({ password: pwForm.newPw });
     setPwLoading(false);
     if (error) { toast.error(error.message); } else {
+      await supabase.rpc("registrar_cambio_contrasena", { _origen: "perfil" });
       toast.success("Contraseña actualizada correctamente");
       setPwDialogOpen(false);
       setPwForm({ newPw: "", confirm: "" });

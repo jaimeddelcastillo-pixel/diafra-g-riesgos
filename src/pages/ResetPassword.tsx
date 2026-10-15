@@ -113,7 +113,7 @@ export default function ResetPassword() {
       // Destino según la cuenta: con empresa → Inicio; solo expedientes de auditoría → portal.
       const { data: m } = await e2.client.from("org_members").select("id").eq("user_id", cuenta.id).limit(1);
       await e2.client.auth.signOut({ scope: "local" });
-      window.location.replace((m ?? []).length > 0 ? "/login" : "/login?destino=auditoria");
+      window.location.replace("/login");
     } catch (err: any) {
       toast.error(err.message || "Error al guardar la contraseña");
     } finally {
