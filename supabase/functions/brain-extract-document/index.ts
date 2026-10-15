@@ -9,6 +9,7 @@
 //   cita textual, método y la persona que extrajo.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { cargarSkill, interpolar, registrarSkillFaltante } from "../_shared/skills.ts";
 import { resolverContextoOrg } from "../_shared/contexto-org.ts";
 import { PDFDocument } from "npm:pdf-lib@1.17.1";
 import {
@@ -221,31 +222,21 @@ Deno.serve(async (req) => {
       return j({ error: "no_soportado", mensaje: `Formato ${mime} todavía no soportado para extracción.` }, 422);
     }
 
-    const instruccion = `Extrae conocimiento institucional del documento "${nombreArchivo}"${
+    // C4a: la instrucción vive en la base (skill extraccion_documento, vigente).
+    const documentoRef = `"${nombreArchivo}"${
       brainDoc ? ` (registro ${brainDoc.codigo ?? "sin código"}${brainDoc.revision ? ` rev. ${brainDoc.revision}` : ""})` : ""
-    }. Devuelve EXCLUSIVAMENTE un JSON válido:
-{
-  "conocimientos": [
-    {
-      "tipo": uno de ${TIPOS_CONOCIMIENTO.join(", ")},
-      "contenido": "afirmación concreta y verificable del documento, sin interpretar",
-      "pagina": número de página si aplica,
-      "parrafo": número de párrafo si aplica,
-      "seccion": "encabezado de sección si aplica",
-      "cita": "cita textual corta que respalda el contenido"
+    }`;
+    let instruccion = "";
+    let skills_usadas: { clave: string; version: string; sha256: string }[] = [];
+    try {
+      const skill = await cargarSkill(admin, "extraccion_documento");
+      instruccion = interpolar(skill.texto, { documento: documentoRef });
+      skills_usadas = [{ clave: skill.clave, version: skill.version, sha256: skill.sha256 }];
+    } catch (e) {
+      console.error("C4a: extraccion_documento no vigente", e);
+      await registrarSkillFaltante(admin, orgId, "extraccion_documento", "brain-extract-document");
+      return j({ error: "skill_no_vigente", mensaje: "Skill no vigente: extraccion_documento. Publícala en el panel Skills de IA." }, 500);
     }
-  ],
-  "estado_documento": {
-    "estado_propuesto": "obsoleto" o "cancelado" o null,
-    "estado_evidencia": "qué se ve: sello o leyenda OBSOLETO/CANCELADO, o vigencia vencida (con fecha)",
-    "estado_confianza": "alta" | "media" | "baja",
-    "copia_no_controlada": true o false,
-    "copia_evidencia": "texto del sello o leyenda COPIA NO CONTROLADA y página",
-    "revision_detectada": "revisión que aparece impresa en el documento, o null",
-    "revision_evidencia": "dónde aparece (página, encabezado)"
-  }
-}
-Reglas: "pagina" es el número de página real del archivo PDF (la primera página del archivo es 1), no el folio impreso; reporta estado_documento solo con evidencia visible en el documento, si no la hay deja null/false; solo afirmaciones que estén literalmente en el documento; no inventes ni interpretes; máximo 15 conocimientos; si el documento no aporta conocimiento institucional, devuelve {"conocimientos": []}. No agregues explicaciones fuera del JSON.`;
 
     // deno-lint-ignore no-explicit-any
     const userContent: any[] = metodo === "vision"
@@ -294,6 +285,7 @@ Reglas: "pagina" es el número de página real del archivo PDF (la primera pági
       paginas_leidas: paginasLeidas,
       truncado,
       texto: metodo === "vision" ? null : textoPlano.slice(0, 120000),
+      skills_usadas,
       solicitado_por: user.id,
     }).select("id").single();
     if (eErr || !extraccion) {

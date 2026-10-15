@@ -3,6 +3,7 @@
 // y aplica visión si es escaneado). Devuelve resumen estructurado y clasificación.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { cargarSkill, interpolar, registrarSkillFaltante } from "../_shared/skills.ts";
 import { resolverContextoOrg } from "../_shared/contexto-org.ts";
 import { bloqueImagen, bloquePdf, extractDocxText, isWordMime } from "../_shared/documento-contenido.ts";
 
@@ -77,28 +78,17 @@ Deno.serve(async (req) => {
       });
     }
 
-    userContent.push({
-      type: "text",
-      text: `Analiza el documento "${nombre_archivo}" y devuelve EXCLUSIVAMENTE un JSON válido con esta estructura:
-{
-  "tipo": "amef" | "procedimiento" | "estudio" | "evidencia" | "otro",
-  "resumen": "Resumen de 2-3 líneas",
-  "puntos_clave": ["..."],
-  "riesgos_detectados": [
-    {
-      "peligro": "...",
-      "situacion_peligrosa": "...",
-      "efecto_dano": "...",
-      "causa_potencial": "...",
-      "severidad_sugerida": 1-10,
-      "ocurrencia_sugerida": 1-10,
-      "deteccion_sugerida": 1-10
+    // C4a: la instrucción vive en la base (skill analisis_documento, vigente).
+    let instruccion = "";
+    try {
+      const skill = await cargarSkill(adminClient, "analisis_documento");
+      instruccion = interpolar(skill.texto, { documento: `"${nombre_archivo}"` });
+    } catch (e) {
+      console.error("C4a: analisis_documento no vigente", e);
+      await registrarSkillFaltante(adminClient, member.org_id, "analisis_documento", "chat-analizar-documento");
+      return j({ error: "skill_no_vigente", mensaje: "Skill no vigente: analisis_documento. Publícala en el panel Skills de IA." }, 500);
     }
-  ],
-  "accion_sugerida": "Texto que recomiende qué hacer (insertar riesgos, adjuntar como evidencia, etc.)"
-}
-No agregues explicaciones fuera del JSON.`,
-    });
+    userContent.push({ type: "text", text: instruccion });
 
     const anthRes = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",

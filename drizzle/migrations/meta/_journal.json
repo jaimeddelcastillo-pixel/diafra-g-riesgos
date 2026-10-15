@@ -309,6 +309,13 @@
       "when": 1792095379908,
       "tag": "0043_p3_2_rs_configuracion_empresa",
       "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1792097711281,
+      "tag": "0044_0044_c4a_skills_ia",
+      "breakpoints": true
     }
   ]
 }
