@@ -136,7 +136,7 @@ const BAND_FILL: [number, number, number] = [220, 232, 244];
 const BAND_BORDER: [number, number, number] = [140, 170, 200];
 
 // ─── Tipos para Sección VII ──────────────────────────────────────────────────
-interface VersionRow {
+export interface VersionRow {
   version_de: string;
   version_a: string;
   fecha: string;
@@ -189,6 +189,12 @@ export async function generateFolioPDF(
     codigo_formato?: string | null;
     version_formato?: string | null;
   } | null,
+  opciones?: {
+    /** C6c: texto diagonal en cada página (copia para auditor externo). */
+    marcaAgua?: string;
+    /** C6c: versiones ya resueltas (el auditor no lee folio_versiones directamente). */
+    versiones?: VersionRow[];
+  },
 ) {
   const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "letter" });
   const pageW = doc.internal.pageSize.getWidth();
@@ -209,7 +215,7 @@ export async function generateFolioPDF(
       ? `${codigoFormato} (${versionFormato})`
       : codigoFormato
     : "";
-  const versiones = await fetchVersiones(folio.id, folio.numero_version || "1.0");
+  const versiones = opciones?.versiones ?? await fetchVersiones(folio.id, folio.numero_version || "1.0");
 
   // ── Configuración por norma del folio (congelada al crear) ────────────────
   const normaConfig = getNormaConfig(folio.norma_folio);
@@ -351,6 +357,27 @@ export async function generateFolioPDF(
       const reset = new (doc as any).GState({ opacity: 1 });
       (doc as any).setGState(reset);
     }
+    doc.setTextColor(0);
+  }
+
+  function addMarcaAgua() {
+    const marca = opciones?.marcaAgua;
+    if (!marca) return;
+    const gs = (doc as any).GState ? new (doc as any).GState({ opacity: 0.25 }) : null;
+    if (gs) (doc as any).setGState(gs);
+    doc.setTextColor(180, 0, 0);
+    doc.setFont("helvetica", "bold");
+    let size = 26;
+    doc.setFontSize(size);
+    while (size > 8 && doc.getTextWidth(marca) > Math.hypot(pageW, pageH) * 0.85) {
+      size -= 1;
+      doc.setFontSize(size);
+    }
+    doc.text(pdfSafeText(marca), pageW / 2, pageH / 2, {
+      align: "center",
+      angle: (Math.atan2(pageH, pageW) * 180) / Math.PI,
+    });
+    if (gs) (doc as any).setGState(new (doc as any).GState({ opacity: 1 }));
     doc.setTextColor(0);
   }
 
@@ -1008,6 +1035,7 @@ export async function generateFolioPDF(
     addFooter();
     addCanceladoWatermark();
     if (i === 1) addCanceladoMetaStrip();
+    addMarcaAgua();
   }
 
   doc.save(`${folio.codigo}_${folio.proceso_equipo.replace(/[^a-zA-Z0-9]/g, "_")}.pdf`);
