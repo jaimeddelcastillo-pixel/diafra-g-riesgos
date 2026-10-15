@@ -38,6 +38,8 @@ import { ModuloGuard } from "./components/ModuloGuard";
 import { modulos, rutasPlataforma, clavesModulos } from "./modules";
 import Inicio from "./pages/Inicio";
 import MisDiplomas from "./pages/MisDiplomas";
+import AuditoriaExterna from "./pages/AuditoriaExterna";
+import AuditoriasExternas from "./pages/AuditoriasExternas";
 
 const queryClient = new QueryClient();
 
@@ -61,6 +63,8 @@ const App = () => (
             <Route path="/confianza" element={<Confianza />} />
             <Route path="/diploma/verificar/:hash" element={<DiplomaVerificar />} />
             <Route path="/guia-:tipo" element={<GuiaLanding />} />
+            {/* C6c: portal del auditor externo, fuera del menú y del asistente. */}
+            <Route path="/auditoria-externa" element={<AuditoriaExterna />} />
             <Route element={<AppLayout />}>
               <Route path="/" element={<Inicio />} />
               <Route element={<ModuloGuard clave={clavesModulos} mensaje="Tu organización no tiene ningún módulo activo." />}>
@@ -79,6 +83,8 @@ const App = () => (
               <Route path="/mis-diplomas" element={<MisDiplomas />} />
               <Route path="/configuracion" element={<Configuracion />} />
               <Route path="/configuracion/asistente" element={<ConfiguracionAsistente />} />
+              <Route path="/configuracion/auditorias" element={<AuditoriasExternas />} />
+              <Route path="/configuracion/auditorias/:id" element={<AuditoriasExternas />} />
               <Route path="/admin" element={<Admin />} />
               <Route path="/admin/org/:id" element={<AdminOrg />} />
               <Route path="/admin/tickets" element={<AdminTickets />} />
