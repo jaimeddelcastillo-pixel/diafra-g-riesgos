@@ -8,16 +8,17 @@ export type SkillUso = { clave: string; version: string; sha256: string };
 export type SkillCargada = SkillUso & { texto: string };
 
 /** Carga la versión vigente de una skill desde agent_prompts. */
-export async function cargarSkill(admin: any, clave: string): Promise<SkillCargada> {
+export async function cargarSkill(admin: any, clave: string): Promise<SkillCargada & { id?: string }> {
   const { data, error } = await admin
     .from("agent_prompts")
-    .select("nombre, system_prompt, version, sha256")
+    .select("id, nombre, system_prompt, version, sha256")
     .eq("nombre", clave)
     .eq("estado", "vigente")
     .maybeSingle();
   if (error) throw new Error(`No se pudo cargar la skill ${clave}: ${error.message}`);
   if (!data?.system_prompt) throw new Error(`Skill no vigente: ${clave}`);
   return {
+    id: data.id,
     clave: data.nombre,
     version: data.version,
     sha256: data.sha256,
