@@ -61,7 +61,7 @@ export const navigationConfig: NavItem[] = construirNavegacion(modulos.map((m) =
 export const adminNavigationConfig: NavItem[] = [
   { id: "admin-panel", label: "Panel TRACEA", icon: ShieldCheck, route: "/admin", exact: true, section: "admin" },
   { id: "admin-tickets", label: "Tickets", icon: Ticket, route: "/admin/tickets", section: "admin" },
-  { id: "admin-agentes", label: "Agentes IA", icon: Sparkles, route: "/admin/agentes-ia", section: "admin" },
+  { id: "admin-agentes", label: "Skills de IA", icon: Sparkles, route: "/admin/agentes-ia", section: "admin" },
   { id: "admin-protocolos", label: "Protocolos (addon)", icon: FileBadge, route: "/admin/protocolos", section: "admin" },
   { id: "admin-recursos", label: "Recursos públicos", icon: Library, route: "/admin/recursos", section: "admin" },
   { id: "admin-cursos", label: "Cursos", icon: GraduationCap, route: "/admin/cursos", section: "admin" },
