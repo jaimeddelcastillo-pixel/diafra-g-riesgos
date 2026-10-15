@@ -491,7 +491,7 @@ export default function Configuracion() {
           </CardHeader>
           <CardContent className="flex flex-wrap items-center justify-between gap-3">
             <p className="text-sm text-muted-foreground">Expedientes temporales de solo lectura para auditores externos, con bitácora de consultas y descargas.</p>
-            <Button variant="outline" size="sm" onClick={() => navigate("/configuracion/auditorias")}>Abrir</Button>
+            <Button variant="outline" size="sm" asChild><Link to="/configuracion/auditorias">Abrir</Link></Button>
           </CardContent>
         </Card>
       )}
