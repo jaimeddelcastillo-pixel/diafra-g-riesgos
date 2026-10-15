@@ -711,7 +711,9 @@ Deno.serve(async (req) => {
         "NUNCA cites, sugieras ni mezcles NOM-241-SSA1-2025 salvo que el usuario pregunte explícitamente por comparación regulatoria.\n\n";
     }
 
-    const systemPrompt = normaAncla + skillBase + orgCtx + folioCtx + resumeNote + TOOL_RULES_ADDENDUM;
+    const systemPrompt = bloques
+      ? bloques.variable + folioCtx + resumeNote + TOOL_RULES_ADDENDUM
+      : normaAncla + skillBase + orgCtx + folioCtx + resumeNote + TOOL_RULES_ADDENDUM;
 
     // Persistir el último mensaje user + bump
     const lastUser = [...messages].reverse().find((m) => m.role === "user");
@@ -804,9 +806,14 @@ Deno.serve(async (req) => {
 
             // --- Prompt caching ephemeral (5 min TTL) ---
             // 1) Cache del system prompt (siempre). Requiere ≥1024 tokens en Sonnet — se cumple.
-            const systemForApi = [
-              { type: "text", text: sysForCall, cache_control: { type: "ephemeral" } },
-            ];
+            // C4b: en bloques, la marca de caché va en el último bloque fijo
+            // (plataforma · riesgos_amef · norma); lo variable va después.
+            const systemForApi: any[] = bloques
+              ? [
+                  { type: "text", text: bloques.fijo, cache_control: { type: "ephemeral" } },
+                  { type: "text", text: sysForCall },
+                ]
+              : [{ type: "text", text: sysForCall, cache_control: { type: "ephemeral" } }];
             // 2) Cache del historial cuando supera 10 mensajes: marcar último bloque
             //    del último mensaje del historial original (no los tool_results del loop).
             let messagesForApi: any[] = turnMessages;
