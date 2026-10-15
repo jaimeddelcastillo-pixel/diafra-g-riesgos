@@ -2,6 +2,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import MisDiplomas from "@/pages/MisDiplomas";
 import { Button } from "@/components/ui/button";
+import { useAuditorExpedientes } from "@/hooks/useAuditorExpedientes";
 
 function BlockScreen({ title, message, verDiplomas }: { title: string; message: string; verDiplomas?: boolean }) {
   const { signOut } = useAuth();
@@ -46,8 +47,10 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading, org, isSuperAdmin } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
+  const sinEmpresa = !!user && !loading && !org && !isSuperAdmin();
+  const { data: expedientes, isLoading: cargandoExp } = useAuditorExpedientes(sinEmpresa);
 
-  if (loading) {
+  if (loading || (sinEmpresa && cargandoExp)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
@@ -57,6 +60,17 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
   if (!user) {
     return <Navigate to="/login" replace />;
+  }
+
+  // C6c: sin membresías → portal de auditoría externa si tiene expedientes vigentes.
+  if (sinEmpresa) {
+    if ((expedientes ?? []).length > 0) return <Navigate to="/auditoria-externa" replace />;
+    return (
+      <BlockScreen
+        title="No tienes accesos vigentes"
+        message="Tu cuenta no pertenece a ninguna empresa activa ni tiene expedientes de auditoría vigentes."
+      />
+    );
   }
 
   // Org guard — solo aplica a usuarios con contexto de org

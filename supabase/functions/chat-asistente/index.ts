@@ -571,6 +571,7 @@ Deno.serve(async (req) => {
         .select("id, titulo, ultimo_mensaje_en, folio_id, agente")
         .eq("id", conversacion_id)
         .eq("org_id", org.id)
+        .eq("created_by", user.id)
         .maybeSingle();
       if (!conv) conversacion_id = null;
       else if (conv.agente && conv.agente !== agente) {

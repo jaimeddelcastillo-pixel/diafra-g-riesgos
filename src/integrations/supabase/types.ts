@@ -180,6 +180,125 @@ export type Database = {
           },
         ]
       }
+      auditoria_items: {
+        Row: {
+          agregado_por: string | null
+          auditoria_id: string
+          created_at: string
+          entidad_id: string
+          id: string
+          incluir_evidencias: boolean
+          org_id: string
+          tipo: string
+        }
+        Insert: {
+          agregado_por?: string | null
+          auditoria_id: string
+          created_at?: string
+          entidad_id: string
+          id?: string
+          incluir_evidencias?: boolean
+          org_id: string
+          tipo: string
+        }
+        Update: {
+          agregado_por?: string | null
+          auditoria_id?: string
+          created_at?: string
+          entidad_id?: string
+          id?: string
+          incluir_evidencias?: boolean
+          org_id?: string
+          tipo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "auditoria_items_auditoria_id_fkey"
+            columns: ["auditoria_id"]
+            isOneToOne: false
+            referencedRelation: "auditorias_externas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "auditoria_items_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      auditorias_externas: {
+        Row: {
+          activado_en: string | null
+          activado_por: string | null
+          auditor_email: string
+          auditor_nombre: string
+          auditor_organizacion: string | null
+          auditor_user_id: string | null
+          cerrado_en: string | null
+          cerrado_por: string | null
+          creado_por: string | null
+          created_at: string
+          estado: string
+          expira_en: string
+          id: string
+          inicia_en: string
+          motivo_cierre: string | null
+          nombre: string
+          org_id: string
+          permite_descarga: boolean
+        }
+        Insert: {
+          activado_en?: string | null
+          activado_por?: string | null
+          auditor_email: string
+          auditor_nombre: string
+          auditor_organizacion?: string | null
+          auditor_user_id?: string | null
+          cerrado_en?: string | null
+          cerrado_por?: string | null
+          creado_por?: string | null
+          created_at?: string
+          estado?: string
+          expira_en: string
+          id?: string
+          inicia_en?: string
+          motivo_cierre?: string | null
+          nombre: string
+          org_id: string
+          permite_descarga?: boolean
+        }
+        Update: {
+          activado_en?: string | null
+          activado_por?: string | null
+          auditor_email?: string
+          auditor_nombre?: string
+          auditor_organizacion?: string | null
+          auditor_user_id?: string | null
+          cerrado_en?: string | null
+          cerrado_por?: string | null
+          creado_por?: string | null
+          created_at?: string
+          estado?: string
+          expira_en?: string
+          id?: string
+          inicia_en?: string
+          motivo_cierre?: string | null
+          nombre?: string
+          org_id?: string
+          permite_descarga?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "auditorias_externas_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       brain_areas: {
         Row: {
           activo: boolean
@@ -4078,6 +4197,41 @@ export type Database = {
       archivar_version_folio: {
         Args: { p_folio_id: string; p_motivo?: string }
         Returns: string
+      }
+      auditor_mis_expedientes: {
+        Args: never
+        Returns: {
+          auditor_nombre: string
+          expira_en: string
+          id: string
+          inicia_en: string
+          items: Json
+          nombre: string
+          org_nombre: string
+          permite_descarga: boolean
+        }[]
+      }
+      auditor_registrar_descarga_folio: {
+        Args: { p_item_id: string }
+        Returns: Json
+      }
+      auditor_ver_item: { Args: { p_item_id: string }; Returns: Json }
+      auditoria_actividad: {
+        Args: { p_auditoria_id: string }
+        Returns: {
+          accion: string
+          archivo: string
+          fecha: string
+          ip: string
+          item_id: string
+          modo: string
+          sha256: string
+          tipo: string
+        }[]
+      }
+      auditoria_validar_acceso: {
+        Args: { p_item_id: string; p_user: string }
+        Returns: Json
       }
       brain_resolver_enlace: {
         Args: {

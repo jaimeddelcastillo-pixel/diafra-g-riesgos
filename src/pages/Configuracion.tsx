@@ -484,6 +484,18 @@ export default function Configuracion() {
 
       {isAdmin && <UsuariosDesactivadosCard puedeReactivar={hasRole("admin") || isSuperAdmin()} />}
 
+      {(hasRole("admin") || hasRole("responsable_sanitario")) && (
+        <Card id="auditorias-externas" className="scroll-mt-20">
+          <CardHeader>
+            <CardTitle className="text-base">Auditorías externas</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-wrap items-center justify-between gap-3">
+            <p className="text-sm text-muted-foreground">Expedientes temporales de solo lectura para auditores externos, con bitácora de consultas y descargas.</p>
+            <Button variant="outline" size="sm" asChild><Link to="/configuracion/auditorias">Abrir</Link></Button>
+          </CardContent>
+        </Card>
+      )}
+
       <Card>
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
