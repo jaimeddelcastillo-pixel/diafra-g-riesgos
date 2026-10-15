@@ -5,7 +5,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { resolverContextoOrg } from "../_shared/contexto-org.ts";
 import { enviarYRegistrar } from "../_shared/transactional-email-templates/enviar-y-registrar.ts";
-import { cargarSkill, registrarSkillFaltante } from "../_shared/skills.ts";
+import { cargarSkill, registrarSkillFaltante, armarRiesgos, normaBloques, type ResultadoBloques } from "../_shared/skills.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -576,19 +576,45 @@ Deno.serve(async (req) => {
       }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
+    // C4b: composición por bloques solo si la empresa está en 'bloques' y las
+    // piezas obligatorias tienen versión vigente; si falta alguna, dm/farma.
+    let skillsUsadasOut: { clave: string; version: string; sha256: string }[] = [];
+    let bloques: Extract<ResultadoBloques, { ok: true }> | null = null;
+    {
+      const { data: iaCfg } = await adminClient
+        .from("ia_config_org").select("composicion_riesgos").eq("org_id", org.id).maybeSingle();
+      if (iaCfg?.composicion_riesgos === "bloques") {
+        const r = await armarRiesgos(adminClient, { org, norma: normaBloques(folioNorma, folioCategoria, agente) });
+        if (r.ok) {
+          bloques = r;
+          skillsUsadasOut = r.skills_usadas;
+        } else {
+          console.warn("C4b: composición por bloques incompleta, se usa", agente, r.faltantes);
+          try {
+            await adminClient.from("audit_trail").insert({
+              org_id: org.id, user_id: user.id, tabla: "ia_config_org", registro_id: org.id,
+              accion: "COMPOSICION_BLOQUES_INCOMPLETA",
+              valor_nuevo: { faltantes: r.faltantes, se_usa: agente, contexto: "chat-asistente" },
+            });
+          } catch (e) { console.error("audit COMPOSICION_BLOQUES_INCOMPLETA", e); }
+        }
+      }
+    }
+
     // C4a: cargar la skill vigente desde la base (sin texto de respaldo en código).
     let skillBase = "";
-    let skillsUsadasOut: { clave: string; version: string; sha256: string }[] = [];
-    try {
-      const skill = await cargarSkill(adminClient, agente);
-      skillBase = skill.texto;
-      skillsUsadasOut = [{ clave: skill.clave, version: skill.version, sha256: skill.sha256 }];
-    } catch (e) {
-      console.error("C4a: skill no vigente", e);
-      await registrarSkillFaltante(adminClient, org.id, agente, "chat-asistente");
-      return new Response(JSON.stringify({ error: `Skill no vigente: ${agente}. Publícala en el panel Skills de IA.` }), {
-        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    if (!bloques) {
+      try {
+        const skill = await cargarSkill(adminClient, agente);
+        skillBase = skill.texto;
+        skillsUsadasOut = [{ clave: skill.clave, version: skill.version, sha256: skill.sha256 }];
+      } catch (e) {
+        console.error("C4a: skill no vigente", e);
+        await registrarSkillFaltante(adminClient, org.id, agente, "chat-asistente");
+        return new Response(JSON.stringify({ error: `Skill no vigente: ${agente}. Publícala en el panel Skills de IA.` }), {
+          status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
     }
 
     // --- Conversación: crear o reanudar antes de construir contexto de folio ---
