@@ -21,7 +21,7 @@ const ESTADO_VAR: Record<string, "default" | "secondary" | "outline" | "destruct
 };
 const vencido = (a: any) => a.estado === "activo" && new Date(a.expira_en) <= new Date();
 const TIPO_LABEL: Record<string, string> = { folio: "Folio", documento: "Documento", conocimiento: "Conocimiento" };
-const ACCION_LABEL: Record<string, string> = { AUDITOR_CONSULTO: "Consultó", AUDITOR_DESCARGO: "Descargó", AUDITORIA_ACTIVADA: "Expediente activado" };
+const ACCION_LABEL: Record<string, string> = { AUDITOR_CONSULTO: "Consultó", AUDITOR_DESCARGO: "Descargó", AUDITORIA_ACTIVADA: "Expediente activado", AUDITORIA_DUPLICADA: "Expediente creado por duplicado" };
 
 function usePuedeGestionar() {
   const { hasRole, orgRole } = useAuth();
@@ -388,7 +388,7 @@ function Detalle({ id }: { id: string }) {
                 {(actividad ?? []).map((r, n) => (
                   <tr key={n} className="border-t align-top">
                     <td className="p-1.5 whitespace-nowrap">{fmt(r.fecha)}</td>
-                    <td className="p-1.5">{ACCION_LABEL[r.accion] ?? r.accion}{r.modo === "vista_60s" ? " (vista)" : ""}</td>
+                    <td className="p-1.5">{ACCION_LABEL[r.accion] ?? r.accion}{r.modo === "vista_60s" || r.modo === "vista_pdf" ? " (vista)" : ""}</td>
                     <td className="p-1.5">{titulos[r.item_id] ?? "—"}</td>
                     <td className="p-1.5">{r.archivo ?? "—"}</td>
                     <td className="p-1.5 font-mono break-all">{r.sha256 ? `${r.sha256.slice(0, 16)}…` : "—"}</td>
