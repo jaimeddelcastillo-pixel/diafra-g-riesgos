@@ -117,6 +117,39 @@ export function ListaConocimiento({
   };
 
   const porId = useMemo(() => Object.fromEntries(items.map((i) => [i.id, i])), [items]);
+
+  // C4a: trazabilidad — con qué skill de IA se propuso cada conocimiento.
+  const extraccionIds = useMemo(
+    () => Array.from(new Set((items ?? []).flatMap((i: any) => (i.fuentes ?? []).map((f: any) => f.extraccion_id)).filter(Boolean))) as string[],
+    [items],
+  );
+  const turnIds = useMemo(
+    () => Array.from(new Set((items ?? []).map((i: any) => i.turn_id).filter(Boolean))) as string[],
+    [items],
+  );
+  const { data: skillsPorExtraccion = {} } = useQuery({
+    queryKey: ["cerebro-skills-extracciones", extraccionIds],
+    enabled: extraccionIds.length > 0,
+    queryFn: async () => {
+      const { data } = await supabase.from("brain_extracciones").select("id, skills_usadas").in("id", extraccionIds);
+      return Object.fromEntries((data ?? []).map((e: any) => [e.id, e.skills_usadas ?? null]));
+    },
+  });
+  const { data: skillsPorTurno = {} } = useQuery({
+    queryKey: ["cerebro-skills-turnos", turnIds],
+    enabled: turnIds.length > 0,
+    queryFn: async () => {
+      const { data } = await supabase.from("brain_interview_turns").select("id, skills_usadas").in("id", turnIds);
+      return Object.fromEntries((data ?? []).map((t: any) => [t.id, t.skills_usadas ?? null]));
+    },
+  });
+  const skillsDe = (i: any) => {
+    const exId = (i.fuentes ?? []).find((f: any) => f.extraccion_id)?.extraccion_id;
+    return (exId ? (skillsPorExtraccion as any)[exId] : null)
+      ?? (i.turn_id ? (skillsPorTurno as any)[i.turn_id] : null)
+      ?? null;
+  };
+
   const visibles = items.filter((i) => {
     const retirado = ESTADOS_RETIRADOS.includes(i.estado);
     if (retirado) return modo === "conocimiento" && verRetirados;
@@ -184,6 +217,14 @@ export function ListaConocimiento({
                     <p className="text-sm font-medium">{texto(i)}</p>
                     <Badge variant={retirado ? "secondary" : i.estado === "validado" ? "default" : "outline"}>{i.estado}</Badge>
                   </div>
+                  {(() => {
+                    const s = skillsDe(i);
+                    return s?.length ? (
+                      <p className="text-xs text-muted-foreground">
+                        Propuesto por IA con: {s.map((x: any) => `${x.clave} v${x.version}`).join(" · ")}
+                      </p>
+                    ) : null;
+                  })()}
                   <p className="text-xs text-muted-foreground">{i.tipo}</p>
                   {i.requiere_revision && (
                     <div className="text-xs border-l-2 border-destructive/60 pl-2">
