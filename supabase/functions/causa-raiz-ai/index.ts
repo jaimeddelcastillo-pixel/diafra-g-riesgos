@@ -4,6 +4,7 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { resolverContextoOrg } from "../_shared/contexto-org.ts";
+import { cargarSkill, interpolar, registrarSkillFaltante } from "../_shared/skills.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -97,18 +98,25 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+    // C4a: cliente de servicio para leer la skill y registrar en la bitácora.
+    const adminClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
     const body = (await req.json()) as IshikawaReq | PorquesReq;
 
     if (body.mode === "ishikawa") {
       const { peligro, proceso, norma, causa_actual } = body;
-      const sys =
-        `Eres un experto en gestión de riesgos según ${norma} (ISO 14971 / ICH Q9). ` +
-        `Devuelve EXCLUSIVAMENTE un JSON válido sin texto adicional, sin markdown, sin \`\`\`. ` +
-        `Estructura exacta: {"mano_obra":[],"maquina":[],"metodo":[],"material":[],"medio_ambiente":[],"medicion":[]}. ` +
-        `Cada lista debe tener entre 2 y 4 causas potenciales concretas, específicas al peligro y proceso. ` +
-        `Evita causas genéricas tipo "error humano" o "falta de capacitación" sin contexto. ` +
-        `Cada causa: máximo 12 palabras.`;
+      // C4a: la instrucción vive en la base (skill causa_raiz_ishikawa, vigente).
+      let sys = "";
+      try {
+        const skill = await cargarSkill(adminClient, "causa_raiz_ishikawa");
+        sys = interpolar(skill.texto, { norma });
+      } catch (e) {
+        console.error("C4a: causa_raiz_ishikawa no vigente", e);
+        await registrarSkillFaltante(adminClient, memberRow.org_id, "causa_raiz_ishikawa", "causa-raiz-ai");
+        return new Response(JSON.stringify({ error: "Skill no vigente: causa_raiz_ishikawa. Publícala en el panel Skills de IA." }), {
+          status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
       const user =
         `Peligro: "${peligro}"\nProceso: "${proceso}"\n` +
         (causa_actual ? `Causa actual capturada: "${causa_actual}"\n` : "") +
@@ -124,14 +132,18 @@ Deno.serve(async (req) => {
     if (body.mode === "evaluar_porque") {
       const { norma, causa_inicial, porques } = body;
       const cadena = [causa_inicial, ...porques].filter(Boolean).join(" → ");
-      const sys =
-        `Eres un experto en análisis de causa raíz bajo ${norma}. ` +
-        `Evalúa si la cadena de 5 Porqués llega a una verdadera causa raíz (sistémica, ` +
-        `controlable por la organización, no atribuible a culpa individual, no puede seguir ` +
-        `preguntándose "por qué" de forma significativa). ` +
-        `Devuelve EXCLUSIVAMENTE JSON sin markdown: ` +
-        `{"esCausaRaiz":boolean,"justificacion":"...","sugerencia":"... o null"}. ` +
-        `"sugerencia" debe contener el siguiente porqué propuesto si aún no es raíz, o null.`;
+      // C4a: la instrucción vive en la base (skill causa_raiz_5porques, vigente).
+      let sys = "";
+      try {
+        const skill = await cargarSkill(adminClient, "causa_raiz_5porques");
+        sys = interpolar(skill.texto, { norma });
+      } catch (e) {
+        console.error("C4a: causa_raiz_5porques no vigente", e);
+        await registrarSkillFaltante(adminClient, memberRow.org_id, "causa_raiz_5porques", "causa-raiz-ai");
+        return new Response(JSON.stringify({ error: "Skill no vigente: causa_raiz_5porques. Publícala en el panel Skills de IA." }), {
+          status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
       const user = `Cadena: ${cadena}\nNiveles capturados: ${porques.length}\nEvalúa el último nivel.`;
       const text = await askClaude(sys, user);
       const json = extractJson(text);
