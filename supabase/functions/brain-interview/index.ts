@@ -1243,11 +1243,11 @@ Deno.serve(async (req) => {
 
     // ── Prompt maestro (C4a: skill vigente desde la base, sin texto en código)
     let promptTexto = "";
-    let skillsUsadas: { clave: string; version: string; sha256: string }[] = [];
+    let skillsUsadas: { clave: string; version: string; sha256: string; estado: string }[] = [];
     try {
       const skill = await cargarSkill(admin, "cerebro_institucional");
       promptTexto = skill.texto;
-      skillsUsadas = [{ clave: skill.clave, version: skill.version, sha256: skill.sha256 }];
+      skillsUsadas = [{ clave: skill.clave, version: skill.version, sha256: skill.sha256, estado: "vigente" }];
     } catch (e) {
       console.error("C4a: cerebro_institucional no vigente", e);
       await admin.from("brain_interview_turns").update({ estado: "fallido", error: "database: skill cerebro_institucional no vigente" }).eq("id", turnId);

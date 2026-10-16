@@ -1,6 +1,6 @@
 # Roadmap
 
-- [ ] C4b.2 Fecha de México en contextos IA, información por respuesta, etiqueta global, restauración exacta, tarjetas agrupadas/conteos y aviso; reversión c4b2_down.sql. Navegador a cargo de Jaime.
+- [x] C4b.2 Fecha de México en contextos IA, información por respuesta, etiqueta global, restauración exacta, tarjetas agrupadas/conteos y aviso; reversión c4b2_down.sql (sin cambios SQL), cinco pruebas automáticas. Navegador a cargo de Jaime; MULTI cuenta en ambas normas y bloques incluye borradores.
 
 - [x] P1c.1 Regla única mi_acceso_curso (RLS, examen, diploma, pantallas); Mis diplomas sin filtro por módulo; reversión p1c1_down.sql
 - [ ] Motor futuro: el webhook de Stripe cambia trial → starter al comprar el curso; revisar ese efecto comercial al definir precios

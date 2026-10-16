@@ -111,7 +111,7 @@ Deno.serve(async (req) => {
       let uso: any = null;
       try {
         const skill = await cargarSkill(adminClient, "causa_raiz_ishikawa");
-        uso = { clave: skill.clave, version: skill.version, sha256: skill.sha256 };
+        uso = { clave: skill.clave, version: skill.version, sha256: skill.sha256, estado: "vigente" };
         sys = interpolar(skill.texto, { norma }) + `\n\n[CONTEXTO_EMPRESA]\n${contextoFechaMexico()}`;
       } catch (e) {
         console.error("C4a: causa_raiz_ishikawa no vigente", e);
@@ -140,7 +140,7 @@ Deno.serve(async (req) => {
       let uso: any = null;
       try {
         const skill = await cargarSkill(adminClient, "causa_raiz_5porques");
-        uso = { clave: skill.clave, version: skill.version, sha256: skill.sha256 };
+        uso = { clave: skill.clave, version: skill.version, sha256: skill.sha256, estado: "vigente" };
         sys = interpolar(skill.texto, { norma }) + `\n\n[CONTEXTO_EMPRESA]\n${contextoFechaMexico()}`;
       } catch (e) {
         console.error("C4a: causa_raiz_5porques no vigente", e);

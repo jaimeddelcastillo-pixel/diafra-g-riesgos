@@ -89,10 +89,13 @@ export function AssistantPanel({ open, onOpenChange, folioId = null, folioCodigo
   }, [open, mensajeInicial]);
 
   useEffect(() => {
+    let vigente = true;
+    setIaPrueba(false);
     if (!open || !org) return;
     refreshUsage();
     refreshConversaciones();
-    void (supabase.rpc as any)("mi_ia_en_prueba").then(({ data }: any) => setIaPrueba(!!data));
+    void supabase.rpc("mi_ia_en_prueba").then(({ data }) => { if (vigente) setIaPrueba(!!data); });
+    return () => { vigente = false; };
   }, [open, org?.id]);
   const [iaPrueba, setIaPrueba] = useState(false);
 
