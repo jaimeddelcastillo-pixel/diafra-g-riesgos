@@ -330,6 +330,13 @@
       "when": 1792183424752,
       "tag": "0046_c4b1_bloques_borrador",
       "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "7",
+      "when": 1792183492418,
+      "tag": "0047_c4b1_mi_ia_en_prueba",
+      "breakpoints": true
     }
   ]
 }
