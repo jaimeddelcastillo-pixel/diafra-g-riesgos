@@ -612,7 +612,7 @@ Deno.serve(async (req) => {
       try {
         const skill = await cargarSkill(adminClient, agente);
         skillBase = skill.texto;
-        skillsUsadasOut = [{ clave: skill.clave, version: skill.version, sha256: skill.sha256 }];
+        skillsUsadasOut = [{ clave: skill.clave, version: skill.version, sha256: skill.sha256, estado: "vigente" }];
       } catch (e) {
         console.error("C4a: skill no vigente", e);
         await registrarSkillFaltante(adminClient, org.id, agente, "chat-asistente");
