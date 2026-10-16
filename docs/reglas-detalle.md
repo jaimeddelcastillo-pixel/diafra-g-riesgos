@@ -1,5 +1,8 @@
 # Reglas técnicas — detalle
 
+## R20
+Riesgos retrieves validated knowledge only through contexto_cerebro (active company or authenticated server service role, contracted Cerebro, bounded Spanish text search). The per-company switch defaults off; only block composition loads uso_conocimiento_empresa and the dynamic knowledge section. Risk insert triggers read the user's persisted assistant proposal, store its provenance and create cited knowledge references in the same transaction, without granting ordinary users general Cerebro write access. Knowledge codes remain immutable and unique per company; why: module isolation, opt-in use and auditable, non-client-forged attribution.
+
 Detalle completo de cada regla resumida en AGENTS.md (R1…R17).
 
 ## R1

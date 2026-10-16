@@ -1,4 +1,6 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useLocation } from "react-router-dom";
+import { ConocimientoUsadoEn } from "./ConocimientoUsadoEn";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -88,6 +90,15 @@ export function ListaConocimiento({
   const [opcionRev, setOpcionRev] = useState<"vigente" | "cambio">("vigente");
   const [revVigente, setRevVigente] = useState("");
   const [comentarioRev, setComentarioRev] = useState("");
+  const [detalle, setDetalle] = useState<string | null>(null);
+  const location = useLocation();
+  useEffect(() => {
+    const id = location.hash.startsWith("#k-") ? location.hash.slice(3) : null;
+    if (id && items.some(i => i.id === id)) {
+      setDetalle(id);
+      document.getElementById(`k-${id}`)?.scrollIntoView({ block: "center" });
+    }
+  }, [location.hash, items]);
 
   const abrirAtender = (item: any) => {
     const rev = (item.fuentes ?? []).find((f: any) => f.documento_revision)?.documento_revision ?? "";
@@ -214,7 +225,10 @@ export function ListaConocimiento({
               <Card key={i.id} id={`k-${i.id}`} className={retirado ? "opacity-75" : undefined}>
                 <CardContent className="p-4 space-y-2">
                   <div className="flex items-start justify-between gap-3">
-                    <p className="text-sm font-medium">{texto(i)}</p>
+                    <div className="min-w-0 space-y-1">
+                      <Button variant="link" className="h-auto p-0 font-mono text-xs" onClick={() => setDetalle(detalle === i.id ? null : i.id)}>{i.codigo}</Button>
+                      <p className="text-sm font-medium">{texto(i)}</p>
+                    </div>
                     <Badge variant={retirado ? "secondary" : i.estado === "validado" ? "default" : "outline"}>{i.estado}</Badge>
                   </div>
                   {(() => {
@@ -280,6 +294,7 @@ export function ListaConocimiento({
                       <Button size="sm" variant="outline" onClick={() => abrir("sustituido", i)}>Sustituir por…</Button>
                     </div>
                   )}
+                  {detalle === i.id && <ConocimientoUsadoEn id={i.id} />}
                 </CardContent>
               </Card>
             );

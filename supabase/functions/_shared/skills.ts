@@ -1,4 +1,5 @@
 import { contextoFechaMexico } from "./fecha-mexico.ts";
+import { bloqueConocimiento, type ConocimientoContexto } from "./conocimiento-contexto.ts";
 
 // C4a · Armador único de prompts con skills versionadas en la base.
 // Las funciones Edge NUNCA guardan texto de prompt en el código: lo leen
@@ -99,6 +100,7 @@ export type ResultadoBloques =
       variable: string;
       skills_usadas: PiezaUsada[];
       norma: "NOM-241" | "NOM-059";
+      contexto_usado: ConocimientoContexto[];
     }
   | { ok: false; faltantes: string[] };
 
@@ -142,7 +144,7 @@ export function normaBloques(folioNorma: string | null, folioCategoria: string |
  */
 export async function armarRiesgos(
   admin: any,
-  args: { org: OrgBloques; norma: "NOM-241" | "NOM-059"; versiones?: Record<string, string>; usarBorradores?: boolean },
+  args: { org: OrgBloques; norma: "NOM-241" | "NOM-059"; versiones?: Record<string, string>; usarBorradores?: boolean; usarConocimiento?: boolean; folioId?: string | null; texto?: string },
 ): Promise<ResultadoBloques> {
   const { org, norma, versiones = {}, usarBorradores = false } = args;
   const cargar = usarBorradores ? cargarBorradorOVigente : cargarVigenteOpcional;
@@ -159,6 +161,22 @@ export async function armarRiesgos(
     else piezas.push(s);
   }
   if (faltantes.length) return { ok: false, faltantes };
+
+  // C4c: Riesgos accede a Cerebro exclusivamente mediante su servicio SQL.
+  let conocimiento: ConocimientoContexto[] = [];
+  if (args.usarConocimiento) {
+    const { data, error } = await admin.rpc("contexto_cerebro", {
+      _org: org.id, _folio_id: args.folioId ?? null, _texto: args.texto ?? "", _limite: 12,
+    });
+    if (error) throw new Error(`Contexto de Cerebro: ${error.message}`);
+    conocimiento = data ?? [];
+    if (conocimiento.length) {
+      const clave = "uso_conocimiento_empresa";
+      const s = versiones[clave] ? await cargarPorId(admin, versiones[clave]).catch(() => null) : await cargar(admin, clave);
+      if (!s?.texto?.trim() || s.clave !== clave) return { ok: false, faltantes: [clave] };
+      piezas.splice(1, 0, s);
+    }
+  }
 
   // [CONTEXTO_EMPRESA]
   const contexto =
@@ -191,8 +209,9 @@ export async function armarRiesgos(
   return {
     ok: true,
     fijo: piezas.map((p) => p.texto).join("\n\n"),
-    variable: `${contexto}\n\n${alcance}`,
+    variable: `${contexto}\n\n${alcance}${conocimiento.length ? `\n\n${bloqueConocimiento(conocimiento)}` : ""}`,
     skills_usadas: todas.map((p) => ({ clave: p.clave, version: p.version, sha256: p.sha256, ...(p.id ? { id: p.id, estado: p.estado } : {}) })),
     norma,
+    contexto_usado: conocimiento,
   };
 }

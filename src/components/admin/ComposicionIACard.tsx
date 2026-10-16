@@ -4,18 +4,22 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
 import { AlertTriangle, Sparkles } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { useState } from "react";
 
 /** C4b: interruptor «Composición de IA (Riesgos)» por empresa. Solo super_admin; queda en la bitácora. */
 export default function ComposicionIACard({ orgId }: { orgId: string }) {
   const qc = useQueryClient();
+  const [guardando, setGuardando] = useState(false);
   const { data } = useQuery({
     queryKey: ["ia-config-org", orgId],
     queryFn: async () => {
       const [{ data: cfg }, { data: org }] = await Promise.all([
-        supabase.from("ia_config_org").select("composicion_riesgos, cambiado_en").eq("org_id", orgId).maybeSingle(),
+        supabase.from("ia_config_org").select("composicion_riesgos, cambiado_en, usar_conocimiento_cerebro").eq("org_id", orgId).maybeSingle(),
         supabase.from("organizations").select("es_prueba").eq("id", orgId).maybeSingle(),
       ]);
-      return { valor: (cfg?.composicion_riesgos ?? "monolitica") as string, cambiado: cfg?.cambiado_en ?? null, esPrueba: !!(org as any)?.es_prueba };
+      return { valor: (cfg?.composicion_riesgos ?? "monolitica") as string, cambiado: cfg?.cambiado_en ?? null, esPrueba: !!(org as any)?.es_prueba, usarConocimiento: cfg?.usar_conocimiento_cerebro ?? false };
     },
   });
 
@@ -28,6 +32,16 @@ export default function ComposicionIACard({ orgId }: { orgId: string }) {
     toast({ title: "Composición actualizada", description: "El cambio quedó en la bitácora." });
     qc.invalidateQueries({ queryKey: ["ia-config-org", orgId] });
     qc.invalidateQueries({ queryKey: ["ia-skills-uso-empresas"] });
+  }
+
+  async function cambiarConocimiento(valor: boolean) {
+    setGuardando(true);
+    const { error } = await supabase.from("ia_config_org").upsert({ org_id: orgId,
+      composicion_riesgos: data?.valor ?? "monolitica", usar_conocimiento_cerebro: valor }, { onConflict: "org_id" });
+    setGuardando(false);
+    if (error) return toast({ title: "No se pudo cambiar", description: error.message, variant: "destructive" });
+    qc.invalidateQueries({ queryKey: ["ia-config-org", orgId] });
+    toast({ title: "Uso de conocimiento actualizado" });
   }
 
   return (
@@ -46,6 +60,11 @@ export default function ComposicionIACard({ orgId }: { orgId: string }) {
             </SelectItem>
           </SelectContent>
         </Select>
+        <div className="flex items-center gap-2 py-2">
+          <Switch id={`cerebro-ia-${orgId}`} checked={data?.usarConocimiento ?? false} disabled={!data || guardando}
+            onCheckedChange={v => void cambiarConocimiento(v)} />
+          <Label htmlFor={`cerebro-ia-${orgId}`}>Usar conocimiento validado de Cerebro</Label>
+        </div>
         {data && !data.esPrueba && (
           <p className="text-xs text-destructive flex items-center gap-1">
             <AlertTriangle className="h-3.5 w-3.5" /> Empresa real: la composición por bloques es solo para pilotos.

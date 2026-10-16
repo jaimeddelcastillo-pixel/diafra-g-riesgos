@@ -1,16 +1,15 @@
 // Edge function: chat-insertar-riesgo
 // Inserta un riesgo en un folio. Respeta locks: solo permite si el folio está en 'Borrador'.
 
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { createClient } from "npm:@supabase/supabase-js@2";
+import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
+import { z } from "npm:zod@3";
 import { aListaNumerada, aControlesPrevencionTexto } from "../_shared/listas-riesgo.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
-
-const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
+const InputSchema = z.object({ folio_id: z.string().uuid(), conversacion_id: z.string().uuid().nullish(),
+  mensaje_id: z.string().uuid().optional(), tool_id: z.string().min(1).max(200).optional(), force: z.boolean().optional(),
+}).passthrough();
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -18,13 +17,16 @@ Deno.serve(async (req) => {
     const authHeader = req.headers.get("Authorization") ?? "";
     if (!authHeader) return jsonErr("no autorizado", 401);
 
-    const userClient = createClient(SUPABASE_URL, Deno.env.get("SUPABASE_ANON_KEY")!, {
+    const userClient = createClient(SUPABASE_URL, Deno.env.get("SUPABASE_ANON_KEY") ?? "", {
       global: { headers: { Authorization: authHeader } },
     });
-    const { data: { user } } = await userClient.auth.getUser();
-    if (!user) return jsonErr("sesión inválida", 401);
+    const { data, error: authError } = await userClient.auth.getClaims(authHeader.replace(/^Bearer\s+/i, ""));
+    if (authError || !data?.claims?.sub) return jsonErr("sesión inválida", 401);
+    const user = { id: data.claims.sub };
 
-    const body = await req.json();
+    const parsed = InputSchema.safeParse(await req.json());
+    if (!parsed.success) return jsonErr("Datos de propuesta inválidos", 400);
+    const body = parsed.data as any;
     const folio_id: string = body.folio_id;
     if (!folio_id) return jsonErr("folio_id requerido", 400);
     const conversacion_id: string | null = body.conversacion_id ?? null;
@@ -33,11 +35,13 @@ Deno.serve(async (req) => {
     // Validar estado del folio (Borrador)
     const { data: folio, error: fErr } = await userClient
       .from("folios")
-      .select("id, estado")
+      .select("id, estado, org_id")
       .eq("id", folio_id)
       .maybeSingle();
     if (fErr) return jsonErr(fErr.message, 500);
     if (!folio) return jsonErr("folio no encontrado", 404);
+    const { data: activeOrg } = await userClient.rpc("get_user_org_id");
+    if (folio.org_id !== activeOrg) return jsonErr("Folio fuera de la empresa activa", 403);
     if (folio.estado !== "Borrador") {
       return jsonErr(`No se puede insertar: el folio está en estado "${folio.estado}". Solo se permiten cambios en Borrador.`, 409);
     }
@@ -67,6 +71,7 @@ Deno.serve(async (req) => {
       det_residual: clamp(body.det_residual ?? body.deteccion ?? 1),
       tipo_escala_severidad:
         body.tipo_escala_severidad === "sgc_regulatorio" ? "sgc_regulatorio" : "estandar",
+      ...(body.mensaje_id && body.tool_id ? { ia_origen: { mensaje_id: body.mensaje_id, tool_id: body.tool_id } } : {}),
     };
 
     const { data: duplicate, error: dupErr } = await userClient
@@ -123,7 +128,7 @@ Deno.serve(async (req) => {
         await userClient
           .from("chat_conversaciones")
           .update({ tiene_riesgos_insertados: true })
-          .eq("id", conversacion_id);
+          .eq("id", conversacion_id).eq("org_id", folio.org_id).eq("created_by", user.id);
       } catch (e) { console.error("flag conv fail", e); }
     }
 

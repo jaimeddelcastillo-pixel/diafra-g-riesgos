@@ -7,8 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Bot, User, Send, Paperclip, Loader2, AlertTriangle, Sparkles, FileText, FileSpreadsheet, FileType2, X, Plus, History, PanelLeftClose, PanelLeftOpen, Maximize2, Minimize2 } from "lucide-react";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
+import { ConocimientoMarkdown, ConocimientoTexto } from "@/components/ConocimientoChat";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
@@ -205,7 +204,7 @@ export function AssistantPanel({ open, onOpenChange, folioId = null, folioCodigo
     try {
       const { data, error } = await supabase
         .from("chat_mensajes")
-        .select("role, contenido, documentos_adjuntos, created_at, skills_usadas, modelo_ia")
+        .select("id, role, contenido, documentos_adjuntos, created_at, skills_usadas, modelo_ia, contexto_usado")
         .eq("conversacion_id", id)
         .order("created_at", { ascending: true });
       if (error) throw error;
@@ -213,7 +212,7 @@ export function AssistantPanel({ open, onOpenChange, folioId = null, folioCodigo
         role: r.role === "assistant" ? "assistant" : "user",
         content: r.contenido ?? "",
         toolUses: r.documentos_adjuntos?.tool_uses ?? undefined,
-        skills_usadas: r.skills_usadas, modelo_ia: r.modelo_ia,
+        skills_usadas: r.skills_usadas, modelo_ia: r.modelo_ia, mensaje_id: r.id, contexto_usado: r.documentos_adjuntos?.contexto_detalle ?? [],
       }));
       setMessages(msgs);
       setConversacionId(id);
@@ -294,7 +293,7 @@ export function AssistantPanel({ open, onOpenChange, folioId = null, folioCodigo
             if (evt.type === "conversacion" && evt.id) {
               if (!conversacionId) setConversacionId(evt.id);
               setIaPrueba(!!evt.ia_prueba_borradores);
-              traza = { skills_usadas: evt.skills_usadas, modelo_ia: evt.modelo_ia };
+              traza = { skills_usadas: evt.skills_usadas, modelo_ia: evt.modelo_ia, mensaje_id: evt.mensaje_id, contexto_usado: evt.contexto_usado };
               setMessages((m) => m.map((msg, i) => i === m.length - 1 ? { ...msg, ...traza } : msg));
               continue;
             }
@@ -741,7 +740,7 @@ function MessageBubble({ msg, onInsertarRiesgo, folioId, insertedRiskKeys }: { m
         {!isUser && <div className="flex justify-end"><InformacionRespuestaIA skills_usadas={msg.skills_usadas} modelo_ia={msg.modelo_ia} /></div>}
         {typeof msg.content === "string" ? (
           <div className="prose prose-sm max-w-none break-words [overflow-wrap:anywhere] [&_p]:my-1 [&_ul]:my-1 [&_ol]:my-1 [&_pre]:whitespace-pre-wrap [&_pre]:break-words [&_code]:break-words [&_table]:block [&_table]:max-w-full [&_table]:overflow-x-auto">
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
+            <ConocimientoMarkdown items={isUser ? [] : msg.contexto_usado}>{msg.content}</ConocimientoMarkdown>
           </div>
         ) : null}
         {msg.toolUses?.map((t, i) => {
@@ -760,14 +759,15 @@ function MessageBubble({ msg, onInsertarRiesgo, folioId, insertedRiskKeys }: { m
                   {nprRes > 0 && <Badge variant="outline" className="text-xs">NPR residual {nprRes}</Badge>}
                   {r.requiere_accion && <Badge className="text-xs">Requiere acción</Badge>}
                 </div>
-                <div className="text-xs space-y-0.5">
+                <div className="text-xs space-y-0.5"><ConocimientoTexto items={msg.contexto_usado ?? []}>
                   {r.etapa_proceso && <div><strong>Etapa:</strong> {r.etapa_proceso}</div>}
                   <div><strong>Peligro:</strong> {r.peligro}</div>
                   <div><strong>Situación:</strong> {r.situacion_peligrosa}</div>
-                  <ListaPreview label="Secuencia" items={normalizarLista(r.secuencia_eventos, 8)} />
+                  <ListaPreview contexto={msg.contexto_usado} label="Secuencia" items={normalizarLista(r.secuencia_eventos, 8)} />
                   <div><strong>Efecto:</strong> {r.efecto_dano}</div>
-                  <ListaPreview label="Causa" items={normalizarLista(r.causa_potencial, 8)} />
+                  <ListaPreview contexto={msg.contexto_usado} label="Causa" items={normalizarLista(r.causa_potencial, 8)} />
                   <ListaPreview
+                    contexto={msg.contexto_usado}
                     label="Prevención"
                     items={
                       r.controles_prevencion
@@ -775,7 +775,7 @@ function MessageBubble({ msg, onInsertarRiesgo, folioId, insertedRiskKeys }: { m
                         : normalizarLista(r.controles_actuales, 8)
                     }
                   />
-                  <ListaPreview label="Detección" items={normalizarLista(r.controles_deteccion, 8)} />
+                  <ListaPreview contexto={msg.contexto_usado} label="Detección" items={normalizarLista(r.controles_deteccion, 8)} />
 
                   <div className="text-muted-foreground">S:{r.severidad} O:{r.ocurrencia} D:{r.deteccion}</div>
                   {nprRes > 0 && (
@@ -784,11 +784,11 @@ function MessageBubble({ msg, onInsertarRiesgo, folioId, insertedRiskKeys }: { m
                   {r.accion_propuesta && <div><strong>Acción:</strong> {r.accion_propuesta}</div>}
                   {r.responsable && <div><strong>Responsable:</strong> {r.responsable}{r.fecha_compromiso ? ` — ${r.fecha_compromiso}` : ""}</div>}
                   {r.justificacion && <div className="text-muted-foreground italic">{r.justificacion}</div>}
-                </div>
+                </ConocimientoTexto></div>
                 <div className="flex gap-2 mt-2">
                   <Button size="sm" className="h-7 text-xs"
                     disabled={alreadyInserted || (!r.folio_id && !folioId)}
-                    onClick={() => onInsertarRiesgo({ ...r, folio_id: r.folio_id ?? folioId, __risk_key: riskKey })}>
+                    onClick={() => onInsertarRiesgo({ ...r, folio_id: r.folio_id ?? folioId, __risk_key: riskKey, mensaje_id: msg.mensaje_id, tool_id: t.id })}>
                     {alreadyInserted ? "Insertado" : "Insertar"}
                   </Button>
                 </div>
@@ -834,12 +834,12 @@ function MessageBubble({ msg, onInsertarRiesgo, folioId, insertedRiskKeys }: { m
   );
 }
 
-function ListaPreview({ label, items }: { label: string; items: string[] }) {
+function ListaPreview({ label, items, contexto }: { label: string; items: string[]; contexto?: TrazaIA["contexto_usado"] }) {
   if (!items.length) return null;
   if (items.length === 1) {
     return (
       <div>
-        <strong>{label}:</strong> {items[0]}
+        <strong>{label}:</strong> <ConocimientoTexto items={contexto ?? []}>{items[0]}</ConocimientoTexto>
       </div>
     );
   }
@@ -848,7 +848,7 @@ function ListaPreview({ label, items }: { label: string; items: string[] }) {
       <strong>{label}:</strong>
       <ol className="list-decimal pl-4 my-0.5 space-y-0.5">
         {items.map((it, i) => (
-          <li key={i}>{it}</li>
+          <li key={i}><ConocimientoTexto items={contexto ?? []}>{it}</ConocimientoTexto></li>
         ))}
       </ol>
     </div>

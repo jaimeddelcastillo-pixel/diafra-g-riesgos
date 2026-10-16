@@ -25,3 +25,4 @@ Technical rules — one line each; full text and "why" in docs/reglas-detalle.md
 - R17 Riesgos block composition is per-company (ia_config_org) and block pieces publish only with all test cases passed.
 - R18 AI date context uses the shared Mexico City server-date formatter, outside fixed risk blocks; why: consistent dates without invalidating fixed-block caching.
 - R19 Response provenance renders through one super-admin-only control; skill presentation helpers preserve restored text and count configured composition by norm (MULTI counts in both); why: consistent inspection and exact hashes.
+- R20 Riesgos reads validated Cerebro knowledge only through contexto_cerebro; insertion triggers derive provenance from the owned assistant message and create cited references atomically; why: module isolation and unforgeable, audited attribution.
