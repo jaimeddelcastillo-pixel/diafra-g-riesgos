@@ -171,7 +171,7 @@ function SkillCard({ skill, onAbrir, empresas }: { skill: Skill; onAbrir: () => 
 
 function SkillDetalle({ clave, onVolver }: { clave: string; onVolver: () => void }) {
   const qc = useQueryClient();
-  const [publicar, setPublicar] = useState<null | { texto: string; version: string; baseVersion: string | null; restauracion?: boolean }>(null);
+  const [publicar, setPublicar] = useState<null | { texto: string; version: string; baseVersion: string | null; restauracion?: boolean; conservarTexto?: boolean }>(null);
   const [motivo, setMotivo] = useState("");
   const [guardando, setGuardando] = useState(false);
   const [ver, setVer] = useState<Version | null>(null);
@@ -292,7 +292,7 @@ function SkillDetalle({ clave, onVolver }: { clave: string; onVolver: () => void
                 <>
                   <Button size="sm" variant="outline" onClick={() => {
                     setMotivo(borrador.motivo_cambio ?? "");
-                    setPublicar({ texto: borrador.system_prompt, version: borrador.version, baseVersion: vigente?.version ?? null });
+                    setPublicar({ texto: borrador.system_prompt, version: borrador.version, baseVersion: vigente?.version ?? null, conservarTexto: true });
                   }}>Editar borrador</Button>
                   <Button
                     size="sm"
@@ -386,7 +386,7 @@ function SkillDetalle({ clave, onVolver }: { clave: string; onVolver: () => void
               <Textarea
                 value={publicar?.texto ?? ""}
                 readOnly={!!publicar?.restauracion}
-                onChange={(e) => setPublicar((p) => (p ? { ...p, texto: e.target.value } : p))}
+                onChange={(e) => setPublicar((p) => (p ? { ...p, texto: e.target.value, conservarTexto: false } : p))}
                 className="min-h-[280px] font-mono text-xs"
               />
             </div>
@@ -402,7 +402,7 @@ function SkillDetalle({ clave, onVolver }: { clave: string; onVolver: () => void
               disabled={guardando || !publicar?.texto?.trim() || !publicar?.version?.trim()}
               onClick={() => {
                 if (!publicar) return;
-                void onGuardarBorrador(textoSkillParaGuardar(publicar.texto, !!publicar.restauracion), publicar.version.trim(), motivo.trim());
+                void onGuardarBorrador(textoSkillParaGuardar(publicar.texto, !!(publicar.restauracion || publicar.conservarTexto)), publicar.version.trim(), motivo.trim());
               }}
             >
               Guardar borrador
@@ -412,7 +412,7 @@ function SkillDetalle({ clave, onVolver }: { clave: string; onVolver: () => void
                 disabled={guardando || !publicar?.texto?.trim() || !publicar?.version?.trim() || !motivo.trim()}
                 onClick={() => {
                   if (!publicar) return;
-                  void publicarVersion(textoSkillParaGuardar(publicar.texto, !!publicar.restauracion), publicar.version.trim(), motivo.trim());
+                  void publicarVersion(textoSkillParaGuardar(publicar.texto, !!(publicar.restauracion || publicar.conservarTexto)), publicar.version.trim(), motivo.trim());
                 }}
               >
                 {guardando ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
