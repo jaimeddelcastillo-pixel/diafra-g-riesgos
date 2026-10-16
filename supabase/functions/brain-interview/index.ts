@@ -5,6 +5,7 @@
 // Contrato: POST { session_id, messages: [{role, content}] }
 // Respuesta: SSE con eventos { type: "content_block_delta" | "tool_use" | "sesion" | "error" }
 
+import { contextoFechaMexico } from "../_shared/fecha-mexico.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { resolverContextoOrg, ContextoOrgError } from "../_shared/contexto-org.ts";
 import { cargarSkill, registrarSkillFaltante } from "../_shared/skills.ts";
@@ -976,6 +977,7 @@ async function construirContextoSesion(admin: any, orgId: string, sessionId: str
   const bloque = `
 
 ## CONTEXTO DE SESIÓN (fuente: base de datos, NO el historial del chat)
+${contextoFechaMexico()}
 [EMPRESA]: ${org.nombre}
 [MARCO REGULATORIO DECLARADO]: ${org.norma_aplicable ?? "no declarado"}
 [ESTADO DEL MARCO]: por_validar
@@ -1241,11 +1243,11 @@ Deno.serve(async (req) => {
 
     // ── Prompt maestro (C4a: skill vigente desde la base, sin texto en código)
     let promptTexto = "";
-    let skillsUsadas: { clave: string; version: string; sha256: string }[] = [];
+    let skillsUsadas: { clave: string; version: string; sha256: string; estado: string }[] = [];
     try {
       const skill = await cargarSkill(admin, "cerebro_institucional");
       promptTexto = skill.texto;
-      skillsUsadas = [{ clave: skill.clave, version: skill.version, sha256: skill.sha256 }];
+      skillsUsadas = [{ clave: skill.clave, version: skill.version, sha256: skill.sha256, estado: "vigente" }];
     } catch (e) {
       console.error("C4a: cerebro_institucional no vigente", e);
       await admin.from("brain_interview_turns").update({ estado: "fallido", error: "database: skill cerebro_institucional no vigente" }).eq("id", turnId);
@@ -1597,6 +1599,7 @@ Deno.serve(async (req) => {
 
           sse(controller, "turn_complete", {
             session_id: sessionId, turn_id: turnId,
+            skills_usadas: skillsUsadas, modelo_ia: MODEL,
             knowledge_created: metrics.knowledge_created,
             gaps_created: metrics.gaps_created,
             contradictions_created: metrics.contradictions_created,
@@ -1633,6 +1636,7 @@ Deno.serve(async (req) => {
 
         sse(controller, "turn_complete", {
           session_id: sessionId, turn_id: turnId,
+          skills_usadas: skillsUsadas, modelo_ia: MODEL,
           knowledge_created: metrics.knowledge_created,
           gaps_created: metrics.gaps_created,
           contradictions_created: metrics.contradictions_created,

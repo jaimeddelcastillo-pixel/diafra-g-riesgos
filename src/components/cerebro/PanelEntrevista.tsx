@@ -1,3 +1,6 @@
+import { InformacionRespuestaIA } from "@/components/InformacionRespuestaIA";
+import { useAuth } from "@/hooks/useAuth";
+import type { TrazaIA } from "@/lib/skills-presentacion";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -16,7 +19,7 @@ import { ArrowLeft, Loader2, Pause, Play, Send, Square } from "lucide-react";
 import { useEntrevistaStream, TurnComplete } from "@/hooks/useEntrevistaStream";
 import { TranscriptMarkdown } from "@/components/cerebro/TranscriptMarkdown";
 
-type Msg = { id: string; role: string; content: string; created_at: string };
+type Msg = { id: string; role: string; content: string; created_at: string; turn_id?: string | null } & TrazaIA;
 
 interface Props {
   sessionId: string;
@@ -25,6 +28,7 @@ interface Props {
 
 export function PanelEntrevista({ sessionId, onSalir }: Props) {
   const qc = useQueryClient();
+  const { isSuperAdmin } = useAuth();
   const [mensajes, setMensajes] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   const [estado, setEstado] = useState<string>("pendiente");
@@ -48,15 +52,26 @@ export function PanelEntrevista({ sessionId, onSalir }: Props) {
   });
 
   const { data: transcript } = useQuery({
-    queryKey: ["brain", "transcript", sessionId],
+    queryKey: ["brain", "transcript", sessionId, isSuperAdmin()],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("brain_interview_messages")
-        .select("id, role, content, created_at")
+        .select("id, role, content, created_at, turn_id")
         .eq("session_id", sessionId)
         .order("created_at", { ascending: true });
       if (error) throw error;
-      return (data ?? []) as Msg[];
+      const filas = (data ?? []) as Msg[];
+      if (!isSuperAdmin()) return filas;
+      const turnIds = [...new Set(filas.map((m) => m.turn_id).filter((id): id is string => !!id))];
+      if (!turnIds.length) return filas;
+      const { data: turnos, error: errorTurnos } = await supabase.from("brain_interview_turns")
+        .select("id, skills_usadas, modelo_ia").in("id", turnIds);
+      if (errorTurnos) throw errorTurnos;
+      const trazas = new Map((turnos ?? []).map((t) => [t.id, t]));
+      return filas.map((m) => {
+        const t = m.turn_id ? trazas.get(m.turn_id) : undefined;
+        return { ...m, skills_usadas: t?.skills_usadas as TrazaIA["skills_usadas"], modelo_ia: t?.modelo_ia };
+      });
     },
   });
 
@@ -100,6 +115,7 @@ export function PanelEntrevista({ sessionId, onSalir }: Props) {
     setMensajes((m) => [...m, { id: crypto.randomUUID(), role, content, created_at: new Date().toISOString() }]);
 
   const onTurnComplete = (t: TurnComplete) => {
+    qc.invalidateQueries({ queryKey: ["brain", "transcript", sessionId] });
     setEstado(t.session_status ?? estado);
     if (t.current_objective) setObjetivo(t.current_objective);
     setSugeridosSesion((n) => n + (t.interviewees_suggested ?? 0));
@@ -179,7 +195,10 @@ export function PanelEntrevista({ sessionId, onSalir }: Props) {
                 {m.role === "assistant" ? "Consultor" : "Entrevistado"}
               </p>
               {m.role === "assistant" ? (
-                <TranscriptMarkdown>{m.content}</TranscriptMarkdown>
+                <>
+                  <div className="flex justify-end"><InformacionRespuestaIA skills_usadas={m.skills_usadas} modelo_ia={m.modelo_ia} /></div>
+                  <TranscriptMarkdown>{m.content}</TranscriptMarkdown>
+                </>
               ) : (
                 <p className="text-sm leading-relaxed whitespace-pre-wrap">{m.content}</p>
               )}

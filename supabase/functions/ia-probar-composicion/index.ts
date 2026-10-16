@@ -1,6 +1,7 @@
 // C4b · «Probar composición» (solo super_admin, solo empresas es_prueba).
 // Corre los casos SIN herramientas: nunca escribe datos de negocio; solo
 // guarda las respuestas en ia_skill_pruebas. La IA no se califica a sí misma.
+import { contextoFechaMexico } from "../_shared/fecha-mexico.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { z } from "npm:zod@3";
@@ -33,7 +34,7 @@ function contextoMonolitico(org: any): string {
   return ancla;
 }
 function orgCtx(org: any): string {
-  return `\n\n## CONTEXTO DE LA ORGANIZACIÓN\nNombre: ${org.nombre}\nNorma aplicable: ${org.norma_aplicable}\nMetodología: ${org.metodologia}\nUsa detectabilidad: ${org.usar_detectabilidad}\nUmbral NPR Alto: ${org.umbral_npr_alto}\nUmbral NPR Medio: ${org.umbral_npr_medio}`;
+  return `\n\n## CONTEXTO DE LA ORGANIZACIÓN\n${contextoFechaMexico()}\nNombre: ${org.nombre}\nNorma aplicable: ${org.norma_aplicable}\nMetodología: ${org.metodologia}\nUsa detectabilidad: ${org.usar_detectabilidad}\nUmbral NPR Alto: ${org.umbral_npr_alto}\nUmbral NPR Medio: ${org.umbral_npr_medio}`;
 }
 
 async function preguntar(system: any[], entrada: string): Promise<string> {

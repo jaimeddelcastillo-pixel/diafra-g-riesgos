@@ -2,6 +2,7 @@
 // Asistencia IA para análisis de causa raíz (Ishikawa 6M y 5 Porqués).
 // Devuelve JSON estructurado (no streaming).
 
+import { contextoFechaMexico } from "../_shared/fecha-mexico.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { resolverContextoOrg } from "../_shared/contexto-org.ts";
 import { cargarSkill, interpolar, registrarSkillFaltante } from "../_shared/skills.ts";
@@ -110,8 +111,8 @@ Deno.serve(async (req) => {
       let uso: any = null;
       try {
         const skill = await cargarSkill(adminClient, "causa_raiz_ishikawa");
-        uso = { clave: skill.clave, version: skill.version, sha256: skill.sha256 };
-        sys = interpolar(skill.texto, { norma });
+        uso = { clave: skill.clave, version: skill.version, sha256: skill.sha256, estado: "vigente" };
+        sys = interpolar(skill.texto, { norma }) + `\n\n[CONTEXTO_EMPRESA]\n${contextoFechaMexico()}`;
       } catch (e) {
         console.error("C4a: causa_raiz_ishikawa no vigente", e);
         await registrarSkillFaltante(adminClient, memberRow.org_id, "causa_raiz_ishikawa", "causa-raiz-ai");
@@ -139,8 +140,8 @@ Deno.serve(async (req) => {
       let uso: any = null;
       try {
         const skill = await cargarSkill(adminClient, "causa_raiz_5porques");
-        uso = { clave: skill.clave, version: skill.version, sha256: skill.sha256 };
-        sys = interpolar(skill.texto, { norma });
+        uso = { clave: skill.clave, version: skill.version, sha256: skill.sha256, estado: "vigente" };
+        sys = interpolar(skill.texto, { norma }) + `\n\n[CONTEXTO_EMPRESA]\n${contextoFechaMexico()}`;
       } catch (e) {
         console.error("C4a: causa_raiz_5porques no vigente", e);
         await registrarSkillFaltante(adminClient, memberRow.org_id, "causa_raiz_5porques", "causa-raiz-ai");

@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
 import { ChevronLeft, Loader2, Sparkles } from "lucide-react";
+import { contarEmpresasSkill, grupoSkill, textoSkillParaGuardar } from "@/lib/skills-presentacion";
 import ProbarComposicion from "@/components/admin/ProbarComposicion";
 
 type Skill = {
@@ -55,6 +56,31 @@ export default function AdminAgentes() {
     },
   });
 
+  const { data: usoEmpresas } = useQuery({
+    queryKey: ["ia-skills-uso-empresas"],
+    enabled: isSuperAdmin(),
+    queryFn: async () => {
+      // Paginar para no subcontar empresas al superar el límite de la API.
+      const empresas: { id: string; norma_aplicable: string | null }[] = [];
+      const modos: Record<string, string> = {};
+      for (let desde = 0; ; desde += 1000) {
+        const { data, error } = await supabase.from("organizations")
+          .select("id, norma_aplicable").order("id").range(desde, desde + 999);
+        if (error) throw error;
+        empresas.push(...(data ?? []));
+        if ((data ?? []).length < 1000) break;
+      }
+      for (let desde = 0; ; desde += 1000) {
+        const { data, error } = await supabase.from("ia_config_org")
+          .select("org_id, composicion_riesgos").order("org_id").range(desde, desde + 999);
+        if (error) throw error;
+        for (const fila of data ?? []) modos[fila.org_id] = fila.composicion_riesgos;
+        if ((data ?? []).length < 1000) break;
+      }
+      return { empresas, modos };
+    },
+  });
+
   if (!isSuperAdmin()) return <Navigate to="/" replace />;
 
   return (
@@ -83,15 +109,23 @@ export default function AdminAgentes() {
           <Loader2 className="h-4 w-4 animate-spin" /> Cargando…
         </div>
       ) : (
-        <div className="space-y-2">
-          {skills.map((s) => <SkillCard key={s.clave} skill={s} onAbrir={() => setClave(s.clave)} />)}
+        <div className="space-y-6">
+          {(["En producción", "Bloques", "Alcances"] as const).map((grupo) => (
+            <section key={grupo} className="space-y-2">
+              <h2 className="text-base font-semibold">{grupo}</h2>
+              {skills.filter((s) => grupoSkill(s.clave, s.ambito) === grupo).map((s) => (
+                <SkillCard key={s.clave} skill={s} onAbrir={() => setClave(s.clave)}
+                  empresas={usoEmpresas ? contarEmpresasSkill(s.clave, usoEmpresas.empresas, usoEmpresas.modos) : null} />
+              ))}
+            </section>
+          ))}
         </div>
       )}
     </div>
   );
 }
 
-function SkillCard({ skill, onAbrir }: { skill: Skill; onAbrir: () => void }) {
+function SkillCard({ skill, onAbrir, empresas }: { skill: Skill; onAbrir: () => void; empresas: number | null }) {
   const { data: vigente } = useQuery({
     queryKey: ["ia-skill-vigente", skill.clave],
     queryFn: async () => {
@@ -107,7 +141,12 @@ function SkillCard({ skill, onAbrir }: { skill: Skill; onAbrir: () => void }) {
         <div className="space-y-1">
           <p className="font-medium">{skill.nombre}</p>
           <p className="text-sm text-muted-foreground">{skill.descripcion}</p>
-          <div className="flex gap-1.5 pt-0.5">
+          {(skill.clave === "dm" || skill.clave === "farma" || grupoSkill(skill.clave, skill.ambito) === "Bloques") && (
+            <p className="text-xs text-muted-foreground">
+              {skill.clave === "dm" || skill.clave === "farma" ? "Monolítica" : "Por bloques"}: la usan {empresas ?? "…"} empresas
+            </p>
+          )}
+          <div className="flex flex-wrap gap-1.5 pt-0.5">
             <Badge variant="outline">{ETIQUETA_AMBITO[skill.ambito]}</Badge>
             {skill.norma && <Badge variant="outline">{skill.norma}</Badge>}
             {skill.modulo && <Badge variant="outline">{skill.modulo}</Badge>}
@@ -132,7 +171,7 @@ function SkillCard({ skill, onAbrir }: { skill: Skill; onAbrir: () => void }) {
 
 function SkillDetalle({ clave, onVolver }: { clave: string; onVolver: () => void }) {
   const qc = useQueryClient();
-  const [publicar, setPublicar] = useState<null | { texto: string; version: string; baseVersion: string | null }>(null);
+  const [publicar, setPublicar] = useState<null | { texto: string; version: string; baseVersion: string | null; restauracion?: boolean; conservarTexto?: boolean }>(null);
   const [motivo, setMotivo] = useState("");
   const [guardando, setGuardando] = useState(false);
   const [ver, setVer] = useState<Version | null>(null);
@@ -170,7 +209,8 @@ function SkillDetalle({ clave, onVolver }: { clave: string; onVolver: () => void
     queryKey: ["ia-skill-faltantes", borrador?.id, borrador?.sha256],
     enabled: !!borrador && conPruebas,
     queryFn: async () => {
-      const { data } = await supabase.rpc("ia_skill_casos_faltantes", { p_prompt_id: borrador!.id });
+      if (!borrador) return 0;
+      const { data } = await supabase.rpc("ia_skill_casos_faltantes", { p_prompt_id: borrador.id });
       return (data ?? 0) as number;
     },
   });
@@ -225,7 +265,7 @@ function SkillDetalle({ clave, onVolver }: { clave: string; onVolver: () => void
 
   async function restaurar(v: Version) {
     const sugerida = siguienteVersion(versiones.map((x) => x.version));
-    setPublicar({ texto: v.system_prompt, version: sugerida, baseVersion: v.version });
+    setPublicar({ texto: v.system_prompt, version: sugerida, baseVersion: v.version, restauracion: true });
     setMotivo(`Restaurada desde v${v.version}`);
   }
 
@@ -252,7 +292,7 @@ function SkillDetalle({ clave, onVolver }: { clave: string; onVolver: () => void
                 <>
                   <Button size="sm" variant="outline" onClick={() => {
                     setMotivo(borrador.motivo_cambio ?? "");
-                    setPublicar({ texto: borrador.system_prompt, version: borrador.version, baseVersion: vigente?.version ?? null });
+                    setPublicar({ texto: borrador.system_prompt, version: borrador.version, baseVersion: vigente?.version ?? null, conservarTexto: true });
                   }}>Editar borrador</Button>
                   <Button
                     size="sm"
@@ -299,7 +339,8 @@ function SkillDetalle({ clave, onVolver }: { clave: string; onVolver: () => void
                       size="sm" variant="outline"
                       disabled={versiones.length < 2}
                       onClick={() => {
-                        const otra = versiones.find((x) => x.id !== v.id)!;
+                        const otra = versiones.find((x) => x.id !== v.id);
+                        if (!otra) return;
                         setDiff(v.created_at < otra.created_at ? { a: v, b: otra } : { a: otra, b: v });
                       }}
                     >
@@ -344,7 +385,8 @@ function SkillDetalle({ clave, onVolver }: { clave: string; onVolver: () => void
               <Label>Texto de la skill</Label>
               <Textarea
                 value={publicar?.texto ?? ""}
-                onChange={(e) => setPublicar((p) => (p ? { ...p, texto: e.target.value } : p))}
+                readOnly={!!publicar?.restauracion}
+                onChange={(e) => setPublicar((p) => (p ? { ...p, texto: e.target.value, conservarTexto: false } : p))}
                 className="min-h-[280px] font-mono text-xs"
               />
             </div>
@@ -358,14 +400,20 @@ function SkillDetalle({ clave, onVolver }: { clave: string; onVolver: () => void
             <Button
               variant="secondary"
               disabled={guardando || !publicar?.texto?.trim() || !publicar?.version?.trim()}
-              onClick={() => void onGuardarBorrador(publicar!.texto.trim(), publicar!.version.trim(), motivo.trim())}
+              onClick={() => {
+                if (!publicar) return;
+                void onGuardarBorrador(textoSkillParaGuardar(publicar.texto, !!(publicar.restauracion || publicar.conservarTexto)), publicar.version.trim(), motivo.trim());
+              }}
             >
               Guardar borrador
             </Button>
             {!conPruebas && (
               <Button
                 disabled={guardando || !publicar?.texto?.trim() || !publicar?.version?.trim() || !motivo.trim()}
-                onClick={() => void publicarVersion(publicar!.texto.trim(), publicar!.version.trim(), motivo.trim())}
+                onClick={() => {
+                  if (!publicar) return;
+                  void publicarVersion(textoSkillParaGuardar(publicar.texto, !!(publicar.restauracion || publicar.conservarTexto)), publicar.version.trim(), motivo.trim());
+                }}
               >
                 {guardando ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
                 Publicar
@@ -393,8 +441,9 @@ function SkillDetalle({ clave, onVolver }: { clave: string; onVolver: () => void
             <Button
               disabled={guardando || !motivoPub.trim()}
               onClick={async () => {
+                if (!borrador) return;
                 setGuardando(true);
-                const ok = await publicarBorradorId(borrador!.id, motivoPub.trim());
+                const ok = await publicarBorradorId(borrador.id, motivoPub.trim());
                 setGuardando(false);
                 if (ok) { setPublicarBorrador(false); setMotivoPub(""); }
                 refrescar();
