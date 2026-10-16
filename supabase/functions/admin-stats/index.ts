@@ -2,8 +2,7 @@
 // Métricas globales para el panel super_admin de TRACEA.
 // Corre con service role — bypasea RLS para consultar todas las orgs.
 
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
-import { createRemoteJWKSet, jwtVerify } from "https://esm.sh/jose@5.9.6";
+import { createClient } from "npm:@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -19,13 +18,14 @@ function json(data: unknown, status = 200) {
   });
 }
 
+// Verificación de firma con el cliente oficial (soporta las claves de firma actuales).
 async function verifyAccessToken(token: string, supabaseUrl: string) {
-  const JWKS = createRemoteJWKSet(new URL(`${supabaseUrl}/auth/v1/.well-known/jwks.json`));
-  const { payload } = await jwtVerify(token, JWKS, {
-    issuer: `${supabaseUrl}/auth/v1`,
-    audience: "authenticated",
+  const client = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!, {
+    auth: { persistSession: false, autoRefreshToken: false },
   });
-  return payload;
+  const { data, error } = await client.auth.getClaims(token);
+  if (error || !data?.claims) throw error ?? new Error("Token inválido");
+  return data.claims as { sub?: unknown };
 }
 
 Deno.serve(async (req) => {
