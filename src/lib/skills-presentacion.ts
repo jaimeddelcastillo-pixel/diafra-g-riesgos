@@ -1,5 +1,6 @@
 export type SkillTraza = { clave: string; version: string; estado?: string; sha256: string };
-export type TrazaIA = { skills_usadas?: SkillTraza[] | null; modelo_ia?: string | null };
+export type ContextoConocimiento = import("../../supabase/functions/_shared/conocimiento-contexto").ConocimientoContexto;
+export type TrazaIA = { skills_usadas?: SkillTraza[] | null; modelo_ia?: string | null; mensaje_id?: string; contexto_usado?: ContextoConocimiento[] | null };
 
 export function textoSkillParaGuardar(texto: string, restauracion: boolean): string {
   return restauracion ? texto : texto.trim();
@@ -7,7 +8,7 @@ export function textoSkillParaGuardar(texto: string, restauracion: boolean): str
 
 export function grupoSkill(clave: string, ambito: string): "En producción" | "Bloques" | "Alcances" {
   if (ambito === "alcance") return "Alcances";
-  if (["plataforma", "riesgos_amef"].includes(clave) || clave.startsWith("norma_")) return "Bloques";
+  if (["plataforma", "riesgos_amef", "uso_conocimiento_empresa"].includes(clave) || clave.startsWith("norma_")) return "Bloques";
   return "En producción";
 }
 
