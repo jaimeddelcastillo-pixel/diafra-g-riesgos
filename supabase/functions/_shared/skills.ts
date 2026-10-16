@@ -1,3 +1,5 @@
+import { contextoFechaMexico } from "./fecha-mexico.ts";
+
 // C4a · Armador único de prompts con skills versionadas en la base.
 // Las funciones Edge NUNCA guardan texto de prompt en el código: lo leen
 // de agent_prompts (estado 'vigente'). Si la skill no está vigente, la
@@ -160,7 +162,7 @@ export async function armarRiesgos(
 
   // [CONTEXTO_EMPRESA]
   const contexto =
-    `[CONTEXTO_EMPRESA]\nNombre: ${org.nombre}\nNorma(s): ${org.norma_aplicable ?? "—"}` +
+    `[CONTEXTO_EMPRESA]\n${contextoFechaMexico()}\nNombre: ${org.nombre}\nNorma(s): ${org.norma_aplicable ?? "—"}` +
     `${org.norma_aplicable === "MULTI" ? ` (norma de esta conversación: ${norma})` : ""}\n` +
     `Metodología: ${org.metodologia ?? "—"}\nUsa detectabilidad: ${org.usar_detectabilidad}\n` +
     `Umbral NPR alto: ${org.umbral_npr_alto}\nUmbral NPR medio: ${org.umbral_npr_medio}`;

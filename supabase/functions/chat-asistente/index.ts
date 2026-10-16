@@ -2,6 +2,7 @@
 // Stream Claude responses (Anthropic SSE) with org/plan/norma awareness + tool calling.
 // 1 user message = 1 unit (incremented on the first user message of the request).
 
+import { contextoFechaMexico } from "../_shared/fecha-mexico.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { resolverContextoOrg } from "../_shared/contexto-org.ts";
 import { enviarYRegistrar } from "../_shared/transactional-email-templates/enviar-y-registrar.ts";
@@ -700,7 +701,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    const orgCtx = `\n\n## CONTEXTO DE LA ORGANIZACIÓN\nNombre: ${org.nombre}\nNorma aplicable: ${org.norma_aplicable}\nMetodología: ${org.metodologia}\nUsa detectabilidad: ${org.usar_detectabilidad}\nUmbral NPR Alto: ${org.umbral_npr_alto}\nUmbral NPR Medio: ${org.umbral_npr_medio}`;
+    const orgCtx = `\n\n## CONTEXTO DE LA ORGANIZACIÓN\n${contextoFechaMexico()}\nNombre: ${org.nombre}\nNorma aplicable: ${org.norma_aplicable}\nMetodología: ${org.metodologia}\nUsa detectabilidad: ${org.usar_detectabilidad}\nUmbral NPR Alto: ${org.umbral_npr_alto}\nUmbral NPR Medio: ${org.umbral_npr_medio}`;
 
     // Ancla de norma — debe ir AL INICIO del system prompt para tener máximo peso.
     let normaAncla = "";
@@ -794,7 +795,7 @@ Deno.serve(async (req) => {
 
     const stream = new ReadableStream({
       async start(controller) {
-        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: "conversacion", id: conversacion_id, ia_prueba_borradores: modoComposicion === "bloques_borrador" })}\n\n`));
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: "conversacion", id: conversacion_id, ia_prueba_borradores: modoComposicion === "bloques_borrador", skills_usadas: skillsUsadasOut, modelo_ia: modelToUse })}\n\n`));
 
         if (emitHint) {
           fullText += HINT_TEXT + HINT_SENTINEL + "\n\n";

@@ -5,6 +5,7 @@
 // Contrato: POST { session_id, messages: [{role, content}] }
 // Respuesta: SSE con eventos { type: "content_block_delta" | "tool_use" | "sesion" | "error" }
 
+import { contextoFechaMexico } from "../_shared/fecha-mexico.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { resolverContextoOrg, ContextoOrgError } from "../_shared/contexto-org.ts";
 import { cargarSkill, registrarSkillFaltante } from "../_shared/skills.ts";
@@ -976,6 +977,7 @@ async function construirContextoSesion(admin: any, orgId: string, sessionId: str
   const bloque = `
 
 ## CONTEXTO DE SESIÓN (fuente: base de datos, NO el historial del chat)
+${contextoFechaMexico()}
 [EMPRESA]: ${org.nombre}
 [MARCO REGULATORIO DECLARADO]: ${org.norma_aplicable ?? "no declarado"}
 [ESTADO DEL MARCO]: por_validar
@@ -1597,6 +1599,7 @@ Deno.serve(async (req) => {
 
           sse(controller, "turn_complete", {
             session_id: sessionId, turn_id: turnId,
+            skills_usadas: skillsUsadas, modelo_ia: MODEL,
             knowledge_created: metrics.knowledge_created,
             gaps_created: metrics.gaps_created,
             contradictions_created: metrics.contradictions_created,
@@ -1633,6 +1636,7 @@ Deno.serve(async (req) => {
 
         sse(controller, "turn_complete", {
           session_id: sessionId, turn_id: turnId,
+          skills_usadas: skillsUsadas, modelo_ia: MODEL,
           knowledge_created: metrics.knowledge_created,
           gaps_created: metrics.gaps_created,
           contradictions_created: metrics.contradictions_created,
