@@ -4677,6 +4677,7 @@ export type Database = {
       }
       is_super_admin: { Args: never; Returns: boolean }
       mi_acceso_curso: { Args: { p_curso_id: string }; Returns: string }
+      mi_ia_en_prueba: { Args: never; Returns: boolean }
       mi_org_tiene_modulo: { Args: { _modulo: string }; Returns: boolean }
       mi_plan_limite: { Args: { p_clave: string }; Returns: Json }
       mis_cursos_certificados: {

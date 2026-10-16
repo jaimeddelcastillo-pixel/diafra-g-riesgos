@@ -40,6 +40,9 @@ export default function ComposicionIACard({ orgId }: { orgId: string }) {
           <SelectContent>
             <SelectItem value="monolitica">Monolítica (dm / farma)</SelectItem>
             <SelectItem value="bloques">Por bloques</SelectItem>
+            <SelectItem value="bloques_borrador" disabled={!data?.esPrueba}>
+              Por bloques con borradores{!data?.esPrueba ? " (solo empresas de prueba)" : ""}
+            </SelectItem>
           </SelectContent>
         </Select>
         {data && !data.esPrueba && (
@@ -48,7 +51,7 @@ export default function ComposicionIACard({ orgId }: { orgId: string }) {
           </p>
         )}
         <p className="text-xs text-muted-foreground">
-          Por bloques se usa solo si plataforma, riesgos_amef y la norma tienen versión vigente; si falta alguna, sigue con dm/farma y se registra.
+          Por bloques se usa solo si plataforma, riesgos_amef y la norma tienen versión vigente; con borradores usa el borrador de cada pieza si existe y si no la vigente. Si falta alguna, sigue con dm/farma y se registra.
         </p>
       </CardContent>
     </Card>

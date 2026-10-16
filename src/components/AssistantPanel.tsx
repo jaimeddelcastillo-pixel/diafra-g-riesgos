@@ -90,7 +90,9 @@ export function AssistantPanel({ open, onOpenChange, folioId = null, folioCodigo
     if (!open || !org) return;
     refreshUsage();
     refreshConversaciones();
+    void (supabase.rpc as any)("mi_ia_en_prueba").then(({ data }: any) => setIaPrueba(!!data));
   }, [open, org?.id]);
+  const [iaPrueba, setIaPrueba] = useState(false);
 
   const scrollToBottom = (behavior: ScrollBehavior = "auto") => {
     // Radix ScrollArea forwards ref to root, so reach into the viewport directly.
@@ -461,6 +463,11 @@ export function AssistantPanel({ open, onOpenChange, folioId = null, folioCodigo
                 Agent Farma
               </button>
             </div>
+          )}
+          {iaPrueba && folioId && (
+            <span className="self-start mt-1 text-[10px] px-1.5 py-0.5 rounded bg-primary-foreground/10 opacity-80">
+              IA en prueba (borradores)
+            </span>
           )}
         </SheetHeader>
 

@@ -109,7 +109,18 @@ async function cargarPorId(admin: any, id: string): Promise<SkillCargada & { id:
 }
 
 async function cargarVigenteOpcional(admin: any, clave: string) {
-  try { return await cargarSkill(admin, clave); } catch { return null; }
+  try { const s = await cargarSkill(admin, clave); return { ...s, estado: "vigente" }; } catch { return null; }
+}
+
+/** C4b.1: borrador si existe; si no, vigente. Solo para empresas de prueba. */
+async function cargarBorradorOVigente(admin: any, clave: string) {
+  const { data } = await admin
+    .from("agent_prompts").select("id, nombre, system_prompt, version, sha256, estado")
+    .eq("nombre", clave).eq("estado", "borrador").maybeSingle();
+  if (data?.system_prompt?.trim()) {
+    return { id: data.id, estado: "borrador", clave: data.nombre, version: data.version, sha256: data.sha256, texto: data.system_prompt };
+  }
+  return cargarVigenteOpcional(admin, clave);
 }
 
 /** Norma de bloques: folio manda; sin folio, la selección vigente (dm/farma). */
@@ -129,9 +140,10 @@ export function normaBloques(folioNorma: string | null, folioCategoria: string |
  */
 export async function armarRiesgos(
   admin: any,
-  args: { org: OrgBloques; norma: "NOM-241" | "NOM-059"; versiones?: Record<string, string> },
+  args: { org: OrgBloques; norma: "NOM-241" | "NOM-059"; versiones?: Record<string, string>; usarBorradores?: boolean },
 ): Promise<ResultadoBloques> {
-  const { org, norma, versiones = {} } = args;
+  const { org, norma, versiones = {}, usarBorradores = false } = args;
+  const cargar = usarBorradores ? cargarBorradorOVigente : cargarVigenteOpcional;
   const claveNorma = norma === "NOM-059" ? "norma_nom059" : "norma_nom241";
   const obligatorias = ["plataforma", "riesgos_amef", claveNorma];
 
@@ -140,7 +152,7 @@ export async function armarRiesgos(
   for (const clave of obligatorias) {
     const s = versiones[clave]
       ? await cargarPorId(admin, versiones[clave]).catch(() => null)
-      : await cargarVigenteOpcional(admin, clave);
+      : await cargar(admin, clave);
     if (!s || s.clave !== clave || !s.texto?.trim()) faltantes.push(clave);
     else piezas.push(s);
   }
@@ -166,7 +178,7 @@ export async function armarRiesgos(
     if (!activo) { noEstan.push(a.etiqueta); continue; }
     const s = versiones[a.clave]
       ? await cargarPorId(admin, versiones[a.clave]).catch(() => null)
-      : await cargarVigenteOpcional(admin, a.clave);
+      : await cargar(admin, a.clave);
     if (s && s.clave === a.clave && s.texto?.trim()) { fragmentos.push(s.texto); usadosAlcance.push(s); }
   }
   const alcance =

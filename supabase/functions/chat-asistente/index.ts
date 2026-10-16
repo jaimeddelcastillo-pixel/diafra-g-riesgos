@@ -343,7 +343,7 @@ const TOOL_RULES_ADDENDUM = `
 async function getOrgContext(supabase: any, orgId: string, rolEnOrg: string | null) {
   const { data: org } = await supabase
     .from("organizations")
-    .select("id, nombre, plan, norma_aplicable, metodologia, usar_detectabilidad, umbral_npr_alto, umbral_npr_medio, consultas_ia_extras")
+    .select("id, nombre, plan, norma_aplicable, metodologia, usar_detectabilidad, umbral_npr_alto, umbral_npr_medio, consultas_ia_extras, es_prueba")
     .eq("id", orgId)
     .maybeSingle();
   if (!org) return null;
@@ -578,13 +578,18 @@ Deno.serve(async (req) => {
 
     // C4b: composición por bloques solo si la empresa está en 'bloques' y las
     // piezas obligatorias tienen versión vigente; si falta alguna, dm/farma.
-    let skillsUsadasOut: { clave: string; version: string; sha256: string }[] = [];
+    let skillsUsadasOut: { clave: string; version: string; sha256: string; estado?: string }[] = [];
     let bloques: Extract<ResultadoBloques, { ok: true }> | null = null;
+    let modoComposicion = "monolitica";
     {
       const { data: iaCfg } = await adminClient
         .from("ia_config_org").select("composicion_riesgos").eq("org_id", org.id).maybeSingle();
-      if (iaCfg?.composicion_riesgos === "bloques") {
-        const r = await armarRiesgos(adminClient, { org, norma: normaBloques(folioNorma, folioCategoria, agente) });
+      const modo = iaCfg?.composicion_riesgos;
+      // C4b.1: bloques_borrador solo en empresas de prueba (doble verificación además del trigger).
+      const usarBorradores = modo === "bloques_borrador" && org.es_prueba === true;
+      if (modo === "bloques" || usarBorradores) {
+        modoComposicion = modo;
+        const r = await armarRiesgos(adminClient, { org, norma: normaBloques(folioNorma, folioCategoria, agente), usarBorradores });
         if (r.ok) {
           bloques = r;
           skillsUsadasOut = r.skills_usadas;
@@ -594,7 +599,7 @@ Deno.serve(async (req) => {
             await adminClient.from("audit_trail").insert({
               org_id: org.id, user_id: user.id, tabla: "ia_config_org", registro_id: org.id,
               accion: "COMPOSICION_BLOQUES_INCOMPLETA",
-              valor_nuevo: { faltantes: r.faltantes, se_usa: agente, contexto: "chat-asistente" },
+              valor_nuevo: { faltantes: r.faltantes, se_usa: agente, modo: modoComposicion, contexto: "chat-asistente" },
             });
           } catch (e) { console.error("audit COMPOSICION_BLOQUES_INCOMPLETA", e); }
         }
@@ -607,7 +612,7 @@ Deno.serve(async (req) => {
       try {
         const skill = await cargarSkill(adminClient, agente);
         skillBase = skill.texto;
-        skillsUsadasOut = [{ clave: skill.clave, version: skill.version, sha256: skill.sha256 }];
+        skillsUsadasOut = [{ clave: skill.clave, version: skill.version, sha256: skill.sha256, estado: "vigente" }];
       } catch (e) {
         console.error("C4a: skill no vigente", e);
         await registrarSkillFaltante(adminClient, org.id, agente, "chat-asistente");
@@ -789,7 +794,7 @@ Deno.serve(async (req) => {
 
     const stream = new ReadableStream({
       async start(controller) {
-        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: "conversacion", id: conversacion_id })}\n\n`));
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: "conversacion", id: conversacion_id, ia_prueba_borradores: modoComposicion === "bloques_borrador" })}\n\n`));
 
         if (emitHint) {
           fullText += HINT_TEXT + HINT_SENTINEL + "\n\n";
