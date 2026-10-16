@@ -1448,6 +1448,7 @@ export type Database = {
           actualizado_por: string | null
           afecta_cumplimiento: boolean | null
           area_id: string | null
+          codigo: string | null
           comentario_validacion: string | null
           contenido: string
           contexto: Json | null
@@ -1481,6 +1482,7 @@ export type Database = {
           actualizado_por?: string | null
           afecta_cumplimiento?: boolean | null
           area_id?: string | null
+          codigo?: string | null
           comentario_validacion?: string | null
           contenido: string
           contexto?: Json | null
@@ -1514,6 +1516,7 @@ export type Database = {
           actualizado_por?: string | null
           afecta_cumplimiento?: boolean | null
           area_id?: string | null
+          codigo?: string | null
           comentario_validacion?: string | null
           contenido?: string
           contexto?: Json | null
@@ -2101,6 +2104,7 @@ export type Database = {
         Row: {
           agente: string | null
           contenido: string
+          contexto_usado: Json | null
           conversacion_id: string | null
           created_at: string
           documentos_adjuntos: Json | null
@@ -2116,6 +2120,7 @@ export type Database = {
         Insert: {
           agente?: string | null
           contenido?: string
+          contexto_usado?: Json | null
           conversacion_id?: string | null
           created_at?: string
           documentos_adjuntos?: Json | null
@@ -2131,6 +2136,7 @@ export type Database = {
         Update: {
           agente?: string | null
           contenido?: string
+          contexto_usado?: Json | null
           conversacion_id?: string | null
           created_at?: string
           documentos_adjuntos?: Json | null
@@ -3150,18 +3156,21 @@ export type Database = {
           cambiado_por: string | null
           composicion_riesgos: string
           org_id: string
+          usar_conocimiento_cerebro: boolean
         }
         Insert: {
           cambiado_en?: string
           cambiado_por?: string | null
           composicion_riesgos?: string
           org_id: string
+          usar_conocimiento_cerebro?: boolean
         }
         Update: {
           cambiado_en?: string
           cambiado_por?: string | null
           composicion_riesgos?: string
           org_id?: string
+          usar_conocimiento_cerebro?: boolean
         }
         Relationships: [
           {
@@ -4567,6 +4576,36 @@ export type Database = {
       }
       codigo_tokens: { Args: { _t: string }; Returns: string }
       confirmar_catalogo_documentos: { Args: never; Returns: string }
+      conocimiento_usado_en: {
+        Args: { _id: string }
+        Returns: {
+          fecha: string
+          folio: string
+          folio_id: string
+          nota: string
+          riesgo: string
+          riesgo_id: string
+        }[]
+      }
+      contexto_cerebro: {
+        Args: {
+          _folio_id: string
+          _limite?: number
+          _org: string
+          _texto: string
+        }
+        Returns: {
+          area: string
+          codigo: string
+          contenido: string
+          fuente: Json
+          id: string
+          proceso: string
+          tipo: string
+          validado_en: string
+          validado_por: string
+        }[]
+      }
       contexto_org_actual: {
         Args: never
         Returns: {
