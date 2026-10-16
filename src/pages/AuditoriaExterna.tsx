@@ -210,7 +210,7 @@ function VisorConocimiento({ itemId, d, permiteDescarga, verPdf }: { itemId: str
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-lg font-bold">Conocimiento validado</h2>
+        <h2 className="text-lg font-bold">{d.codigo ? `${d.codigo} · ` : ""}Conocimiento validado</h2>
         <div className="flex gap-2">
           <Button size="sm" variant="outline" disabled={!!ocupado}
             onClick={() => correr("ver", async () => verPdf(await fichaConocimientoAuditor(itemId, d, false), "Ficha de conocimiento"))}>

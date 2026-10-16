@@ -97,6 +97,7 @@ export async function generarFichaConocimientoPDF(d: any, m: MarcaInfo, soloBlob
   const { doc, terminar } = await nuevoDoc(d.org ?? {}, "Ficha de conocimiento institucional", textoPie(m), textoMarca(m));
   let y = seccion(doc, TOP, "Conocimiento");
   y = tabla(doc, y, [
+    ["Código", d.codigo || "-"],
     ["Enunciado", d.contenido], ["Tipo", d.tipo || "-"], ["Área", d.area || "-"], ["Proceso", d.proceso || "-"],
   ], undefined, { columnStyles: { 0: { cellWidth: 35, fontStyle: "bold" } } });
 

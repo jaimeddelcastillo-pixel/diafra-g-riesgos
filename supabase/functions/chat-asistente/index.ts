@@ -7,6 +7,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { resolverContextoOrg } from "../_shared/contexto-org.ts";
 import { enviarYRegistrar } from "../_shared/transactional-email-templates/enviar-y-registrar.ts";
 import { cargarSkill, registrarSkillFaltante, armarRiesgos, normaBloques, type ResultadoBloques } from "../_shared/skills.ts";
+import { trazaConocimiento } from "../_shared/conocimiento-contexto.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -519,6 +520,7 @@ Deno.serve(async (req) => {
     if (folio_id) {
       const { data: fNorma } = await adminClient
         .from("folios").select("norma_folio, clasificacion_categoria").eq("id", folio_id).eq("org_id", org.id).maybeSingle();
+      if (!fNorma) return new Response(JSON.stringify({ error: "Folio no encontrado en la empresa activa" }), { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       if (fNorma?.norma_folio) { folioNorma = fNorma.norma_folio; folioCategoria = fNorma.clasificacion_categoria ?? null; }
     } else if (conversacion_id) {
       const { data: convPeek } = await adminClient
@@ -577,6 +579,7 @@ Deno.serve(async (req) => {
       }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
+    const mensajeRespuestaId = crypto.randomUUID();
     // C4b: composición por bloques solo si la empresa está en 'bloques' y las
     // piezas obligatorias tienen versión vigente; si falta alguna, dm/farma.
     let skillsUsadasOut: { clave: string; version: string; sha256: string; estado?: string }[] = [];
@@ -584,13 +587,24 @@ Deno.serve(async (req) => {
     let modoComposicion = "monolitica";
     {
       const { data: iaCfg } = await adminClient
-        .from("ia_config_org").select("composicion_riesgos").eq("org_id", org.id).maybeSingle();
+        .from("ia_config_org").select("composicion_riesgos, usar_conocimiento_cerebro").eq("org_id", org.id).maybeSingle();
       const modo = iaCfg?.composicion_riesgos;
       // C4b.1: bloques_borrador solo en empresas de prueba (doble verificación además del trigger).
       const usarBorradores = modo === "bloques_borrador" && org.es_prueba === true;
       if (modo === "bloques" || usarBorradores) {
         modoComposicion = modo;
-        const r = await armarRiesgos(adminClient, { org, norma: normaBloques(folioNorma, folioCategoria, agente), usarBorradores });
+        let contextoFolioId = folio_id;
+        if (!contextoFolioId && conversacion_id) {
+          const { data: conv } = await adminClient.from("chat_conversaciones").select("folio_id")
+            .eq("id", conversacion_id).eq("org_id", org.id).eq("created_by", user.id).maybeSingle();
+          contextoFolioId = conv?.folio_id ?? null;
+        }
+        const ultimoTexto = [...messages].reverse().find(m => m.role === "user")?.content;
+        const { data: fContexto } = contextoFolioId ? await adminClient.from("folios").select("proceso_equipo")
+          .eq("id", contextoFolioId).eq("org_id", org.id).maybeSingle() : { data: null };
+        const r = await armarRiesgos(adminClient, { org, norma: normaBloques(folioNorma, folioCategoria, agente), usarBorradores,
+          usarConocimiento: iaCfg?.usar_conocimiento_cerebro === true, folioId: contextoFolioId,
+          texto: [fContexto?.proceso_equipo, typeof ultimoTexto === "string" ? ultimoTexto : JSON.stringify(ultimoTexto ?? "")].filter(Boolean).join(" ") });
         if (r.ok) {
           bloques = r;
           skillsUsadasOut = r.skills_usadas;
@@ -681,6 +695,7 @@ Deno.serve(async (req) => {
         .from("folios")
         .select("codigo, proceso_equipo, estado, norma_folio, origen, alcance, beneficio_clinico, clase_dispositivo, clasificacion_categoria, clasificacion_tipo, clasificacion_condicion_venta, clasificacion_riesgo_sanitario")
         .eq("id", folio_id)
+        .eq("org_id", org.id)
         .maybeSingle();
       const { data: riesgos } = await adminClient
         .from("riesgos")
@@ -795,7 +810,7 @@ Deno.serve(async (req) => {
 
     const stream = new ReadableStream({
       async start(controller) {
-        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: "conversacion", id: conversacion_id, ia_prueba_borradores: modoComposicion === "bloques_borrador", skills_usadas: skillsUsadasOut, modelo_ia: modelToUse })}\n\n`));
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: "conversacion", id: conversacion_id, mensaje_id: mensajeRespuestaId, contexto_usado: bloques?.contexto_usado ?? [], ia_prueba_borradores: modoComposicion === "bloques_borrador", skills_usadas: skillsUsadasOut, modelo_ia: modelToUse })}\n\n`));
 
         if (emitHint) {
           fullText += HINT_TEXT + HINT_SENTINEL + "\n\n";
@@ -988,6 +1003,7 @@ Deno.serve(async (req) => {
           // Persistir respuesta del asistente
           try {
             await adminClient.from("chat_mensajes").insert({
+              id: mensajeRespuestaId,
               conversacion_id,
               org_id: org.id, folio_id: activeFolioId, user_id: user.id,
               role: "assistant",
@@ -996,7 +1012,8 @@ Deno.serve(async (req) => {
               agente,
               skills_usadas: skillsUsadasOut.length ? skillsUsadasOut : null,
               modelo_ia: modelToUse,
-              documentos_adjuntos: allToolUses.length ? { tool_uses: allToolUses } : null,
+              contexto_usado: trazaConocimiento(bloques?.contexto_usado ?? []),
+              documentos_adjuntos: { tool_uses: allToolUses, contexto_detalle: bloques?.contexto_usado ?? [] },
             });
 
             if (isNewConversation && conversacion_id) {
