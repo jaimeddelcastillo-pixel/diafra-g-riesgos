@@ -1314,6 +1314,7 @@ export default function Admin() {
                 onChange={(e) => setEditForm((f) => ({ ...f, max_users: Number(e.target.value) }))}
               />
             </div>
+            {editOrg?.id && isSuperAdmin() && <ComposicionIACard orgId={editOrg.id} />}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
