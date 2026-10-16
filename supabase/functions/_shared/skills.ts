@@ -178,7 +178,7 @@ export async function armarRiesgos(
     if (!activo) { noEstan.push(a.etiqueta); continue; }
     const s = versiones[a.clave]
       ? await cargarPorId(admin, versiones[a.clave]).catch(() => null)
-      : await cargarVigenteOpcional(admin, a.clave);
+      : await cargar(admin, a.clave);
     if (s && s.clave === a.clave && s.texto?.trim()) { fragmentos.push(s.texto); usadosAlcance.push(s); }
   }
   const alcance =
