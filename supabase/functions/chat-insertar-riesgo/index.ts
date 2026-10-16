@@ -128,7 +128,7 @@ Deno.serve(async (req) => {
         await userClient
           .from("chat_conversaciones")
           .update({ tiene_riesgos_insertados: true })
-          .eq("id", conversacion_id);
+          .eq("id", conversacion_id).eq("org_id", folio.org_id).eq("created_by", user.id);
       } catch (e) { console.error("flag conv fail", e); }
     }
 

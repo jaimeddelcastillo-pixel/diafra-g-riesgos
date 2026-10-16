@@ -763,10 +763,11 @@ function MessageBubble({ msg, onInsertarRiesgo, folioId, insertedRiskKeys }: { m
                   {r.etapa_proceso && <div><strong>Etapa:</strong> {r.etapa_proceso}</div>}
                   <div><strong>Peligro:</strong> {r.peligro}</div>
                   <div><strong>Situación:</strong> {r.situacion_peligrosa}</div>
-                  <ListaPreview label="Secuencia" items={normalizarLista(r.secuencia_eventos, 8)} />
+                  <ListaPreview contexto={msg.contexto_usado} label="Secuencia" items={normalizarLista(r.secuencia_eventos, 8)} />
                   <div><strong>Efecto:</strong> {r.efecto_dano}</div>
-                  <ListaPreview label="Causa" items={normalizarLista(r.causa_potencial, 8)} />
+                  <ListaPreview contexto={msg.contexto_usado} label="Causa" items={normalizarLista(r.causa_potencial, 8)} />
                   <ListaPreview
+                    contexto={msg.contexto_usado}
                     label="Prevención"
                     items={
                       r.controles_prevencion
@@ -774,7 +775,7 @@ function MessageBubble({ msg, onInsertarRiesgo, folioId, insertedRiskKeys }: { m
                         : normalizarLista(r.controles_actuales, 8)
                     }
                   />
-                  <ListaPreview label="Detección" items={normalizarLista(r.controles_deteccion, 8)} />
+                  <ListaPreview contexto={msg.contexto_usado} label="Detección" items={normalizarLista(r.controles_deteccion, 8)} />
 
                   <div className="text-muted-foreground">S:{r.severidad} O:{r.ocurrencia} D:{r.deteccion}</div>
                   {nprRes > 0 && (
@@ -833,12 +834,12 @@ function MessageBubble({ msg, onInsertarRiesgo, folioId, insertedRiskKeys }: { m
   );
 }
 
-function ListaPreview({ label, items }: { label: string; items: string[] }) {
+function ListaPreview({ label, items, contexto }: { label: string; items: string[]; contexto?: TrazaIA["contexto_usado"] }) {
   if (!items.length) return null;
   if (items.length === 1) {
     return (
       <div>
-        <strong>{label}:</strong> {items[0]}
+        <strong>{label}:</strong> <ConocimientoTexto items={contexto ?? []}>{items[0]}</ConocimientoTexto>
       </div>
     );
   }
@@ -847,7 +848,7 @@ function ListaPreview({ label, items }: { label: string; items: string[] }) {
       <strong>{label}:</strong>
       <ol className="list-decimal pl-4 my-0.5 space-y-0.5">
         {items.map((it, i) => (
-          <li key={i}>{it}</li>
+          <li key={i}><ConocimientoTexto items={contexto ?? []}>{it}</ConocimientoTexto></li>
         ))}
       </ol>
     </div>

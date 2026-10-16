@@ -7,6 +7,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { HoverCard, HoverCardTrigger, HoverCardContent } from "@/components/ui/hover-card";
 import type { ContextoConocimiento } from "@/lib/skills-presentacion";
+import { Link } from "react-router-dom";
 import { fuenteConocimiento } from "../../supabase/functions/_shared/conocimiento-contexto";
 
 function Chip({ codigo, items }: { codigo: string; items: ContextoConocimiento[] }) {
@@ -17,7 +18,7 @@ function Chip({ codigo, items }: { codigo: string; items: ContextoConocimiento[]
   return <HoverCard>
     <HoverCardTrigger asChild>
       <Button variant="secondary" size="sm" className="h-6 px-1.5 text-xs font-mono align-baseline" asChild={!!item && acceso}>
-        {item && acceso ? <a href={`/cerebro/conocimiento#k-${item.id}`}>{codigo}</a> : <span>{codigo}</span>}
+        {item && acceso ? <Link to={`/cerebro/conocimiento#k-${item.id}`}>{codigo}</Link> : <span>{codigo}</span>}
       </Button>
     </HoverCardTrigger>
     <HoverCardContent className="max-w-[min(360px,90vw)] text-xs space-y-2">
