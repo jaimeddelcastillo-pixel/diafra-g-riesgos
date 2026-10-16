@@ -578,13 +578,18 @@ Deno.serve(async (req) => {
 
     // C4b: composición por bloques solo si la empresa está en 'bloques' y las
     // piezas obligatorias tienen versión vigente; si falta alguna, dm/farma.
-    let skillsUsadasOut: { clave: string; version: string; sha256: string }[] = [];
+    let skillsUsadasOut: { clave: string; version: string; sha256: string; estado?: string }[] = [];
     let bloques: Extract<ResultadoBloques, { ok: true }> | null = null;
+    let modoComposicion = "monolitica";
     {
       const { data: iaCfg } = await adminClient
         .from("ia_config_org").select("composicion_riesgos").eq("org_id", org.id).maybeSingle();
-      if (iaCfg?.composicion_riesgos === "bloques") {
-        const r = await armarRiesgos(adminClient, { org, norma: normaBloques(folioNorma, folioCategoria, agente) });
+      const modo = iaCfg?.composicion_riesgos;
+      // C4b.1: bloques_borrador solo en empresas de prueba (doble verificación además del trigger).
+      const usarBorradores = modo === "bloques_borrador" && org.es_prueba === true;
+      if (modo === "bloques" || usarBorradores) {
+        modoComposicion = modo;
+        const r = await armarRiesgos(adminClient, { org, norma: normaBloques(folioNorma, folioCategoria, agente), usarBorradores });
         if (r.ok) {
           bloques = r;
           skillsUsadasOut = r.skills_usadas;
