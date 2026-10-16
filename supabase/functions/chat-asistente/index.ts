@@ -343,7 +343,7 @@ const TOOL_RULES_ADDENDUM = `
 async function getOrgContext(supabase: any, orgId: string, rolEnOrg: string | null) {
   const { data: org } = await supabase
     .from("organizations")
-    .select("id, nombre, plan, norma_aplicable, metodologia, usar_detectabilidad, umbral_npr_alto, umbral_npr_medio, consultas_ia_extras")
+    .select("id, nombre, plan, norma_aplicable, metodologia, usar_detectabilidad, umbral_npr_alto, umbral_npr_medio, consultas_ia_extras, es_prueba")
     .eq("id", orgId)
     .maybeSingle();
   if (!org) return null;
@@ -599,7 +599,7 @@ Deno.serve(async (req) => {
             await adminClient.from("audit_trail").insert({
               org_id: org.id, user_id: user.id, tabla: "ia_config_org", registro_id: org.id,
               accion: "COMPOSICION_BLOQUES_INCOMPLETA",
-              valor_nuevo: { faltantes: r.faltantes, se_usa: agente, contexto: "chat-asistente" },
+              valor_nuevo: { faltantes: r.faltantes, se_usa: agente, modo: modoComposicion, contexto: "chat-asistente" },
             });
           } catch (e) { console.error("audit COMPOSICION_BLOQUES_INCOMPLETA", e); }
         }
@@ -794,7 +794,7 @@ Deno.serve(async (req) => {
 
     const stream = new ReadableStream({
       async start(controller) {
-        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: "conversacion", id: conversacion_id })}\n\n`));
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: "conversacion", id: conversacion_id, ia_prueba_borradores: modoComposicion === "bloques_borrador" })}\n\n`));
 
         if (emitHint) {
           fullText += HINT_TEXT + HINT_SENTINEL + "\n\n";
