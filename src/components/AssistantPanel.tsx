@@ -1,3 +1,5 @@
+import { InformacionRespuestaIA } from "@/components/InformacionRespuestaIA";
+import type { TrazaIA } from "@/lib/skills-presentacion";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
@@ -20,7 +22,7 @@ import {
   type ExtractKind,
 } from "@/lib/extract-file-text";
 
-type Msg = { role: "user" | "assistant"; content: any; toolUses?: any[] };
+type Msg = { role: "user" | "assistant"; content: any; toolUses?: any[] } & TrazaIA;
 
 type Conversacion = {
   id: string;
@@ -200,7 +202,7 @@ export function AssistantPanel({ open, onOpenChange, folioId = null, folioCodigo
     try {
       const { data, error } = await supabase
         .from("chat_mensajes")
-        .select("role, contenido, documentos_adjuntos, created_at")
+        .select("role, contenido, documentos_adjuntos, created_at, skills_usadas, modelo_ia")
         .eq("conversacion_id", id)
         .order("created_at", { ascending: true });
       if (error) throw error;
@@ -208,6 +210,7 @@ export function AssistantPanel({ open, onOpenChange, folioId = null, folioCodigo
         role: r.role === "assistant" ? "assistant" : "user",
         content: r.contenido ?? "",
         toolUses: r.documentos_adjuntos?.tool_uses ?? undefined,
+        skills_usadas: r.skills_usadas, modelo_ia: r.modelo_ia,
       }));
       setMessages(msgs);
       setConversacionId(id);
@@ -268,6 +271,7 @@ export function AssistantPanel({ open, onOpenChange, folioId = null, folioCodigo
       const decoder = new TextDecoder();
       let buffer = "";
       let assistantText = "";
+      let traza: TrazaIA = {};
       const toolUses: any[] = [];
       let currentToolJson = "";
       let currentTool: any = null;
@@ -286,6 +290,9 @@ export function AssistantPanel({ open, onOpenChange, folioId = null, folioCodigo
             const evt = JSON.parse(line.slice(6));
             if (evt.type === "conversacion" && evt.id) {
               if (!conversacionId) setConversacionId(evt.id);
+              setIaPrueba(!!evt.ia_prueba_borradores);
+              traza = { skills_usadas: evt.skills_usadas, modelo_ia: evt.modelo_ia };
+              setMessages((m) => m.map((msg, i) => i === m.length - 1 ? { ...msg, ...traza } : msg));
               continue;
             }
             if (evt.type === "content_block_start" && evt.content_block?.type === "tool_use") {
@@ -297,7 +304,7 @@ export function AssistantPanel({ open, onOpenChange, folioId = null, folioCodigo
                 assistantText += evt.delta.text;
                 setMessages((m) => {
                   const arr = [...m];
-                  arr[arr.length - 1] = { role: "assistant", content: assistantText, toolUses: [...toolUses] };
+                  arr[arr.length - 1] = { role: "assistant", content: assistantText, toolUses: [...toolUses], ...traza };
                   return arr;
                 });
               }
@@ -309,7 +316,7 @@ export function AssistantPanel({ open, onOpenChange, folioId = null, folioCodigo
               currentTool = null;
               setMessages((m) => {
                 const arr = [...m];
-                arr[arr.length - 1] = { role: "assistant", content: assistantText, toolUses: [...toolUses] };
+                arr[arr.length - 1] = { role: "assistant", content: assistantText, toolUses: [...toolUses], ...traza };
                 return arr;
               });
             }
@@ -464,7 +471,7 @@ export function AssistantPanel({ open, onOpenChange, folioId = null, folioCodigo
               </button>
             </div>
           )}
-          {iaPrueba && folioId && (
+          {iaPrueba && (
             <span className="self-start mt-1 text-[10px] px-1.5 py-0.5 rounded bg-primary-foreground/10 opacity-80">
               IA en prueba (borradores)
             </span>
@@ -728,6 +735,7 @@ function MessageBubble({ msg, onInsertarRiesgo, folioId, insertedRiskKeys }: { m
         {isUser ? <User className="h-3.5 w-3.5 text-accent-foreground" /> : <Bot className="h-3.5 w-3.5 text-primary-foreground" />}
       </div>
       <div className={`rounded-md px-3 py-2 text-sm max-w-[85%] min-w-0 overflow-hidden ${isUser ? "bg-accent/10" : "bg-muted/50"}`}>
+        {!isUser && <div className="flex justify-end"><InformacionRespuestaIA skills_usadas={msg.skills_usadas} modelo_ia={msg.modelo_ia} /></div>}
         {typeof msg.content === "string" ? (
           <div className="prose prose-sm max-w-none break-words [overflow-wrap:anywhere] [&_p]:my-1 [&_ul]:my-1 [&_ol]:my-1 [&_pre]:whitespace-pre-wrap [&_pre]:break-words [&_code]:break-words [&_table]:block [&_table]:max-w-full [&_table]:overflow-x-auto">
             <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>

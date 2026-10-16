@@ -21,12 +21,13 @@ export default function ComposicionIACard({ orgId }: { orgId: string }) {
 
   async function cambiar(valor: string) {
     if (valor === "bloques" && data && !data.esPrueba &&
-        !window.confirm("Esta empresa no es de prueba. La composición por bloques es solo para pilotos. ¿Continuar?")) return;
+        !window.confirm("Vas a cambiar la IA de una empresa real a la composición por bloques. El cambio queda en la bitácora. ¿Continuar?")) return;
     const { error } = await supabase.from("ia_config_org")
       .upsert({ org_id: orgId, composicion_riesgos: valor }, { onConflict: "org_id" });
     if (error) { toast({ title: "No se pudo cambiar", description: error.message, variant: "destructive" }); return; }
     toast({ title: "Composición actualizada", description: "El cambio quedó en la bitácora." });
     qc.invalidateQueries({ queryKey: ["ia-config-org", orgId] });
+    qc.invalidateQueries({ queryKey: ["ia-skills-uso-empresas"] });
   }
 
   return (

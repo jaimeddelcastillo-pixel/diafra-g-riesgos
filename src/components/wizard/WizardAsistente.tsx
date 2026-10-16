@@ -1,3 +1,7 @@
+import { InformacionRespuestaIA } from "@/components/InformacionRespuestaIA";
+import { supabase } from "@/integrations/supabase/client";
+import { Badge } from "@/components/ui/badge";
+import type { TrazaIA } from "@/lib/skills-presentacion";
 import { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -7,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/hooks/use-toast";
 
-type Msg = { role: "user" | "assistant"; content: string };
+type Msg = { role: "user" | "assistant"; content: string } & TrazaIA;
 
 export type WizardApplyField =
   | "peligro"
@@ -70,7 +74,12 @@ function parseSugerencias(texto: string): Array<{ field: WizardApplyField; value
 }
 
 export function WizardAsistente({ folioId, agente, contextoSistema, paso, onApply, onClose }: Props) {
-  const { session } = useAuth();
+  const { session, orgId } = useAuth();
+  const [iaPrueba, setIaPrueba] = useState(false);
+  useEffect(() => {
+    setIaPrueba(false);
+    void supabase.rpc("mi_ia_en_prueba").then(({ data }) => setIaPrueba(!!data));
+  }, [orgId]);
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
@@ -121,6 +130,7 @@ export function WizardAsistente({ folioId, agente, contextoSistema, paso, onAppl
       const decoder = new TextDecoder();
       let buffer = "";
       let acc = "";
+      let traza: TrazaIA = {};
       setMessages((m) => [...m, { role: "assistant", content: "" }]);
       while (true) {
         const { done, value } = await reader.read();
@@ -132,14 +142,17 @@ export function WizardAsistente({ folioId, agente, contextoSistema, paso, onAppl
           if (!line.startsWith("data: ")) continue;
           try {
             const evt = JSON.parse(line.slice(6));
-            if (evt.type === "conversacion" && evt.id && !conversacionId) {
-              setConversacionId(evt.id);
+            if (evt.type === "conversacion") {
+              if (evt.id && !conversacionId) setConversacionId(evt.id);
+              setIaPrueba(!!evt.ia_prueba_borradores);
+              traza = { skills_usadas: evt.skills_usadas, modelo_ia: evt.modelo_ia };
+              setMessages((m) => m.map((msg, i) => i === m.length - 1 ? { ...msg, ...traza } : msg));
             }
             if (evt.type === "content_block_delta" && evt.delta?.type === "text_delta") {
               acc += evt.delta.text;
               setMessages((m) => {
                 const arr = [...m];
-                arr[arr.length - 1] = { role: "assistant", content: acc };
+                arr[arr.length - 1] = { role: "assistant", content: acc, ...traza };
                 return arr;
               });
             }
@@ -178,6 +191,7 @@ export function WizardAsistente({ folioId, agente, contextoSistema, paso, onAppl
         <div className="flex items-center gap-2 text-sm font-semibold">
           <Bot className="h-4 w-4 text-accent" /> Asesor IA
         </div>
+        {iaPrueba && <Badge variant="secondary" className="text-[10px]">IA en prueba (borradores)</Badge>}
         {onClose && (
           <Button size="sm" variant="ghost" onClick={onClose} className="h-7 text-xs">
             Cerrar
@@ -204,6 +218,7 @@ export function WizardAsistente({ folioId, agente, contextoSistema, paso, onAppl
                     : "bg-card border"
                 }`}
               >
+                {m.role === "assistant" && <div className="flex justify-end"><InformacionRespuestaIA skills_usadas={m.skills_usadas} modelo_ia={m.modelo_ia} /></div>}
                 <div className="prose prose-sm max-w-none [&_p]:my-1 [&_ul]:my-1 [&_ol]:my-1">
                   <ReactMarkdown remarkPlugins={[remarkGfm]}>
                     {m.content.replace(/::APLICAR[^:]+::/g, "").trim() || "…"}
