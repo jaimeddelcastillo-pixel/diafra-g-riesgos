@@ -3,6 +3,7 @@ import { Navigate, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { DesactivarUsuarioDialog } from "@/components/DesactivarUsuarioDialog";
+import ComposicionIACard from "@/components/admin/ComposicionIACard";
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -1314,6 +1315,7 @@ export default function Admin() {
                 onChange={(e) => setEditForm((f) => ({ ...f, max_users: Number(e.target.value) }))}
               />
             </div>
+            {editOrg?.id && isSuperAdmin() && <ComposicionIACard orgId={editOrg.id} />}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
