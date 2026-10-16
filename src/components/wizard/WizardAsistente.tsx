@@ -3,8 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import type { TrazaIA } from "@/lib/skills-presentacion";
 import { useEffect, useRef, useState } from "react";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
+import { ConocimientoMarkdown } from "@/components/ConocimientoChat";
 import { Bot, Loader2, Send, User, Wand2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -145,7 +144,7 @@ export function WizardAsistente({ folioId, agente, contextoSistema, paso, onAppl
             if (evt.type === "conversacion") {
               if (evt.id && !conversacionId) setConversacionId(evt.id);
               setIaPrueba(!!evt.ia_prueba_borradores);
-              traza = { skills_usadas: evt.skills_usadas, modelo_ia: evt.modelo_ia };
+              traza = { skills_usadas: evt.skills_usadas, modelo_ia: evt.modelo_ia, mensaje_id: evt.mensaje_id, contexto_usado: evt.contexto_usado };
               setMessages((m) => m.map((msg, i) => i === m.length - 1 ? { ...msg, ...traza } : msg));
             }
             if (evt.type === "content_block_delta" && evt.delta?.type === "text_delta") {
@@ -220,9 +219,9 @@ export function WizardAsistente({ folioId, agente, contextoSistema, paso, onAppl
               >
                 {m.role === "assistant" && <div className="flex justify-end"><InformacionRespuestaIA skills_usadas={m.skills_usadas} modelo_ia={m.modelo_ia} /></div>}
                 <div className="prose prose-sm max-w-none [&_p]:my-1 [&_ul]:my-1 [&_ol]:my-1">
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                  <ConocimientoMarkdown items={m.role === "assistant" ? m.contexto_usado : []}>
                     {m.content.replace(/::APLICAR[^:]+::/g, "").trim() || "…"}
-                  </ReactMarkdown>
+                  </ConocimientoMarkdown>
                 </div>
                 {sugs.length > 0 && (
                   <div className="mt-2 flex flex-wrap gap-1.5">
