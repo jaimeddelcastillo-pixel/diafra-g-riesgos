@@ -1,0 +1,10 @@
+import { Link } from 'react-router-dom';
+import { Wind,Thermometer,Droplets,Gauge,ArrowRight } from 'lucide-react';
+import { Card,CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Progress } from '@/components/ui/progress';
+import { useTendencias } from './hooks';
+import { semanasSinCapturar } from './lib/pendientes';
+import Marco from './Marco';
+export const SUBMODULOS=[{clave:'presiones',nombre:'Presiones diferenciales',icono:Gauge,unidad:'Pa'},{clave:'temphr',nombre:'Temperatura y HR',icono:Thermometer,unidad:'°C'},{clave:'filtros',nombre:'Bancos de filtros',icono:Wind,unidad:'Pa'},{clave:'agua',nombre:'Agua purificada',icono:Droplets,unidad:'µS/cm'}] as const;
+export default function Tablero(){const q=useTendencias();return <Marco titulo="Análisis de Tendencias">{q.isPending?<p>Cargando…</p>:q.error?<p role="alert">{q.error.message}</p>:<section className="grid gap-4 sm:grid-cols-2">{SUBMODULOS.map(m=>{const regs=q.data?.registros.filter(r=>r.modulo===m.clave && r.activo) ?? [];const faltantes=semanasSinCapturar(regs);return <Card key={m.clave}><CardContent className="space-y-5 p-5"><div className="flex items-center gap-3"><m.icono className="h-6 w-6 text-primary"/><h2 className="font-semibold">{m.nombre}</h2></div><div className="flex justify-between text-sm"><span>{regs.length} registros activos</span><span className="text-muted-foreground">{faltantes} sin capturar esta semana</span></div><Progress value={regs.length?(regs.length-faltantes)/regs.length*100:0}/><Button variant="outline" asChild><Link to={`/tendencias/captura?modulo=${m.clave}`}>Captura semanal<ArrowRight className="ml-2 h-4 w-4"/></Link></Button></CardContent></Card>;})}</section>}</Marco>;}
