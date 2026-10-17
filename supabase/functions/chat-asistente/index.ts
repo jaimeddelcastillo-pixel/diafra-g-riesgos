@@ -7,7 +7,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { resolverContextoOrg } from "../_shared/contexto-org.ts";
 import { enviarYRegistrar } from "../_shared/transactional-email-templates/enviar-y-registrar.ts";
 import { cargarSkill, registrarSkillFaltante, armarRiesgos, normaBloques, type ResultadoBloques } from "../_shared/skills.ts";
-import { trazaConocimiento } from "../_shared/conocimiento-contexto.ts";
+import { trazaConocimiento, diagnosticoCerebro, textoBusquedaCerebro } from "../_shared/conocimiento-contexto.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -585,10 +585,12 @@ Deno.serve(async (req) => {
     let skillsUsadasOut: { clave: string; version: string; sha256: string; estado?: string }[] = [];
     let bloques: Extract<ResultadoBloques, { ok: true }> | null = null;
     let modoComposicion = "monolitica";
+    let diagnosticoContexto = diagnosticoCerebro([], "composicion_monolitica");
     {
       const { data: iaCfg } = await adminClient
         .from("ia_config_org").select("composicion_riesgos, usar_conocimiento_cerebro").eq("org_id", org.id).maybeSingle();
       const modo = iaCfg?.composicion_riesgos;
+      if (!iaCfg?.usar_conocimiento_cerebro) diagnosticoContexto = diagnosticoCerebro([], "interruptor_apagado");
       // C4b.1: bloques_borrador solo en empresas de prueba (doble verificación además del trigger).
       const usarBorradores = modo === "bloques_borrador" && org.es_prueba === true;
       if (modo === "bloques" || usarBorradores) {
@@ -604,7 +606,8 @@ Deno.serve(async (req) => {
           .eq("id", contextoFolioId).eq("org_id", org.id).maybeSingle() : { data: null };
         const r = await armarRiesgos(adminClient, { org, norma: normaBloques(folioNorma, folioCategoria, agente), usarBorradores,
           usarConocimiento: iaCfg?.usar_conocimiento_cerebro === true, folioId: contextoFolioId,
-          texto: [fContexto?.proceso_equipo, typeof ultimoTexto === "string" ? ultimoTexto : JSON.stringify(ultimoTexto ?? "")].filter(Boolean).join(" ") });
+          texto: textoBusquedaCerebro(fContexto?.proceso_equipo, body.contexto_busqueda, ultimoTexto) });
+        if (r.contexto_cerebro) diagnosticoContexto = r.contexto_cerebro;
         if (r.ok) {
           bloques = r;
           skillsUsadasOut = r.skills_usadas;
@@ -810,7 +813,7 @@ Deno.serve(async (req) => {
 
     const stream = new ReadableStream({
       async start(controller) {
-        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: "conversacion", id: conversacion_id, mensaje_id: mensajeRespuestaId, contexto_usado: bloques?.contexto_usado ?? [], ia_prueba_borradores: modoComposicion === "bloques_borrador", skills_usadas: skillsUsadasOut, modelo_ia: modelToUse })}\n\n`));
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: "conversacion", id: conversacion_id, mensaje_id: mensajeRespuestaId, contexto_usado: bloques?.contexto_usado ?? [], contexto_cerebro: diagnosticoContexto, ia_prueba_borradores: modoComposicion === "bloques_borrador", skills_usadas: skillsUsadasOut, modelo_ia: modelToUse })}\n\n`));
 
         if (emitHint) {
           fullText += HINT_TEXT + HINT_SENTINEL + "\n\n";
@@ -1013,7 +1016,7 @@ Deno.serve(async (req) => {
               skills_usadas: skillsUsadasOut.length ? skillsUsadasOut : null,
               modelo_ia: modelToUse,
               contexto_usado: trazaConocimiento(bloques?.contexto_usado ?? []),
-              documentos_adjuntos: { tool_uses: allToolUses, contexto_detalle: bloques?.contexto_usado ?? [] },
+              documentos_adjuntos: { tool_uses: allToolUses, contexto_detalle: bloques?.contexto_usado ?? [], contexto_cerebro: diagnosticoContexto },
             });
 
             if (isNewConversation && conversacion_id) {

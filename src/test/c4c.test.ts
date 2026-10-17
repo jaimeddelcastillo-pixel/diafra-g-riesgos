@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { armarRiesgos } from "../../supabase/functions/_shared/skills";
-import { trazaConocimiento, type ConocimientoContexto } from "../../supabase/functions/_shared/conocimiento-contexto";
+import { trazaConocimiento, textoBusquedaCerebro, type ConocimientoContexto } from "../../supabase/functions/_shared/conocimiento-contexto";
 
 const item: ConocimientoContexto = { id: "k1", codigo: "K-0012", tipo: "regla_pno", contenido: "Limpieza validada", area: "Calidad", proceso: "Limpieza", fuente: { codigo: "PNO-CAL-003", revision: "04", pagina: 5 }, validado_por: "Validador", validado_en: "2026-10-16T20:00:00Z" };
 const org = { id: "qa", nombre: "QA", norma_aplicable: "NOM-241", metodologia: "AMEF", usar_detectabilidad: true, umbral_npr_alto: 100, umbral_npr_medio: 50 };
@@ -39,6 +39,23 @@ describe("C4c", () => {
     expect(trazaConocimiento([item])).toEqual([{ id: "k1", codigo: "K-0012", validado_en: "2026-10-16T20:00:00Z" }]);
   });
   it("no envía conocimiento sin la skill controlada", async () => {
-    expect(await armarRiesgos(cliente([item], true), { org, norma: "NOM-241", usarConocimiento: true })).toEqual({ ok: false, faltantes: ["uso_conocimiento_empresa"] });
+    expect(await armarRiesgos(cliente([item], true), { org, norma: "NOM-241", usarConocimiento: true })).toEqual({ ok: false, faltantes: ["uso_conocimiento_empresa"], contexto_cerebro: { elementos: 0, codigos: [], motivo: "skill_sin_version" } });
+  });
+  it("incluye proceso, etapa y mensaje actual sin todo el formulario", () => {
+    expect(textoBusquedaCerebro("Recepción", "• Etapa: Cuarentena\n• Peligro: Otro", "¿Qué dice K-0008?"))
+      .toBe("Recepción Cuarentena ¿Qué dice K-0008?");
+  });
+  it("diagnostica conocimiento enviado", async () => {
+    const r = await armarRiesgos(cliente([item]), { org, norma: "NOM-241", usarConocimiento: true });
+    if (!r.ok) throw Error("incompleto");
+    expect(r.contexto_cerebro).toEqual({ elementos: 1, codigos: ["K-0012"] });
+  });
+  it("sin módulo no consulta conocimiento", async () => {
+    const c = cliente([item]);
+    c.rpc = async (name: string) => { c.calls.push(name); return { data: false }; };
+    const r = await armarRiesgos(c, { org, norma: "NOM-241", usarConocimiento: true });
+    if (!r.ok) throw Error("incompleto");
+    expect(c.calls).not.toContain("contexto_cerebro");
+    expect(r.contexto_cerebro.motivo).toBe("sin_modulo");
   });
 });
