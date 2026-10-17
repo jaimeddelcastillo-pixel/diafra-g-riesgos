@@ -1,5 +1,5 @@
 import { contextoFechaMexico } from "./fecha-mexico.ts";
-import { bloqueConocimiento, type ConocimientoContexto } from "./conocimiento-contexto.ts";
+import { bloqueConocimiento, diagnosticoCerebro, type DiagnosticoCerebro, type ConocimientoContexto } from "./conocimiento-contexto.ts";
 
 // C4a · Armador único de prompts con skills versionadas en la base.
 // Las funciones Edge NUNCA guardan texto de prompt en el código: lo leen
@@ -101,8 +101,9 @@ export type ResultadoBloques =
       skills_usadas: PiezaUsada[];
       norma: "NOM-241" | "NOM-059";
       contexto_usado: ConocimientoContexto[];
+      contexto_cerebro: DiagnosticoCerebro;
     }
-  | { ok: false; faltantes: string[] };
+  | { ok: false; faltantes: string[]; contexto_cerebro?: DiagnosticoCerebro };
 
 async function cargarPorId(admin: any, id: string): Promise<SkillCargada & { id: string; estado: string }> {
   const { data, error } = await admin
@@ -164,17 +165,24 @@ export async function armarRiesgos(
 
   // C4c: Riesgos accede a Cerebro exclusivamente mediante su servicio SQL.
   let conocimiento: ConocimientoContexto[] = [];
+  let diagnostico = diagnosticoCerebro([], "interruptor_apagado");
   if (args.usarConocimiento) {
+    const { data: tieneModulo, error: errorModulo } = await admin.rpc("org_tiene_modulo", { _org: org.id, _modulo: "institutional_brain" });
+    if (errorModulo) throw new Error(`Acceso a Cerebro: ${errorModulo.message}`);
+    if (!tieneModulo) diagnostico = diagnosticoCerebro([], "sin_modulo");
+    else {
     const { data, error } = await admin.rpc("contexto_cerebro", {
       _org: org.id, _folio_id: args.folioId ?? null, _texto: args.texto ?? "", _limite: 12,
     });
     if (error) throw new Error(`Contexto de Cerebro: ${error.message}`);
     conocimiento = data ?? [];
+    diagnostico = diagnosticoCerebro(conocimiento, conocimiento.length ? undefined : "sin_coincidencias");
     if (conocimiento.length) {
       const clave = "uso_conocimiento_empresa";
       const s = versiones[clave] ? await cargarPorId(admin, versiones[clave]).catch(() => null) : await cargar(admin, clave);
-      if (!s?.texto?.trim() || s.clave !== clave) return { ok: false, faltantes: [clave] };
+      if (!s?.texto?.trim() || s.clave !== clave) return { ok: false, faltantes: [clave], contexto_cerebro: diagnosticoCerebro([], "skill_sin_version") };
       piezas.splice(1, 0, s);
+    }
     }
   }
 
@@ -213,5 +221,6 @@ export async function armarRiesgos(
     skills_usadas: todas.map((p) => ({ clave: p.clave, version: p.version, sha256: p.sha256, ...(p.id ? { id: p.id, estado: p.estado } : {}) })),
     norma,
     contexto_usado: conocimiento,
+    contexto_cerebro: diagnostico,
   };
 }

@@ -17,7 +17,7 @@ function Chip({ codigo, items }: { codigo: string; items: ContextoConocimiento[]
   const item = items.find(k => k.codigo === codigo);
   return <HoverCard>
     <HoverCardTrigger asChild>
-      <Button variant="secondary" size="sm" className="h-6 px-1.5 text-xs font-mono align-baseline" asChild={!!item && acceso}>
+      <Button variant="secondary" size="sm" className="inline-flex h-auto py-0 px-1 text-xs font-mono align-baseline leading-[inherit]" asChild={!!item && acceso}>
         {item && acceso ? <Link to={`/cerebro/conocimiento#k-${item.id}`}>{codigo}</Link> : <span>{codigo}</span>}
       </Button>
     </HoverCardTrigger>
@@ -32,7 +32,11 @@ function citar(node: ReactNode, items: ContextoConocimiento[]): ReactNode {
   return Children.map(node, (child) => {
     if (typeof child === "string") return child.split(/(\bK-\d{4,}\b)/g).map((p, i) =>
       /^K-\d{4,}$/.test(p) ? <Chip key={i} codigo={p} items={items} /> : p);
-    if (isValidElement<{ children?: ReactNode }>(child)) return cloneElement(child, {}, citar(child.props.children, items));
+    if (isValidElement<{ children?: ReactNode }>(child)) {
+      // Markdown descendants have their own wrappers; only transform text once.
+      if (child.type === Chip || typeof child.type !== "string" || child.type === "a" || child.type === "pre") return child;
+      return cloneElement(child, {}, citar(child.props.children, items));
+    }
     return child;
   });
 }

@@ -19,3 +19,18 @@ export function bloqueConocimiento(items: ConocimientoContexto[]): string {
 export function trazaConocimiento(items: ConocimientoContexto[]) {
   return items.map(({ id, codigo, validado_en }) => ({ id, codigo, validado_en }));
 }
+
+export type DiagnosticoCerebro = {
+  elementos: number; codigos: string[];
+  motivo?: "interruptor_apagado" | "sin_modulo" | "sin_coincidencias" | "skill_sin_version" | "composicion_monolitica";
+};
+
+export function diagnosticoCerebro(items: ConocimientoContexto[], motivo?: DiagnosticoCerebro["motivo"]): DiagnosticoCerebro {
+  return { elementos: items.length, codigos: items.map(k => k.codigo), ...(motivo ? { motivo } : {}) };
+}
+
+export function textoBusquedaCerebro(proceso: unknown, contexto: unknown, mensaje: unknown): string {
+  const etapa = typeof contexto === "string" ? contexto.match(/(?:^|\n)\s*[•*-]?\s*Etapa:\s*([^\n]+)/i)?.[1]?.trim() : "";
+  return [typeof proceso === "string" ? proceso : "", etapa === "—" ? "" : etapa,
+    typeof mensaje === "string" ? mensaje : JSON.stringify(mensaje ?? "")].filter(Boolean).join(" ").slice(0, 10000);
+}
