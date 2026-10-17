@@ -351,6 +351,13 @@
       "when": 1792273589414,
       "tag": "0049_c4c1_busqueda_contexto_cerebro",
       "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "7",
+      "when": 1792276695241,
+      "tag": "0050_t2_tendencias_suplencias_beta",
+      "breakpoints": true
     }
   ]
 }
