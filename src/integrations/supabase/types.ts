@@ -3621,6 +3621,90 @@ export type Database = {
           },
         ]
       }
+      org_suplencias: {
+        Row: {
+          aviso_rs_enviado_en: string | null
+          aviso_rs_error: string | null
+          aviso_rs_requerido: boolean
+          created_at: string
+          created_by: string | null
+          documento_respaldo: string | null
+          facultades: string[]
+          fecha_fin: string
+          fecha_inicio: string
+          id: string
+          motivo: string
+          org_id: string
+          registrada_por: string | null
+          revocada_en: string | null
+          revocada_por: string | null
+          suplente_cargo: string
+          suplente_nombre: string
+          suplente_user_id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          aviso_rs_enviado_en?: string | null
+          aviso_rs_error?: string | null
+          aviso_rs_requerido?: boolean
+          created_at?: string
+          created_by?: string | null
+          documento_respaldo?: string | null
+          facultades: string[]
+          fecha_fin: string
+          fecha_inicio: string
+          id?: string
+          motivo: string
+          org_id: string
+          registrada_por?: string | null
+          revocada_en?: string | null
+          revocada_por?: string | null
+          suplente_cargo?: string
+          suplente_nombre?: string
+          suplente_user_id: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          aviso_rs_enviado_en?: string | null
+          aviso_rs_error?: string | null
+          aviso_rs_requerido?: boolean
+          created_at?: string
+          created_by?: string | null
+          documento_respaldo?: string | null
+          facultades?: string[]
+          fecha_fin?: string
+          fecha_inicio?: string
+          id?: string
+          motivo?: string
+          org_id?: string
+          registrada_por?: string | null
+          revocada_en?: string | null
+          revocada_por?: string | null
+          suplente_cargo?: string
+          suplente_nombre?: string
+          suplente_user_id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "org_suplencias_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "org_suplencias_org_id_suplente_user_id_fkey"
+            columns: ["org_id", "suplente_user_id"]
+            isOneToOne: false
+            referencedRelation: "org_members"
+            referencedColumns: ["org_id", "user_id"]
+          },
+        ]
+      }
       organization_features: {
         Row: {
           activado_en: string
@@ -4201,6 +4285,924 @@ export type Database = {
         }
         Relationships: []
       }
+      tend_areas: {
+        Row: {
+          activo: boolean
+          codigo: string
+          created_at: string
+          created_by: string | null
+          hvac_id: string | null
+          id: string
+          iso: string
+          migrado_desde: string | null
+          nombre: string
+          org_id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          activo?: boolean
+          codigo: string
+          created_at?: string
+          created_by?: string | null
+          hvac_id?: string | null
+          id?: string
+          iso: string
+          migrado_desde?: string | null
+          nombre: string
+          org_id: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          activo?: boolean
+          codigo?: string
+          created_at?: string
+          created_by?: string | null
+          hvac_id?: string | null
+          id?: string
+          iso?: string
+          migrado_desde?: string | null
+          nombre?: string
+          org_id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tend_areas_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tend_areas_org_id_hvac_id_fkey"
+            columns: ["org_id", "hvac_id"]
+            isOneToOne: false
+            referencedRelation: "tend_sistemas_hvac"
+            referencedColumns: ["org_id", "id"]
+          },
+        ]
+      }
+      tend_cambios_filtro: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          fecha: string
+          id: string
+          instrumento_id: string
+          migrado_desde: string | null
+          nota: string
+          org_id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          fecha: string
+          id?: string
+          instrumento_id: string
+          migrado_desde?: string | null
+          nota?: string
+          org_id: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          fecha?: string
+          id?: string
+          instrumento_id?: string
+          migrado_desde?: string | null
+          nota?: string
+          org_id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tend_cambios_filtro_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tend_cambios_filtro_org_id_instrumento_id_fkey"
+            columns: ["org_id", "instrumento_id"]
+            isOneToOne: false
+            referencedRelation: "tend_instrumentos"
+            referencedColumns: ["org_id", "id"]
+          },
+        ]
+      }
+      tend_config: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          migrado_desde: string | null
+          org_id: string
+          permitir_autoemision: boolean
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          migrado_desde?: string | null
+          org_id: string
+          permitir_autoemision?: boolean
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          migrado_desde?: string | null
+          org_id?: string
+          permitir_autoemision?: boolean
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tend_config_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tend_formato: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          created_by_email: string | null
+          firmantes: Json
+          id: string
+          logo: string | null
+          migrado_desde: string | null
+          org_id: string
+          tabla_iso: Json
+          textos: Json
+          updated_at: string
+          updated_by: string | null
+          version: number
+          version_formato: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          created_by_email?: string | null
+          firmantes?: Json
+          id?: string
+          logo?: string | null
+          migrado_desde?: string | null
+          org_id: string
+          tabla_iso?: Json
+          textos?: Json
+          updated_at?: string
+          updated_by?: string | null
+          version?: number
+          version_formato?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          created_by_email?: string | null
+          firmantes?: Json
+          id?: string
+          logo?: string | null
+          migrado_desde?: string | null
+          org_id?: string
+          tabla_iso?: Json
+          textos?: Json
+          updated_at?: string
+          updated_by?: string | null
+          version?: number
+          version_formato?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tend_formato_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tend_instrumentos: {
+        Row: {
+          activo: boolean
+          area_estado: string
+          area_id: string | null
+          area_libre: string | null
+          area_nota: string | null
+          baseline_pa: number | null
+          baseline_tolerancia_pct: number | null
+          codigo: string
+          codigo_bitacora: string | null
+          created_at: string
+          created_by: string | null
+          dp_final_fabricante: number | null
+          especificacion: string | null
+          id: string
+          lie_pa: number | null
+          lse_pa: number | null
+          migrado_desde: string | null
+          op_max_pa: number | null
+          op_min_pa: number | null
+          org_id: string
+          parametro: string
+          spec_estado: string | null
+          spec_fecha_validacion: string | null
+          spec_lie: number | null
+          spec_lie_estricto: boolean
+          spec_lie_hr: number | null
+          spec_lse: number | null
+          spec_lse_estricto: boolean
+          spec_lse_hr: number | null
+          spec_referencia: string | null
+          spec_texto: string | null
+          spec_texto_hr: string | null
+          tipo: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          activo?: boolean
+          area_estado?: string
+          area_id?: string | null
+          area_libre?: string | null
+          area_nota?: string | null
+          baseline_pa?: number | null
+          baseline_tolerancia_pct?: number | null
+          codigo: string
+          codigo_bitacora?: string | null
+          created_at?: string
+          created_by?: string | null
+          dp_final_fabricante?: number | null
+          especificacion?: string | null
+          id?: string
+          lie_pa?: number | null
+          lse_pa?: number | null
+          migrado_desde?: string | null
+          op_max_pa?: number | null
+          op_min_pa?: number | null
+          org_id: string
+          parametro: string
+          spec_estado?: string | null
+          spec_fecha_validacion?: string | null
+          spec_lie?: number | null
+          spec_lie_estricto?: boolean
+          spec_lie_hr?: number | null
+          spec_lse?: number | null
+          spec_lse_estricto?: boolean
+          spec_lse_hr?: number | null
+          spec_referencia?: string | null
+          spec_texto?: string | null
+          spec_texto_hr?: string | null
+          tipo: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          activo?: boolean
+          area_estado?: string
+          area_id?: string | null
+          area_libre?: string | null
+          area_nota?: string | null
+          baseline_pa?: number | null
+          baseline_tolerancia_pct?: number | null
+          codigo?: string
+          codigo_bitacora?: string | null
+          created_at?: string
+          created_by?: string | null
+          dp_final_fabricante?: number | null
+          especificacion?: string | null
+          id?: string
+          lie_pa?: number | null
+          lse_pa?: number | null
+          migrado_desde?: string | null
+          op_max_pa?: number | null
+          op_min_pa?: number | null
+          org_id?: string
+          parametro?: string
+          spec_estado?: string | null
+          spec_fecha_validacion?: string | null
+          spec_lie?: number | null
+          spec_lie_estricto?: boolean
+          spec_lie_hr?: number | null
+          spec_lse?: number | null
+          spec_lse_estricto?: boolean
+          spec_lse_hr?: number | null
+          spec_referencia?: string | null
+          spec_texto?: string | null
+          spec_texto_hr?: string | null
+          tipo?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tend_instrumentos_org_id_area_id_fkey"
+            columns: ["org_id", "area_id"]
+            isOneToOne: false
+            referencedRelation: "tend_areas"
+            referencedColumns: ["org_id", "id"]
+          },
+          {
+            foreignKeyName: "tend_instrumentos_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tend_objetivos_presion: {
+        Row: {
+          activo: boolean
+          codigo: string
+          created_at: string
+          created_by: string | null
+          cuarto_x_id: string | null
+          cuarto_y_id: string | null
+          id: string
+          instrumento_id: string | null
+          iso: string | null
+          lie_pa: number | null
+          limite_normativo_pa: number | null
+          lse_pa: number | null
+          migrado_desde: string | null
+          nombre: string
+          org_id: string
+          par_cuartos_id: string | null
+          tipo: string
+          unidad: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          activo?: boolean
+          codigo: string
+          created_at?: string
+          created_by?: string | null
+          cuarto_x_id?: string | null
+          cuarto_y_id?: string | null
+          id?: string
+          instrumento_id?: string | null
+          iso?: string | null
+          lie_pa?: number | null
+          limite_normativo_pa?: number | null
+          lse_pa?: number | null
+          migrado_desde?: string | null
+          nombre: string
+          org_id: string
+          par_cuartos_id?: string | null
+          tipo?: string
+          unidad?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          activo?: boolean
+          codigo?: string
+          created_at?: string
+          created_by?: string | null
+          cuarto_x_id?: string | null
+          cuarto_y_id?: string | null
+          id?: string
+          instrumento_id?: string | null
+          iso?: string | null
+          lie_pa?: number | null
+          limite_normativo_pa?: number | null
+          lse_pa?: number | null
+          migrado_desde?: string | null
+          nombre?: string
+          org_id?: string
+          par_cuartos_id?: string | null
+          tipo?: string
+          unidad?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tend_objetivos_presion_org_id_cuarto_x_id_fkey"
+            columns: ["org_id", "cuarto_x_id"]
+            isOneToOne: false
+            referencedRelation: "tend_areas"
+            referencedColumns: ["org_id", "id"]
+          },
+          {
+            foreignKeyName: "tend_objetivos_presion_org_id_cuarto_y_id_fkey"
+            columns: ["org_id", "cuarto_y_id"]
+            isOneToOne: false
+            referencedRelation: "tend_areas"
+            referencedColumns: ["org_id", "id"]
+          },
+          {
+            foreignKeyName: "tend_objetivos_presion_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tend_objetivos_presion_org_id_instrumento_id_fkey"
+            columns: ["org_id", "instrumento_id"]
+            isOneToOne: false
+            referencedRelation: "tend_instrumentos"
+            referencedColumns: ["org_id", "id"]
+          },
+        ]
+      }
+      tend_registros: {
+        Row: {
+          activo: boolean
+          area_id: string | null
+          codigo_area_libre: string | null
+          created_at: string
+          created_by: string | null
+          etapa: string | null
+          hvac_id: string | null
+          id: string
+          instrumento_id: string | null
+          iso: string | null
+          lie: number | null
+          lie_hr: number | null
+          lie_t: number | null
+          lse: number | null
+          lse_hr: number | null
+          lse_t: number | null
+          migrado_desde: string | null
+          modulo: string
+          nombre: string
+          nombre_area_libre: string | null
+          org_id: string
+          par_cuartos_id: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          activo?: boolean
+          area_id?: string | null
+          codigo_area_libre?: string | null
+          created_at?: string
+          created_by?: string | null
+          etapa?: string | null
+          hvac_id?: string | null
+          id?: string
+          instrumento_id?: string | null
+          iso?: string | null
+          lie?: number | null
+          lie_hr?: number | null
+          lie_t?: number | null
+          lse?: number | null
+          lse_hr?: number | null
+          lse_t?: number | null
+          migrado_desde?: string | null
+          modulo: string
+          nombre: string
+          nombre_area_libre?: string | null
+          org_id: string
+          par_cuartos_id?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          activo?: boolean
+          area_id?: string | null
+          codigo_area_libre?: string | null
+          created_at?: string
+          created_by?: string | null
+          etapa?: string | null
+          hvac_id?: string | null
+          id?: string
+          instrumento_id?: string | null
+          iso?: string | null
+          lie?: number | null
+          lie_hr?: number | null
+          lie_t?: number | null
+          lse?: number | null
+          lse_hr?: number | null
+          lse_t?: number | null
+          migrado_desde?: string | null
+          modulo?: string
+          nombre?: string
+          nombre_area_libre?: string | null
+          org_id?: string
+          par_cuartos_id?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tend_registros_org_id_area_id_fkey"
+            columns: ["org_id", "area_id"]
+            isOneToOne: false
+            referencedRelation: "tend_areas"
+            referencedColumns: ["org_id", "id"]
+          },
+          {
+            foreignKeyName: "tend_registros_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tend_registros_org_id_hvac_id_fkey"
+            columns: ["org_id", "hvac_id"]
+            isOneToOne: false
+            referencedRelation: "tend_sistemas_hvac"
+            referencedColumns: ["org_id", "id"]
+          },
+          {
+            foreignKeyName: "tend_registros_org_id_instrumento_id_fkey"
+            columns: ["org_id", "instrumento_id"]
+            isOneToOne: false
+            referencedRelation: "tend_instrumentos"
+            referencedColumns: ["org_id", "id"]
+          },
+        ]
+      }
+      tend_registros_at: {
+        Row: {
+          anulacion_en_suplencia: boolean
+          anulacion_suplencia_id: string | null
+          anulado_en: string | null
+          anulado_por: string | null
+          autoemitido: boolean
+          codigo: string
+          created_at: string
+          created_by: string | null
+          created_by_email: string | null
+          dictamen_global: string | null
+          elaborado_version_por: string | null
+          emitido_at: string | null
+          emitido_by: string | null
+          emitido_by_email: string | null
+          emitido_cargo: string | null
+          emitido_nombre: string | null
+          emitido_por: string | null
+          en_suplencia: boolean
+          estado: string
+          fecha: string
+          ia_origen: Json | null
+          id: string
+          instrumentos: Json
+          justificaciones: Json
+          migrado_desde: string | null
+          modificadores_version: string[]
+          motivo_anulacion: string | null
+          motivo_version: string | null
+          org_id: string
+          periodo_desde: string
+          periodo_etiqueta: string | null
+          periodo_hasta: string
+          seleccion: Json | null
+          sistema: string
+          suplencia_id: string | null
+          texto: Json
+          updated_at: string
+          updated_by: string | null
+          updated_by_email: string | null
+          usuario_email: string | null
+          usuario_id: string | null
+          version: number
+        }
+        Insert: {
+          anulacion_en_suplencia?: boolean
+          anulacion_suplencia_id?: string | null
+          anulado_en?: string | null
+          anulado_por?: string | null
+          autoemitido?: boolean
+          codigo: string
+          created_at?: string
+          created_by?: string | null
+          created_by_email?: string | null
+          dictamen_global?: string | null
+          elaborado_version_por?: string | null
+          emitido_at?: string | null
+          emitido_by?: string | null
+          emitido_by_email?: string | null
+          emitido_cargo?: string | null
+          emitido_nombre?: string | null
+          emitido_por?: string | null
+          en_suplencia?: boolean
+          estado?: string
+          fecha?: string
+          ia_origen?: Json | null
+          id?: string
+          instrumentos?: Json
+          justificaciones?: Json
+          migrado_desde?: string | null
+          modificadores_version?: string[]
+          motivo_anulacion?: string | null
+          motivo_version?: string | null
+          org_id: string
+          periodo_desde: string
+          periodo_etiqueta?: string | null
+          periodo_hasta: string
+          seleccion?: Json | null
+          sistema: string
+          suplencia_id?: string | null
+          texto?: Json
+          updated_at?: string
+          updated_by?: string | null
+          updated_by_email?: string | null
+          usuario_email?: string | null
+          usuario_id?: string | null
+          version?: number
+        }
+        Update: {
+          anulacion_en_suplencia?: boolean
+          anulacion_suplencia_id?: string | null
+          anulado_en?: string | null
+          anulado_por?: string | null
+          autoemitido?: boolean
+          codigo?: string
+          created_at?: string
+          created_by?: string | null
+          created_by_email?: string | null
+          dictamen_global?: string | null
+          elaborado_version_por?: string | null
+          emitido_at?: string | null
+          emitido_by?: string | null
+          emitido_by_email?: string | null
+          emitido_cargo?: string | null
+          emitido_nombre?: string | null
+          emitido_por?: string | null
+          en_suplencia?: boolean
+          estado?: string
+          fecha?: string
+          ia_origen?: Json | null
+          id?: string
+          instrumentos?: Json
+          justificaciones?: Json
+          migrado_desde?: string | null
+          modificadores_version?: string[]
+          motivo_anulacion?: string | null
+          motivo_version?: string | null
+          org_id?: string
+          periodo_desde?: string
+          periodo_etiqueta?: string | null
+          periodo_hasta?: string
+          seleccion?: Json | null
+          sistema?: string
+          suplencia_id?: string | null
+          texto?: Json
+          updated_at?: string
+          updated_by?: string | null
+          updated_by_email?: string | null
+          usuario_email?: string | null
+          usuario_id?: string | null
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tend_at_anulacion_suplencia_fk"
+            columns: ["org_id", "anulacion_suplencia_id"]
+            isOneToOne: false
+            referencedRelation: "org_suplencias"
+            referencedColumns: ["org_id", "id"]
+          },
+          {
+            foreignKeyName: "tend_at_suplencia_fk"
+            columns: ["org_id", "suplencia_id"]
+            isOneToOne: false
+            referencedRelation: "org_suplencias"
+            referencedColumns: ["org_id", "id"]
+          },
+          {
+            foreignKeyName: "tend_registros_at_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tend_registros_at_historial: {
+        Row: {
+          codigo: string
+          created_at: string
+          created_by: string | null
+          datos: Json
+          fecha: string
+          id: string
+          migrado_desde: string | null
+          operacion: string
+          org_id: string
+          registro_id: string
+          updated_at: string
+          updated_by: string | null
+          usuario_email: string | null
+          usuario_id: string | null
+          version: number
+        }
+        Insert: {
+          codigo: string
+          created_at?: string
+          created_by?: string | null
+          datos: Json
+          fecha?: string
+          id?: string
+          migrado_desde?: string | null
+          operacion?: string
+          org_id: string
+          registro_id: string
+          updated_at?: string
+          updated_by?: string | null
+          usuario_email?: string | null
+          usuario_id?: string | null
+          version: number
+        }
+        Update: {
+          codigo?: string
+          created_at?: string
+          created_by?: string | null
+          datos?: Json
+          fecha?: string
+          id?: string
+          migrado_desde?: string | null
+          operacion?: string
+          org_id?: string
+          registro_id?: string
+          updated_at?: string
+          updated_by?: string | null
+          usuario_email?: string | null
+          usuario_id?: string | null
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tend_registros_at_historial_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tend_registros_at_historial_org_id_registro_id_fkey"
+            columns: ["org_id", "registro_id"]
+            isOneToOne: false
+            referencedRelation: "tend_registros_at"
+            referencedColumns: ["org_id", "id"]
+          },
+        ]
+      }
+      tend_semanas: {
+        Row: {
+          anio: string
+          created_at: string
+          created_by: string | null
+          foto_path: string | null
+          id: string
+          lecturas: Json
+          lecturas_hr: Json | null
+          mes: string
+          migrado_desde: string | null
+          objetivo_presion_id: string | null
+          observaciones: string
+          org_id: string
+          registro_id: string
+          saved_at: string
+          semana_inicio: string
+          source: string
+          unidad: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          anio: string
+          created_at?: string
+          created_by?: string | null
+          foto_path?: string | null
+          id?: string
+          lecturas?: Json
+          lecturas_hr?: Json | null
+          mes: string
+          migrado_desde?: string | null
+          objetivo_presion_id?: string | null
+          observaciones?: string
+          org_id: string
+          registro_id: string
+          saved_at?: string
+          semana_inicio: string
+          source?: string
+          unidad: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          anio?: string
+          created_at?: string
+          created_by?: string | null
+          foto_path?: string | null
+          id?: string
+          lecturas?: Json
+          lecturas_hr?: Json | null
+          mes?: string
+          migrado_desde?: string | null
+          objetivo_presion_id?: string | null
+          observaciones?: string
+          org_id?: string
+          registro_id?: string
+          saved_at?: string
+          semana_inicio?: string
+          source?: string
+          unidad?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tend_semanas_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tend_semanas_org_id_objetivo_presion_id_fkey"
+            columns: ["org_id", "objetivo_presion_id"]
+            isOneToOne: false
+            referencedRelation: "tend_objetivos_presion"
+            referencedColumns: ["org_id", "id"]
+          },
+          {
+            foreignKeyName: "tend_semanas_org_id_registro_id_fkey"
+            columns: ["org_id", "registro_id"]
+            isOneToOne: false
+            referencedRelation: "tend_registros"
+            referencedColumns: ["org_id", "id"]
+          },
+        ]
+      }
+      tend_sistemas_hvac: {
+        Row: {
+          activo: boolean
+          codigo: string
+          created_at: string
+          created_by: string | null
+          descripcion: string
+          etapas: string[]
+          id: string
+          migrado_desde: string | null
+          nombre_uma: string
+          org_id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          activo?: boolean
+          codigo: string
+          created_at?: string
+          created_by?: string | null
+          descripcion?: string
+          etapas?: string[]
+          id?: string
+          migrado_desde?: string | null
+          nombre_uma: string
+          org_id: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          activo?: boolean
+          codigo?: string
+          created_at?: string
+          created_by?: string | null
+          descripcion?: string
+          etapas?: string[]
+          id?: string
+          migrado_desde?: string | null
+          nombre_uma?: string
+          org_id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tend_sistemas_hvac_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ticket_mensajes: {
         Row: {
           autor_email: string
@@ -4764,6 +5766,11 @@ export type Database = {
       normalizar_txt: { Args: { _t: string }; Returns: string }
       org_documento_retencion: { Args: { p_id: string }; Returns: string }
       org_has_curso_access: { Args: { _org_id: string }; Returns: boolean }
+      org_suplencias_acceso: {
+        Args: { _escritura?: boolean; _org: string }
+        Returns: boolean
+      }
+      org_suplencias_auditar_vencimientos: { Args: never; Returns: number }
       org_tiene_modulo: {
         Args: { _modulo: string; _org: string }
         Returns: boolean
@@ -4830,6 +5837,14 @@ export type Database = {
         Returns: undefined
       }
       set_org_activa: { Args: { _org: string }; Returns: undefined }
+      tend_acceso: {
+        Args: { _escritura?: boolean; _org: string; _roles?: string[] }
+        Returns: boolean
+      }
+      tend_suplencia: {
+        Args: { _facultad: string; _org: string }
+        Returns: string
+      }
       todos_firmaron: { Args: { p_folio_id: string }; Returns: boolean }
       verificar_diploma: {
         Args: { p_hash: string }
