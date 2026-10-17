@@ -38,7 +38,7 @@ export default function Inicio() {
   const acceso = new Set((catalogo ?? []).filter((m) => m.tiene_acceso).map((m) => m.clave));
   const registrados = ordenarModulos(ordenDb);
   const contratados = registrados.filter((m) => acceso.has(m.clave));
-  const disponibles = (catalogo ?? []).filter((m) => !m.tiene_acceso);
+  const disponibles = (catalogo ?? []).filter((m) => !m.tiene_acceso && m.estado !== "beta");
   const nombre = profile?.nombre?.trim() ?? "";
 
   return (

@@ -66,7 +66,7 @@ export function useNavigationItems(): {
     [catalogo],
   );
   const accesos = useMemo(
-    () => Object.fromEntries((catalogo ?? []).map((m) => [m.clave, m.estado === "activo" && m.tiene_acceso])),
+    () => Object.fromEntries((catalogo ?? []).map((m) => [m.clave, ["activo", "beta"].includes(m.estado) && m.tiene_acceso])),
     [catalogo],
   );
 
