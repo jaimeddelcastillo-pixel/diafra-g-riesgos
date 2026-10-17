@@ -1,6 +1,6 @@
 # Roadmap
 
-- [ ] T2 Tendencias: detenido en verificación previa; falta analisis_tendencias beta (existe tendencias/proximamente), y Cerebro usa get_user_org_id + mi_org_tiene_modulo con bypass super_admin. No crear ni activar hasta aclarar discrepancias; diseño atdiafra pendiente de confirmar.
+- [ ] T2 Tendencias: detenido en verificación previa; falta analisis_tendencias beta (existe tendencias/proximamente), y Cerebro usa get_user_org_id + mi_org_tiene_modulo con bypass super_admin. Diseño atdiafra accesible (HTTP 200, 26 migraciones); roles requeridos existen, sin tablas de suplencias ni tend_. Espera autorización de Jaime para resolver discrepancias; no crear ni activar.
 
 - [x] Soporte: actualizar adopta contexto del servidor sin cierre por marca local ausente; 10 pruebas pasan. Navegador QA adminqa: Cerebro conserva soporte tras recargar sin marca local y Terminar soporte vuelve al Panel.
 
