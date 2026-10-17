@@ -1,6 +1,7 @@
 # Roadmap
 
-- [ ] T2 Tendencias: implementar diseño actual atdiafra sin pares_cuartos, RLS/roles e integridad AT, suplencias compartidas, archivos privados y auditoría; tendencias beta manual solo adminqa, sin precios/planes; t2_down.sql y siete pruebas SQL. Diferencias autorizadas por Jaime; guardar estado del aviso al RS, envío/reintento y pantalla quedan para T3.
+- [x] T2 Tendencias: 0050 aplicada, 11 tend_ + org_suplencias, RLS/roles, historial inmutable, bucket privado y auditoría horaria de vencimientos; beta manual solo adminqa sin precios/planes. Siete pruebas SQL y avisos admin/RS pasan con ROLLBACK solo QA; t2_down.sql no destructivo y t2_reporte.md.
+- [ ] T3 (espera alcance/autorización): pantalla de Suplencias, correo al RS al registrar y reintentos pendientes con infraestructura existente; T2 solo guarda estado del aviso.
 
 - [x] Soporte: actualizar adopta contexto del servidor sin cierre por marca local ausente; 10 pruebas pasan. Navegador QA adminqa: Cerebro conserva soporte tras recargar sin marca local y Terminar soporte vuelve al Panel.
 
