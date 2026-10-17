@@ -1,6 +1,6 @@
 # Roadmap
 
-- [ ] T3a autorizado: motor/pruebas intactos; adaptar solo identidad parametrizada/configuración/guardado; regresión Word contra atdiafra. Registro, tablero, catálogos, captura/fotos y configuración. Corregir T2 «No clasificada» y t2_down.sql. Verificar QA y reportar archivos/diferencias. Conservar tracea.site; sin IA/emisión/suplencias hasta T3b.
+- [x] T3a: motor original 36/36 y total 42/42 con regresión Word; registro, tablero, catálogos, captura/fotos y configuración. T2 «No clasificada» autorizado y t2_down.sql actualizado. Navegador adminqa: alta HVAC/área/instrumento, semana y foto persistentes, logo/firmante persistentes, pendientes; operador sin edición; QA Starter sin acceso. Conservar tracea.site; sin IA/emisión/suplencias hasta T3b.
 
 - [x] T2 Tendencias: 0050 aplicada, 11 tend_ + org_suplencias, RLS/roles, historial inmutable, bucket privado y auditoría horaria de vencimientos; beta manual solo adminqa sin precios/planes. Siete pruebas SQL y avisos admin/RS pasan con ROLLBACK solo QA; t2_down.sql no destructivo y t2_reporte.md.
 - [ ] T3 (espera alcance/autorización): pantalla de Suplencias, correo al RS al registrar y reintentos pendientes con infraestructura existente; T2 solo guarda estado del aviso.
