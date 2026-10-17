@@ -113,5 +113,5 @@ export const FORMATO_DEFAULT: FormatoForVal16 = {
 };
 
 export function sustituir(t: string, v: Record<string, string>): string {
-  return t.replace(/\{(sistema|periodo|areas|clases_iso)\}/g, (_, k) => v[k] ?? "");
+  return t.replace(/\{(empresa|sistema|periodo|areas|clases_iso)\}/g, (_, k) => v[k] ?? "");
 }

@@ -26,7 +26,7 @@ export async function listarRegistros():Promise<Registro[]> {
   const org=await empresaActiva();
   const {data,error}=await supabase.from('tend_registros').select('*').eq('org_id',org).order('created_at');
   if(error) throw error;
-  const semanas: Semana[] & {registro_id?:string}[]=[];
+  const semanas: (Semana & {registro_id:string})[]=[];
   for(let offset=0;;offset+=1000){
     const {data:rows,error:e}=await supabase.from('tend_semanas').select('*').eq('org_id',org).order('semana_inicio').order('id').range(offset,offset+999);
     if(e) throw e;
@@ -67,7 +67,7 @@ export async function cargarConfiguracion(nombre:string,logo:string|null):Promis
     supabase.from('tend_formato').select('*').eq('org_id',org).order('version',{ascending:false}).limit(1).maybeSingle(),
     supabase.from('tend_config').select('*').eq('org_id',org).maybeSingle()]);
   if(error || e) throw error ?? e;
-  const textos={...FORMATO_DEFAULT.textos,...(f?.textos as Record<string,string> ?? {})};
+  const textos: FormatoForVal16['textos'] & Record<string,string>={...FORMATO_DEFAULT.textos,...(f?.textos as Record<string,string> ?? {})};
   if(Array.isArray(f?.tabla_iso) && f.tabla_iso.length) textos.tablaClases=(f.tabla_iso as unknown as string[][]).map(row=>row.join(' | ')).join('\n');
   const empresa=textos.empresa || nombre;
   return {autoemision:c?.permitir_autoemision ?? false,formato:{...FORMATO_DEFAULT,version:f?.version ?? 0,version_formato:f?.version_formato ?? FORMATO_DEFAULT.version_formato,logo:f?.logo || logo,firmantes:(f?.firmantes ?? []) as unknown as Firmante[],textos,identidad:{nombre:empresa,logoDescripcion:textos.logoDescripcion || `Logo ${empresa}`,confidencialidad:textos.confidencialidad || `Documento confidencial propiedad de ${empresa}. Queda prohibido su uso, divulgación y/o reproducción total o parcial sin previa autorización.`}}};
