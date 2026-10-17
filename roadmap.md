@@ -1,5 +1,7 @@
 # Roadmap
 
+- [ ] T2 Tendencias: detenido en verificación previa; falta analisis_tendencias beta (existe tendencias/proximamente), y Cerebro usa get_user_org_id + mi_org_tiene_modulo con bypass super_admin. Diseño atdiafra accesible (HTTP 200, 26 migraciones): pares_cuartos fue sustituida por objetivos_presion y eliminada; incluye perfiles/user_roles/audit_log y tablas de correo. Roles requeridos existen, sin tablas de suplencias ni tend_. Espera autorización de Jaime para resolver discrepancias; no crear ni activar.
+
 - [x] Soporte: actualizar adopta contexto del servidor sin cierre por marca local ausente; 10 pruebas pasan. Navegador QA adminqa: Cerebro conserva soporte tras recargar sin marca local y Terminar soporte vuelve al Panel.
 
 - [x] C4c.1 Configuración adminqa confirmada; búsqueda OR/códigos/fallback acotado, texto con etapa y diagnóstico persistido, chips en línea; 13 pruebas pasan y ambas selecciones SQL traen K-0008. Detalles y límites en c4c1_reporte.md.
