@@ -6,7 +6,7 @@ import {
   nombreVariable,
   ubicacionTxt,
   type AlcanceTexto,
-} from "@/lib/texto-forval16";
+} from "../texto-forval16";
 
 describe("listaEs", () => {
   it("0 elementos → cadena vacía", () => {

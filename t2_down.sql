@@ -1,5 +1,7 @@
 -- T2: reversión no destructiva. NO ejecutada.
 -- Conserva datos, originales, historial y audit_trail. No usar DROP/CASCADE.
+-- T3a corrigió tend_areas_iso_check para admitir el valor original «No clasificada».
+-- Esta reversión conserva esa ampliación: estrecharla invalidaría registros existentes.
 -- Aplicar sección A por herramienta de migraciones; sección B por herramienta de datos.
 
 -- A: deshabilitar todos los accesos T2 sin eliminar registros.
