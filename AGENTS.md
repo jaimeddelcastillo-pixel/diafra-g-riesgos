@@ -1,5 +1,6 @@
 Base principles (always):
 - Company and role come only from contexto_org_actual(), get_user_org_id() and has_role (role in the active company); never trust a client-sent org_id.
+- Support restoration adopts contexto_org_actual on reload; browser storage is synchronization only and never closes or authorizes support; why: persistence without client-derived access.
 - Nothing is deleted: users are deactivated, records retired/obsoleted/voided; audit_trail is insert-only.
 - AI proposes; it never validates, approves or signs.
 - Tests run only in es_prueba companies, never with DIAFRA data.
