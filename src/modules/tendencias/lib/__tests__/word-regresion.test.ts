@@ -14,8 +14,8 @@ const normalize=(xml:string)=>xml.replace(/\b(?:r:id|r:embed)="[^"]+"/g,'r:id="R
 describe('Regresión Word atdiafra con identidad en tend_formato',()=>{
  it('mantiene mismas secciones, tablas, textos y resultados con los mismos datos',async()=>{
   vi.stubGlobal('Blob', (await import('node:buffer')).Blob);
-  vi.spyOn(URL,'createObjectURL').mockImplementation(()=>'blob:qa');
-  vi.spyOn(URL,'revokeObjectURL').mockImplementation(()=>{});
+  Object.defineProperty(URL,'createObjectURL',{configurable:true,value:()=> 'blob:qa'});
+  Object.defineProperty(URL,'revokeObjectURL',{configurable:true,value:()=>{}});
   vi.stubGlobal('Image',TestImage);
   const {bloques,texto}=datos();expect(bloques.length).toBeGreaterThan(0);expect(bloques[0].n).toBeGreaterThan(0);
   const args:WordArgs={...{formato:{...originalFormato,logo}},codigoAT:'AT-2025-001',version:1,estado:'emitido',emitidoAt:'2025-04-01',sistema:'QA',tituloSistema:'Sistema QA',periodo:'enero–marzo 2025',desde:'2025-01-01',hasta:'2025-03-31',bloques,texto,justificaciones:{},cambios:[],sustituye:'N/A',areas:['QA-01 Área QA'],png:async()=>[{nombre:'gráfica QA',blob:await(await fetch(logo)).blob()}]};
