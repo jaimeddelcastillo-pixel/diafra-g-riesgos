@@ -60,6 +60,7 @@ export interface Bloque {
 type BaseBloque = Omit<Bloque, "n" | "media" | "s" | "min" | "max" | "LAS" | "LAI" | "LAcS" | "LAcI" | "Cp" | "Cpk" | "Pp" | "Ppk" | "normalidad" | "nSenales" | "dict" | "tablaLimites" | "filas" | "encabezado" | "graficas" | "puntos">;
 
 export interface PaqueteArgs {
+  empresa?: string;
   codigoAT: string;
   sistema: string;
   registros: Registro[];
@@ -508,7 +509,7 @@ export async function exportarPaqueteForVal16(a: PaqueteArgs): Promise<{ archivo
   // Portada
   {
     const b = new HojaBuilder();
-    b.set(0, 0, "DIAFRA, S.A. de C.V.", ST.titulo);
+    b.set(0, 0, a.empresa ?? "", ST.titulo);
     b.set(1, 0, "FOR-VAL-16-02 · Análisis de tendencias (PNO-VAL-16)", ST.bold);
     const datos: [string, string][] = [["Código de reporte", a.codigoAT], ["Sistema", a.sistema], ["Periodo", rango], ["Fecha de emisión", format(new Date(), "dd/MM/yyyy")]];
     datos.forEach(([k, v], i) => { b.set(3 + i, 0, k, ST.head); b.set(3 + i, 1, v, ST.txt); });
