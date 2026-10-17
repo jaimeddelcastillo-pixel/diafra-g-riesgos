@@ -91,14 +91,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let { data: ctxData } = await supabase.rpc("contexto_org_actual");
     let ctx: any = Array.isArray(ctxData) ? ctxData[0] : ctxData;
 
-    // Soporte compartido entre pestañas (localStorage); solo se cierra si ninguna lo inició:
-    // si el servidor tiene uno abierto que esta pestaña no inició, se cierra.
-    if (ctx?.es_super_admin && ctx?.soporte_log_id &&
-        localStorage.getItem(SOPORTE_KEY) !== ctx.soporte_log_id) {
-      await supabase.rpc("cerrar_mis_soportes", { _tipo: "inicio_sesion" });
-      const r = await supabase.rpc("contexto_org_actual");
-      ctx = Array.isArray(r.data) ? r.data[0] : r.data;
-    }
+    // El servidor decide si el soporte sigue vigente (incluido el límite de 8 h).
+    // La marca local solo sincroniza pestañas: su ausencia no cierra un soporte.
+    try {
+      if (ctx?.es_super_admin && ctx?.soporte_log_id) localStorage.setItem(SOPORTE_KEY, ctx.soporte_log_id);
+      else localStorage.removeItem(SOPORTE_KEY);
+    } catch { /* El contexto del servidor funciona incluso sin almacenamiento local. */ }
 
     const esSA = !!ctx?.es_super_admin;
     const rol = (ctx?.rol_en_org ?? null) as AppRole | null;

@@ -1,5 +1,7 @@
 # Roadmap
 
+- [ ] Soporte: conservar empresa al actualizar, sin cierre automático por almacenamiento local; probar restauración y salida explícita.
+
 - [x] C4c.1 Configuración adminqa confirmada; búsqueda OR/códigos/fallback acotado, texto con etapa y diagnóstico persistido, chips en línea; 13 pruebas pasan y ambas selecciones SQL traen K-0008. Detalles y límites en c4c1_reporte.md.
 - [ ] C4c.1 Verificación del chat y llamada completa a contexto_cerebro en adminqa: navegador a cargo de Jaime; herramienta SQL sin EXECUTE y sesión disponible fuera de adminqa (no cambiar empresa).
 
