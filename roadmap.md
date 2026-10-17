@@ -1,5 +1,7 @@
 # Roadmap
 
+- [ ] T3a bloqueado por decisión de Jaime: Word/formato original contiene DIAFRA y firmantes fijos (requiere adaptar presentación además de imports/tablas); clientes originales no incluyen org_id y fotos usan año/uuid (requiere adaptadores de persistencia/rutas); T2 omite ISO «No clasificada» existente en atdiafra. Tras autorización: copiar motor/pruebas sin modificar cálculos, registro, tablero, catálogos, captura/fotos y configuración. Conservar tracea.site; sin IA/emisión/suplencias hasta T3b.
+
 - [x] T2 Tendencias: 0050 aplicada, 11 tend_ + org_suplencias, RLS/roles, historial inmutable, bucket privado y auditoría horaria de vencimientos; beta manual solo adminqa sin precios/planes. Siete pruebas SQL y avisos admin/RS pasan con ROLLBACK solo QA; t2_down.sql no destructivo y t2_reporte.md.
 - [ ] T3 (espera alcance/autorización): pantalla de Suplencias, correo al RS al registrar y reintentos pendientes con infraestructura existente; T2 solo guarda estado del aviso.
 
