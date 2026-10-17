@@ -1,4 +1,3 @@
-// @vitest-environment node
 import { describe,it,expect,vi } from 'vitest';import JSZip from 'jszip';
 import { generarWordForVal16 as original } from './word-atdiafra.reference';import { FORMATO_DEFAULT as originalFormato } from './formato-atdiafra.reference';
 import { generarWordForVal16,type WordArgs } from '../word-forval16';import { FORMATO_DEFAULT } from '../formato-forval16';import { construirBloques } from '../export-forval16';import { generarTexto } from '../texto-forval16';import type { Registro } from '../semanas';import type { Instrumento } from '../catalogos';import fixture from './fixtures/ins-cmb-03-t-q1-2025.json';
@@ -14,6 +13,9 @@ const datos=()=>{
 const normalize=(xml:string)=>xml.replace(/\b(?:r:id|r:embed)="[^"]+"/g,'r:id="REL"').replace(/(<wp:docPr[^>]*\bid=")[^"]+/g,'$1ID');
 describe('Regresión Word atdiafra con identidad en tend_formato',()=>{
  it('mantiene mismas secciones, tablas, textos y resultados con los mismos datos',async()=>{
+  vi.stubGlobal('Blob', (await import('node:buffer')).Blob);
+  vi.spyOn(URL,'createObjectURL').mockImplementation(()=>'blob:qa');
+  vi.spyOn(URL,'revokeObjectURL').mockImplementation(()=>{});
   vi.stubGlobal('Image',TestImage);
   const {bloques,texto}=datos();expect(bloques.length).toBeGreaterThan(0);expect(bloques[0].n).toBeGreaterThan(0);
   const args:WordArgs={...{formato:{...originalFormato,logo}},codigoAT:'AT-2025-001',version:1,estado:'emitido',emitidoAt:'2025-04-01',sistema:'QA',tituloSistema:'Sistema QA',periodo:'enero–marzo 2025',desde:'2025-01-01',hasta:'2025-03-31',bloques,texto,justificaciones:{},cambios:[],sustituye:'N/A',areas:['QA-01 Área QA'],png:async()=>[{nombre:'gráfica QA',blob:await(await fetch(logo)).blob()}]};
