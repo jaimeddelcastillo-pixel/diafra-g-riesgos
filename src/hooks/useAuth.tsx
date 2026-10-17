@@ -79,7 +79,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Las demás pestañas adoptan el soporte vigente para no cerrarlo al recargar.
   const broadcast = (tipo: string) => {
     try {
-      channelRef.current?.postMessage({ tipo, soporte: sessionStorage.getItem(SOPORTE_KEY) });
+      channelRef.current?.postMessage({ tipo, soporte: localStorage.getItem(SOPORTE_KEY) });
     } catch { /* noop */ }
   };
 
@@ -91,10 +91,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let { data: ctxData } = await supabase.rpc("contexto_org_actual");
     let ctx: any = Array.isArray(ctxData) ? ctxData[0] : ctxData;
 
-    // El soporte debe iniciarse a propósito en cada sesión de pestaña:
+    // Soporte compartido entre pestañas (localStorage); solo se cierra si ninguna lo inició:
     // si el servidor tiene uno abierto que esta pestaña no inició, se cierra.
     if (ctx?.es_super_admin && ctx?.soporte_log_id &&
-        sessionStorage.getItem(SOPORTE_KEY) !== ctx.soporte_log_id) {
+        localStorage.getItem(SOPORTE_KEY) !== ctx.soporte_log_id) {
       await supabase.rpc("cerrar_mis_soportes", { _tipo: "inicio_sesion" });
       const r = await supabase.rpc("contexto_org_actual");
       ctx = Array.isArray(r.data) ? r.data[0] : r.data;
@@ -135,9 +135,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       ch.onmessage = (ev) => {
         const soporte = ev?.data?.soporte;
         if (ev?.data?.tipo !== "signout" && typeof soporte === "string" && soporte) {
-          sessionStorage.setItem(SOPORTE_KEY, soporte);
+          localStorage.setItem(SOPORTE_KEY, soporte);
         } else {
-          sessionStorage.removeItem(SOPORTE_KEY);
+          localStorage.removeItem(SOPORTE_KEY);
         }
         window.location.reload();
       };
@@ -208,7 +208,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.error("Error registrando impersonación:", error);
       throw error;
     }
-    sessionStorage.setItem(SOPORTE_KEY, data.id);
+    localStorage.setItem(SOPORTE_KEY, data.id);
     await recargar();
 
     if (ticketId) {
@@ -243,7 +243,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const stopImpersonation = async () => {
     await supabase.rpc("cerrar_mis_soportes", { _tipo: "usuario" });
-    sessionStorage.removeItem(SOPORTE_KEY);
+    localStorage.removeItem(SOPORTE_KEY);
     await recargar();
   };
 
@@ -251,7 +251,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (isSuperAdmin()) {
       try { await supabase.rpc("cerrar_mis_soportes", { _tipo: "cierre_sesion" }); } catch { /* noop */ }
     }
-    sessionStorage.removeItem(SOPORTE_KEY);
+    localStorage.removeItem(SOPORTE_KEY);
     localStorage.removeItem("tracea-actuando-como");
     queryClient.clear();
     limpiarEstado();
