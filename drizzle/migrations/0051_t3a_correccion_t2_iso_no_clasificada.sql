@@ -1,0 +1,2 @@
+ALTER TABLE public.tend_areas DROP CONSTRAINT tend_areas_iso_check;
+ALTER TABLE public.tend_areas ADD CONSTRAINT tend_areas_iso_check CHECK (iso IN ('ISO-5','ISO-6','ISO-7','ISO-8','ISO-9','No clasificada'));
