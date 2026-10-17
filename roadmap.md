@@ -1,5 +1,7 @@
 # Roadmap
 
+- [ ] T3a: copiar motor/pruebas de atdiafra sin modificar cálculos; registro de módulo, tablero, catálogos admin, captura semanal/fotos y configuración sobre T2. Conservar enlace tracea.site; sin IA/emisión/suplencias hasta T3b. Reportar incompatibilidades antes de corregirlas.
+
 - [x] T2 Tendencias: 0050 aplicada, 11 tend_ + org_suplencias, RLS/roles, historial inmutable, bucket privado y auditoría horaria de vencimientos; beta manual solo adminqa sin precios/planes. Siete pruebas SQL y avisos admin/RS pasan con ROLLBACK solo QA; t2_down.sql no destructivo y t2_reporte.md.
 - [ ] T3 (espera alcance/autorización): pantalla de Suplencias, correo al RS al registrar y reintentos pendientes con infraestructura existente; T2 solo guarda estado del aviso.
 
