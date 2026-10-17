@@ -106,6 +106,7 @@ export function WizardAsistente({ folioId, agente, contextoSistema, paso, onAppl
         folio_id: folioId,
         agente,
         conversacion_id: conversacionId,
+        contexto_busqueda: contextoSistema,
       };
       const url = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/chat-asistente`;
       const res = await fetch(url, {
@@ -144,7 +145,7 @@ export function WizardAsistente({ folioId, agente, contextoSistema, paso, onAppl
             if (evt.type === "conversacion") {
               if (evt.id && !conversacionId) setConversacionId(evt.id);
               setIaPrueba(!!evt.ia_prueba_borradores);
-              traza = { skills_usadas: evt.skills_usadas, modelo_ia: evt.modelo_ia, mensaje_id: evt.mensaje_id, contexto_usado: evt.contexto_usado };
+              traza = { skills_usadas: evt.skills_usadas, modelo_ia: evt.modelo_ia, mensaje_id: evt.mensaje_id, contexto_usado: evt.contexto_usado, contexto_cerebro: evt.contexto_cerebro };
               setMessages((m) => m.map((msg, i) => i === m.length - 1 ? { ...msg, ...traza } : msg));
             }
             if (evt.type === "content_block_delta" && evt.delta?.type === "text_delta") {
@@ -217,7 +218,7 @@ export function WizardAsistente({ folioId, agente, contextoSistema, paso, onAppl
                     : "bg-card border"
                 }`}
               >
-                {m.role === "assistant" && <div className="flex justify-end"><InformacionRespuestaIA skills_usadas={m.skills_usadas} modelo_ia={m.modelo_ia} /></div>}
+                {m.role === "assistant" && <div className="flex justify-end"><InformacionRespuestaIA {...m} /></div>}
                 <div className="prose prose-sm max-w-none [&_p]:my-1 [&_ul]:my-1 [&_ol]:my-1">
                   <ConocimientoMarkdown items={m.role === "assistant" ? m.contexto_usado : []}>
                     {m.content.replace(/::APLICAR[^:]+::/g, "").trim() || "…"}

@@ -212,7 +212,7 @@ export function AssistantPanel({ open, onOpenChange, folioId = null, folioCodigo
         role: r.role === "assistant" ? "assistant" : "user",
         content: r.contenido ?? "",
         toolUses: r.documentos_adjuntos?.tool_uses ?? undefined,
-        skills_usadas: r.skills_usadas, modelo_ia: r.modelo_ia, mensaje_id: r.id, contexto_usado: r.documentos_adjuntos?.contexto_detalle ?? [],
+        skills_usadas: r.skills_usadas, modelo_ia: r.modelo_ia, mensaje_id: r.id, contexto_usado: r.documentos_adjuntos?.contexto_detalle ?? [], contexto_cerebro: r.documentos_adjuntos?.contexto_cerebro,
       }));
       setMessages(msgs);
       setConversacionId(id);
@@ -293,7 +293,7 @@ export function AssistantPanel({ open, onOpenChange, folioId = null, folioCodigo
             if (evt.type === "conversacion" && evt.id) {
               if (!conversacionId) setConversacionId(evt.id);
               setIaPrueba(!!evt.ia_prueba_borradores);
-              traza = { skills_usadas: evt.skills_usadas, modelo_ia: evt.modelo_ia, mensaje_id: evt.mensaje_id, contexto_usado: evt.contexto_usado };
+              traza = { skills_usadas: evt.skills_usadas, modelo_ia: evt.modelo_ia, mensaje_id: evt.mensaje_id, contexto_usado: evt.contexto_usado, contexto_cerebro: evt.contexto_cerebro };
               setMessages((m) => m.map((msg, i) => i === m.length - 1 ? { ...msg, ...traza } : msg));
               continue;
             }
@@ -737,7 +737,7 @@ function MessageBubble({ msg, onInsertarRiesgo, folioId, insertedRiskKeys }: { m
         {isUser ? <User className="h-3.5 w-3.5 text-accent-foreground" /> : <Bot className="h-3.5 w-3.5 text-primary-foreground" />}
       </div>
       <div className={`rounded-md px-3 py-2 text-sm max-w-[85%] min-w-0 overflow-hidden ${isUser ? "bg-accent/10" : "bg-muted/50"}`}>
-        {!isUser && <div className="flex justify-end"><InformacionRespuestaIA skills_usadas={msg.skills_usadas} modelo_ia={msg.modelo_ia} /></div>}
+        {!isUser && <div className="flex justify-end"><InformacionRespuestaIA {...msg} /></div>}
         {typeof msg.content === "string" ? (
           <div className="prose prose-sm max-w-none break-words [overflow-wrap:anywhere] [&_p]:my-1 [&_ul]:my-1 [&_ol]:my-1 [&_pre]:whitespace-pre-wrap [&_pre]:break-words [&_code]:break-words [&_table]:block [&_table]:max-w-full [&_table]:overflow-x-auto">
             <ConocimientoMarkdown items={isUser ? [] : msg.contexto_usado}>{msg.content}</ConocimientoMarkdown>
