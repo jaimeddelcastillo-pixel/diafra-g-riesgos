@@ -1,6 +1,6 @@
 # Roadmap
 
-- [ ] T2 Tendencias: implementar diseño actual atdiafra sin pares_cuartos, RLS/roles e integridad AT, suplencias compartidas, archivos privados y auditoría; tendencias beta manual solo adminqa, sin precios/planes; t2_down.sql y siete pruebas SQL. Diferencias iniciales autorizadas por Jaime.
+- [ ] T2 Tendencias: implementar diseño actual atdiafra sin pares_cuartos, RLS/roles e integridad AT, suplencias compartidas, archivos privados y auditoría; tendencias beta manual solo adminqa, sin precios/planes; t2_down.sql y siete pruebas SQL. Diferencias iniciales autorizadas por Jaime. Bloqueo por decidir: aviso al RS requiere función de correo (no es posible con solo SQL); elegir excepción mínima o bloquear alta por admin hasta fase posterior.
 
 - [x] Soporte: actualizar adopta contexto del servidor sin cierre por marca local ausente; 10 pruebas pasan. Navegador QA adminqa: Cerebro conserva soporte tras recargar sin marca local y Terminar soporte vuelve al Panel.
 
