@@ -1,6 +1,7 @@
 # Roadmap
 
-- [ ] C4c.1 Confirmar adminqa, búsqueda OR/códigos/fallback acotado, texto del turno, diagnóstico super_admin y chips en línea; dos pruebas SQL QA.
+- [x] C4c.1 Configuración adminqa confirmada; búsqueda OR/códigos/fallback acotado, texto con etapa y diagnóstico persistido, chips en línea; 13 pruebas pasan y ambas selecciones SQL traen K-0008. Detalles y límites en c4c1_reporte.md.
+- [ ] C4c.1 Verificación del chat y llamada completa a contexto_cerebro en adminqa: navegador a cargo de Jaime; herramienta SQL sin EXECUTE y sesión disponible fuera de adminqa (no cambiar empresa).
 
 - [x] C4c Códigos K, contexto validado vía función, interruptor apagado por defecto, composición y trazabilidad, chips/Usado en, reversión y prueba SQL QA; 50 pruebas automáticas pasan. Pendiente de Jaime: pegar skill, activar piloto y pruebas de navegador.
 
