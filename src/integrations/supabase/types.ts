@@ -4354,6 +4354,32 @@ export type Database = {
           },
         ]
       }
+      tend_avisos_control: {
+        Row: {
+          suplencia_id: string
+          terminado_en: string | null
+          tomado_en: string
+        }
+        Insert: {
+          suplencia_id: string
+          terminado_en?: string | null
+          tomado_en?: string
+        }
+        Update: {
+          suplencia_id?: string
+          terminado_en?: string | null
+          tomado_en?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tend_avisos_control_suplencia_id_fkey"
+            columns: ["suplencia_id"]
+            isOneToOne: true
+            referencedRelation: "org_suplencias"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tend_cambios_filtro: {
         Row: {
           created_at: string
@@ -4588,6 +4614,38 @@ export type Database = {
             foreignKeyName: "tend_formato_org_id_fkey"
             columns: ["org_id"]
             isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tend_ia_control: {
+        Row: {
+          bloqueado: boolean
+          mensaje: string | null
+          org_id: string
+          status: number | null
+          updated_at: string
+        }
+        Insert: {
+          bloqueado?: boolean
+          mensaje?: string | null
+          org_id: string
+          status?: number | null
+          updated_at?: string
+        }
+        Update: {
+          bloqueado?: boolean
+          mensaje?: string | null
+          org_id?: string
+          status?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tend_ia_control_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: true
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
@@ -5963,6 +6021,11 @@ export type Database = {
         Args: { _escritura?: boolean; _org: string; _roles?: string[] }
         Returns: boolean
       }
+      tend_aviso_terminar: {
+        Args: { _enviado: boolean; _error?: string; _id: string }
+        Returns: undefined
+      }
+      tend_aviso_tomar: { Args: { _id: string }; Returns: boolean }
       tend_confirmar_extraccion: {
         Args: { _id: string; _motivo?: string; _semana: Json }
         Returns: string

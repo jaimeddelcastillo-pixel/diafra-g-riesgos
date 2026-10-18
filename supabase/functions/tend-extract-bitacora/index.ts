@@ -1,0 +1,63 @@
+import {createClient} from 'npm:@supabase/supabase-js@2';
+import {corsHeaders} from 'npm:@supabase/supabase-js@2/cors';
+import {z} from 'npm:zod@3';
+import {createOpenAI} from 'npm:@ai-sdk/openai@3';
+import {streamText,Output,NoObjectGeneratedError,APICallError} from 'npm:ai@6';
+import {resolverContextoOrg,ContextoOrgError} from '../_shared/contexto-org.ts';
+import {cargarSkill,interpolar,registrarSkillFaltante} from '../_shared/skills.ts';
+import {leerBitacoraPrivada} from '../_shared/documento-contenido.ts';
+import {contextoFechaMexico} from '../_shared/fecha-mexico.ts';
+import {createLovableAiGatewayRunIdFetch,getLovableAiGatewayRunId,getLovableAiGatewayResponseHeaders} from '../_shared/run-id.ts';
+
+const requestSchema=z.object({registro_id:z.string().uuid(),foto_path:z.string().min(1).max(500)}).strict();
+const lectura=z.object({dia:z.string(),turno:z.string(),valor:z.number().nullable(),hora:z.string().nullable(),quien:z.string().nullable(),confianza:z.number().nullable()});
+const comunes={mes:z.string(),anio:z.string(),instrumento:z.string(),area:z.string(),observaciones:z.string()};
+const dias=['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'];
+const turnos=['Mañana','Media tarde','Tarde'];
+function comprobarLecturas(rows:unknown){
+ const parsed=z.array(lectura).parse(rows);
+ if(parsed.length!==21 || new Set(parsed.map(p=>`${p.dia}/${p.turno}`)).size!==21 || parsed.some(p=>!dias.includes(p.dia) || !turnos.includes(p.turno)))throw new Error('Propuesta incompleta: requiere 21 combinaciones únicas por variable');
+ return parsed.map(p=>({...p,confianza:p.confianza===null?null:Math.max(0,Math.min(1,p.confianza))}));
+}
+Deno.serve(async req=>{
+ const respond=(data:unknown,status=200,extra?:HeadersInit)=>new Response(JSON.stringify(data),{status,headers:getLovableAiGatewayResponseHeaders(extra,{...corsHeaders,'Content-Type':'application/json'})});
+ if(req.method==='OPTIONS')return new Response('ok',{headers:corsHeaders});
+ if(req.method!=='POST')return respond({error:'Método no permitido'},405);
+ let admin:any;let id:string|undefined;let orgId:string|undefined;let skills:unknown[]=[];const modelo='openai/gpt-6-astra';
+ try{
+  const ctx=await resolverContextoOrg(req);orgId=ctx.orgId;
+  if(ctx.esSuperAdmin || !['admin','responsable_sanitario','comite_tecnico','operador'].includes(ctx.rolEnOrg ?? ''))return respond({error:'Sin permiso de extracción'},403);
+  const body=requestSchema.safeParse(await req.json());if(!body.success)return respond({error:'Solicitud inválida'},400);
+  const url=Deno.env.get('SUPABASE_URL');const anon=Deno.env.get('SUPABASE_ANON_KEY');const service=Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');const key=Deno.env.get('LOVABLE_API_KEY');
+  if(!url || !anon || !service || !key)return respond({error:'Extracción IA no configurada'},401);
+  const user=createClient(url,anon,{global:{headers:{Authorization:req.headers.get('Authorization') ?? ''}},auth:{persistSession:false}});admin=createClient(url,service);
+  const {data:acceso,error:ae}=await user.rpc('tend_acceso',{_org:ctx.orgId,_escritura:true,_roles:['operador','comite_tecnico','admin','responsable_sanitario']});if(ae || !acceso)return respond({error:'Tendencias no disponible para extracción'},403);
+  const {data:pausa,error:pauseError}=await admin.from('tend_ia_control').select('*').eq('org_id',ctx.orgId).maybeSingle();if(pauseError)throw pauseError;if(pausa?.bloqueado)return respond({error:pausa.mensaje},pausa.status ?? 403);
+  const {data:r,error:re}=await user.from('tend_registros').select('id,modulo,nombre,activo').eq('org_id',ctx.orgId).eq('id',body.data.registro_id).single();if(re || !r?.activo)return respond({error:'Registro no disponible'},404);
+  if(!['temphr','presiones','filtros'].includes(r.modulo))return respond({error:'Agua se captura manualmente'},400);
+  const media=await leerBitacoraPrivada(user,ctx.orgId,body.data.foto_path);
+  const clave=`extraccion_bitacora_${r.modulo}`;let skill;
+  try{skill=await cargarSkill(admin,clave);}catch{throw await registrarSkillFaltante(admin,ctx.orgId,clave,'tend-extract-bitacora');}
+  skills=[{id:skill.id,clave:skill.clave,version:skill.version,sha256:skill.sha256,estado:'vigente'}];
+  const {data:org,error:oe}=await admin.from('organizations').select('nombre').eq('id',ctx.orgId).single();if(oe)throw oe;
+  const {data:reserva,error:reserveError}=await user.from('tend_extracciones').insert({org_id:ctx.orgId,registro_id:r.id,modulo:r.modulo,foto_path:body.data.foto_path,solicitado_por:ctx.userId}).select('id').single();if(reserveError)throw reserveError;id=reserva.id;
+  const fechas=z.array(z.object({dia:z.string(),fecha:z.string()}));
+  const schema=r.modulo==='temphr'?z.object({...comunes,fechas_columnas:fechas,lecturas_t:z.array(lectura),lecturas_hr:z.array(lectura)}):r.modulo==='presiones'?z.object({...comunes,unidad:z.string(),fechas_columnas:fechas,lecturas:z.array(lectura)}):z.object({...comunes,unidad:z.string(),lecturas:z.array(lectura)});
+  const run=createLovableAiGatewayRunIdFetch(getLovableAiGatewayRunId(req));
+  const provider=createOpenAI({baseURL:'https://ai.gateway.lovable.dev/v1',apiKey:key,headers:{'Lovable-API-Key':key,'X-Lovable-AIG-SDK':'vercel-ai-sdk'},fetch:run.fetch});
+  const result=streamText({model:provider.responses(modelo),system:`${interpolar(skill.texto,{empresa:org.nombre})}\n${contextoFechaMexico()}`,messages:[{role:'user',content:[{type:'image',image:new URL(`data:${media.mime};base64,${media.base64}`)}]}],output:Output.object({schema}),maxRetries:0,providerOptions:{openai:{forceReasoning:true,reasoningEffort:'low',reasoningSummary:'auto',store:false,include:['reasoning.encrypted_content']}}});
+  let propuesta:any;
+  try{propuesta=await result.output;}catch(e){if(!NoObjectGeneratedError.isInstance(e))throw e;try{propuesta=schema.parse(JSON.parse(e.text));}catch{throw new Error('La IA no produjo una propuesta válida; la foto permanece para captura manual');}}
+  if(!propuesta)throw new Error('La IA no produjo una propuesta; solicitud terminada');
+  if(r.modulo==='temphr'){propuesta.lecturas_t=comprobarLecturas(propuesta.lecturas_t);propuesta.lecturas_hr=comprobarLecturas(propuesta.lecturas_hr);}else propuesta.lecturas=comprobarLecturas(propuesta.lecturas);
+  const usage=await result.totalUsage;
+  const {error:saveError}=await admin.rpc('tend_extraccion_resultado',{_id:id,_propuesta:propuesta,_skills:skills,_modelo:modelo,_input:usage.inputTokens ?? 0,_output:usage.outputTokens ?? 0});if(saveError)throw saveError;
+  return respond({id,propuesta,skills_usadas:skills,modelo_ia:modelo},200,run.getRunId()?{'X-Lovable-AIG-Run-ID':run.getRunId() ?? ''}:undefined);
+ }catch(e){
+  let status=e instanceof ContextoOrgError?e.status:500;let message=e instanceof Error?e.message:'No se pudo extraer la bitácora';
+  if(APICallError.isInstance(e)){status=e.statusCode ?? 500;try{const upstream=JSON.parse(e.responseBody ?? '{}');message=upstream.message ?? upstream.error?.message ?? message;}catch{/* preserve safe SDK error */}}
+  if(admin && orgId && [402,403].includes(status)){const {error}=await admin.from('tend_ia_control').upsert({org_id:orgId,bloqueado:true,status,mensaje:message,updated_at:new Date().toISOString()});if(error)console.error('No se pudo persistir pausa IA',error.code);}
+  if(admin && id){const {error}=await admin.rpc('tend_extraccion_resultado',{_id:id,_propuesta:null,_skills:skills,_modelo:modelo,_error:message});if(error)console.error('No se pudo registrar error de extracción',error.code);}
+  return respond({error:message,id},status);
+ }
+});
