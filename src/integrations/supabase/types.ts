@@ -3289,6 +3289,7 @@ export type Database = {
           ambito: string
           clave: string
           descripcion: string | null
+          modelo_ia: string | null
           modulo: string | null
           nombre: string
           norma: string | null
@@ -3298,6 +3299,7 @@ export type Database = {
           ambito: string
           clave: string
           descripcion?: string | null
+          modelo_ia?: string | null
           modulo?: string | null
           nombre: string
           norma?: string | null
@@ -3307,6 +3309,7 @@ export type Database = {
           ambito?: string
           clave?: string
           descripcion?: string | null
+          modelo_ia?: string | null
           modulo?: string | null
           nombre?: string
           norma?: string | null
@@ -5786,6 +5789,10 @@ export type Database = {
         Returns: Json
       }
       codigo_tokens: { Args: { _t: string }; Returns: string }
+      configurar_modelo_skill: {
+        Args: { _clave: string; _modelo: string; _motivo: string }
+        Returns: undefined
+      }
       confirmar_catalogo_documentos: { Args: never; Returns: string }
       conocimiento_usado_en: {
         Args: { _id: string }
@@ -6066,6 +6073,10 @@ export type Database = {
       tend_corregir_fecha_semana: {
         Args: { _id: string; _inicio: string; _motivo?: string }
         Returns: undefined
+      }
+      tend_exportar_crudo: {
+        Args: { _desde: string; _hasta: string; _registro: string }
+        Returns: Json
       }
       tend_extraccion_resultado: {
         Args: {
