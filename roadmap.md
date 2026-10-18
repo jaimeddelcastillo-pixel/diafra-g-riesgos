@@ -41,3 +41,6 @@
 - [ ] Exportar en servidor (cuando exista): validar `exportar` desde plan_limites
 - [ ] Prueba de recorte a 20 páginas en QA Brain operqa (bloqueada: operqa solo tiene un operador y ya usó sus 3 extracciones)
 - [ ] Fase posterior: retirar la restricción vieja de 12 valores de brain_documents.tipo
+
+### Tendencias — reporte consolidado y paridad de Cumplimiento
+Implementados reporte independiente, vistas por área/instrumento/avance, consolidación no destructiva, exportadores normativos de seis hojas y PDF tabular, KPIs/cobertura/filtros/agrupación de Cumplimiento; 110 pruebas pasan (16 archivos). Pendientes QA visual autenticado, descargas reales y gráficas PDF opcionales; sin cambios a motores, BD ni edge functions. Evidencia y lista de archivos en t3b_matriz_equivalencia.md.
