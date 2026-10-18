@@ -5,6 +5,7 @@ Base principles (always):
 - AI proposes; it never validates, approves or signs.
 - Tests run only in es_prueba companies, never with DIAFRA data.
 - organizations whitelist: admin/RS change only allowed fields; commercial fields only support or the system.
+- Never add, upgrade or bump packages/dependencies, nor apply security or version updates, without the user's explicit authorization; report a needed update in one line (package, current → new version, reason) and wait; why: preserve the verified environment and avoid unapproved regressions.
 
 Technical rules — one line each; full text and "why" in docs/reglas-detalle.md (read it before touching the area):
 - R1 Document types classify only via SQL clasificar_tipo_documento.
