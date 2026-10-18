@@ -1,0 +1,19 @@
+import { describe,it,expect } from 'vitest';
+import { accionDia,duplicadosLote,procesarLote } from '../captura-controles';
+import { semanaVacia } from '../semanas';
+import { detectarLunesFoto,mesesEncabezado } from '../fotos-bitacora';
+import { alertaBaseline } from '../objetivos-presion';
+const nueva=()=>semanaVacia({semana_inicio:'2026-10-12',mes:'octubre',anio:'2026',unidad:'°C',esTHR:true});
+describe('T3c-1 controles sin cambiar motor',()=>{
+ it('N/A del día completo afecta tres turnos y ambas variables',()=>{const s=nueva();s.lecturas[0].valor=22;const next=accionDia(s,'Lunes','na');expect(next.lecturas.filter(p=>p.dia==='Lunes').map(p=>[p.valor,p._na])).toEqual([[null,true],[null,true],[null,true]]);expect(next.lecturas_hr?.filter(p=>p.dia==='Lunes').every(p=>p._na)).toBe(true);expect(next.lecturas[3]._na).toBe(false);});
+ it('mover a derecha conserva hora/antefirma destino y vacía solo valores origen',()=>{const s=nueva();s.lecturas[0]={...s.lecturas[0],valor:22,hora:'08:00',quien:'A'};s.lecturas[3]={...s.lecturas[3],valor:20,hora:'09:00',quien:'B'};const next=accionDia(s,'Lunes',1);expect(next.lecturas[0].valor).toBeNull();expect(next.lecturas[3]).toMatchObject({dia:'Martes',valor:22,hora:'09:00',quien:'B',_edited:true});expect(s.lecturas[0].valor).toBe(22);});
+ it('mover a izquierda actualiza también HR sin recorrer los demás días',()=>{const s=nueva();if(s.lecturas_hr)s.lecturas_hr[3].valor=45;const next=accionDia(s,'Martes',-1);expect(next.lecturas_hr?.[0].valor).toBe(45);expect(next.lecturas_hr?.[3].valor).toBeNull();expect(next.lecturas[6]).toEqual(s.lecturas[6]);});
+ it('no cruza los extremos de semana',()=>{const s=nueva();expect(accionDia(s,'Lunes',-1)).toBe(s);expect(accionDia(s,'Domingo',1)).toBe(s);});
+ it('limpiar no convierte un día laboral en N/A ni elimina horas',()=>{const s=nueva();s.lecturas[0]={...s.lecturas[0],valor:22,hora:'08:00'};const next=accionDia(s,'Lunes','limpiar');expect(next.lecturas[0]).toMatchObject({valor:null,_na:false,hora:'08:00'});});
+ it('duplicados requieren mismo registro y lunes e ignoran omitidos',()=>{expect([...duplicadosLote([{registro:'A',lunes:'2026-10-12',incluir:true},{registro:'B',lunes:'2026-10-12',incluir:true},{registro:'A',lunes:'2026-10-12',incluir:false}])]).toEqual([]);expect([...duplicadosLote([{registro:'A',lunes:'2026-10-12',incluir:true},{registro:'A',lunes:'2026-10-12',incluir:true}])]).toEqual(['A/2026-10-12']);});
+ it('una foto fallida no abandona las propuestas siguientes',async()=>{const orden:number[]=[];const fallos:number[]=[];await procesarLote([1,2,3],async n=>{orden.push(n);if(n===2)throw Error('Foto ilegible');},n=>fallos.push(n));expect(orden).toEqual([1,2,3]);expect(fallos).toEqual([2]);});
+ it('bloqueo terminal detiene el lote sin nuevas llamadas pagadas',async()=>{const orden:number[]=[];await procesarLote([1,2,3],async n=>{orden.push(n);throw Object.assign(Error('Sin créditos'),{terminal:true});},()=>{});expect(orden).toEqual([1]);});
+ it('propone lunes del encabezado sin cambiar las lecturas',()=>{expect(detectarLunesFoto({anio:'2026',mes:'octubre',fechas_columnas:[{dia:'Lunes',fecha:'2026-10-12'},{dia:'Martes',fecha:'2026-10-13'}]})).toBe('2026-10-12');expect(detectarLunesFoto({anio:'2026',mes:'octubre'})).toBe('');});
+ it('meses cruzados se conservan como en atdiafra',()=>{expect(mesesEncabezado('Septiembre/Octubre')).toEqual([9,10]);});
+ it('baseline usa la tolerancia original y no especificaciones normativas',()=>{expect(alertaBaseline(11,10,10)).toBe('ok');expect(alertaBaseline(11.1,10,10)).toBe('warning');expect(alertaBaseline(11,null,10)).toBeNull();});
+});
