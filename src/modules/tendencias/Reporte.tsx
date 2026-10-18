@@ -16,7 +16,7 @@ import {
   detectarDuplicados, type Registro,
 } from "./lib/semanas";
 import { type AreaClasificada, type Instrumento } from "./lib/catalogos";
-import { MODULOS } from "./lib/diafra-data";
+
 import {claveInstrumento, consolidarPorInstrumento} from "./lib/avance";
 import { exportarNormativoExcel, exportarNormativoPDF } from "./lib/export-normativo";
 import { Input } from "@/components/ui/input";
@@ -578,8 +578,7 @@ function TablaRegistros({
           </thead>
           <tbody>
             {registros.map((r) => {
-              const moduloDef = MODULOS.find((m) => moduloSlug(r.modulo) === m.slug);
-              const editable = moduloDef?.enabled;
+              const editable = true;
               const lecturas = lecturasPeriodo(r);
               return (
                 <tr key={r.id} className="border-t border-border align-top">
@@ -595,8 +594,7 @@ function TablaRegistros({
                   <td className="px-3 py-2 text-right">
                     <div className="inline-flex gap-1">
                       <Link
-                        to="/reporte/$id"
-                        params={{ id: r.id }}
+                        to={`/tendencias/analisis?ids=${r.id}`}
                         className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-xs hover:bg-muted"
                       >
                         <Eye className="h-3 w-3" /> Detalle

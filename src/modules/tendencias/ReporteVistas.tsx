@@ -1,3 +1,4 @@
+import {estadoSemana, lunesDelPeriodo, resumenAvance, type Estado} from "./lib/avance";
 import { coberturaReal, recortarSemanasPorFecha } from "./lib/fechas-lectura";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
@@ -61,14 +62,6 @@ interface Fila {
   semanas: Map<string, Semana>;
 }
 
-function fueraDeLimites(r: Registro, s: Semana, ins?: Instrumento): number {
-  const cuenta = (arr: PuntoLectura[] | undefined, lie?: number | null, lse?: number | null) =>
-    (arr ?? []).filter((p) => !p._na && p.valor != null && Number.isFinite(p.valor) &&
-      ((lie != null && p.valor < lie) || (lse != null && p.valor > lse))).length;
-  if (r.modulo === "temphr") return cuenta(s.lecturas, r.lie_t, r.lse_t) + cuenta(s.lecturas_hr, r.lie_hr, r.lse_hr);
-  return cuenta(s.lecturas, r.lie ?? ins?.lie_pa, r.lse ?? ins?.lse_pa);
-}
-
 function construirFilas(
   registros: Registro[], areaDe: AreaFn, instrMap: Map<string, Instrumento>,
   catalogo: Instrumento[] = [], areasMap: Map<string, AreaClasificada> = new Map(),
@@ -118,30 +111,6 @@ function construirFilas(
   return Array.from(m.values()).sort((a, b) =>
     Number(a.sinDatos) - Number(b.sinDatos) ||
     a.codigo.localeCompare(b.codigo) || a.nombre.localeCompare(b.nombre));
-}
-
-function lunesDelPeriodo(desde: Date, hasta: Date): string[] {
-  const out: string[] = [];
-  const d = new Date(lunesDe(desde) + "T00:00:00");
-  const fin = format(hasta, "yyyy-MM-dd");
-  while (format(d, "yyyy-MM-dd") <= fin && out.length < 60) {
-    out.push(format(d, "yyyy-MM-dd"));
-    d.setDate(d.getDate() + 7);
-  }
-  return out;
-}
-
-type Estado = "completa" | "parcial" | "vacia" | "fuera";
-function estadoSemana(f: Fila, lunes: string, instrMap: Map<string, Instrumento>) {
-  const s = f.semanas.get(lunes);
-  const esTHR = f.modulo === "temphr";
-  if (!s) return { estado: "vacia" as Estado, cap: 0, esp: 0, fuera: 0 };
-  if (f.sinDatos) return { estado: "vacia" as Estado, cap: 0, esp: 0, fuera: 0 };
-  const cap = lecturasCapturadas(s, esTHR);
-  const esp = lecturasEsperadas(s, esTHR);
-  const fuera = fueraDeLimites(f.registro, s, f.registro.instrumento_id ? instrMap.get(f.registro.instrumento_id) : undefined);
-  const estado: Estado = fuera > 0 ? "fuera" : cap === 0 ? "vacia" : esSemanaCompleta(s, esTHR) ? "completa" : "parcial";
-  return { estado, cap, esp, fuera };
 }
 
 const CELDA: Record<Estado, string> = {
@@ -338,18 +307,7 @@ export function VistaAvance({ registros, areaDe, instrMap, catalogo, areasMap, d
     return () => observer.disconnect();
   }, [lunes.length, filtradas.length]);
 
-  const resumen = useMemo(() => {
-    let alDia = 0, pendientes = 0, fuera = 0;
-    for (const f of filtradas) {
-      if (ultima && estadoSemana(f, ultima, instrMap).estado === "completa") alDia++;
-      for (const l of lunes) {
-        const e = estadoSemana(f, l, instrMap);
-        if (e.estado === "vacia" || e.estado === "parcial") pendientes++;
-        fuera += e.fuera;
-      }
-    }
-    return { alDia, pendientes, fuera };
-  }, [filtradas, lunes, ultima, instrMap]);
+  const resumen = useMemo(() => resumenAvance(filtradas, lunes, instrMap), [filtradas, lunes, instrMap]);
 
   const exportar = () => {
     const header = ["Instrumento", "Nombre", "Área", "Módulo", ...lunes];
@@ -363,7 +321,7 @@ export function VistaAvance({ registros, areaDe, instrMap, catalogo, areasMap, d
       }),
     ]);
     const ws = XLSX.utils.aoa_to_sheet([
-      ["DIAFRA, S.A. de C.V. — Avance semanal de captura"],
+      ["TRACEA — Avance semanal de captura"],
       [`Periodo: ${format(desde, "dd/MM/yyyy")} – ${format(hasta, "dd/MM/yyyy")}`],
       [], header, ...filasXls,
     ]);
