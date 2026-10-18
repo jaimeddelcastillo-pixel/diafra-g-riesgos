@@ -1,5 +1,7 @@
 # Roadmap
 
+- [ ] T3c-1 solicitado: lote IA con propuestas/revisión/reintento; fecha detectada y compresión; captura contextual/antefirma/objetivo/baseline; acciones por día/descarte/fecha con colisiones; retiro motivado de registros/semanas/cambios de filtro y pruebas QA. Motor intacto. T3c-2 espera aprobación de esta parte.
+
 - [x] Cierre T3b solicitado: t3b_matriz.md exhaustiva entregada, gráficas originales del PDF descargadas/inspeccionadas, suplencias/aviso/reintento/revocación QA y extracción individual T/HR-presiones-filtros con skills originales v1.0, revisión humana y consumo; 118/118 pruebas y 3 reglas SQL QA con rollback. Agua manual y formatos por módulo posteriores. No equivale a paridad total: faltantes enumerados en la matriz.
 
 - [x] T3a: motor original 36/36 y total 42/42 con regresión Word; registro, tablero, catálogos, captura/fotos y configuración. T2 «No clasificada» autorizado y t2_down.sql actualizado. Navegador adminqa: alta HVAC/área/instrumento, semana y foto persistentes, logo/firmante persistentes, pendientes; operador sin edición; QA Starter sin acceso. Conservar tracea.site; sin IA/emisión/suplencias hasta T3b.
