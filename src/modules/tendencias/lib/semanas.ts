@@ -30,9 +30,10 @@ export interface Semana {
   lecturas: PuntoLectura[];
   lecturas_hr?: PuntoLectura[];
   observaciones: string;
-  source: "imagen" | "manual";
+  source: "imagen" | "manual" | "ia";
   saved_at: string;
   foto_path?: string | null;
+  objetivo_presion_id?: string | null;
 }
 
 export type Modulo = "filtros" | "temphr" | "presiones" | "agua";
