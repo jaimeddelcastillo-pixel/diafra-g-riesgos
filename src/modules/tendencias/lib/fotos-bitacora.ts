@@ -1,17 +1,29 @@
 // Guarda la foto de la bitácora (ya comprimida) para poder consultarla después junto a su semana.
-import { lunesDe } from "./semanas";
+import { lunesDe, type Registro } from "./semanas";
+
+export type RangoFoto = { desde?: string; hasta?: string };
+export function rangoRegistro(registro: Registro): RangoFoto {
+  const fechas = registro.semanas.filter(s => s.activo !== false).map(s => s.semana_inicio).sort();
+  const ultima = fechas.at(-1);
+  if (!fechas[0] || !ultima) return {};
+  const fin = new Date(ultima + 'T12:00:00'); fin.setDate(fin.getDate() + 6);
+  return {desde: fechas[0], hasta: `${fin.getFullYear()}-${String(fin.getMonth()+1).padStart(2,'0')}-${String(fin.getDate()).padStart(2,'0')}`};
+}
+function limitesAnio(rango: RangoFoto): [number, number] {
+  const now = Number(new Intl.DateTimeFormat('en', {timeZone:'America/Mexico_City',year:'numeric'}).format(new Date()));
+  const desde = Number(rango.desde?.slice(0,4)), hasta = Number(rango.hasta?.slice(0,4));
+  return desde && hasta && desde <= hasta ? [desde,hasta] : [now-1,now+1];
+}
 
 /** Corrige años mal leídos por la IA (escritura a mano: 2016→2026, 2075→2025). Devuelve "" si no hay año plausible. */
-function corregirAnio(fecha: string): string {
+function corregirAnio(fecha: string, rango: RangoFoto): string {
   const [y, m, d] = fecha.split("-").map(Number);
-  const now = new Date().getFullYear();
-  const MIN = 2025; // no se aceptan bitácoras de 2024 o anteriores
-  if (y >= MIN && y <= now + 1) return fecha;
-  if (y === 2023) return `2025-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+  const [MIN, MAX] = limitesAnio(rango);
+  if (y >= MIN && y <= MAX) return fecha;
   // Intenta corregir un solo dígito del año (errores típicos de lectura manuscrita)
   for (const delta of [10, -10, 50, -50, 100, -100, 2, 1, -1]) {
     const cand = y + delta;
-    if (cand >= MIN && cand <= now + 1) {
+    if (cand >= MIN && cand <= MAX) {
       const test = new Date(cand, m - 1, d);
       if (test.getMonth() === m - 1) return `${cand}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
     }
@@ -28,23 +40,23 @@ const idxDia = (s?: string) => (s ? IDX_DIA[s.toLowerCase().trim()] : undefined)
 const idxSemana = (d: Date) => (d.getDay() + 6) % 7;
 
 /** Años plausibles del recuadro "Año" (2026, "26", o ambos si la hoja cruza de año: "2025/2026"). */
-function aniosEncabezado(a?: string | number | null): number[] {
-  const now = new Date().getFullYear();
+function aniosEncabezado(a: string | number | null | undefined, rango: RangoFoto): number[] {
+  const [min,max] = limitesAnio(rango);
   const out: number[] = [];
   for (const m of String(a ?? "").match(/\d{2,4}/g) ?? []) {
     let y = Number(m);
     if (y < 100) y += 2000;
-    if (y >= 2025 && y <= now + 1 && !out.includes(y)) out.push(y);
+    if (y >= min && y <= max && !out.includes(y)) out.push(y);
   }
   return out.sort((x, y) => x - y);
 }
 
 /** Si el año leído no cuadra con el día de la columna, busca el año plausible MÁS CERCANO al de referencia. */
-function anioQueCuadra(fecha: string, dia: number, ref: number): string | null {
+function anioQueCuadra(fecha: string, dia: number, ref: number, rango: RangoFoto): string | null {
   const [, m, d] = fecha.split("-").map(Number);
-  const now = new Date().getFullYear();
+  const [min,max] = limitesAnio(rango);
   const cands: number[] = [];
-  for (let y = 2025; y <= now + 1; y++) cands.push(y);
+  for (let y = min; y <= max; y++) cands.push(y);
   cands.sort((a, b) => Math.abs(a - ref) - Math.abs(b - ref) || b - a);
   for (const y of cands) {
     const t = new Date(y, m - 1, d);
@@ -79,13 +91,25 @@ export function mesesEncabezado(m?: string | number | null): number[] {
  */
 export function detectarLunesFoto(
   p: { anio?: string | number | null; mes?: string | number | null; fechas_columnas?: { dia?: string; fecha?: string }[] } | null | undefined,
+  rango: RangoFoto = {},
 ): string {
-  const aHoja = aniosEncabezado(p?.anio);
+  const aHoja = aniosEncabezado(p?.anio,rango);
   const mHoja = mesesEncabezado(p?.mes);
   const votos = new Map<string, number>();
   for (const f0 of p?.fechas_columnas ?? []) {
     let f = f0;
     if (!f.fecha || !/^\d{4}-\d{2}-\d{2}$/.test(f.fecha)) continue;
+    // Resolve the sheet year first, before checking month/day validity.
+    if (aHoja.length) {
+      const [y,m,d] = f.fecha.split('-').map(Number);
+      const yHoja = aHoja.length > 1 ? (m >= 7 ? aHoja[0] : aHoja[aHoja.length-1]) : aHoja[0];
+      const yy = aHoja.length === 1 && Math.abs(y-yHoja)===1 && (m===12 || m===1) ? y : yHoja;
+      f = {...f,fecha:`${yy}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`};
+    } else {
+      const corregida = corregirAnio(f.fecha,rango);
+      if (!corregida) continue;
+      f = {...f,fecha:corregida};
+    }
     if (mHoja.length) {
       // Fuerza el mes de la hoja; con un solo mes se tolera el contiguo (semana que cruza de mes)
       const [y, m, d] = f.fecha.split("-").map(Number);
@@ -99,23 +123,17 @@ export function detectarLunesFoto(
     }
     const di = idxDia(f.dia);
     let fecha: string;
-    if (aHoja.length) {
-      // Fuerza el año de la hoja; con dos años, diciembre va al primero y enero al segundo
-      const [y, m, d] = (f.fecha ?? "").split("-").map(Number);
-      const yHoja = aHoja.length > 1 ? (m >= 7 ? aHoja[0] : aHoja[aHoja.length - 1]) : aHoja[0];
-      const yy = aHoja.length > 1 ? yHoja : Math.abs(y - yHoja) === 1 && (m === 12 || m === 1) && aHoja.length === 1 ? y : yHoja;
-      fecha = `${yy}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
-    } else {
-      fecha = corregirAnio((f.fecha ?? ""));
+    fecha = f.fecha ?? '';
+    if (!aHoja.length) {
       if (di !== undefined) {
         const ok = fecha && idxSemana(new Date(fecha + "T00:00:00")) === di;
         const ref = fecha ? Number(fecha.slice(0, 4)) : new Date().getFullYear();
-        if (!ok) fecha = anioQueCuadra(fecha || (f.fecha ?? ""), di, ref) ?? fecha;
+        if (!ok) fecha = anioQueCuadra(fecha || (f.fecha ?? ""), di, ref,rango) ?? fecha;
       }
     }
     if (!fecha) continue;
     const d = new Date(fecha + "T00:00:00");
-    if (isNaN(d.getTime())) continue;
+    if (isNaN(d.getTime()) || d.getDate() !== Number(fecha.slice(8,10)) || d.getMonth()+1 !== Number(fecha.slice(5,7))) continue;
     const lunes = lunesDe(d);
     const peso = di !== undefined && idxSemana(d) === di ? 2 : 1;
     votos.set(lunes, (votos.get(lunes) ?? 0) + peso);
