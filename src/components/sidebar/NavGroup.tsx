@@ -66,7 +66,7 @@ export function NavLeaf({
   if (sub) {
     return (
       <SidebarMenuSubItem>
-        <SidebarMenuSubButton asChild isActive={active}>
+        <SidebarMenuSubButton asChild isActive={active} className="h-auto min-h-7 py-1">
           {content}
         </SidebarMenuSubButton>
       </SidebarMenuSubItem>
@@ -75,7 +75,7 @@ export function NavLeaf({
 
   return (
     <SidebarMenuItem>
-      <SidebarMenuButton asChild isActive={active}>
+      <SidebarMenuButton asChild isActive={active} className="h-auto min-h-8 py-1.5">
         {content}
       </SidebarMenuButton>
     </SidebarMenuItem>
@@ -97,7 +97,10 @@ export function NavGroup({ item, pathname, open, onOpenChange, renderExtra }: Na
 
   const triggerButton = (
     <SidebarMenuButton
-      className={cn("hover:bg-sidebar-accent/50", hasActive && !open && "text-sidebar-primary")}
+      className={cn(
+        "h-auto min-h-8 py-1.5 hover:bg-sidebar-accent/50",
+        hasActive && !open && "text-sidebar-primary",
+      )}
     >
       <span
         className={cn(
