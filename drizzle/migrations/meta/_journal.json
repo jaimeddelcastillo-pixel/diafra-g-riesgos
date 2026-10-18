@@ -393,6 +393,13 @@
       "when": 1792287262850,
       "tag": "0055_t3b_snapshot_hvac_completo",
       "breakpoints": true
+    },
+    {
+      "idx": 56,
+      "version": "7",
+      "when": 1792288164726,
+      "tag": "0056_t3b_hvac_precedencia_fuente",
+      "breakpoints": true
     }
   ]
 }
