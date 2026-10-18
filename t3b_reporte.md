@@ -2,7 +2,7 @@
 
 ## Emisión y fuentes del Word
 
-La selección por HVAC se resuelve en el servidor. Se rechaza la emisión si no hay instrumentos activos o registros activos seleccionados. 0055 congela los siguientes datos:
+La selección por HVAC se resuelve en el servidor. Se rechaza la emisión si no hay instrumentos activos o registros activos seleccionados. 0055 congela los siguientes datos; 0056 alinea la precedencia HVAC con atdiafra (registro → área elegida → código libre), con prueba QA positiva/negativa:
 
 |Dato usado|Fuente al emitir / lectura histórica|
 |---|---|
@@ -37,4 +37,4 @@ Un emitido no consulta catálogos/formato vivos. La reconstrucción rechaza snap
 
 ## Pendiente, no se declara terminado
 
-Paridad completa de captura/lotes y reporte consolidado, agrupaciones/pestañas de Cumplimiento, auditoría interna, pendiente Inicio por autorizar, entrega real de correo/reintentos, tres skills originales y extracción IA con revisión humana, descarga Word de AT real y revisión de precedencia HVAC exacta. La matriz conserva todos los faltantes; no se eliminaron del alcance.
+Paridad completa de captura/lotes y reporte consolidado, agrupaciones/pestañas de Cumplimiento, auditoría interna, entrega real de correo/reintentos, tres skills originales y extracción IA con revisión humana, descarga Word de AT real. La matriz conserva todos los faltantes; no se eliminaron del alcance.

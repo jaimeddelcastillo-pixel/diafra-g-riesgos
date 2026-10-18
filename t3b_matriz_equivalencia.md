@@ -15,7 +15,7 @@ Esta sección prevalece sobre el inventario previo que sigue abajo, conservado c
 |Suplencias y aviso del encabezado|/tendencias/suplencias|Pantalla alta/revocación/historial creada; entrega correo/reintentos sin verificar|
 |Aviso RS|tend-aviso-suplencia + plantilla compartida|Implementación creada, entrega real y concurrencia pendientes|
 |IA de bitácoras|No habilitada|Tres skills originales, extracción, revisión/confirmación UI y lotes pendientes; agua manual|
-|Inicio por autorizar|Registro de módulos|Pendiente; solo semanas faltantes y borradores por revisar actualmente|
+|Inicio por autorizar|Registro de módulos|Implementado para RS/suplente con separación de funciones; UI pendiente de verificación|
 |Auditoría interna, captura avanzada, migración local y paridad restante|Ver inventario previo|Pendiente; no se excluyen silenciosamente|
 
 Pruebas actuales: **36/36 originales, 47/47 totales** (incluye 1 regresión Word, 2 snapshots, 3 Cumplimiento). Las siete T2 completas y avisos admin/RS se repitieron con rollback QA; HVAC positivo/vacíos, objetivos, semanas/id, motivos/auditoría, snapshot cliente y dos vías de bloqueo emitido pasan. Una prueba provisional usó ISO 8 en lugar de ISO-8 y otra una lectura en lugar de 21; se corrigieron los datos de prueba, no las reglas.

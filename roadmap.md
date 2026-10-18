@@ -8,7 +8,7 @@
 - [x] T3b correcciones de integridad: snapshots solo servidor al emitir con registros/semanas/id; ambos replace comprobados; RS titular congelado y copiado desde suplencia; motivo y auditoría manual/extracción; semanas emitidas bloqueadas en ambas vías; source/mes/año y foto validados en servidor. Pruebas adicionales en t3b_integridad_pruebas.sql.
 - [x] T3b ajuste HVAC: 0055 aplicada, instrumentos resueltos por servidor, instrumentos/registros vacíos rechazados, objetivos y semanas/id congelados. Pruebas positivas/negativas QA con rollback pasan. Fuente Word documentada en t3b_reporte.md.
 - [x] T3b captura individual usa RPC motivada; Word emitido usa snapshot y fecha de cálculo congelada. Motor original 36/36 y total 47/47, incluido Word. Registro AT abre en navegador soporte QA sin errores; no equivale a emisión/descarga completa en navegador.
-- [ ] T3b cierre de equivalencia: completar funciones faltantes de captura/lotes/reporte consolidado/auditoría y agrupaciones de Cumplimiento; validar guard SQL HVAC contra precedencia exacta fuente; probar Word de AT real de principio a fin. Sin Part 11, Riesgos ni Cerebro.
+- [ ] T3b cierre de equivalencia: completar funciones faltantes de captura/lotes/reporte consolidado/auditoría y agrupaciones de Cumplimiento; probar Word de AT real de principio a fin. Sin Part 11, Riesgos ni Cerebro.
 - [ ] T3b correo: pantalla/plantilla/función de avisos y reintentos creadas; falta verificar entrega real y no-op concurrente. No declarar envío probado.
 - [ ] T3b IA: faltan registrar tres skills v1.0 originales parametrizadas, implementar extracción/confirmación humana/lotes y probar llamada real. Agua manual. Función IA incompleta retirada; no habilitada.
 
