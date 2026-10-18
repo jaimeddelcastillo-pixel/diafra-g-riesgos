@@ -4,6 +4,17 @@
 
 import JSZip from "npm:jszip@3.10.1";
 
+/** Reads tenant-private bitacora originals through the authenticated storage client. */
+export async function leerBitacoraPrivada(client: any, orgId: string, path: string) {
+  if (!path.startsWith(`${orgId}/`) || path.includes('..')) throw new Error('Foto fuera de empresa');
+  const { data, error } = await client.storage.from('tend-bitacoras').download(path);
+  if (error || !data) throw new Error(error?.message ?? 'Foto no disponible');
+  if (!['image/png', 'image/jpeg'].includes(data.type)) throw new Error('Extracción requiere foto PNG o JPEG; PDF queda para carga manual');
+  if (!data.size || data.size > 10 * 1024 * 1024) throw new Error('Foto vacía o mayor a 10 MB');
+  const bytes = await data.arrayBuffer();
+  return { mime: data.type, base64: arrayBufferToBase64(bytes) };
+}
+
 export function arrayBufferToBase64(buffer: ArrayBuffer): string {
   const bytes = new Uint8Array(buffer);
   const chunkSize = 0x8000;
