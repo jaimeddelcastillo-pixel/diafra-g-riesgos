@@ -141,9 +141,9 @@ Tipos/interfaces y componentes UI genéricos no añaden funciones de negocio; co
 | Revocar e historial | Suplencias.tsx | **Hecho**; revocada visible y conservada. |
 | Correo cuando requerido, reintentar, resultado sistema | tend-aviso-suplencia; template suplencia-rs; tend_aviso_tomar/terminar | **Hecho**: HTTP 200/enviado y timestamp sin error guardado. Reintento posterior resultados vacíos, sin envío duplicado. **No verificado** buzón receptor ni dos llamadas simultáneas reales; claim servidor impide reclamo repetido. |
 | Tres skills originales v1.0 | Skills de IA, agent_prompts/ia_skills | **Hecho**: extraccion_bitacora_temphr/presiones/filtros vigentes; textos comparados con originales, igualdad exacta antes de interpolar empresa. |
-| Extraer T/HR | tend-extract-bitacora, Captura | **Hecho**: imagen sintética QA, HTTP 200, 21 T + 21 HR, valores 22 y 45 y skill/hash/modelo conservados. |
+| Extraer T/HR | tend-extract-bitacora, Captura | **Hecho**: imagen sintética QA, HTTP 200, 21 T + 21 HR, valores 22 y 45 y skill/hash/modelo conservados; T confirmada y recargada con valor 22. |
 | Extraer presiones | Mismos | **Hecho**: HTTP 200, 21 lecturas; corregir lunes 12 → 12.5, confirmar y recargar: 12.5 persistente. |
-| Extraer filtros | Mismos | **Hecho**: imagen sintética QA, HTTP 200, 21 lecturas 0.3 y unidad inH2O propuesta; skill/hash/modelo conservados. |
+| Extraer filtros | Mismos | **Hecho**: imagen sintética QA, HTTP 200, 21 lecturas 0.3 y unidad inH2O propuesta; skill/hash/modelo conservados; confirmación/readback 0.3 y unidad inH2O visible tras recargar. |
 | Propuesta/dudosos/revisión humana | extraccion.ts, ExtraccionBitacora, tend_confirmar_extraccion | **Hecho**: no valida/emite; corregir o N/A dudosos + revisión explícita. Semana con lecturas previas exige motivo y auditoría; emitida bloqueada por guards existentes. |
 | Consumo total histórico por empresa | tend_extracciones y contador aislado por org | **Hecho**: reserva antes de IA y propuesta/error persistidos; límite desde plan_limites; errores también conservados. No hay cobro/precios nuevos. |
 | Información ⓘ solo super_admin | InformacionRespuestaIA en historial | **Hecho en código**, control compartido R19; sesión QA admin no muestra ⓘ. Visual de super_admin en soporte no repetido en este cierre. |
@@ -194,4 +194,4 @@ Son faltantes explícitos, no motivos autorizados inventados. Se entregan los cu
 - Siete pruebas T2 y pruebas de integridad/HVAC se aprobaron en fases anteriores; no se presentan como nueva ejecución de este cierre.
 - Navegador autenticado QA: tres llamadas IA reales, corrección/confirmación persistente de presión, suplencia/aviso/reintento/revocación y descarga PDF con todas sus páginas inspeccionadas.
 - Buzón del RS, dos invocaciones simultáneas reales, todas las rutas administrativas y todos los escenarios de límite/errores no se probaron de principio a fin.
-- Última señal de compilación se consulta antes de entrega; no ejecutar pruebas en empresas reales. Agua permanece manual, sin cambios a Riesgos/Cerebro/atdiafra.
+- Última señal de compilación: build OK; no ejecutar pruebas en empresas reales. Agua permanece manual, sin cambios a Riesgos/Cerebro/atdiafra.
