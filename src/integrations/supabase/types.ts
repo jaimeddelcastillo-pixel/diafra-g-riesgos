@@ -4382,6 +4382,7 @@ export type Database = {
       }
       tend_cambios_filtro: {
         Row: {
+          activo: boolean
           created_at: string
           created_by: string | null
           fecha: string
@@ -4390,10 +4391,14 @@ export type Database = {
           migrado_desde: string | null
           nota: string
           org_id: string
+          retirado_en: string | null
+          retirado_motivo: string | null
+          retirado_por: string | null
           updated_at: string
           updated_by: string | null
         }
         Insert: {
+          activo?: boolean
           created_at?: string
           created_by?: string | null
           fecha: string
@@ -4402,10 +4407,14 @@ export type Database = {
           migrado_desde?: string | null
           nota?: string
           org_id: string
+          retirado_en?: string | null
+          retirado_motivo?: string | null
+          retirado_por?: string | null
           updated_at?: string
           updated_by?: string | null
         }
         Update: {
+          activo?: boolean
           created_at?: string
           created_by?: string | null
           fecha?: string
@@ -4414,6 +4423,9 @@ export type Database = {
           migrado_desde?: string | null
           nota?: string
           org_id?: string
+          retirado_en?: string | null
+          retirado_motivo?: string | null
+          retirado_por?: string | null
           updated_at?: string
           updated_by?: string | null
         }
@@ -4902,6 +4914,9 @@ export type Database = {
           nombre_area_libre: string | null
           org_id: string
           par_cuartos_id: string | null
+          retirado_en: string | null
+          retirado_motivo: string | null
+          retirado_por: string | null
           updated_at: string
           updated_by: string | null
         }
@@ -4928,6 +4943,9 @@ export type Database = {
           nombre_area_libre?: string | null
           org_id: string
           par_cuartos_id?: string | null
+          retirado_en?: string | null
+          retirado_motivo?: string | null
+          retirado_por?: string | null
           updated_at?: string
           updated_by?: string | null
         }
@@ -4954,6 +4972,9 @@ export type Database = {
           nombre_area_libre?: string | null
           org_id?: string
           par_cuartos_id?: string | null
+          retirado_en?: string | null
+          retirado_motivo?: string | null
+          retirado_por?: string | null
           updated_at?: string
           updated_by?: string | null
         }
@@ -5240,6 +5261,7 @@ export type Database = {
       }
       tend_semanas: {
         Row: {
+          activo: boolean
           anio: string
           created_at: string
           created_by: string | null
@@ -5253,6 +5275,9 @@ export type Database = {
           observaciones: string
           org_id: string
           registro_id: string
+          retirado_en: string | null
+          retirado_motivo: string | null
+          retirado_por: string | null
           saved_at: string
           semana_inicio: string
           source: string
@@ -5261,6 +5286,7 @@ export type Database = {
           updated_by: string | null
         }
         Insert: {
+          activo?: boolean
           anio: string
           created_at?: string
           created_by?: string | null
@@ -5274,6 +5300,9 @@ export type Database = {
           observaciones?: string
           org_id: string
           registro_id: string
+          retirado_en?: string | null
+          retirado_motivo?: string | null
+          retirado_por?: string | null
           saved_at?: string
           semana_inicio: string
           source?: string
@@ -5282,6 +5311,7 @@ export type Database = {
           updated_by?: string | null
         }
         Update: {
+          activo?: boolean
           anio?: string
           created_at?: string
           created_by?: string | null
@@ -5295,6 +5325,9 @@ export type Database = {
           observaciones?: string
           org_id?: string
           registro_id?: string
+          retirado_en?: string | null
+          retirado_motivo?: string | null
+          retirado_por?: string | null
           saved_at?: string
           semana_inicio?: string
           source?: string
@@ -6030,6 +6063,10 @@ export type Database = {
         Args: { _id: string; _motivo?: string; _semana: Json }
         Returns: string
       }
+      tend_corregir_fecha_semana: {
+        Args: { _id: string; _inicio: string; _motivo?: string }
+        Returns: undefined
+      }
       tend_extraccion_resultado: {
         Args: {
           _error?: string
@@ -6049,6 +6086,10 @@ export type Database = {
       tend_resolver_instrumentos: {
         Args: { _instrumentos: Json; _org: string; _seleccion: Json }
         Returns: Json
+      }
+      tend_retirar: {
+        Args: { _id: string; _motivo: string; _tipo: string }
+        Returns: undefined
       }
       tend_semana_en_emitido: {
         Args: { _org: string; _semana: string }

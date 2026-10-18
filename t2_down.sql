@@ -17,6 +17,9 @@ END $$;
 -- T3b: conservar snapshots, identidades y extracciones; cerrar operaciones servidor.
 REVOKE ALL ON FUNCTION public.tend_guardar_semana(uuid,jsonb,text) FROM PUBLIC,anon,authenticated,service_role;
 REVOKE ALL ON FUNCTION public.tend_confirmar_extraccion(uuid,jsonb,text) FROM PUBLIC,anon,authenticated,service_role;
+-- T3c-1: conservar retiros/fechas auditados y cerrar sus operaciones, sin borrar historial.
+REVOKE ALL ON FUNCTION public.tend_retirar(text,uuid,text) FROM PUBLIC,anon,authenticated,service_role;
+REVOKE ALL ON FUNCTION public.tend_corregir_fecha_semana(uuid,date,text) FROM PUBLIC,anon,authenticated,service_role;
 REVOKE ALL ON FUNCTION public.tend_extraccion_resultado(uuid,jsonb,jsonb,text,bigint,bigint,text) FROM PUBLIC,anon,authenticated,service_role;
 REVOKE ALL ON FUNCTION public.org_suplencia_aviso_resultado(uuid,boolean,text) FROM PUBLIC,anon,authenticated,service_role;
 REVOKE ALL ON FUNCTION public.tend_aviso_tomar(uuid) FROM PUBLIC,anon,authenticated,service_role;
