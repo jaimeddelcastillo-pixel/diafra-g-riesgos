@@ -1,14 +1,13 @@
 import {createClient} from 'npm:@supabase/supabase-js@2';
 import {corsHeaders} from 'npm:@supabase/supabase-js@2/cors';
 import {z} from 'npm:zod@3';
-import {createOpenAI} from 'npm:@ai-sdk/openai@3';
 import {streamText,Output,NoObjectGeneratedError,APICallError} from 'npm:ai@6';
 import {resolverContextoOrg,ContextoOrgError} from '../_shared/contexto-org.ts';
 import {cargarSkill,interpolar,registrarSkillFaltante} from '../_shared/skills.ts';
 import {leerBitacoraPrivada} from '../_shared/documento-contenido.ts';
-import {contextoFechaMexico} from '../_shared/fecha-mexico.ts';
+import {contextoFechaMexico,fechaMexico} from '../_shared/fecha-mexico.ts';
 import {normalizarLecturas} from '../_shared/bitacora-lecturas.ts';
-import {createLovableAiGatewayRunIdFetch,getLovableAiGatewayRunId,getLovableAiGatewayResponseHeaders} from '../_shared/run-id.ts';
+import {createLovableAiGatewayProvider,getLovableAiGatewayRunId,getLovableAiGatewayResponseHeaders} from '../_shared/gateway-helpers.ts';
 
 const requestSchema=z.object({registro_id:z.string().uuid(),foto_path:z.string().min(1).max(500)}).strict();
 const lectura=z.object({dia:z.string(),turno:z.string(),valor:z.number().nullable(),hora:z.string().nullable(),quien:z.string().nullable(),confianza:z.number().nullable()});
@@ -24,7 +23,7 @@ Deno.serve(async req=>{
  const respond=(data:unknown,status=200,extra?:HeadersInit)=>new Response(JSON.stringify(data),{status,headers:getLovableAiGatewayResponseHeaders(extra,{...corsHeaders,'Content-Type':'application/json'})});
  if(req.method==='OPTIONS')return new Response('ok',{headers:corsHeaders});
  if(req.method!=='POST')return respond({error:'Método no permitido'},405);
- let admin:any;let id:string|undefined;let orgId:string|undefined;let skills:unknown[]=[];const modelo='openai/gpt-6-astra';
+  let admin:any;let id:string|undefined;let orgId:string|undefined;let skills:unknown[]=[];let modelo:string|undefined;
  try{
   const ctx=await resolverContextoOrg(req);orgId=ctx.orgId;
   if(ctx.esSuperAdmin || !['admin','responsable_sanitario','comite_tecnico','operador'].includes(ctx.rolEnOrg ?? ''))return respond({error:'Sin permiso de extracción'},403);
@@ -39,21 +38,32 @@ Deno.serve(async req=>{
   const media=await leerBitacoraPrivada(user,ctx.orgId,body.data.foto_path);
   const clave=`extraccion_bitacora_${r.modulo}`;let skill;
   try{skill=await cargarSkill(admin,clave);}catch{throw await registrarSkillFaltante(admin,ctx.orgId,clave,'tend-extract-bitacora');}
-  skills=[{id:skill.id,clave:skill.clave,version:skill.version,sha256:skill.sha256,estado:'vigente'}];
+   const {data:config,error:ce}=await admin.from('ia_skills').select('modelo_ia').eq('clave',clave).eq('ambito','tarea').single();
+   if(ce || !config?.modelo_ia)return respond({error:'Modelo de la skill no configurado'},401);
+   modelo=config.modelo_ia;
+   if(!modelo?.startsWith('google/'))return respond({error:'El modelo configurado requiere un contrato de extracción compatible'},400);
+   skills=[{id:skill.id,clave:skill.clave,version:skill.version,sha256:skill.sha256,estado:'vigente',modelo_ia:modelo}];
+   const [{data:primera,error:pe},{data:ultima,error:ue}]=await Promise.all([user.from('tend_semanas').select('semana_inicio').eq('org_id',ctx.orgId).eq('registro_id',r.id).eq('activo',true).order('semana_inicio').limit(1).maybeSingle(),user.from('tend_semanas').select('semana_inicio').eq('org_id',ctx.orgId).eq('registro_id',r.id).eq('activo',true).order('semana_inicio',{ascending:false}).limit(1).maybeSingle()]);
+   if(pe || ue)throw pe ?? ue;
+   const anioActual=Number(fechaMexico().slice(0,4));
+   let anioFin=ultima?Number(ultima.semana_inicio.slice(0,4)):anioActual+1;
+   if(ultima){const fin=new Date(ultima.semana_inicio+'T12:00:00');fin.setDate(fin.getDate()+6);anioFin=fin.getFullYear();}
+   const vars={empresa:'',anio_min:String(primera?Number(primera.semana_inicio.slice(0,4)):anioActual-1),anio_max:String(anioFin)};
   const {data:org,error:oe}=await admin.from('organizations').select('nombre').eq('id',ctx.orgId).single();if(oe)throw oe;
   const {data:reserva,error:reserveError}=await user.from('tend_extracciones').insert({org_id:ctx.orgId,registro_id:r.id,modulo:r.modulo,foto_path:body.data.foto_path,solicitado_por:ctx.userId}).select('id').single();if(reserveError)throw reserveError;id=reserva.id;
   const fechas=z.array(z.object({dia:z.string(),fecha:z.string()}));
-  const schema=r.modulo==='temphr'?z.object({...comunes,fechas_columnas:fechas,lecturas_t:z.array(lectura),lecturas_hr:z.array(lectura)}):r.modulo==='presiones'?z.object({...comunes,unidad:z.string(),fechas_columnas:fechas,lecturas:z.array(lectura)}):z.object({...comunes,unidad:z.string(),lecturas:z.array(lectura)});
-  const run=createLovableAiGatewayRunIdFetch(getLovableAiGatewayRunId(req));
-  const provider=createOpenAI({baseURL:'https://ai.gateway.lovable.dev/v1',apiKey:key,headers:{'Lovable-API-Key':key,'X-Lovable-AIG-SDK':'vercel-ai-sdk'},fetch:run.fetch});
-  const result=streamText({model:provider.responses(modelo),system:`${interpolar(skill.texto,{empresa:org.nombre})}\n${contextoFechaMexico()}`,messages:[{role:'user',content:[{type:'image',image:new URL(`data:${media.mime};base64,${media.base64}`)}]}],output:Output.object({schema}),maxRetries:0,providerOptions:{openai:{forceReasoning:true,reasoningEffort:'low',reasoningSummary:'auto',store:false,include:['reasoning.encrypted_content']}}});
+   const schema=r.modulo==='temphr'?z.object({...comunes,fechas_columnas:fechas,lecturas_t:z.array(lectura),lecturas_hr:z.array(lectura)}):z.object({...comunes,unidad:z.string(),fechas_columnas:fechas,lecturas:z.array(lectura)});
+   const provider=createLovableAiGatewayProvider(key,getLovableAiGatewayRunId(req),{baseURL:'https://ai.gateway.lovable.dev/v1'});
+   const result=streamText({model:provider(modelo),system:`${interpolar(skill.texto,{...vars,empresa:org.nombre})}\n${contextoFechaMexico()}`,messages:[{role:'user',content:[{type:'image',image:new URL(`data:${media.mime};base64,${media.base64}`)}]}],output:Output.object({schema}),maxRetries:0,abortSignal:req.signal});
   let propuesta:any;
   try{propuesta=await result.output;}catch(e){if(!NoObjectGeneratedError.isInstance(e))throw e;try{propuesta=schema.parse(JSON.parse(e.text));}catch{throw new Error('La IA no produjo una propuesta válida; la foto permanece para captura manual');}}
   if(!propuesta)throw new Error('La IA no produjo una propuesta; solicitud terminada');
   if(r.modulo==='temphr'){propuesta.lecturas_t=comprobarLecturas(propuesta.lecturas_t);propuesta.lecturas_hr=comprobarLecturas(propuesta.lecturas_hr);}else propuesta.lecturas=comprobarLecturas(propuesta.lecturas);
+   const rows=[...(propuesta.lecturas_t ?? []),...(propuesta.lecturas_hr ?? []),...(propuesta.lecturas ?? [])];
+   propuesta.requiere_revision=rows.length>0 && rows.filter(p=>p.valor===null || p.confianza===null || p.confianza<0.70).length/rows.length>0.15;
   const usage=await result.totalUsage;
   const {error:saveError}=await admin.rpc('tend_extraccion_resultado',{_id:id,_propuesta:propuesta,_skills:skills,_modelo:modelo,_input:usage.inputTokens ?? 0,_output:usage.outputTokens ?? 0});if(saveError)throw saveError;
-  return respond({id,propuesta,skills_usadas:skills,modelo_ia:modelo},200,run.getRunId()?{'X-Lovable-AIG-Run-ID':run.getRunId() ?? ''}:undefined);
+   return respond({id,propuesta,skills_usadas:skills,modelo_ia:modelo},200,provider.getRunId()?{'X-Lovable-AIG-Run-ID':provider.getRunId() ?? ''}:undefined);
  }catch(e){
   let status=e instanceof ContextoOrgError?e.status:500;let message=e instanceof Error?e.message:'No se pudo extraer la bitácora';
   if(APICallError.isInstance(e)){status=e.statusCode ?? 500;try{const upstream=JSON.parse(e.responseBody ?? '{}');message=upstream.message ?? upstream.error?.message ?? message;}catch{/* preserve safe SDK error */}}
