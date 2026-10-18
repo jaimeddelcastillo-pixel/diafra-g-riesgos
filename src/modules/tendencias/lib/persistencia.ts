@@ -45,9 +45,8 @@ export async function guardarRegistro(r:Registro) {
   }
   // Never remove absent weeks: original synchronization deletes are intentionally not exposed.
 }
-export async function guardarSemana(registroId:string,s:Semana) {
-  const org=await empresaActiva();
-  const {error}=await supabase.from('tend_semanas').upsert({...s,registro_id:registroId,org_id:org,lecturas:s.lecturas as unknown as Json,lecturas_hr:s.lecturas_hr as unknown as Json ?? null},{onConflict:'org_id,registro_id,semana_inicio'});
+export async function guardarSemana(registroId:string,s:Semana,motivo?:string) {
+  const {error}=await supabase.rpc('tend_guardar_semana',{_registro:registroId,_semana:s as unknown as Json,_motivo:motivo});
   if(error) throw error;
 }
 export async function subirFoto(file:File) {
