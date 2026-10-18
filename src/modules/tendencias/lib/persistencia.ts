@@ -2,6 +2,7 @@ import { supabase } from '@/integrations/supabase/client';
 import type { Json } from '@/integrations/supabase/types';
 import { FORMATO_DEFAULT, type FormatoForVal16, type Firmante } from './formato-forval16';
 import type { Registro, Semana } from './semanas';
+import { compressImage } from './compress-image';
 
 export type TablaCatalogo = 'tend_sistemas_hvac' | 'tend_areas' | 'tend_instrumentos' | 'tend_objetivos_presion' | 'tend_cambios_filtro';
 export async function empresaActiva() {
@@ -33,7 +34,7 @@ export async function listarRegistros():Promise<Registro[]> {
     semanas.push(...(rows ?? []).map(r=>({...r,lecturas:r.lecturas,lecturas_hr:r.lecturas_hr ?? undefined}) as unknown as Semana & {registro_id:string}));
     if(!rows || rows.length<1000) break;
   }
-  return (data ?? []).map(r=>({...r,semanas:semanas.filter(s=>s.registro_id===r.id)} as unknown as Registro));
+  return (data ?? []).map(r=>({...r,semanas:semanas.filter(s=>s.registro_id===r.id && s.activo!==false)} as unknown as Registro));
 }
 export async function guardarRegistro(r:Registro) {
   const org=await empresaActiva(); const {semanas,created_at,...head}=r;
@@ -48,10 +49,26 @@ export async function guardarSemana(registroId:string,s:Semana,motivo?:string) {
   if(error) throw error;
 }
 export async function subirFoto(file:File) {
+  if(file.type.startsWith('image/')) file=await compressImage(file);
   const org=await empresaActiva(); const ext=file.type==='image/png'?'png':file.type==='application/pdf'?'pdf':'jpg';
   const path=`${org}/${new Date().getFullYear()}/${crypto.randomUUID()}.${ext}`;
   const {error}=await supabase.storage.from('tend-bitacoras').upload(path,file,{upsert:false,contentType:file.type});
   if(error) throw error; return path;
+}
+export async function retirarCaptura(tipo:'registro'|'semana'|'cambio_filtro',id:string,motivo:string) {
+  const {error}=await supabase.rpc('tend_retirar',{_tipo:tipo,_id:id,_motivo:motivo}); if(error)throw error;
+}
+export async function corregirFechaSemana(id:string,inicio:string,motivo:string) {
+  const {error}=await supabase.rpc('tend_corregir_fecha_semana',{_id:id,_inicio:inicio,_motivo:motivo || undefined}); if(error)throw error;
+}
+export async function historialRetirados() {
+  const org=await empresaActiva();
+  const [registros,semanas,cambios]=await Promise.all([
+    supabase.from('tend_registros').select('*').eq('org_id',org).eq('activo',false),
+    supabase.from('tend_semanas').select('*').eq('org_id',org).eq('activo',false),
+    supabase.from('tend_cambios_filtro').select('*').eq('org_id',org).eq('activo',false)]);
+  if(registros.error || semanas.error || cambios.error)throw registros.error ?? semanas.error ?? cambios.error;
+  return [...(registros.data ?? []).map(r=>({tipo:'Registro',nombre:r.nombre,motivo:r.retirado_motivo,fecha:r.retirado_en})),...(semanas.data ?? []).map(s=>({tipo:'Semana',nombre:s.semana_inicio,motivo:s.retirado_motivo,fecha:s.retirado_en})),...(cambios.data ?? []).map(c=>({tipo:'Cambio de filtro',nombre:c.fecha,motivo:c.retirado_motivo,fecha:c.retirado_en}))];
 }
 export async function abrirFoto(path:string) {
   const org=await empresaActiva(); if(!path.startsWith(`${org}/`)) throw new Error('Archivo de otra empresa');

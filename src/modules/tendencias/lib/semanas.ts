@@ -34,6 +34,7 @@ export interface Semana {
   saved_at: string;
   foto_path?: string | null;
   objetivo_presion_id?: string | null;
+  activo?: boolean;
 }
 
 export type Modulo = "filtros" | "temphr" | "presiones" | "agua";
