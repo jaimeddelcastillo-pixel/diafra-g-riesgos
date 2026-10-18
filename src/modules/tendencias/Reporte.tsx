@@ -179,6 +179,8 @@ export default function Reporte() {
       const consolidados = consolidarPorInstrumento(registrosParaExportar);
       const analisis = consolidados.map((r) => {const a=areaEfectiva(r,areasMap,instrMap);return analizarRegistro({...r,area_id:a.key,nombre_area_libre:a.etiqueta}, periodo);});
       const cat = {
+        empresa: q.auth.org?.nombre,
+        logo: q.auth.org?.logo_url,
         areas: new Map(registrosParaExportar.map(r=>{const a=areaEfectiva(r,areasMap,instrMap);return [a.key,a.etiqueta];})),
         hvac: hvacMap,
       };
