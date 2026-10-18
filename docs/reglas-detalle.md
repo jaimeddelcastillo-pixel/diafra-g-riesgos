@@ -71,3 +71,7 @@ Copied atdiafra engines stay separate from tenant persistence. Issued Word reads
 
 ## R23
 Bitacora AI reads versioned task skills and tenant-private originals; proposed and human-confirmed values, model, skill hashes and usage remain separate. Label normalization only reconciles original day/shift spelling, never readings. Notification claims and terminal AI blocks persist server-side; why: prevent duplicate notices, silent overwrites and repeated blocked billing.
+
+
+## R24
+Capture batch processing creates independent server-persisted photo proposals, compresses derived uploads before AI, isolates recoverable per-item errors and stops terminal account errors. Human review precedes confirmation; detected dates remain proposals. Date correction and retirement RPCs derive the active company, require audited reasons for changed readings/retirements, preserve IDs/history and reject issued snapshot inputs. New calculations and issuance snapshots exclude inactive weeks and filter changes; historical snapshots remain untouched. Contextual catalogue creation retains admin-only permissions; why: recoverable reviewed batches without deletion, cross-tenant writes or changes to the original engine.
