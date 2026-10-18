@@ -204,3 +204,7 @@ Archivos: Captura, LoteFotosImporter, AltaContextual, ControlesSemana, Extraccio
 Evidencia: 129/129 pruebas en 19 archivos; 71 de bibliotecas Tendencias incluidas (motor/Word original). t3c1_pruebas.sql ejecutado con rollback solo QA: motivos, corrección de fecha conservando ID, auditoría anterior/nuevo, colisiones, retiros de tres tipos, no reactivación, snapshots sin inactivos, bloqueo emitido por edición manual/extracción/fecha y tres retiros. Navegador QA: nueva captura, mover T/HR, N/A, guardar y readback; corregir fecha; dos fotos extraídas, revisadas, confirmadas y readback 22/45; retiro visible en historial. No se simuló fallo real del proveedor: aislamiento y parada terminal probados unitariamente.
 
 T3c-2 no ejecutado. PDF semanal/análisis local y fusión persistente esperan decisión; formatos/Part 11/Revisó posteriores. No se declara paridad total.
+
+### Reconfirmación T3c-1 — 18/10/2026
+
+Diferencias 1, 2, 3, 4 y 7 revisadas sobre el código existente. Ajustes en `LoteFotosImporter.tsx` (aviso de semana previamente guardada, conservando corrección motivada) y `ExtraccionBitacora.tsx` (aviso y bloqueo de confirmación sin motivo cuando ya hay lecturas). Sin modificar motor, skills ni reglas de base de datos; nada se borra. Suite existente: **129/129 pruebas, 19 archivos**, sin pruebas nuevas. No se usó navegador, no se llamó a la IA ni se inspeccionaron descargas en esta revisión; pruebas funcionales a cargo de Jaime. Alta contextual conserva admin-only; cola local de fotos no persiste tras recargar. T3c-2 fuera de alcance.
