@@ -3638,6 +3638,9 @@ export type Database = {
           registrada_por: string | null
           revocada_en: string | null
           revocada_por: string | null
+          rs_titular_cargo: string | null
+          rs_titular_nombre: string | null
+          rs_titular_user_id: string | null
           suplente_cargo: string
           suplente_nombre: string
           suplente_user_id: string
@@ -3660,6 +3663,9 @@ export type Database = {
           registrada_por?: string | null
           revocada_en?: string | null
           revocada_por?: string | null
+          rs_titular_cargo?: string | null
+          rs_titular_nombre?: string | null
+          rs_titular_user_id?: string | null
           suplente_cargo?: string
           suplente_nombre?: string
           suplente_user_id: string
@@ -3682,6 +3688,9 @@ export type Database = {
           registrada_por?: string | null
           revocada_en?: string | null
           revocada_por?: string | null
+          rs_titular_cargo?: string | null
+          rs_titular_nombre?: string | null
+          rs_titular_user_id?: string | null
           suplente_cargo?: string
           suplente_nombre?: string
           suplente_user_id?: string
@@ -4840,14 +4849,20 @@ export type Database = {
         Row: {
           anulacion_en_suplencia: boolean
           anulacion_suplencia_id: string | null
+          anulado_cargo: string | null
+          anulado_email: string | null
           anulado_en: string | null
+          anulado_nombre: string | null
           anulado_por: string | null
           autoemitido: boolean
           codigo: string
           created_at: string
           created_by: string | null
           created_by_email: string | null
+          datos_snapshot: Json | null
           dictamen_global: string | null
+          elaborado_cargo: string | null
+          elaborado_nombre: string | null
           elaborado_version_por: string | null
           emitido_at: string | null
           emitido_by: string | null
@@ -4858,6 +4873,7 @@ export type Database = {
           en_suplencia: boolean
           estado: string
           fecha: string
+          formato_snapshot: Json | null
           ia_origen: Json | null
           id: string
           instrumentos: Json
@@ -4870,6 +4886,7 @@ export type Database = {
           periodo_desde: string
           periodo_etiqueta: string | null
           periodo_hasta: string
+          rs_sustituido_nombre: string | null
           seleccion: Json | null
           sistema: string
           suplencia_id: string | null
@@ -4884,14 +4901,20 @@ export type Database = {
         Insert: {
           anulacion_en_suplencia?: boolean
           anulacion_suplencia_id?: string | null
+          anulado_cargo?: string | null
+          anulado_email?: string | null
           anulado_en?: string | null
+          anulado_nombre?: string | null
           anulado_por?: string | null
           autoemitido?: boolean
           codigo: string
           created_at?: string
           created_by?: string | null
           created_by_email?: string | null
+          datos_snapshot?: Json | null
           dictamen_global?: string | null
+          elaborado_cargo?: string | null
+          elaborado_nombre?: string | null
           elaborado_version_por?: string | null
           emitido_at?: string | null
           emitido_by?: string | null
@@ -4902,6 +4925,7 @@ export type Database = {
           en_suplencia?: boolean
           estado?: string
           fecha?: string
+          formato_snapshot?: Json | null
           ia_origen?: Json | null
           id?: string
           instrumentos?: Json
@@ -4914,6 +4938,7 @@ export type Database = {
           periodo_desde: string
           periodo_etiqueta?: string | null
           periodo_hasta: string
+          rs_sustituido_nombre?: string | null
           seleccion?: Json | null
           sistema: string
           suplencia_id?: string | null
@@ -4928,14 +4953,20 @@ export type Database = {
         Update: {
           anulacion_en_suplencia?: boolean
           anulacion_suplencia_id?: string | null
+          anulado_cargo?: string | null
+          anulado_email?: string | null
           anulado_en?: string | null
+          anulado_nombre?: string | null
           anulado_por?: string | null
           autoemitido?: boolean
           codigo?: string
           created_at?: string
           created_by?: string | null
           created_by_email?: string | null
+          datos_snapshot?: Json | null
           dictamen_global?: string | null
+          elaborado_cargo?: string | null
+          elaborado_nombre?: string | null
           elaborado_version_por?: string | null
           emitido_at?: string | null
           emitido_by?: string | null
@@ -4946,6 +4977,7 @@ export type Database = {
           en_suplencia?: boolean
           estado?: string
           fecha?: string
+          formato_snapshot?: Json | null
           ia_origen?: Json | null
           id?: string
           instrumentos?: Json
@@ -4958,6 +4990,7 @@ export type Database = {
           periodo_desde?: string
           periodo_etiqueta?: string | null
           periodo_hasta?: string
+          rs_sustituido_nombre?: string | null
           seleccion?: Json | null
           sistema?: string
           suplencia_id?: string | null
@@ -5766,6 +5799,10 @@ export type Database = {
       normalizar_txt: { Args: { _t: string }; Returns: string }
       org_documento_retencion: { Args: { p_id: string }; Returns: string }
       org_has_curso_access: { Args: { _org_id: string }; Returns: boolean }
+      org_suplencia_aviso_resultado: {
+        Args: { _enviado: boolean; _error?: string; _id: string }
+        Returns: undefined
+      }
       org_suplencias_acceso: {
         Args: { _escritura?: boolean; _org: string }
         Returns: boolean
