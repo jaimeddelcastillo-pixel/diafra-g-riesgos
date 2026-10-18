@@ -18,6 +18,6 @@ export function desdeSnapshot(row:RegistroAT){
  const at=datos.registro_at;
  const seleccion=at.seleccion as {modo?:string;hvacId?:string}|null;
  const hvac=datos.hvac.find(h=>h.id===seleccion?.hvacId);
- const args={empresa:formato.identidad?.nombre,registros:unirPorInstrumento(datos.registros),instrMap:new Map(datos.instrumentos.map(i=>[i.id,i])),areasMap:new Map(datos.areas.map(a=>[a.id,a])),desde:at.periodo_desde,hasta:at.periodo_hasta,hvac,cambiosFiltro:datos.cambios};
+ const args={fechaCalculo:datos.fecha_calculo,empresa:formato.identidad?.nombre,registros:unirPorInstrumento(datos.registros),instrMap:new Map(datos.instrumentos.map(i=>[i.id,i])),areasMap:new Map(datos.areas.map(a=>[a.id,a])),desde:at.periodo_desde,hasta:at.periodo_hasta,hvac,cambiosFiltro:datos.cambios};
  return {datos,at,formato,args,...construirBloques(args),texto:at.texto as unknown as TextoForVal16,justificaciones:at.justificaciones as Record<string,string>};
 }

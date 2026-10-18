@@ -11,5 +11,5 @@ describe('Word histórico',()=>{
  expect(snapshot.datos.objetivos[0].limite_normativo_pa).toBe(5);
  expect(snapshot.args.registros[0].id).toBe('r');
  });
- it('rechaza históricos sin snapshot completo en vez de consultar datos vivos',()=>{expect(()=>desdeSnapshot({formato_snapshot:{},datos_snapshot:{schema_version:1}} as RegistroAT)).toThrow('Snapshot histórico incompleto');});
+ it('rechaza históricos sin snapshot completo en vez de consultar datos vivos',()=>{expect(()=>desdeSnapshot({formato_snapshot:{},datos_snapshot:{schema_version:1}} as unknown as RegistroAT)).toThrow('Snapshot histórico incompleto');});
 });
