@@ -386,6 +386,13 @@
       "when": 1792286725952,
       "tag": "0054_t3b_guardado_semanas_seguro",
       "breakpoints": true
+    },
+    {
+      "idx": 55,
+      "version": "7",
+      "when": 1792287262850,
+      "tag": "0055_t3b_snapshot_hvac_completo",
+      "breakpoints": true
     }
   ]
 }

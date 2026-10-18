@@ -32,6 +32,7 @@ import { template as folioSolicitudVotacion } from './folio-solicitud-votacion.t
 import { template as folioListoDictamen } from './folio-listo-dictamen.tsx'
 import { template as usuarioAgregadoEmpresa } from './usuario-agregado-empresa.tsx'
 import { template as auditoriaInvitacion } from './auditoria-invitacion.tsx'
+import { template as suplenciaRs } from './suplencia-rs.tsx'
 
 export const TEMPLATES: Record<string, TemplateEntry> = {
   'bienvenida-usuario': bienvenidaUsuario,
@@ -57,4 +58,5 @@ export const TEMPLATES: Record<string, TemplateEntry> = {
   'folio-listo-dictamen': folioListoDictamen,
   'usuario-agregado-empresa': usuarioAgregadoEmpresa,
   'auditoria-invitacion': auditoriaInvitacion,
+  'suplencia-rs': suplenciaRs,
 }

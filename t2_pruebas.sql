@@ -21,6 +21,7 @@ BEGIN
  PERFORM set_config('request.jwt.claims',jsonb_build_object('sub',admin_a,'role','authenticated')::text,true);
  INSERT INTO public.tend_sistemas_hvac(org_id,codigo,nombre_uma) VALUES(a,'T2-A','T2 A') RETURNING id INTO ra;
  INSERT INTO public.tend_instrumentos(org_id,codigo,tipo,parametro,spec_estado) VALUES(a,'T2-I','otro','T2','validada') RETURNING id INTO ins;
+ INSERT INTO public.tend_registros(org_id,modulo,nombre,instrumento_id) VALUES(a,'presiones','T2 registro QA',ins);
  INSERT INTO public.tend_config(org_id,permitir_autoemision) VALUES(a,false) ON CONFLICT(org_id) DO UPDATE SET permitir_autoemision=false;
  -- 1: fila positiva visible; fila real B oculta.
  IF NOT EXISTS(SELECT 1 FROM public.tend_sistemas_hvac WHERE id=ra) OR EXISTS(SELECT 1 FROM public.tend_sistemas_hvac WHERE id=rb) THEN RAISE EXCEPTION 'P1 aislamiento falla'; END IF;

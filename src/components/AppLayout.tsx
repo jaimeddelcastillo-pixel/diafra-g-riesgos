@@ -12,6 +12,7 @@ import { OnboardingController } from "@/components/onboarding/OnboardingControll
 import { useMisModulos } from "@/hooks/useMisModulos";
 import { modulos } from "@/modules";
 import { encabezadoModulo, moduloEnRuta } from "@/modules/contexto";
+import { AvisoSuplencia } from '@/modules/tendencias/Suplencias';
 
 const roleLabels: Record<string, string> = {
   admin: "Administrador",
@@ -82,6 +83,7 @@ export function AppLayout() {
               </div>
             )}
 
+            <AvisoSuplencia />
             <header className="h-14 flex items-center justify-between border-b bg-card px-4 shrink-0">
               <div className="flex items-center gap-2 min-w-0">
                 <SidebarTrigger />

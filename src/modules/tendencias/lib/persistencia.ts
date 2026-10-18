@@ -39,15 +39,12 @@ export async function guardarRegistro(r:Registro) {
   const org=await empresaActiva(); const {semanas,created_at,...head}=r;
   const {error}=await supabase.from('tend_registros').upsert({...head,org_id:org},{onConflict:'id'});
   if(error) throw error;
-  if(semanas.length){
-    const {error:e}=await supabase.from('tend_semanas').upsert(semanas.map(s=>({...s,org_id:org,registro_id:r.id,lecturas:s.lecturas as unknown as Json,lecturas_hr:s.lecturas_hr as unknown as Json ?? null})),{onConflict:'org_id,registro_id,semana_inicio'});
-    if(e) throw e;
-  }
+  // Existing readings are saved only by the guarded week RPC, never by head synchronization.
+  for (const semana of semanas) await guardarSemana(r.id,semana);
   // Never remove absent weeks: original synchronization deletes are intentionally not exposed.
 }
-export async function guardarSemana(registroId:string,s:Semana) {
-  const org=await empresaActiva();
-  const {error}=await supabase.from('tend_semanas').upsert({...s,registro_id:registroId,org_id:org,lecturas:s.lecturas as unknown as Json,lecturas_hr:s.lecturas_hr as unknown as Json ?? null},{onConflict:'org_id,registro_id,semana_inicio'});
+export async function guardarSemana(registroId:string,s:Semana,motivo?:string) {
+  const {error}=await supabase.rpc('tend_guardar_semana',{_registro:registroId,_semana:s as unknown as Json,_motivo:motivo});
   if(error) throw error;
 }
 export async function subirFoto(file:File) {

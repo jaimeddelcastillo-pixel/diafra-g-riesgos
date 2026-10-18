@@ -61,6 +61,7 @@ type BaseBloque = Omit<Bloque, "n" | "media" | "s" | "min" | "max" | "LAS" | "LA
 
 export interface PaqueteArgs {
   empresa?: string;
+  fechaCalculo?: string;
   codigoAT: string;
   sistema: string;
   registros: Registro[];
@@ -185,7 +186,7 @@ function specInstrumento(ins: Instrumento | undefined, hr: boolean) {
 const reglasDe = (sen: Senal[], i: number) => sen.filter((x) => x.index === i).map((x) => `Regla ${x.rule}: ${x.description}`);
 
 /** Calidad de datos: lecturas, días, días hábiles sin lectura (no N/A), dudosas de la IA. */
-function calidadDe(r: Registro, campo: "lecturas" | "lecturas_hr", desde: string, hasta: string, nSuficiencia: (nDias: number, nLect: number) => number): CalidadDatos {
+function calidadDe(r: Registro, campo: "lecturas" | "lecturas_hr", desde: string, hasta: string, nSuficiencia: (nDias: number, nLect: number) => number, fechaCalculo?: string): CalidadDatos {
   const conLectura = new Set<string>(), soloNA = new Set<string>(), vistos = new Set<string>();
   let nLecturas = 0, dudosas = 0;
   for (const s of recortarSemanasPorFecha(r.semanas, desde, hasta)) {
@@ -196,7 +197,7 @@ function calidadDe(r: Registro, campo: "lecturas" | "lecturas_hr", desde: string
       else if (p._na) soloNA.add(f);
     }
   }
-  const hoy = new Date().toISOString().slice(0, 10);
+  const hoy = fechaCalculo ?? new Date().toISOString().slice(0, 10);
   const fin = hasta < hoy ? hasta : hoy;
   let habiles = 0;
   for (let d = new Date(desde + "T00:00:00Z"); d.toISOString().slice(0, 10) <= fin; d.setUTCDate(d.getUTCDate() + 1)) {
@@ -478,7 +479,7 @@ export function construirBloques(a: Omit<PaqueteArgs, "codigoAT" | "sistema" | "
         if (!n) continue;
         const hoja = nombreHoja(`${codigo} ${v}`, usadas);
         const sp = specInstrumento(ins, v === "HR");
-        bloques.push(bloqueTHR({ ...comun, hoja, calidad: calidadDe(r, campo, a.desde, a.hasta, (nd) => nd), variable: v === "T" ? "Temperatura" : "Humedad relativa", tipo: "thr", lie: lie ?? null, lse: lse ?? null, ...(sp ?? {}), unidad: u }, dias, rango, v === "HR"));
+        bloques.push(bloqueTHR({ ...comun, hoja, calidad: calidadDe(r, campo, a.desde, a.hasta, (nd) => nd, a.fechaCalculo), variable: v === "T" ? "Temperatura" : "Humedad relativa", tipo: "thr", lie: lie ?? null, lse: lse ?? null, ...(sp ?? {}), unidad: u }, dias, rango, v === "HR"));
       }
     } else if (r.modulo === "presiones" || r.modulo === "filtros") {
       const dias = lecturasPorDia(r, "lecturas", a.desde, a.hasta);
@@ -488,7 +489,7 @@ export function construirBloques(a: Omit<PaqueteArgs, "codigoAT" | "sistema" | "
       const hoja = nombreHoja(codigo, usadas);
       const unidad = r.semanas.find((s) => s.unidad?.trim())?.unidad || "Pa";
       bloques.push(bloquePresion({
-        ...comun, hoja, calidad: calidadDe(r, "lecturas", a.desde, a.hasta, (_nd, nl) => nl), variable: "Presión diferencial", tipo: r.modulo === "filtros" || ins?.tipo === "manometro_filtro" ? "filtro" : "presion",
+        ...comun, hoja, calidad: calidadDe(r, "lecturas", a.desde, a.hasta, (_nd, nl) => nl, a.fechaCalculo), variable: "Presión diferencial", tipo: r.modulo === "filtros" || ins?.tipo === "manometro_filtro" ? "filtro" : "presion",
         lie: r.lie ?? ins?.lie_pa ?? null, lse: r.lse ?? ins?.lse_pa ?? null, ...(specInstrumento(ins, false) ?? {}), unidad,
         saturacion: ins?.dp_final_fabricante ?? null,
         opMin: ins?.op_min_pa ?? null, opMax: ins?.op_max_pa ?? null,
@@ -511,7 +512,7 @@ export async function exportarPaqueteForVal16(a: PaqueteArgs): Promise<{ archivo
     const b = new HojaBuilder();
     b.set(0, 0, a.empresa ?? "", ST.titulo);
     b.set(1, 0, "FOR-VAL-16-02 · Análisis de tendencias (PNO-VAL-16)", ST.bold);
-    const datos: [string, string][] = [["Código de reporte", a.codigoAT], ["Sistema", a.sistema], ["Periodo", rango], ["Fecha de emisión", format(new Date(), "dd/MM/yyyy")]];
+    const datos: [string, string][] = [["Código de reporte", a.codigoAT], ["Sistema", a.sistema], ["Periodo", rango], ["Fecha de emisión", format(a.fechaCalculo ? new Date(a.fechaCalculo + 'T12:00:00') : new Date(), "dd/MM/yyyy")]];
     datos.forEach(([k, v], i) => { b.set(3 + i, 0, k, ST.head); b.set(3 + i, 1, v, ST.txt); });
     b.fila(9, 0, ["Instrumento", "Bitácora", "Variable", "n de datos"], ST.head);
     portadaInst.forEach((p, i) => b.fila(10 + i, 0, [p.codigo, p.bitacora, p.variable, p.n], (v) => (typeof v === "number" ? ST.txt : ST.txt)));
