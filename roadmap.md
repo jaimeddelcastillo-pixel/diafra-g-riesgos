@@ -1,5 +1,7 @@
 # Roadmap
 
+- [ ] Reconfirmación T3c-1 solicitada: revisar diferencias 1/2/3/4/7 ya implementadas y ejecutar solo suite existente; sin navegador, llamadas IA ni inspección de descargas. Nuevas pruebas solo si cambian reglas de base de datos; pruebas funcionales a cargo de Jaime. No avanzar T3c-2.
+
 - [x] T3c-1 verificado: lote IA con propuestas/revisión/reintento; fecha detectada y compresión; captura contextual/antefirma/objetivo/baseline; acciones por día/descarte/fecha con colisiones; retiro motivado de registros/semanas/cambios de filtro y pruebas QA. Motor intacto; 129/129 pruebas, controles SQL rollback QA y lote revisado/readback real. Alta catálogo conserva admin-only. T3c-2 espera aprobación de esta parte.
 
 - [x] Cierre T3b solicitado: t3b_matriz.md exhaustiva entregada, gráficas originales del PDF descargadas/inspeccionadas, suplencias/aviso/reintento/revocación QA y extracción individual T/HR-presiones-filtros con skills originales v1.0, revisión humana y consumo; 118/118 pruebas y 3 reglas SQL QA con rollback. Agua manual y formatos por módulo posteriores. No equivale a paridad total: faltantes enumerados en la matriz.
