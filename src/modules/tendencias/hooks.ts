@@ -12,3 +12,13 @@ export function useTendencias(cargar=true){
  }});
  return {...query,auth,captura:puedeCapturar(auth.orgRole,auth.isImpersonating,auth.isSuperAdmin()),admin:puedeConfigurar(auth.orgRole,auth.isImpersonating,auth.isSuperAdmin()),refresh:()=>{qc.invalidateQueries({queryKey:['tendencias']});qc.invalidateQueries({queryKey:['pendientes-modulo','tendencias']});}};
 }
+export function useFacultadesTendencias(){
+ const auth=useAuth();
+ return useQuery({queryKey:['tend-facultades',auth.orgId,auth.user?.id],enabled:!!auth.orgId && !auth.isSuperAdmin(),queryFn:async()=>{
+  const {supabase}=await import('@/integrations/supabase/client');
+  const {data:org,error}=await supabase.rpc('get_user_org_id');if(error)throw error;if(!org)return {autorizar:false,anular:false};
+  const [autorizar,anular]=await Promise.all([supabase.rpc('tend_suplencia',{_org:org,_facultad:'autorizar'}),supabase.rpc('tend_suplencia',{_org:org,_facultad:'anular'})]);
+  if(autorizar.error || anular.error)throw autorizar.error ?? anular.error;
+  return {autorizar:auth.orgRole==='responsable_sanitario' || !!autorizar.data,anular:auth.orgRole==='responsable_sanitario' || !!anular.data};
+ }});
+}

@@ -1,4 +1,28 @@
-# Punto 0 — Matriz de equivalencia de T3b (antes de implementar)
+# Matriz de equivalencia T3b
+
+## Actualización de implementación y evidencia
+
+Esta sección prevalece sobre el inventario previo que sigue abajo, conservado como referencia de lo encontrado antes de implementar. No se declara equivalencia completa.
+
+|Función|Destino actual|Estado verificado / pendiente|
+|---|---|---|
+|Selección HVAC e instrumentos, periodo, textos, gráficas, borrador, emisión/nueva versión/anulación|/tendencias/analisis|Implementada; emisión HVAC, vacíos y guards probados en SQL QA; flujo completo de navegador pendiente|
+|Word histórico|snapshot-forval16 + Analisis|Datos y fecha congelados, sin consultas de catálogos para emitidos; 1 regresión Word pasa; descarga de AT real pendiente|
+|Registro AT, filtros y Excel|/tendencias/registro-at|Pantalla cargada en soporte QA sin errores; creación/exportación completa pendiente|
+|Edición de semana con motivo|/tendencias/captura|RPC conectada; motivo/auditoría y rechazo de emitidos en ambas vías pasan SQL QA; lote necesita motivo por elemento|
+|Cumplimiento|/tendencias/cumplimiento|Motor normativo copiado; filtros URL, selección, KPIs, detalle, Excel/PDF implementados; agrupaciones/pestañas y paridad completa pendientes|
+|Reporte consolidado|/tendencias/reporte|Reutiliza provisionalmente Cumplimiento; NO reproduce avance/jerarquía/detalle fuente|
+|Suplencias y aviso del encabezado|/tendencias/suplencias|Pantalla alta/revocación/historial creada; entrega correo/reintentos sin verificar|
+|Aviso RS|tend-aviso-suplencia + plantilla compartida|Implementación creada, entrega real y concurrencia pendientes|
+|IA de bitácoras|No habilitada|Tres skills originales, extracción, revisión/confirmación UI y lotes pendientes; agua manual|
+|Inicio por autorizar|Registro de módulos|Implementado para RS/suplente con separación de funciones; UI pendiente de verificación|
+|Auditoría interna, captura avanzada, migración local y paridad restante|Ver inventario previo|Pendiente; no se excluyen silenciosamente|
+
+Pruebas actuales: **36/36 originales, 47/47 totales** (incluye 1 regresión Word, 2 snapshots, 3 Cumplimiento). Las siete T2 completas y avisos admin/RS se repitieron con rollback QA; HVAC positivo/vacíos, objetivos, semanas/id, motivos/auditoría, snapshot cliente y dos vías de bloqueo emitido pasan. Una prueba provisional usó ISO 8 en lugar de ISO-8 y otra una lectura en lugar de 21; se corrigieron los datos de prueba, no las reglas.
+
+Cumplimiento conserva la regla fuente: período cerrado con menos de 90 lecturas no cumple; fuera de especificación no cumple; Cpk bajo por sí solo es advertencia, no incumplimiento normativo. No se cambió el motor.
+
+## Inventario previo al desarrollo (referencia histórica)
 
 **Estado:** verificación previa terminada; implementación detenida para avisar de incompatibilidades. «Se hace en T3b» es trabajo pendiente, no una función ya construida. El desglose granular es evidencia de cobertura; el resumen por ruta distingue cada función y su destino. No se han modificado pantallas ni datos.
 

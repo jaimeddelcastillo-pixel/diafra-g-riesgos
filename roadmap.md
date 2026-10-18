@@ -6,9 +6,11 @@
 - [x] T3b punto 0: matriz de rutas/acciones/funciones, inventario intacto/adaptado y nueva ejecución 36/36 originales, 42/42 totales (Word 1/1). Entrega t3b_matriz_equivalencia.md y verificación previa; sin cambios funcionales.
 - [x] T3b controles de base: tres estados, anulación motivada de borrador, avisos solo sistema, identidades congeladas, extracciones trazables/límite histórico; reversión actualizada. Siete pruebas T2 y aviso RS pasan con rollback QA.
 - [x] T3b correcciones de integridad: snapshots solo servidor al emitir con registros/semanas/id; ambos replace comprobados; RS titular congelado y copiado desde suplencia; motivo y auditoría manual/extracción; semanas emitidas bloqueadas en ambas vías; source/mes/año y foto validados en servidor. Pruebas adicionales en t3b_integridad_pruebas.sql.
-- [ ] T3b ajuste HVAC: resolver selección en servidor, rechazar instrumentos/registros vacíos, completar snapshot con objetivos/textos y todos los insumos Word; prueba emisión HVAC y listado de fuentes.
-- [ ] T3b siguiente etapa autorizada: conectar captura a RPC con motivo y generar Word de emitidos desde snapshots, junto con pantallas restantes.
-- [ ] T3b pantallas: análisis/reporte consolidado/normativo, captura pendiente de equivalencia, Registro AT y Word/historial, suplencias con correo/reintentos e IA (agua manual, tres skills v1.0 originales parametrizadas). Navegador de Jaime; no firma Part 11, Riesgos ni Cerebro.
+- [x] T3b ajuste HVAC: 0055 aplicada, instrumentos resueltos por servidor, instrumentos/registros vacíos rechazados, objetivos y semanas/id congelados. Pruebas positivas/negativas QA con rollback pasan. Fuente Word documentada en t3b_reporte.md.
+- [x] T3b captura individual usa RPC motivada; Word emitido usa snapshot y fecha de cálculo congelada. Motor original 36/36 y total 47/47, incluido Word. Registro AT abre en navegador soporte QA sin errores; no equivale a emisión/descarga completa en navegador.
+- [ ] T3b cierre de equivalencia: completar funciones faltantes de captura/lotes/reporte consolidado/auditoría y agrupaciones de Cumplimiento; probar Word de AT real de principio a fin. Sin Part 11, Riesgos ni Cerebro.
+- [ ] T3b correo: pantalla/plantilla/función de avisos y reintentos creadas; falta verificar entrega real y no-op concurrente. No declarar envío probado.
+- [ ] T3b IA: faltan registrar tres skills v1.0 originales parametrizadas, implementar extracción/confirmación humana/lotes y probar llamada real. Agua manual. Función IA incompleta retirada; no habilitada.
 
 - [x] Soporte: actualizar adopta contexto del servidor sin cierre por marca local ausente; 10 pruebas pasan. Navegador QA adminqa: Cerebro conserva soporte tras recargar sin marca local y Terminar soporte vuelve al Panel.
 

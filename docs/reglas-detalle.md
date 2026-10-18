@@ -59,3 +59,9 @@ All AI prompts (asistente, Cerebro, extracción, análisis, causa raíz) are ver
 
 ## R17
 AI composition for Riesgos is per company in ia_config_org (default monolitica; only super_admin, audited). chat-asistente uses _shared/skills.ts armarRiesgos (plataforma, riesgos_amef, norma_nom241|norma_nom059, [CONTEXTO_EMPRESA], [ALCANCE_TRACEA]) only when the company is 'bloques' and the three required pieces are vigente; otherwise dm/farma and COMPOSICION_BLOQUES_INCOMPLETA is logged. Fixed blocks carry Anthropic cache_control. Block pieces are published only from a borrador via publicar_skill, and only when ia_skill_casos_faltantes = 0 (a run in ia_skill_pruebas of that sha256 with all cases 'pasa', graded by a person). skills_usadas plus modelo_ia record every piece and model; accepted causa-raiz-ai suggestions land in riesgos.ia_origen; why: no client change until piloted, and no prompt goes live untested.
+
+## R21
+Tendencias writes use active-company guards, never super-admin writes. Issuance snapshots are server-only and retain selected records, week IDs and substitution identity; prior-reading corrections require a reason and immutable before/after audit, while emitted weeks reject manual and extraction changes. Source, month/year and photo ownership are server-guarded; why: tenant isolation and immutable issuance.
+
+## R22
+Copied atdiafra engines stay separate from tenant persistence. Issued Word reads frozen format, records/catalogs, text, identities and calculation date exclusively from issuance snapshots; source regression tests preserve calculations/report structure. Live catalogs are only for drafts; why: historical reports stay reproducible after catalog/profile changes.
