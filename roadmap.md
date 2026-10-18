@@ -1,5 +1,7 @@
 # Roadmap
 
+- [x] Reconfirmación T3c-1: diferencias 1/2/3/4/7 revisadas; aviso de semana existente en lote y bloqueo/aviso de confirmación individual sin motivo añadidos. Suite existente 129/129, 19 archivos; sin nuevas reglas SQL/pruebas, navegador, llamadas IA ni inspección de descargas. Pruebas funcionales a cargo de Jaime. T3c-2 no ejecutado.
+
 - [x] T3c-1 verificado: lote IA con propuestas/revisión/reintento; fecha detectada y compresión; captura contextual/antefirma/objetivo/baseline; acciones por día/descarte/fecha con colisiones; retiro motivado de registros/semanas/cambios de filtro y pruebas QA. Motor intacto; 129/129 pruebas, controles SQL rollback QA y lote revisado/readback real. Alta catálogo conserva admin-only. T3c-2 espera aprobación de esta parte.
 
 - [x] Cierre T3b solicitado: t3b_matriz.md exhaustiva entregada, gráficas originales del PDF descargadas/inspeccionadas, suplencias/aviso/reintento/revocación QA y extracción individual T/HR-presiones-filtros con skills originales v1.0, revisión humana y consumo; 118/118 pruebas y 3 reglas SQL QA con rollback. Agua manual y formatos por módulo posteriores. No equivale a paridad total: faltantes enumerados en la matriz.
