@@ -3,7 +3,8 @@
 - [x] T3a: motor original 36/36 y total 42/42 con regresión Word; registro, tablero, catálogos, captura/fotos y configuración. T2 «No clasificada» autorizado y t2_down.sql actualizado. Navegador adminqa: alta HVAC/área/instrumento, semana y foto persistentes, logo/firmante persistentes, pendientes; operador sin edición; QA Starter sin acceso. Conservar tracea.site; sin IA/emisión/suplencias hasta T3b.
 
 - [x] T2 Tendencias: 0050 aplicada, 11 tend_ + org_suplencias, RLS/roles, historial inmutable, bucket privado y auditoría horaria de vencimientos; beta manual solo adminqa sin precios/planes. Siete pruebas SQL y avisos admin/RS pasan con ROLLBACK solo QA; t2_down.sql no destructivo y t2_reporte.md.
-- [ ] T3 (espera alcance/autorización): pantalla de Suplencias, correo al RS al registrar y reintentos pendientes con infraestructura existente; T2 solo guarda estado del aviso.
+- [x] T3b punto 0: matriz de rutas/acciones/funciones, inventario intacto/adaptado y nueva ejecución 36/36 originales, 42/42 totales (Word 1/1). Entrega t3b_matriz_equivalencia.md y verificación previa; sin cambios funcionales.
+- [ ] T3b implementación bloqueada por decisiones de Jaime: revisión persistida o etapa de borrador; ajustes mínimos T2 para anular borrador/avisos/identidad y consumo IA; prompt vacío de agua e identidad fija/unidades del origen. Después análisis/reporte consolidado/normativo y brechas de captura, Registro AT, suplencias con correo/reintentos e IA. Navegador de Jaime; no firma Part 11, Riesgos ni Cerebro.
 
 - [x] Soporte: actualizar adopta contexto del servidor sin cierre por marca local ausente; 10 pruebas pasan. Navegador QA adminqa: Cerebro conserva soporte tras recargar sin marca local y Terminar soporte vuelve al Panel.
 
