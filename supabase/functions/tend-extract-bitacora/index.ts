@@ -7,6 +7,7 @@ import {resolverContextoOrg,ContextoOrgError} from '../_shared/contexto-org.ts';
 import {cargarSkill,interpolar,registrarSkillFaltante} from '../_shared/skills.ts';
 import {leerBitacoraPrivada} from '../_shared/documento-contenido.ts';
 import {contextoFechaMexico} from '../_shared/fecha-mexico.ts';
+import {normalizarLecturas} from '../_shared/bitacora-lecturas.ts';
 import {createLovableAiGatewayRunIdFetch,getLovableAiGatewayRunId,getLovableAiGatewayResponseHeaders} from '../_shared/run-id.ts';
 
 const requestSchema=z.object({registro_id:z.string().uuid(),foto_path:z.string().min(1).max(500)}).strict();
@@ -15,7 +16,7 @@ const comunes={mes:z.string(),anio:z.string(),instrumento:z.string(),area:z.stri
 const dias=['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'];
 const turnos=['Mañana','Media tarde','Tarde'];
 function comprobarLecturas(rows:unknown){
- const parsed=z.array(lectura).parse(rows);
+ const parsed=normalizarLecturas(z.array(lectura).parse(rows));
  if(parsed.length!==21 || new Set(parsed.map(p=>`${p.dia}/${p.turno}`)).size!==21 || parsed.some(p=>!dias.includes(p.dia) || !turnos.includes(p.turno)))throw new Error('Propuesta incompleta: requiere 21 combinaciones únicas por variable');
  return parsed.map(p=>({...p,confianza:p.confianza===null?null:Math.max(0,Math.min(1,p.confianza))}));
 }

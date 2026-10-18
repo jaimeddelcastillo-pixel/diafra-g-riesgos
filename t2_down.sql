@@ -19,6 +19,9 @@ REVOKE ALL ON FUNCTION public.tend_guardar_semana(uuid,jsonb,text) FROM PUBLIC,a
 REVOKE ALL ON FUNCTION public.tend_confirmar_extraccion(uuid,jsonb,text) FROM PUBLIC,anon,authenticated,service_role;
 REVOKE ALL ON FUNCTION public.tend_extraccion_resultado(uuid,jsonb,jsonb,text,bigint,bigint,text) FROM PUBLIC,anon,authenticated,service_role;
 REVOKE ALL ON FUNCTION public.org_suplencia_aviso_resultado(uuid,boolean,text) FROM PUBLIC,anon,authenticated,service_role;
+REVOKE ALL ON FUNCTION public.tend_aviso_tomar(uuid) FROM PUBLIC,anon,authenticated,service_role;
+REVOKE ALL ON FUNCTION public.tend_aviso_terminar(uuid,boolean,text) FROM PUBLIC,anon,authenticated,service_role;
+REVOKE ALL ON TABLE public.tend_avisos_control,public.tend_ia_control FROM PUBLIC,anon,authenticated,service_role;
 REVOKE ALL ON FUNCTION public.tend_resolver_instrumentos(uuid,jsonb,jsonb) FROM PUBLIC,anon,authenticated,service_role;
 -- Bloquea archivos T2 sin afectar los demás buckets ni borrar originales.
 DROP POLICY IF EXISTS tend_bitacoras_select ON storage.objects;

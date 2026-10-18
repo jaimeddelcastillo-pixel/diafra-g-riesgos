@@ -68,3 +68,6 @@ Tendencias writes use active-company guards, never super-admin writes. Issuance 
 
 ## R22
 Copied atdiafra engines stay separate from tenant persistence. Issued Word reads frozen format, records/catalogs, text, identities and calculation date exclusively from issuance snapshots; source regression tests preserve calculations/report structure. Live catalogs are only for drafts; why: historical reports stay reproducible after catalog/profile changes.
+
+## R23
+Bitacora AI reads versioned task skills and tenant-private originals; proposed and human-confirmed values, model, skill hashes and usage remain separate. Label normalization only reconciles original day/shift spelling, never readings. Notification claims and terminal AI blocks persist server-side; why: prevent duplicate notices, silent overwrites and repeated blocked billing.

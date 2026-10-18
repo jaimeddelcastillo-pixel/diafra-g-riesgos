@@ -28,7 +28,7 @@ import {
 
 const diafraLogo = "";
 
-type Catalogos = { areas: Map<string, string>; hvac: Map<string, string> };
+type Catalogos = { areas: Map<string, string>; hvac: Map<string, string>; empresa?: string; logo?: string | null };
 
 // ===== Identidad documental DIAFRA (formato controlado) =====
 const DOC_CODIGO = "FOR-VAL-16";
@@ -53,7 +53,7 @@ function num(v: number | null | undefined, d = 2) {
 }
 
 /** Dibuja encabezado corporativo (logo · título · código) y pie en cada página. */
-function pintarEncabezadoPie(doc: jsPDF, periodo: string, titulo: string = DOC_TITULO_DEFAULT) {
+function pintarEncabezadoPie(doc: jsPDF, periodo: string, titulo: string = DOC_TITULO_DEFAULT, identidad?: Catalogos) {
   const pageW = doc.internal.pageSize.getWidth();
   const pageH = doc.internal.pageSize.getHeight();
   const total = doc.getNumberOfPages();
@@ -78,12 +78,12 @@ function pintarEncabezadoPie(doc: jsPDF, periodo: string, titulo: string = DOC_T
 
     // Logo
     try {
-      doc.addImage(diafraLogo, "JPEG", xLogo + 10, 26, wLogo - 20, HEADER_H - 32);
+      if (!identidad?.logo) throw new Error('Sin logo');
+      doc.addImage(identidad.logo, identidad.logo.startsWith('data:image/png') ? 'PNG' : 'JPEG', xLogo + 10, 26, wLogo - 20, HEADER_H - 32);
     } catch {
       doc.setFontSize(11).setFont("helvetica", "bold").setTextColor(30, 64, 175);
       doc.text("TRACEA", xLogo + wLogo / 2, 45, { align: "center" });
       doc.setFontSize(7).setFont("helvetica", "italic").setTextColor(100);
-      doc.text("S.A. DE C.V.", xLogo + wLogo / 2, 55, { align: "center" });
       doc.setTextColor(0);
     }
 
@@ -92,7 +92,10 @@ function pintarEncabezadoPie(doc: jsPDF, periodo: string, titulo: string = DOC_T
     const wTit = xCodigo - xTit;
     doc.setTextColor(0);
     doc.setFontSize(12).setFont("helvetica", "bold");
-    doc.text("DIAFRA, S.A. DE C.V.", xTit + wTit / 2, 34, { align: "center" });
+    const empresa = identidad?.empresa ?? 'TRACEA';
+    const nombreW = doc.getTextWidth(empresa);
+    if (nombreW > wTit - 12) doc.setFontSize(12 * (wTit - 12) / nombreW);
+    doc.text(empresa, xTit + wTit / 2, 34, { align: "center" });
     doc.setFontSize(8).setFont("helvetica", "italic");
     doc.text(DOC_DEPARTAMENTO, xTit + wTit / 2, 46, { align: "center" });
     doc.setFontSize(10).setFont("helvetica", "bold");
@@ -259,7 +262,7 @@ export function exportarNormativoPDF(
   doc.setFontSize(18).setFont("helvetica", "bold");
   doc.text(tituloPortada, pageW / 2, TOP_Y + 30, { align: "center" });
   doc.setFontSize(13).setFont("helvetica", "normal");
-  doc.text(`TRACEA — ${periodo}`, pageW / 2, TOP_Y + 56, { align: "center" });
+  doc.text(`${cat.empresa ?? 'TRACEA'} — ${periodo}`, pageW / 2, TOP_Y + 56, { align: "center" });
 
   doc.setFontSize(10);
   const total = analisis.length;
@@ -502,7 +505,7 @@ export function exportarNormativoPDF(
         const chartH = 200;
         const sems = semanasDelPeriodo(a.registro, a.periodo);
         const bloque = generarBloqueEstadisticoRegistro(a.registro, sems, chartW, chartH);
-        let yCursor = (doc as any).lastAutoTable.finalY + 16;
+        let yCursor = (doc as any).lastAutoTable.finalY + (seriesInsuf.length ? 28 : 16);
 
         const nuevaPagina = (titulo: string) => {
           doc.addPage();
@@ -623,7 +626,7 @@ export function exportarNormativoPDF(
   }
 
   // Pintar encabezado y pie en TODAS las páginas al final
-  pintarEncabezadoPie(doc, periodo, tituloDoc);
+  pintarEncabezadoPie(doc, periodo, tituloDoc, cat);
 
   doc.save(`normativo-${periodo.replace(/\s+/g, "_")}-${fechaArchivo()}.pdf`);
 }
