@@ -5983,6 +5983,10 @@ export type Database = {
         Args: { _motivo?: string; _registro: string; _semana: Json }
         Returns: string
       }
+      tend_resolver_instrumentos: {
+        Args: { _instrumentos: Json; _org: string; _seleccion: Json }
+        Returns: Json
+      }
       tend_semana_en_emitido: {
         Args: { _org: string; _semana: string }
         Returns: boolean
