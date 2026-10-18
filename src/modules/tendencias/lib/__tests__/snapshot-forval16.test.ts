@@ -10,6 +10,7 @@ describe('Word histórico',()=>{
  expect(snapshot.texto.alcance).toBe('Alcance congelado');
  expect(snapshot.datos.objetivos[0].limite_normativo_pa).toBe(5);
  expect(snapshot.args.registros[0].id).toBe('r');
+ expect(snapshot.args.fechaCalculo).toBe('2026-04-01');
  });
  it('rechaza históricos sin snapshot completo en vez de consultar datos vivos',()=>{expect(()=>desdeSnapshot({formato_snapshot:{},datos_snapshot:{schema_version:1}} as unknown as RegistroAT)).toThrow('Snapshot histórico incompleto');});
 });
