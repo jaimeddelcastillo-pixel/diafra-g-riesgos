@@ -1,5 +1,7 @@
 # Roadmap
 
+- [ ] T3d: modelo configurable por skill y paridad con atdiafra, lote de dos fotos, fechas/confianza y borradores v1.1 sin publicar, enteros Word, aviso soporte y Excel crudo con correcciones; solo suite automática, sin navegador/IA ni dependencias.
+
 - [x] T3c-2 implementado: detalle/retirar con motivo y precargas, bandeja validación admin con conteos/filtros/validar/editar/N/A, Word anulado desde snapshot con motivo/fecha, Excel tachado, histórico solo lectura, tarjetas/menú/aviso dudosos. Suite existente 129/129 (19 archivos), build OK; sin navegador/IA real/inspección de descargas ni pruebas nuevas/SQL. Anulados/históricos sin snapshot no exportan cálculos. Matriz: solo filas afectadas; resto pospuesto por Jaime.
 
 - [x] Reconfirmación T3c-1: diferencias 1/2/3/4/7 revisadas; aviso de semana existente en lote y bloqueo/aviso de confirmación individual sin motivo añadidos. Suite existente 129/129, 19 archivos; sin nuevas reglas SQL/pruebas, navegador, llamadas IA ni inspección de descargas. Pruebas funcionales a cargo de Jaime. T3c-2 no ejecutado.
