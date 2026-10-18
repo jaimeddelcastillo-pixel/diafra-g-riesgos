@@ -4449,6 +4449,91 @@ export type Database = {
           },
         ]
       }
+      tend_extracciones: {
+        Row: {
+          confirmado_en: string | null
+          confirmado_por: string | null
+          created_at: string
+          error: string | null
+          estado: string
+          foto_path: string
+          id: string
+          modelo_ia: string | null
+          modulo: string
+          org_id: string
+          registro_id: string
+          semana_id: string | null
+          skills_usadas: Json
+          solicitado_por: string
+          tokens_input: number
+          tokens_output: number
+          valores_confirmados: Json | null
+          valores_propuestos: Json | null
+        }
+        Insert: {
+          confirmado_en?: string | null
+          confirmado_por?: string | null
+          created_at?: string
+          error?: string | null
+          estado?: string
+          foto_path: string
+          id?: string
+          modelo_ia?: string | null
+          modulo: string
+          org_id: string
+          registro_id: string
+          semana_id?: string | null
+          skills_usadas?: Json
+          solicitado_por: string
+          tokens_input?: number
+          tokens_output?: number
+          valores_confirmados?: Json | null
+          valores_propuestos?: Json | null
+        }
+        Update: {
+          confirmado_en?: string | null
+          confirmado_por?: string | null
+          created_at?: string
+          error?: string | null
+          estado?: string
+          foto_path?: string
+          id?: string
+          modelo_ia?: string | null
+          modulo?: string
+          org_id?: string
+          registro_id?: string
+          semana_id?: string | null
+          skills_usadas?: Json
+          solicitado_por?: string
+          tokens_input?: number
+          tokens_output?: number
+          valores_confirmados?: Json | null
+          valores_propuestos?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tend_extracciones_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tend_extracciones_org_id_registro_id_fkey"
+            columns: ["org_id", "registro_id"]
+            isOneToOne: false
+            referencedRelation: "tend_registros"
+            referencedColumns: ["org_id", "id"]
+          },
+          {
+            foreignKeyName: "tend_extracciones_org_id_semana_id_fkey"
+            columns: ["org_id", "semana_id"]
+            isOneToOne: false
+            referencedRelation: "tend_semanas"
+            referencedColumns: ["org_id", "id"]
+          },
+        ]
+      }
       tend_formato: {
         Row: {
           created_at: string
@@ -5876,6 +5961,30 @@ export type Database = {
       set_org_activa: { Args: { _org: string }; Returns: undefined }
       tend_acceso: {
         Args: { _escritura?: boolean; _org: string; _roles?: string[] }
+        Returns: boolean
+      }
+      tend_confirmar_extraccion: {
+        Args: { _id: string; _motivo?: string; _semana: Json }
+        Returns: string
+      }
+      tend_extraccion_resultado: {
+        Args: {
+          _error?: string
+          _id: string
+          _input?: number
+          _modelo: string
+          _output?: number
+          _propuesta: Json
+          _skills: Json
+        }
+        Returns: undefined
+      }
+      tend_guardar_semana: {
+        Args: { _motivo?: string; _registro: string; _semana: Json }
+        Returns: string
+      }
+      tend_semana_en_emitido: {
+        Args: { _org: string; _semana: string }
         Returns: boolean
       }
       tend_suplencia: {

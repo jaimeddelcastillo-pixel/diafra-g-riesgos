@@ -1,6 +1,7 @@
 # Reglas técnicas — detalle
 
 ## R21
+Issuance runs input snapshot protection before AT authorization and server snapshot creation; snapshots include registros[].semanas[].id. Week changes referenced by an emitted AT fail in both manual and extraction paths. Prior readings require a reason in tracea.semana_motivo and an immutable old/new audit entry. Week source is manual unless the human extraction-confirmation function sets its internal transaction flag; dates derive from semana_inicio and photo paths must match the active company without traversal. Substitution registration freezes the titular RS identity; issuance copies rs_sustituido_nombre from that substitution, never a live client value.
 Tendencias uses existing active-company/module helpers through tend_acceso; super-admin can only SELECT with a live recorded support session, never write even with service-role bypass. Shared org_suplencias uses its own active-company guard independently of module access. AT state transitions stamp authenticated actors, retain issuance identity and archive the previous row; history INSERT is only allowed nested inside guarded versioning, and UPDATE/DELETE/TRUNCATE are blocked. Beta module rights come only from manual features, never plans; price/plan triggers enforce exclusion. Substitution expiry is computed at use time and separately audited hourly. Notification status is recorded without delivery until T3; why: isolate tenants, maintain immutable provenance and enforce approval separation across modules.
 
 ## R20

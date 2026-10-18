@@ -14,14 +14,14 @@ DECLARE
  den boolean; n integer; t text; anterior jsonb;
 BEGIN
  IF (SELECT count(*) FROM public.organizations WHERE id IN(a,b) AND es_prueba)<>2 THEN RAISE EXCEPTION 'Solo QA'; END IF;
- INSERT INTO public.organization_features(org_id,feature_key,activo,notas) VALUES(b,'tendencias',true,'T2 test rollback');
+ INSERT INTO public.organization_features(org_id,feature_key,activo,notas) VALUES(b,'tendencias',true,'T2 test rollback') ON CONFLICT(org_id,feature_key) DO UPDATE SET activo=true;
  EXECUTE 'SET LOCAL ROLE authenticated';
  PERFORM set_config('request.jwt.claims',jsonb_build_object('sub',admin_b,'role','authenticated')::text,true);
  INSERT INTO public.tend_sistemas_hvac(org_id,codigo,nombre_uma) VALUES(b,'T2-B','T2 B') RETURNING id INTO rb;
  PERFORM set_config('request.jwt.claims',jsonb_build_object('sub',admin_a,'role','authenticated')::text,true);
  INSERT INTO public.tend_sistemas_hvac(org_id,codigo,nombre_uma) VALUES(a,'T2-A','T2 A') RETURNING id INTO ra;
  INSERT INTO public.tend_instrumentos(org_id,codigo,tipo,parametro,spec_estado) VALUES(a,'T2-I','otro','T2','validada') RETURNING id INTO ins;
- INSERT INTO public.tend_config(org_id,permitir_autoemision) VALUES(a,false);
+ INSERT INTO public.tend_config(org_id,permitir_autoemision) VALUES(a,false) ON CONFLICT(org_id) DO UPDATE SET permitir_autoemision=false;
  -- 1: fila positiva visible; fila real B oculta.
  IF NOT EXISTS(SELECT 1 FROM public.tend_sistemas_hvac WHERE id=ra) OR EXISTS(SELECT 1 FROM public.tend_sistemas_hvac WHERE id=rb) THEN RAISE EXCEPTION 'P1 aislamiento falla'; END IF;
  -- 2: B contiene fila, pero sin módulo no lee ni inserta.
