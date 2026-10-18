@@ -14,7 +14,7 @@ import { sustituir, type FormatoForVal16 } from "./formato-forval16";
 export interface CambioVersion { de: string; a: string; fecha: string; descripcion: string; por: string }
 export interface WordArgs {
   formato: FormatoForVal16;
-  codigoAT: string; version: number; estado: "borrador" | "emitido" | "anulado"; emitidoAt: string | null;
+  codigoAT: string; version: number; estado: "borrador" | "emitido"; emitidoAt: string | null;
   anuladoEn?: string | null; motivoAnulacion?: string | null;
   sistema: string; tituloSistema: string; periodo: string; desde: string; hasta: string;
   bloques: Bloque[]; texto: TextoForVal16; justificaciones: Record<string, string>;
@@ -131,7 +131,9 @@ export function nombreArchivoWord(a: { codigoAT: string; sistema: string; period
   return `FOR-VAL-16-02_${sinAcentos(a.codigoAT)}_${sinAcentos(a.sistema)}_${sinAcentos(a.periodo)}_v${a.version}.docx`;
 }
 
-export async function generarWordForVal16(a: WordArgs): Promise<{ blob: Blob; archivo: string }> {
+export type WordDocumentoArgs = Omit<WordArgs, "estado"> & { estado: "borrador" | "emitido" | "anulado" };
+
+export async function generarWordForVal16(a: WordDocumentoArgs): Promise<{ blob: Blob; archivo: string }> {
   const f = a.formato;
   if (!f.identidad || !f.logo) throw new Error("Configura la identidad y el logo de la empresa antes de generar el Word");
   const emitido = a.estado === "emitido";
