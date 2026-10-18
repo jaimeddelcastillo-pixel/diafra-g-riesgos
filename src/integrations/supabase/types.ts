@@ -5963,6 +5963,10 @@ export type Database = {
         Args: { _escritura?: boolean; _org: string; _roles?: string[] }
         Returns: boolean
       }
+      tend_confirmar_extraccion: {
+        Args: { _id: string; _motivo?: string; _semana: Json }
+        Returns: string
+      }
       tend_extraccion_resultado: {
         Args: {
           _error?: string
@@ -5974,6 +5978,14 @@ export type Database = {
           _skills: Json
         }
         Returns: undefined
+      }
+      tend_guardar_semana: {
+        Args: { _motivo?: string; _registro: string; _semana: Json }
+        Returns: string
+      }
+      tend_semana_en_emitido: {
+        Args: { _org: string; _semana: string }
+        Returns: boolean
       }
       tend_suplencia: {
         Args: { _facultad: string; _org: string }
