@@ -25,16 +25,16 @@ Prefijos: `D/` = `src/modules/tendencias/`; `S/` = `src/` de atdiafra. Las agrup
 
 | Ruta / archivo atdiafra | Ubicación TRACEA | Estado |
 |---|---|---|
-| `/`, `routes/index.tsx` | `/tendencias`, `D/Tablero.tsx` | **Hecho**: cuatro tarjetas de captura. **Falta**: tarjeta propia Cumplimiento/Reporte y avisos de dudosos. |
+| `/`, `routes/index.tsx` | `/tendencias`, `D/Tablero.tsx` | **Hecho T3c-2**: cuatro tarjetas de captura, tarjetas Reporte/Cumplimiento y aviso de lecturas dudosas guardadas o en propuestas pendientes. |
 | `/modulo/$slug`, `routes/modulo.$slug.tsx` | `/tendencias/captura?modulo=…`, `D/Captura.tsx` | **Hecho parcial**: captura/selección/fotos; controles avanzados abajo. |
 | `/reporte`, `routes/reporte.tsx` (Outlet) | Registro `D/module.ts`, `D/Marco.tsx` | **Cambiado a propósito**: router y marco compartidos. |
-| `/reporte/`, `routes/reporte.index.tsx` | `/tendencias/reporte`, `D/Reporte.tsx`, `ReporteVistas.tsx` | **Hecho**: consolidado, jerarquía y vistas. **Falta**: algunas conexiones de contexto y exportador general exacto. |
-| `/reporte/$id`, `routes/reporte.$id.tsx` | Sin detalle dedicado | **Falta**: pantalla de registro guardado con todos sus controles. |
+| `/reporte/`, `routes/reporte.index.tsx` | `/tendencias/reporte`, `D/Reporte.tsx`, `ReporteVistas.tsx` | **Hecho T3c-2**: consolidado, jerarquía, detalle y precargas. Exportador general exacto **pospuesto por decisión de Jaime**; se conserva el normativo. |
+| `/reporte/$id`, `routes/reporte.$id.tsx` | `/tendencias/reporte/:id`, `D/ReporteDetalle.tsx` | **Hecho T3c-2**: lecturas por semana, volver, editar y retirar con motivo/confirmar/cancelar; RPC conserva historial y rechaza inputs emitidos. |
 | `/reporte/normativo`, `routes/reporte.normativo.tsx` | `/tendencias/cumplimiento`, `D/Cumplimiento.tsx` | **Hecho** con interacción distinta; diferencias abajo. |
 | `/reporte/tendencias`, `routes/reporte.tendencias.tsx` | `/tendencias/analisis`, `D/Analisis.tsx` | **Hecho**: flujo AT; limitaciones históricas/documentales abajo. |
 | `/reporte/registro-at`, `routes/reporte.registro-at.tsx` | `/tendencias/registro-at`, `D/RegistroAT.tsx` | **Hecho**: listado/filtros/abrir/Excel. |
 | `/configuracion`, `routes/configuracion.tsx` | `/tendencias/catalogos`, `/tendencias/configuracion`; perfil compartido | **Hecho parcial / cambiado a propósito**: separar catálogos, formato y perfil. |
-| `/admin/auditoria`, `routes/admin.auditoria.tsx` | `src/pages/Auditoria.tsx`, historial individual en Análisis | **Falta**: explorador específico y equivalencia uno a uno verificada. |
+| `/admin/auditoria`, `routes/admin.auditoria.tsx` | `src/pages/Auditoria.tsx`, historial individual en Análisis | Filtros/explorador específico **pospuesto por decisión de Jaime**; auditoría compartida conservada. |
 | `/admin/usuarios`, `routes/admin.usuarios.tsx` | Gestión compartida `src/pages/Configuracion.tsx` y funciones administrativas | **Cambiado a propósito**: no duplicar gestión; equivalencia de todas las acciones no verificada. |
 | `/auth`, `routes/auth.tsx` | Login/Register/Recuperar compartidos | **Cambiado a propósito**: identidad/sesión única; recorridos de recuperación no probados en este cierre. |
 | `/reset-password`, `routes/reset-password.tsx` | `src/pages/ResetPassword.tsx` | **Cambiado a propósito**: recuperación compartida. |
@@ -44,13 +44,13 @@ Prefijos: `D/` = `src/modules/tendencias/`; `S/` = `src/` de atdiafra. Las agrup
 | `/lovable/email/queue/process` | Envío directo compartido | **Cambiado a propósito**: infraestructura TRACEA sin cola fuente. |
 | Nueva TRACEA: suplencias (sin ruta fuente) | `/tendencias/suplencias`, `D/Suplencias.tsx` | **Hecho**: alta, revocación, historial, banner y aviso/reintento. |
 
-Las nueve rutas del módulo están registradas. Reporte sí está en los accesos de `Marco.tsx`; **falta** su tarjeta equivalente y entrada propia en el menú lateral de `module.ts`.
+Las diez rutas del módulo están registradas. **Hecho T3c-2**: Reporte y Cumplimiento tienen tarjetas de Tablero y entradas propias del menú lateral; detalle registrado en `module.ts`.
 
 ## 2. Botones, campos y acciones por pantalla/componente
 
 | Archivo/componente fuente | Cada control o acción | Destino | Estado / diferencia |
 |---|---|---|---|
-| `ModuloCard`, `CumplimientoCard` | Cuatro módulos; contadores/avance; aviso de dudosos; acceso Cumplimiento | Tablero y pendientes | **Hecho** módulos/avance; **falta** dudosos y tarjeta Cumplimiento. |
+| `ModuloCard`, `CumplimientoCard` | Cuatro módulos; contadores/avance; aviso de dudosos; acceso Cumplimiento | Tablero y pendientes | **Hecho T3c-2** módulos/avance, tarjetas Reporte/Cumplimiento y aviso de lecturas dudosas pendientes. |
 | `modulo.$slug` | Elegir módulo, registro y semana; abrir semana; volver/listado | Captura | **Hecho**, presentación propia. |
 | Mismo | Nuevo registro; nombre/instrumento/área/ISO/HVAC/etapa/límites/unidad; alta contextual | Captura y Catálogos | **Hecho** nombre, instrumento, objetivo presión y contexto derivado. **Hecho T3c-1**: área/HVAC/etapa/límites/unidad y altas de área/instrumento. Alta de catálogos solo admin por permiso aprobado, no se amplía al operador. |
 | Mismo | Guardar, descartar, añadir semana, cerrar/continuar después de guardar | Captura | **Hecho** guardar/seleccionar semana; **hecho T3c-1** descarte explícito y diálogo postguardado. |
@@ -66,10 +66,10 @@ Las nueve rutas del módulo están registradas. Reporte sí está en los accesos
 | `LoteFotosImporter` | Añadir/arrastrar; progreso; procesar secuencial; detectar fecha/duplicados; previsualizar; incluir/omitir; corregir lunes; reintentar; integrar/cancelar | Fotos por lote de Captura | **Hecho T3c-1**: agregar/arrastrar, progreso secuencial, propuesta independiente por foto, duplicados, previsualización, omitir, corregir lunes, revisión y confirmar. Fallos recuperables aislados; reintento por foto fallida, confirmación reintentable sin repetir IA; bloques terminales detienen llamadas. Dos propuestas QA confirmadas y leídas tras recarga. |
 | `reporte.index` | Recargar; fechas/año/T1–T4/S1/S2/anual; buscar; limpiar filtros | Reporte | **Hecho**. |
 | Mismo | Áreas → instrumentos → registros; volver; vistas área/instrumento/avance | Reporte/ReporteVistas | **Hecho** jerarquía/área efectiva. |
-| Mismo | Excel/PDF consolidado; consolidar/detectar duplicados/fusionar/eliminar | Reporte, avance, export-normativo | **Hecho** consolidación en memoria y descargas. **Cambiado a propósito** conservar originales; **falta** fusión persistente conservadora/retiro. |
-| `VistaInstrumentos` | Buscar, catálogo completo/sin capturas, KPIs; editar/ver bitácora/análisis; PDF/Excel individual | ReporteVistas | **Hecho** vista/descargas; **falta** precarga correcta en algunos enlaces (véase §5). |
+| Mismo | Excel/PDF consolidado; consolidar/detectar duplicados/fusionar/eliminar | Reporte, avance, export-normativo | **Hecho** consolidación en memoria y descargas. **Cambiado a propósito** conservar originales; fusión persistente **pospuesto por decisión de Jaime**; retiro motivado ya disponible. |
+| `VistaInstrumentos` | Buscar, catálogo completo/sin capturas, KPIs; editar/ver bitácora/análisis; PDF/Excel individual | ReporteVistas | **Hecho T3c-2** vista/descargas y precarga de registroId en Captura, ids/fechas en Análisis. |
 | `VistaAvance` | Matriz semanal/leyenda/KPIs; anterior/siguiente; Excel | ReporteVistas y avance | **Hecho** hasta 60 lunes, desplazamiento y exportación. |
-| `reporte.$id` | Detalle, volver, editar, eliminar con confirmar/cancelar | Sin ruta dedicada | **Falta** detalle; eliminación sustituible solo por retiro, no implementado. |
+| `reporte.$id` | Detalle, volver, editar, eliminar con confirmar/cancelar | ReporteDetalle | **Hecho T3c-2**; eliminación sustituida por retiro motivado mediante RPC existente, nada se borra. |
 | `reporte.normativo` | Recargar/copiar enlace; trimestre/año/rango; módulo/área/HVAC; solo no conformes | Cumplimiento | **Hecho**; error de portapapeles no tratado explícitamente; área/HVAC usan campos directos. |
 | Mismo | Todos/áreas-pares/instrumentos; ordenar; cobertura; KPIs antes de filtrar | Cumplimiento | **Hecho**, orden selector distinto de cabeceras fuente. |
 | Mismo | Todos/ninguno/individual; chips removibles; restablecer; expandir detalle/series/capacidad/OOS | Cumplimiento | **Hecho**. |
@@ -77,21 +77,21 @@ Las nueve rutas del módulo están registradas. Reporte sí está en los accesos
 | `reporte.tendencias` | Selección HVAC/instrumentos; fechas/presets; año; calidad; justificación n<20 | Análisis | **Hecho**; año derivado de fecha, no selector independiente. |
 | Mismo | Sugerir código siguiente; recuperar por código/query | registros-at y Análisis | **Cambiado a propósito** código servidor; **falta** sugerencia/recuperación por código (usa `?at=id`). |
 | Mismo | Editar §2/§8.1/§9/§10/§11; restablecer; guardar borrador | Análisis, texto-forval16 | **Hecho**. |
-| Mismo | Word; Excel/ZIP paquete; ZIP gráficas; emitir; nueva versión/motivo; anular/motivo; cerrar/cancelar | Análisis, registros-at, generadores | **Hecho**, autorización RS/suplente y snapshot. **Falta** representación adecuada Word anulado. |
-| Mismo | Historial; JSON anterior/nuevo; abrir versión; cambios §13 | Análisis | **Hecho parcial**; **falta** modo histórico inequívocamente solo lectura separado del estado cargado. |
+| Mismo | Word; Excel/ZIP paquete; ZIP gráficas; emitir; nueva versión/motivo; anular/motivo; cerrar/cancelar | Análisis, registros-at, generadores | **Hecho T3c-2**, autorización RS/suplente y snapshot; Word anulado con ANULADO, motivo y fecha. Sin snapshot no se reconstruye exportación calculada. |
+| Mismo | Historial; JSON anterior/nuevo; abrir versión; cambios §13 | Análisis | **Hecho T3c-2**: modo histórico identificado, controles de escritura bloqueados y regreso a versión actual; sin snapshot solo consulta de textos/metadata. |
 | Mismo | Autoemitido/suplencia; firma/fecha/nombre/cargo | Configuración, guards y Word | **Hecho** leyendas y snapshots; no certifica todos los casos de autoemisión. |
 | `TendenciaCard` | Gráficas, puntos/tooltip/reglas/carta R/tabla; copiar imagen/R/tabla; PNG individual | TendenciaCard | **Hecho**; botones individuales no pasan por bloqueo global n<20 de Análisis. |
-| `reporte.registro-at` | Tabla código/sistema/periodo/versión/estado/dictamen/fechas/firmantes; filtros; actualizar; abrir; nuevo; Excel | RegistroAT | **Hecho**. Anulados tachados en pantalla; **falta** tachado Excel equivalente. |
+| `reporte.registro-at` | Tabla código/sistema/periodo/versión/estado/dictamen/fechas/firmantes; filtros; actualizar; abrir; nuevo; Excel | RegistroAT | **Hecho T3c-2**: anulados tachados en pantalla y Excel (xlsx-js-style). |
 | Configuración perfil | Nombre/cargo; guardar | Configuración compartida | **Cambiado a propósito** perfil único; no duplicarlo. |
 | Configuración HVAC | Alta/editar; código/UMA/descripción/etapas; activo; guardar/cancelar/cerrar | Catálogos | **Hecho**, formulario genérico. |
 | Configuración áreas | Alta/editar; código/nombre/ISO/HVAC; activo; guardar/cancelar | Catálogos | **Hecho**. |
 | Configuración instrumentos | Código/bitácora/tipo/área/libre/parámetro/especificación/rangos/baseline/saturación; activo; guardar/cancelar | Catálogos | **Hecho parcial** campos principales/normativos; **falta** búsqueda/filtros/ayudas contextuales y comprobar semántica antigua lie_pa/lse_pa. |
 | Configuración objetivos | Par X/Y/manómetro/HEPA/instrumento/ISO/unidad/límites; activo; guardar/cancelar | Catálogos | **Hecho**, ayudas/validación contextual no idénticas. |
 | `CambiosFiltroEditor` | Listar por instrumento; fecha/nota; agregar/quitar | Catálogos | **Hecho** listar/crear/editar; **hecho T3c-1** retiro motivado; filtro contextual sigue **falta** para T3c-2; **cambiado a propósito** no borrar. |
-| `PendientesValidacionTab` | Contar/filtrar; validar/editar/N/A; límites/HR/área/referencia/fecha; guardar/cancelar | Campos normativos Catálogos | **Hecho parcial** edición; **falta** bandeja especializada/conteos/flujo. |
-| `FormatoForVal16Tab` | Logo/versiones/firmantes/textos/ISO; guardar nueva versión; restaurar sección/quitar logo | Configuración | **Hecho** cargar/reemplazar/guardar; **falta** restaurar precargado por sección/quitar logo. Formatos por módulo después. |
-| `LocalMigrationCard` | Detectar locales/importar/resultado/limpiar | Sin equivalente | **Falta** migración local; limpieza requiere conservación, no DELETE implícito. |
-| Auditoría e `HistorialAT` | Recargar; tabla/operación/actor/búsqueda/fechas; abrir/cerrar valores; buscar código/actor/versiones/snapshot | Auditoría compartida e historial individual | **Hecho parcial** historial AT; **falta** explorador global específico/equivalencia de filtros. |
+| `PendientesValidacionTab` | Contar/filtrar; validar/editar/N/A; límites/HR/área/referencia/fecha; guardar/cancelar | Campos normativos Catálogos | **Hecho T3c-2**: bandeja con conteos únicos/especificación/área, filtros de búsqueda/tipo/área/pendiente, validar/editar/N/A, referencia y fecha; guardado auditado existente, solo admin. N/A solo especificación. |
+| `FormatoForVal16Tab` | Logo/versiones/firmantes/textos/ISO; guardar nueva versión; restaurar sección/quitar logo | Configuración | **Hecho** cargar/reemplazar/guardar; restaurar textos por sección y quitar logo **pospuesto por decisión de Jaime**. Formatos por módulo después. |
+| `LocalMigrationCard` | Detectar locales/importar/resultado/limpiar | Sin equivalente | **No aplica**: TRACEA no tiene datos en el navegador que migrar. |
+| Auditoría e `HistorialAT` | Recargar; tabla/operación/actor/búsqueda/fechas; abrir/cerrar valores; buscar código/actor/versiones/snapshot | Auditoría compartida e historial individual | **Hecho T3c-2** historial individual solo lectura; filtros específicos de Auditoría/explorador global **pospuesto por decisión de Jaime**. |
 | Admin usuarios | Recargar; crear email/password/rol; invitar; cambiar rol; reset/confirmar; recuperación; cancelar/cerrar; eliminar | Gestión compartida | **Cambiado a propósito** no duplicar; desactivar en vez de borrar; **falta verificación** uno a uno de invitación/recuperación. |
 | Auth/Reset/ChangePasswordDialog | Login/signup/email/password; olvidé/enviar/volver; nueva/confirmar; guardar/cancelar/cerrar | Auth compartida | **Cambiado a propósito**; recorridos no verificados en este cierre. |
 | AppHeader/AuthGuard/TraceaLogo/TraceaSiteButton | Inicio/configuración/admin/auditoría/perfil/password/salir; sesión/carga/404/volver; logo/tracea.site | Layout/guards/plataforma | **Cambiado a propósito** integración única; conservar tracea.site; no equivalencia visual literal. |
@@ -108,7 +108,7 @@ Las nueve rutas del módulo están registradas. Reporte sí está en los accesos
 | `export-forval16.ts` | serial, fmtDMY, pasoRedondo, escala, etiquetaPeriodo, specTxt, dictTxt, construirBloques, exportarPaqueteForVal16 | Homónimo/Análisis: **hecho**, identidad/imports adaptados; paquete Excel/ZIP. |
 | `word-forval16.ts` | sinAcentos, nombreArchivoWord, generarWordForVal16 | Homónimo/Análisis: **hecho**, snapshots/identidad/firmantes; borrador marcado y emitido limpio. Limitación anulado en §5. |
 | `export-normativo.ts` | exportarNormativoExcel, exportarNormativoPDF | Homónimo: **hecho**, seis hojas Excel y PDF con gráficas/identidad parametrizada. |
-| `export-utils.ts` | exportarReporteExcel, exportarReportePDF | **Falta** copia de exportador general exacto; se usa normativo en Reporte. No declarar hojas/layout idénticos. |
+| `export-utils.ts` | exportarReporteExcel, exportarReportePDF | **Pospuesto por decisión de Jaime**: exportadores generales exactos; se usa normativo en Reporte. No declarar hojas/layout idénticos. |
 | `chart-renderer.ts` | generarBloqueEstadisticoRegistro, generarChartsRegistro | Homónimo: **hecho**, canvas guard añadido; gráficas especificación y alerta/acción. |
 | `imagen-grafica.ts` | layoutPNG, graficaPNG, descargarBlob, copiarImagen, copiarHTML; PX_16x9, PX_16x5, ESCALA_PNG | Homónimo: **hecho**, canvas guards. |
 | `TendenciaCard.tsx` | leyendaDe, nombreArchivo, pngsDeTarjeta, tablaHTML, TendenciaCard | Homónimo: **hecho**. |
@@ -118,10 +118,10 @@ Las nueve rutas del módulo están registradas. Reporte sí está en los accesos
 | `seleccion-forval16.ts` | unirPorInstrumento, hvacDe, codigoRegistro; MODULOS_TENDENCIA | Homónimo: **hecho**, adaptado/conectado. |
 | `semanas.ts` utilidades | lunesDe, nombreMes, semanaVacia, lecturasEsperadas, lecturasCapturadas, esSemanaCompleta, esSemanaVacia, rangoFechasRegistro, nombreRegistroConFechas, detectarDuplicados, flattenLecturas; DIAS, TURNOS, DIAS_NO_LABORABLES_DEFAULT | Homónimo: **hecho**, adaptado. |
 | `semanas.ts` persistencia | listRegistros, getRegistro, upsertRegistro | listarRegistros/guardarRegistro/guardarSemana: **cambiado a propósito**, empresa activa y RPC motivada. |
-| `semanas.ts` conservación | fusionarRegistros, deleteRegistro | **Cambiado a propósito** no DELETE; **falta** fusión persistente conservadora/retiro. |
-| `semanas.ts` migración | getLocalRegistros, migrateLocalToCloud, clearLocalRegistros | **Falta** importación local; limpieza por definir sin pérdida. |
+| `semanas.ts` conservación | fusionarRegistros, deleteRegistro | **Cambiado a propósito** no DELETE; retiro hecho T3c-1; fusión persistente **pospuesto por decisión de Jaime**. |
+| `semanas.ts` migración | getLocalRegistros, migrateLocalToCloud, clearLocalRegistros | **No aplica**: TRACEA no tiene datos en el navegador que migrar. |
 | `fotos-bitacora.ts` | mesesEncabezado, detectarLunesFoto, subirFotoBitacora, urlFotoBitacora | subirFoto/abrirFoto: **hecho**; helpers de fecha **hecho T3c-1**, propuesta de lunes conectada individual/lote. |
-| `storage.ts` | loadJSON, saveJSON, removeKey | **Cambiado a propósito** persistencia Cloud; puente de migración **falta**. |
+| `storage.ts` | loadJSON, saveJSON, removeKey | **Cambiado a propósito** persistencia Cloud; migración local **no aplica**. |
 | `diafra-data.ts` | SISTEMAS_HVAC, ISO_LIMITS, MODULOS | Catálogos por empresa/catalogos/Tablero: **cambiado a propósito**, no datos DIAFRA globales. |
 | `utils.ts` | cn | `src/lib/utils.ts`: **hecho**, compartido. |
 | `auth-context.tsx`, AuthGuard | AuthProvider, useAuth, AuthGuard | Auth/guards compartidos: **cambiado a propósito**, empresa activa/facultades servidor. |
@@ -136,7 +136,7 @@ Tipos/interfaces y componentes UI genéricos no añaden funciones de negocio; co
 
 | Función | Ubicación | Estado y evidencia |
 |---|---|---|
-| Alta suplencia; fechas/facultades/respaldo/motivo | Suplencias.tsx, org_suplencias | **Hecho**. Alta QA con motivo y facultad autorizar comprobada. Respaldo es texto/referencia, no carga de documento. |
+| Alta suplencia; fechas/facultades/respaldo/motivo | Suplencias.tsx, org_suplencias | **Hecho**. Alta QA con motivo y facultad autorizar comprobada. Respaldo es texto/referencia; archivo de respaldo **pospuesto por decisión de Jaime**. |
 | Aviso vigente al encabezado | AvisoSuplencia en Marco | **Hecho**; visible en QA antes de revocar, refresco periódico. |
 | Revocar e historial | Suplencias.tsx | **Hecho**; revocada visible y conservada. |
 | Correo cuando requerido, reintentar, resultado sistema | tend-aviso-suplencia; template suplencia-rs; tend_aviso_tomar/terminar | **Hecho**: HTTP 200/enviado y timestamp sin error guardado. Reintento posterior resultados vacíos, sin envío duplicado. **No verificado** buzón receptor ni dos llamadas simultáneas reales; claim servidor impide reclamo repetido. |
@@ -164,14 +164,14 @@ Descarga real QA `/tendencias/reporte`: PDF de cinco páginas, 3,683,687 bytes, 
 2. **Hecho T3c-1**: helpers originales de lunes; fecha propuesta confirmable; compresión derivada antes de IA.
 3. **Hecho T3c-1**: contexto, antefirma editable, objetivos/selector semanal y baseline; alta contextual mantiene admin-only (cambiado a propósito por permisos aprobados).
 4. **Hecho T3c-1**: N/A/mover/limpiar, descartar/postguardado y corregir lunes conservando ID, con motivo/auditoría y colisiones.
-5. PDF semanal y análisis local dentro de captura.
-6. Detalle `/reporte/$id` y conexiones: ReporteVistas envía `registroId`, Captura no lo consume; envía `ids` de registros/fechas a Análisis que selecciona instrumentos y solo consume `at`; enlace general tampoco precarga fechas.
-7. **Hecho T3c-1**: retiros motivados conservados en historial y fuera de nuevos cálculos; emitidos bloqueados. Fusión persistente espera confirmación de Jaime, no construida.
-8. Bandeja de validación, filtros/búsquedas/ayudas catálogo y restaurar textos precargados/quitar logo.
-9. Migración local **no aplica**, TRACEA no tiene datos locales que migrar; explorador específico de Auditoría e historial AT global espera T3c-2.
-10. Modo histórico independiente solo lectura; Word anulado actualmente se trata como emitido en la entrada del generador; Excel de RegistroAT sin tachado de anulados.
-11. Exportadores generales originales `export-utils` no portados tal cual (se reemplazaron por normativos); paridad de hojas/layout no demostrada.
-12. Tarjetas/acceso lateral propios de Reporte/Cumplimiento; Reporte accesible desde Marco, no inaccesible.
+5. **Pospuesto por decisión de Jaime**: PDF semanal y análisis local dentro de captura.
+6. **Hecho T3c-2**: detalle `/tendencias/reporte/:id`, volver/editar/retirar motivado; Captura adopta `registroId` y módulo, Análisis resuelve `ids` de registros a instrumentos y precarga `desde`/`hasta`, incluido enlace general.
+7. **Hecho T3c-1**: retiros motivados conservados en historial y fuera de nuevos cálculos; emitidos bloqueados. Fusión persistente **pospuesto por decisión de Jaime**.
+8. **Hecho T3c-2**: bandeja de validación con conteos/filtros/validar/editar/N/A. Ayudas/filtros generales de catálogos fuera del alcance de esta entrega; restaurar textos y quitar logo **pospuesto por decisión de Jaime**.
+9. Migración local **no aplica**, TRACEA no tiene datos en el navegador que migrar; filtros específicos de Auditoría/explorador e historial AT global **pospuesto por decisión de Jaime**.
+10. **Hecho T3c-2**: modo histórico explícito de solo lectura; Word ANULADO con motivo/fecha separados del snapshot de emisión, sin tratarlo como emitido; Excel de RegistroAT tachado. Histórico/anulado sin snapshot no exporta cálculos con catálogos actuales.
+11. **Pospuesto por decisión de Jaime**: exportadores generales originales `export-utils`; se conservan normativos, sin declarar hojas/layout idénticos.
+12. **Hecho T3c-2**: tarjetas y entradas laterales Reporte/Cumplimiento; aviso de lecturas dudosas pendientes en Tablero.
 13. Equivalencia uno a uno de administración/auth/recuperación/plantillas compartidas y recepción de correo en buzón; concurrencia real de envíos pendiente de prueba.
 14. Formatos por módulo deliberadamente posteriores; firma Part 11 y quién Revisó separados por fase, no implementados aquí.
 

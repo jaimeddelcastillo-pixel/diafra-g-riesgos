@@ -1,5 +1,7 @@
 # Roadmap
 
+- [x] T3c-2 implementado: detalle/retirar con motivo y precargas, bandeja validación admin con conteos/filtros/validar/editar/N/A, Word anulado desde snapshot con motivo/fecha, Excel tachado, histórico solo lectura, tarjetas/menú/aviso dudosos. Suite existente 129/129 (19 archivos), build OK; sin navegador/IA real/inspección de descargas ni pruebas nuevas/SQL. Anulados/históricos sin snapshot no exportan cálculos. Matriz: solo filas afectadas; resto pospuesto por Jaime.
+
 - [x] Reconfirmación T3c-1: diferencias 1/2/3/4/7 revisadas; aviso de semana existente en lote y bloqueo/aviso de confirmación individual sin motivo añadidos. Suite existente 129/129, 19 archivos; sin nuevas reglas SQL/pruebas, navegador, llamadas IA ni inspección de descargas. Pruebas funcionales a cargo de Jaime. T3c-2 no ejecutado.
 
 - [x] T3c-1 verificado: lote IA con propuestas/revisión/reintento; fecha detectada y compresión; captura contextual/antefirma/objetivo/baseline; acciones por día/descarte/fecha con colisiones; retiro motivado de registros/semanas/cambios de filtro y pruebas QA. Motor intacto; 129/129 pruebas, controles SQL rollback QA y lote revisado/readback real. Alta catálogo conserva admin-only. T3c-2 espera aprobación de esta parte.
@@ -17,7 +19,7 @@
 - [x] T3b Word de AT real de principio a fin en navegador QA: AT-2026-005 borrador (operador) con marca «BORRADOR – NO VÁLIDO» y emitido (RS) limpio con AUTORIZÓ y snapshots servidor; separación de funciones y bloqueo por especificación pendiente verificados. Pendiente: funciones faltantes de captura/lotes/auditoría. Sin Part 11, Riesgos ni Cerebro.
 - [x] T3b correo: pantalla/plantilla/función y claim sistema; QA alta muestra banner, respuesta enviado y timestamp persistente, reintento sin duplicar y revocación conservada. Buzón receptor y concurrencia real no verificados.
 - [x] T3b IA individual: tres skills originales v1.0 vigentes, tres llamadas reales QA HTTP 200, propuesta presiones corregida/confirmada/readback 12.5, consumo y trazabilidad persistentes. Agua manual. Lote IA no implementado; lote actual solo fotos.
-- [ ] Paridad atdiafra restante — sin bloquear entrega de matriz: PDF semanal/análisis local y fusión persistente esperan decisión; T3c-2 pendiente: detalle y precargas de enlaces, validación/auditoría específica, modo histórico/Word anulado/tachado Excel y exportadores generales. Inventario exacto en t3b_matriz.md; no afirmar paridad completa ni trabajo en segundo plano.
+- [ ] Paridad restante pospuesta por decisión de Jaime: export-utils generales, filtros específicos de Auditoría, respaldo de suplencias, restaurar textos/quitar logo del Formato, PDF semanal/análisis en captura y fusión persistente; no ejecutar sin nueva autorización. Formatos/Part 11/Revisó posteriores. Migración local no aplica. Pruebas funcionales T3c-2 a cargo de Jaime; anulados/históricos sin snapshot carecen de datos congelados para exportación calculada.
 
 - [x] Soporte: actualizar adopta contexto del servidor sin cierre por marca local ausente; 10 pruebas pasan. Navegador QA adminqa: Cerebro conserva soporte tras recargar sin marca local y Terminar soporte vuelve al Panel.
 

@@ -597,7 +597,7 @@ function TablaRegistros({
                   <td className="px-3 py-2 text-right">
                     <div className="inline-flex gap-1">
                       <Link
-                        to={`/tendencias/analisis?ids=${r.id}`}
+                        to={`/tendencias/reporte/${r.id}`}
                         className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-xs hover:bg-muted"
                       >
                         <Eye className="h-3 w-3" /> Detalle
