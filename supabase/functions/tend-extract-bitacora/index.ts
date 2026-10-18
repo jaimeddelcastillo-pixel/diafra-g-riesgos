@@ -7,6 +7,7 @@ import {cargarSkill,interpolar,registrarSkillFaltante} from '../_shared/skills.t
 import {leerBitacoraPrivada} from '../_shared/documento-contenido.ts';
 import {contextoFechaMexico,fechaMexico} from '../_shared/fecha-mexico.ts';
 import {normalizarLecturas} from '../_shared/bitacora-lecturas.ts';
+import {resolverFechasBitacora} from '../_shared/bitacora-fechas.ts';
 import {createLovableAiGatewayProvider,getLovableAiGatewayRunId,getLovableAiGatewayResponseHeaders} from '../_shared/gateway-helpers.ts';
 
 const requestSchema=z.object({registro_id:z.string().uuid(),foto_path:z.string().min(1).max(500)}).strict();
@@ -43,24 +44,26 @@ Deno.serve(async req=>{
    modelo=config.modelo_ia;
    if(!modelo?.startsWith('google/'))return respond({error:'El modelo configurado requiere un contrato de extracción compatible'},400);
    skills=[{id:skill.id,clave:skill.clave,version:skill.version,sha256:skill.sha256,estado:'vigente',modelo_ia:modelo}];
-   const [{data:primera,error:pe},{data:ultima,error:ue}]=await Promise.all([user.from('tend_semanas').select('semana_inicio').eq('org_id',ctx.orgId).eq('registro_id',r.id).eq('activo',true).order('semana_inicio').limit(1).maybeSingle(),user.from('tend_semanas').select('semana_inicio').eq('org_id',ctx.orgId).eq('registro_id',r.id).eq('activo',true).order('semana_inicio',{ascending:false}).limit(1).maybeSingle()]);
-   if(pe || ue)throw pe ?? ue;
+   const {data:primera,error:pe}=await user.from('tend_semanas').select('semana_inicio').eq('org_id',ctx.orgId).eq('registro_id',r.id).order('semana_inicio').limit(1).maybeSingle();
+   if(pe)throw pe;
    const anioActual=Number(fechaMexico().slice(0,4));
-   let anioFin=ultima?Number(ultima.semana_inicio.slice(0,4)):anioActual+1;
-   if(ultima){const fin=new Date(ultima.semana_inicio+'T12:00:00');fin.setDate(fin.getDate()+6);anioFin=fin.getFullYear();}
-   const vars={empresa:'',anio_min:String(primera?Number(primera.semana_inicio.slice(0,4)):anioActual-1),anio_max:String(anioFin)};
+   const vars={empresa:'',anio_min:String(primera?Number(primera.semana_inicio.slice(0,4)):anioActual-1),anio_max:String(anioActual+1)};
   const {data:org,error:oe}=await admin.from('organizations').select('nombre').eq('id',ctx.orgId).single();if(oe)throw oe;
   const {data:reserva,error:reserveError}=await user.from('tend_extracciones').insert({org_id:ctx.orgId,registro_id:r.id,modulo:r.modulo,foto_path:body.data.foto_path,solicitado_por:ctx.userId}).select('id').single();if(reserveError)throw reserveError;id=reserva.id;
   const fechas=z.array(z.object({dia:z.string(),fecha:z.string()}));
-   const schema=r.modulo==='temphr'?z.object({...comunes,fechas_columnas:fechas,lecturas_t:z.array(lectura),lecturas_hr:z.array(lectura)}):z.object({...comunes,unidad:z.string(),fechas_columnas:fechas,lecturas:z.array(lectura)});
+   const schema=r.modulo==='temphr'?z.object({...comunes,anio_dudoso:z.boolean().nullable(),fechas_columnas:fechas,lecturas_t:z.array(lectura),lecturas_hr:z.array(lectura)}):z.object({...comunes,anio_dudoso:z.boolean().nullable(),unidad:z.string(),fechas_columnas:fechas,lecturas:z.array(lectura)});
    const provider=createLovableAiGatewayProvider(key,getLovableAiGatewayRunId(req),{baseURL:'https://ai.gateway.lovable.dev/v1'});
-   const result=streamText({model:provider(modelo),system:`${interpolar(skill.texto,{...vars,empresa:org.nombre})}\n${contextoFechaMexico()}`,messages:[{role:'user',content:[{type:'image',image:new URL(`data:${media.mime};base64,${media.base64}`)}]}],output:Output.object({schema}),maxRetries:0,abortSignal:req.signal});
+   const result=streamText({model:provider(modelo),providerOptions:{lovable:{reasoningEffort:'minimal'}},system:`${interpolar(skill.texto,{...vars,empresa:org.nombre})}\n${contextoFechaMexico()}`,messages:[{role:'user',content:[{type:'image',image:new URL(`data:${media.mime};base64,${media.base64}`)}]}],output:Output.object({schema}),maxRetries:0,abortSignal:req.signal});
   let propuesta:any;
   try{propuesta=await result.output;}catch(e){if(!NoObjectGeneratedError.isInstance(e))throw e;try{propuesta=schema.parse(JSON.parse(e.text));}catch{throw new Error('La IA no produjo una propuesta válida; la foto permanece para captura manual');}}
   if(!propuesta)throw new Error('La IA no produjo una propuesta; solicitud terminada');
   if(r.modulo==='temphr'){propuesta.lecturas_t=comprobarLecturas(propuesta.lecturas_t);propuesta.lecturas_hr=comprobarLecturas(propuesta.lecturas_hr);}else propuesta.lecturas=comprobarLecturas(propuesta.lecturas);
    const rows=[...(propuesta.lecturas_t ?? []),...(propuesta.lecturas_hr ?? []),...(propuesta.lecturas ?? [])];
-   propuesta.requiere_revision=rows.length>0 && rows.filter(p=>p.valor===null || p.confianza===null || p.confianza<0.70).length/rows.length>0.15;
+   const fechasComprobadas=resolverFechasBitacora(propuesta,primera?.semana_inicio,anioActual);
+   propuesta.fechas_columnas_originales=propuesta.fechas_columnas;
+   propuesta.fechas_columnas=fechasComprobadas.fechas_columnas;
+   propuesta.fechas_requieren_revision=fechasComprobadas.requiere_revision;
+   propuesta.requiere_revision=fechasComprobadas.requiere_revision || (rows.length>0 && rows.filter(p=>p.valor===null || p.confianza===null || p.confianza<0.70).length/rows.length>0.15);
   const usage=await result.totalUsage;
   const {error:saveError}=await admin.rpc('tend_extraccion_resultado',{_id:id,_propuesta:propuesta,_skills:skills,_modelo:modelo,_input:usage.inputTokens ?? 0,_output:usage.outputTokens ?? 0});if(saveError)throw saveError;
    return respond({id,propuesta,skills_usadas:skills,modelo_ia:modelo},200,provider.getRunId()?{'X-Lovable-AIG-Run-ID':provider.getRunId() ?? ''}:undefined);

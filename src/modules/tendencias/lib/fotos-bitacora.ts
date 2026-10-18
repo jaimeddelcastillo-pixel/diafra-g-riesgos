@@ -1,9 +1,10 @@
 // Guarda la foto de la bitácora (ya comprimida) para poder consultarla después junto a su semana.
 import { lunesDe, type Registro } from "./semanas";
+import { resolverFechasBitacora, type PropuestaFechas } from '../../../../supabase/functions/_shared/bitacora-fechas';
 
 export type RangoFoto = { desde?: string; hasta?: string };
 export function rangoRegistro(registro: Registro): RangoFoto {
-  const fechas = registro.semanas.filter(s => s.activo !== false).map(s => s.semana_inicio).sort();
+  const fechas = registro.semanas.map(s => s.semana_inicio).sort();
   const ultima = fechas.at(-1);
   if (!fechas[0] || !ultima) return {};
   const fin = new Date(ultima + 'T12:00:00'); fin.setDate(fin.getDate() + 6);
@@ -11,8 +12,8 @@ export function rangoRegistro(registro: Registro): RangoFoto {
 }
 function limitesAnio(rango: RangoFoto): [number, number] {
   const now = Number(new Intl.DateTimeFormat('en', {timeZone:'America/Mexico_City',year:'numeric'}).format(new Date()));
-  const desde = Number(rango.desde?.slice(0,4)), hasta = Number(rango.hasta?.slice(0,4));
-  return desde && hasta && desde <= hasta ? [desde,hasta] : [now-1,now+1];
+  const desde = Number(rango.desde?.slice(0,4));
+  return [desde || now-1,now+1];
 }
 
 /** Corrige años mal leídos por la IA (escritura a mano: 2016→2026, 2075→2025). Devuelve "" si no hay año plausible. */
@@ -90,6 +91,16 @@ export function mesesEncabezado(m?: string | number | null): number[] {
  * el año ni el mes (se tolera el mes adyacente cuando la semana cruza de un mes a otro).
  */
 export function detectarLunesFoto(
+  p: (PropuestaFechas & { mes?: string | number | null; fechas_requieren_revision?: boolean }) | null | undefined,
+  rango: RangoFoto = {},
+): string {
+  if (!p || p.fechas_requieren_revision) return '';
+  const fechas = resolverFechasBitacora(p, rango.desde);
+  if (fechas.requiere_revision) return '';
+  const anios = [...new Set(fechas.fechas_columnas.map(f => f.fecha?.slice(0,4)).filter(Boolean))].join('/');
+  return detectarLunesComprobado({ ...p, anio: anios, fechas_columnas: fechas.fechas_columnas }, rango);
+}
+function detectarLunesComprobado(
   p: { anio?: string | number | null; mes?: string | number | null; fechas_columnas?: { dia?: string; fecha?: string }[] } | null | undefined,
   rango: RangoFoto = {},
 ): string {
