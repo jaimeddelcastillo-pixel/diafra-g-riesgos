@@ -414,6 +414,13 @@
       "when": 1792292831860,
       "tag": "0058_t3b_anulacion_borrador_rs_suplente",
       "breakpoints": true
+    },
+    {
+      "idx": 59,
+      "version": "7",
+      "when": 1792293888108,
+      "tag": "0059_t3c1_captura_retiros_y_fecha",
+      "breakpoints": true
     }
   ]
 }
