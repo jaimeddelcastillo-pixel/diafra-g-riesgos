@@ -32,9 +32,14 @@ export function duplicadosLote(items: { incluir: boolean; registro: string; lune
 }
 
 /** Isolate each failure; terminal account blocks stop the remaining paid work. */
-export async function procesarLote<T>(items: T[], procesar: (item: T) => Promise<void>, fallo: (item: T, error: unknown) => void): Promise<void> {
-  for (const item of items) {
-    try { await procesar(item); }
-    catch (e) { fallo(item, e); if (e instanceof Error && 'terminal' in e && e.terminal) break; }
-  }
+export async function procesarLote<T>(items: T[], procesar: (item: T) => Promise<void>, fallo: (item: T, error: unknown) => void, concurrencia = 1): Promise<void> {
+  let siguiente = 0; let detenido = false;
+  const worker = async () => {
+    while (!detenido && siguiente < items.length) {
+      const item = items[siguiente++];
+      try { await procesar(item); }
+      catch (e) { if (e instanceof Error && 'terminal' in e && e.terminal) detenido = true; fallo(item, e); }
+    }
+  };
+  await Promise.all(Array.from({length: Math.min(items.length, Math.max(1, Math.min(2, concurrencia)))}, worker));
 }

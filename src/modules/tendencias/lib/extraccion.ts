@@ -23,3 +23,9 @@ export function propuestaSemana(propuesta: Record<string, unknown>, registro: Re
 export function revisionPendiente(s: Semana) {
   return [...s.lecturas,...s.lecturas_hr ?? []].some(p=>p._dudoso && !p._edited && !p._na);
 }
+
+/** Diagnostic only: human confirmation remains mandatory for every proposal. */
+export function requiereRevision(s: Semana): boolean {
+  const celdas = [...s.lecturas, ...(s.lecturas_hr ?? [])];
+  return celdas.length > 0 && celdas.filter(p => p._dudoso).length / celdas.length > 0.15;
+}
