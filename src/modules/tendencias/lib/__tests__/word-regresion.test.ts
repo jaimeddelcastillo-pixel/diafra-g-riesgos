@@ -32,3 +32,25 @@ describe('Regresión Word atdiafra con identidad en tend_formato',()=>{
   vi.unstubAllGlobals();
  });
 });
+describe('Marca de agua del Word FOR-VAL-16-02',()=>{
+ it('el borrador lleva marca de agua y el emitido va limpio',async()=>{
+  vi.stubGlobal('Blob', (await import('node:buffer')).Blob);
+  Object.defineProperty(URL,'createObjectURL',{configurable:true,value:()=> 'blob:qa'});
+  Object.defineProperty(URL,'revokeObjectURL',{configurable:true,value:()=>{}});
+  vi.stubGlobal('Image',TestImage);
+  const fakeCtx={fillStyle:'',textAlign:'',textBaseline:'',font:'',translate(){},rotate(){},fillText(){}};
+  const realCreate=document.createElement.bind(document);
+  const pngBytes=Uint8Array.from(atob(logo.split(',')[1]),c=>c.charCodeAt(0));
+  vi.spyOn(document,'createElement').mockImplementation((tag:string)=>tag==='canvas'?({width:0,height:0,getContext:()=>fakeCtx,toBlob:(cb:BlobCallback)=>cb(new Blob([pngBytes],{type:'image/png'}))} as unknown as HTMLElement):realCreate(tag as 'div'));
+  const {bloques,texto}=datos();
+  const formato={...FORMATO_DEFAULT,logo,identidad:{nombre:'DIAFRA S.A. de C.V.',logoDescripcion:'Logo DIAFRA',confidencialidad:'Documento confidencial propiedad de Diafra S. A. de C. V.'}};
+  const base:WordArgs={formato,codigoAT:'AT-2025-001',version:1,estado:'borrador',emitidoAt:null,sistema:'QA',tituloSistema:'Sistema QA',periodo:'enero–marzo 2025',desde:'2025-01-01',hasta:'2025-03-31',bloques,texto,justificaciones:{},cambios:[],sustituye:'N/A',areas:['QA-01'],png:async()=>[{nombre:'g',blob:await(await fetch(logo)).blob()}]};
+  const borrador=await generarWordForVal16(base);
+  const emitidoDoc=await generarWordForVal16({...base,estado:'emitido',emitidoAt:'2025-04-01'});
+  const [zb,ze]=await Promise.all([JSZip.loadAsync(await borrador.blob.arrayBuffer()),JSZip.loadAsync(await emitidoDoc.blob.arrayBuffer())]);
+  const hb=await zb.file('word/header1.xml')?.async('string') ?? '';const he=await ze.file('word/header1.xml')?.async('string') ?? '';
+  expect(hb).toContain('behindDoc');expect(he).not.toContain('behindDoc');
+  expect(hb).toContain('Borrador');expect(he).toContain('01');expect(he).not.toContain('>Borrador<');
+  vi.unstubAllGlobals();
+ });
+});
