@@ -26,7 +26,9 @@ BEGIN
  EXCEPTION WHEN raise_exception THEN IF SQLERRM='Semana con lecturas previas requiere motivo' THEN den:=true; ELSE RAISE; END IF; END;
  IF NOT den THEN RAISE EXCEPTION 'Edición manual sin motivo permitida'; END IF;
  PERFORM public.tend_guardar_semana(reg,datos||jsonb_build_object('observaciones','Corrección QA'),'Motivo QA concreto');
+ PERFORM set_config('request.jwt.claims',jsonb_build_object('sub',admin_id,'role','authenticated')::text,true);
  IF NOT EXISTS(SELECT 1 FROM public.audit_trail WHERE registro_id=semana::text AND accion='SEMANA_CORREGIDA' AND valor_anterior=antes AND valor_nuevo->>'motivo'='Motivo QA concreto' AND valor_nuevo->'semana'->>'observaciones'='Corrección QA') THEN RAISE EXCEPTION 'Falta auditoría de corrección'; END IF;
+ PERFORM set_config('request.jwt.claims',jsonb_build_object('sub',op,'role','authenticated')::text,true);
  INSERT INTO public.tend_extracciones(org_id,registro_id,foto_path,modulo,solicitado_por) VALUES(org,reg,org::text||'/qa.png','presiones',op) RETURNING id INTO ex;
  EXECUTE 'RESET ROLE'; EXECUTE 'SET LOCAL ROLE service_role';
  PERFORM set_config('request.jwt.claims','{"role":"service_role"}',true);
