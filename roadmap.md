@@ -6,6 +6,7 @@
 - [x] T3b punto 0: matriz de rutas/acciones/funciones, inventario intacto/adaptado y nueva ejecución 36/36 originales, 42/42 totales (Word 1/1). Entrega t3b_matriz_equivalencia.md y verificación previa; sin cambios funcionales.
 - [ ] T3b controles autorizados: tres estados sin revisión nueva; anular borrador por autor/admin/RS/suplente con motivo; avisos solo sistema; copias de identidad; extracciones trazables y consumo; reversión y siete pruebas QA.
 - [ ] T3b correcciones 01:14: snapshots exclusivamente del servidor al emitir y Word histórico desde ellos; confirmar sin motivo solo si no hay lecturas previas, con motivo/auditoría si existen y bloqueo si AT emitido; replace validado en ambos guards; RS titular congelado en suplencia; reversión y nueve pruebas QA.
+- [ ] T3b verificación 01:19 antes de continuar: pegar SQL de snapshots con registros/semanas/id; motivo y auditoría también para edición manual; mes calculado en servidor; probar edición manual y por extracción contra AT emitido; informar siete pruebas originales y nuevas.
 - [ ] T3b pantallas: análisis/reporte consolidado/normativo, captura pendiente de equivalencia, Registro AT y Word/historial, suplencias con correo/reintentos e IA (agua manual, tres skills v1.0 originales parametrizadas). Navegador de Jaime; no firma Part 11, Riesgos ni Cerebro.
 
 - [x] Soporte: actualizar adopta contexto del servidor sin cierre por marca local ausente; 10 pruebas pasan. Navegador QA adminqa: Cerebro conserva soporte tras recargar sin marca local y Terminar soporte vuelve al Panel.
