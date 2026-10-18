@@ -1,6 +1,6 @@
 # Roadmap
 
-- [ ] Cierre T3b solicitado: t3b_matriz.md exhaustiva, gráficas originales del PDF, suplencias/correo con reintentos comprobados y extracción T/HR-presiones-filtros con skills originales v1.0, revisión humana, trazabilidad y consumo. Agua manual; formatos por módulo posteriores.
+- [x] Cierre T3b solicitado: t3b_matriz.md exhaustiva entregada, gráficas originales del PDF descargadas/inspeccionadas, suplencias/aviso/reintento/revocación QA y extracción individual T/HR-presiones-filtros con skills originales v1.0, revisión humana y consumo; 118/118 pruebas y 3 reglas SQL QA con rollback. Agua manual y formatos por módulo posteriores. No equivale a paridad total: faltantes enumerados en la matriz.
 
 - [x] T3a: motor original 36/36 y total 42/42 con regresión Word; registro, tablero, catálogos, captura/fotos y configuración. T2 «No clasificada» autorizado y t2_down.sql actualizado. Navegador adminqa: alta HVAC/área/instrumento, semana y foto persistentes, logo/firmante persistentes, pendientes; operador sin edición; QA Starter sin acceso. Conservar tracea.site; sin IA/emisión/suplencias hasta T3b.
 
@@ -11,8 +11,9 @@
 - [x] T3b ajuste HVAC: 0055 aplicada, instrumentos resueltos por servidor, instrumentos/registros vacíos rechazados, objetivos y semanas/id congelados. Pruebas positivas/negativas QA con rollback pasan. Fuente Word documentada en t3b_reporte.md.
 - [x] T3b captura individual usa RPC motivada; Word emitido usa snapshot y fecha de cálculo congelada. Motor original 36/36 y total 47/47, incluido Word. Registro AT abre en navegador soporte QA sin errores; no equivale a emisión/descarga completa en navegador.
 - [x] T3b Word de AT real de principio a fin en navegador QA: AT-2026-005 borrador (operador) con marca «BORRADOR – NO VÁLIDO» y emitido (RS) limpio con AUTORIZÓ y snapshots servidor; separación de funciones y bloqueo por especificación pendiente verificados. Pendiente: funciones faltantes de captura/lotes/auditoría. Sin Part 11, Riesgos ni Cerebro.
-- [ ] T3b correo: pantalla/plantilla/función de avisos y reintentos creadas; falta verificar entrega real y no-op concurrente. No declarar envío probado.
-- [ ] T3b IA: faltan registrar tres skills v1.0 originales parametrizadas, implementar extracción/confirmación humana/lotes y probar llamada real. Agua manual. Función IA incompleta retirada; no habilitada.
+- [x] T3b correo: pantalla/plantilla/función y claim sistema; QA alta muestra banner, respuesta enviado y timestamp persistente, reintento sin duplicar y revocación conservada. Buzón receptor y concurrencia real no verificados.
+- [x] T3b IA individual: tres skills originales v1.0 vigentes, tres llamadas reales QA HTTP 200, propuesta presiones corregida/confirmada/readback 12.5, consumo y trazabilidad persistentes. Agua manual. Lote IA no implementado; lote actual solo fotos.
+- [ ] Paridad atdiafra restante — sin bloquear entrega de matriz: lote IA, fecha/compresión, captura avanzada/acciones de día/fecha persistida/PDF semanal, detalle y precargas de enlaces, retiros/fusión conservadora, validación/migración local/auditoría específica, modo histórico/Word anulado/tachado Excel y exportadores generales. Inventario exacto en t3b_matriz.md; no afirmar paridad completa ni trabajo en segundo plano.
 
 - [x] Soporte: actualizar adopta contexto del servidor sin cierre por marca local ausente; 10 pruebas pasan. Navegador QA adminqa: Cerebro conserva soporte tras recargar sin marca local y Terminar soporte vuelve al Panel.
 
@@ -45,4 +46,4 @@
 - [ ] Fase posterior: retirar la restricción vieja de 12 valores de brain_documents.tipo
 
 ### Tendencias — reporte consolidado y paridad de Cumplimiento
-Implementados reporte independiente, vistas por área/instrumento/avance, consolidación no destructiva, exportadores normativos de seis hojas y PDF tabular, KPIs/cobertura/filtros/agrupación de Cumplimiento; 110 pruebas pasan (16 archivos). Pendientes QA visual autenticado, descargas reales y gráficas PDF opcionales; sin cambios a motores, BD ni edge functions. Evidencia y lista de archivos en t3b_matriz_equivalencia.md.
+Implementados reporte independiente, vistas por área/instrumento/avance, consolidación no destructiva, exportadores normativos de seis hojas, PDF consolidado con gráficas originales descargado e inspeccionado en QA, KPIs/cobertura/filtros/agrupación de Cumplimiento. Suite final 118/118 (18 archivos). Motor intacto; faltantes y diferencias exactas en t3b_matriz.md; no equiparar exportador normativo con export-utils original.
