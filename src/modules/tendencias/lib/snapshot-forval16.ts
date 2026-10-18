@@ -11,7 +11,7 @@ export interface DatosSnapshot {schema_version:number;fecha_calculo:string;regis
 export function desdeSnapshot(row:RegistroAT){
  if(!row.formato_snapshot || !row.datos_snapshot)throw new Error('Registro sin snapshot de emisión; no se consultarán catálogos actuales');
  const datos=row.datos_snapshot as unknown as DatosSnapshot;
- if(datos.schema_version!==2 || !datos.registro_at || !datos.registros.length || !datos.instrumentos.length)throw new Error('Snapshot histórico incompleto');
+ if(datos.schema_version!==2 || !datos.fecha_calculo || !datos.registro_at || !datos.registros?.length || !datos.instrumentos?.length || !Array.isArray(datos.objetivos) || !Array.isArray(datos.areas) || !Array.isArray(datos.hvac) || !Array.isArray(datos.cambios))throw new Error('Snapshot histórico incompleto');
  const raw=row.formato_snapshot as unknown as FormatoForVal16 & {tabla_iso?:string[][]};
  const formato:FormatoForVal16={...FORMATO_DEFAULT,...raw,textos:{...FORMATO_DEFAULT.textos,...raw.textos}};
  if(raw.tabla_iso?.length)formato.textos.tablaClases=raw.tabla_iso.map(r=>r.join(' | ')).join('\n');
