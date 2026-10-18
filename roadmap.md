@@ -1,6 +1,6 @@
 # Roadmap
 
-- [ ] T3c-1 solicitado: lote IA con propuestas/revisión/reintento; fecha detectada y compresión; captura contextual/antefirma/objetivo/baseline; acciones por día/descarte/fecha con colisiones; retiro motivado de registros/semanas/cambios de filtro y pruebas QA. Motor intacto. T3c-2 espera aprobación de esta parte.
+- [x] T3c-1 verificado: lote IA con propuestas/revisión/reintento; fecha detectada y compresión; captura contextual/antefirma/objetivo/baseline; acciones por día/descarte/fecha con colisiones; retiro motivado de registros/semanas/cambios de filtro y pruebas QA. Motor intacto; 129/129 pruebas, controles SQL rollback QA y lote revisado/readback real. Alta catálogo conserva admin-only. T3c-2 espera aprobación de esta parte.
 
 - [x] Cierre T3b solicitado: t3b_matriz.md exhaustiva entregada, gráficas originales del PDF descargadas/inspeccionadas, suplencias/aviso/reintento/revocación QA y extracción individual T/HR-presiones-filtros con skills originales v1.0, revisión humana y consumo; 118/118 pruebas y 3 reglas SQL QA con rollback. Agua manual y formatos por módulo posteriores. No equivale a paridad total: faltantes enumerados en la matriz.
 
@@ -15,7 +15,7 @@
 - [x] T3b Word de AT real de principio a fin en navegador QA: AT-2026-005 borrador (operador) con marca «BORRADOR – NO VÁLIDO» y emitido (RS) limpio con AUTORIZÓ y snapshots servidor; separación de funciones y bloqueo por especificación pendiente verificados. Pendiente: funciones faltantes de captura/lotes/auditoría. Sin Part 11, Riesgos ni Cerebro.
 - [x] T3b correo: pantalla/plantilla/función y claim sistema; QA alta muestra banner, respuesta enviado y timestamp persistente, reintento sin duplicar y revocación conservada. Buzón receptor y concurrencia real no verificados.
 - [x] T3b IA individual: tres skills originales v1.0 vigentes, tres llamadas reales QA HTTP 200, propuesta presiones corregida/confirmada/readback 12.5, consumo y trazabilidad persistentes. Agua manual. Lote IA no implementado; lote actual solo fotos.
-- [ ] Paridad atdiafra restante — sin bloquear entrega de matriz: lote IA, fecha/compresión, captura avanzada/acciones de día/fecha persistida/PDF semanal, detalle y precargas de enlaces, retiros/fusión conservadora, validación/migración local/auditoría específica, modo histórico/Word anulado/tachado Excel y exportadores generales. Inventario exacto en t3b_matriz.md; no afirmar paridad completa ni trabajo en segundo plano.
+- [ ] Paridad atdiafra restante — sin bloquear entrega de matriz: PDF semanal/análisis local y fusión persistente esperan decisión; T3c-2 pendiente: detalle y precargas de enlaces, validación/auditoría específica, modo histórico/Word anulado/tachado Excel y exportadores generales. Inventario exacto en t3b_matriz.md; no afirmar paridad completa ni trabajo en segundo plano.
 
 - [x] Soporte: actualizar adopta contexto del servidor sin cierre por marca local ausente; 10 pruebas pasan. Navegador QA adminqa: Cerebro conserva soporte tras recargar sin marca local y Terminar soporte vuelve al Panel.
 

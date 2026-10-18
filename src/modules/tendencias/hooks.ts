@@ -10,7 +10,7 @@ export function useTendencias(cargar=true){
   const [registros,hvac,areas,instrumentos,objetivos,cambios]=await Promise.all([listarRegistros(),listarCatalogo('tend_sistemas_hvac'),listarCatalogo('tend_areas'),listarCatalogo('tend_instrumentos'),listarCatalogo('tend_objetivos_presion'),listarCatalogo('tend_cambios_filtro')]);
   return {registros,hvac:hvac as unknown as SistemaHVAC[],areas:areas as unknown as AreaClasificada[],instrumentos:instrumentos as unknown as Instrumento[],objetivos:objetivos as unknown as ObjetivoPresion[],cambios:cambios.filter(c=>c.activo) as unknown as CambioFiltro[]};
  }});
- return {...query,auth,captura:puedeCapturar(auth.orgRole,auth.isImpersonating,auth.isSuperAdmin()),admin:puedeConfigurar(auth.orgRole,auth.isImpersonating,auth.isSuperAdmin()),refresh:()=>{qc.invalidateQueries({queryKey:['tendencias']});qc.invalidateQueries({queryKey:['pendientes-modulo','tendencias']});}};
+ return {...query,auth,captura:puedeCapturar(auth.orgRole,auth.isImpersonating,auth.isSuperAdmin()),admin:puedeConfigurar(auth.orgRole,auth.isImpersonating,auth.isSuperAdmin()),refresh:async()=>{await Promise.all([qc.invalidateQueries({queryKey:['tendencias']}),qc.invalidateQueries({queryKey:['pendientes-modulo','tendencias']})]);}};
 }
 export function useFacultadesTendencias(){
  const auth=useAuth();

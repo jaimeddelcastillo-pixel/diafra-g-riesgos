@@ -52,18 +52,18 @@ Las nueve rutas del módulo están registradas. Reporte sí está en los accesos
 |---|---|---|---|
 | `ModuloCard`, `CumplimientoCard` | Cuatro módulos; contadores/avance; aviso de dudosos; acceso Cumplimiento | Tablero y pendientes | **Hecho** módulos/avance; **falta** dudosos y tarjeta Cumplimiento. |
 | `modulo.$slug` | Elegir módulo, registro y semana; abrir semana; volver/listado | Captura | **Hecho**, presentación propia. |
-| Mismo | Nuevo registro; nombre/instrumento/área/ISO/HVAC/etapa/límites/unidad; alta contextual | Captura y Catálogos | **Hecho** nombre, instrumento, objetivo presión y contexto derivado. **Falta** campos/alta contextual especializada. |
-| Mismo | Guardar, descartar, añadir semana, cerrar/continuar después de guardar | Captura | **Hecho** guardar/seleccionar semana; **falta** descarte explícito y diálogo postguardado. |
-| Mismo | Corregir fecha, colisión, confirmar/cancelar; eliminar semana/registro | Sin equivalentes completos | **Falta** corregir fecha y retiro motivado; **cambiado a propósito** no DELETE. |
-| `WeeklyReadingsTable`, `WeeklyReadingsTablePresion` | T/HR/presión/filtro/agua; valor/hora/antefirma/N/A; colores; edición motivada | Tabla de Captura | **Hecho** valores/horas/N/A/dudosos/autor; motivo semanal auditado. **Falta** antefirma editable y diálogo por lectura/ayudas específicas. |
-| Mismos | N/A día entero; mover día izquierda/derecha; limpiar día | Sin controles | **Falta**. |
-| `PresionesModule`, `ObjetivoPresionSelector` | Objetivo par/manómetro/HEPA; límites/baseline/objetivo semanal | Captura y Catálogos | **Hecho parcial** objetivo al crear; **falta** objetivo semanal/selector/alertas especializadas. |
-| `AreaSelector` | Seleccionar; abrir alta, código/nombre/ISO; guardar/cancelar | Catálogos separado | **Hecho** mantenimiento; **falta** alta/selección contextual en captura. |
-| `InstrumentoSelector` | Seleccionar, filtrar/contexto; alta código/bitácora; guardar/cancelar | Captura y Catálogos | **Hecho parcial**; **falta** alta contextual/filtros especializados. |
+| Mismo | Nuevo registro; nombre/instrumento/área/ISO/HVAC/etapa/límites/unidad; alta contextual | Captura y Catálogos | **Hecho** nombre, instrumento, objetivo presión y contexto derivado. **Hecho T3c-1**: área/HVAC/etapa/límites/unidad y altas de área/instrumento. Alta de catálogos solo admin por permiso aprobado, no se amplía al operador. |
+| Mismo | Guardar, descartar, añadir semana, cerrar/continuar después de guardar | Captura | **Hecho** guardar/seleccionar semana; **hecho T3c-1** descarte explícito y diálogo postguardado. |
+| Mismo | Corregir fecha, colisión, confirmar/cancelar; eliminar semana/registro | Sin equivalentes completos | **Hecho T3c-1** corregir lunes, colisión, cancelar y retiro motivado; **cambiado a propósito** no DELETE. |
+| `WeeklyReadingsTable`, `WeeklyReadingsTablePresion` | T/HR/presión/filtro/agua; valor/hora/antefirma/N/A; colores; edición motivada | Tabla de Captura | **Hecho** valores/horas/N/A/dudosos/autor; motivo semanal auditado. **Hecho T3c-1** antefirma editable; motivo semanal centralizado y auditado en servidor en vez de diálogo por lectura. |
+| Mismos | N/A día entero; mover día izquierda/derecha; limpiar día | Captura / captura-controles | **Hecho T3c-1**: tres turnos, T y HR; mover conserva hora/antefirma destino como fuente. |
+| `PresionesModule`, `ObjetivoPresionSelector` | Objetivo par/manómetro/HEPA; límites/baseline/objetivo semanal | Captura y Catálogos | **Hecho T3c-1**: objetivo semanal, selector manómetro/HEPA, límites/contexto de áreas y alertaBaseline original conectada. |
+| `AreaSelector` | Seleccionar; abrir alta, código/nombre/ISO; guardar/cancelar | Catálogos separado | **Hecho T3c-1**: selección y alta contextual código/nombre/ISO/HVAC, cancelar/guardar; solo admin. |
+| `InstrumentoSelector` | Seleccionar, filtrar/contexto; alta código/bitácora; guardar/cancelar | Captura y Catálogos | **Hecho T3c-1**: alta contextual, código duplicado, área/bitácora/especificación, filtro por tipo; solo admin. |
 | `FotoSemana` | Subir, reemplazar referencia, abrir | Captura, persistencia | **Hecho** almacenamiento privado/URL firmada; también permite guardar PDF, pero IA solo PNG/JPEG. |
-| `ImageImporter`, `ImageImporterPresion` | Seleccionar imagen; extraer; propuesta/confianza; corregir; integrar; cancelar | ExtraccionBitacora, Captura, extraccion.ts | **Hecho** extracción individual T/HR, presión y filtros; revisión explícita, dudosos bloquean. **Falta** compresión e integración de fecha detectada. |
-| Mismos | `aplicarLecturas`, `compressImage`, encabezados/fechas | propuestaSemana; lectura privada | **Hecho** mapa 21 celdas sin desplazar días; **falta** compresión y adopción de fechas detectadas (lunes manual). |
-| `LoteFotosImporter` | Añadir/arrastrar; progreso; procesar secuencial; detectar fecha/duplicados; previsualizar; incluir/omitir; corregir lunes; reintentar; integrar/cancelar | Fotos por lote de Captura | **Hecho** seleccionar múltiples fotos, asignar registro/fecha/motivo, quitar, duplicados y guardar. **Falta** extracción IA por lote/propuestas/progreso/reintento. Guardado puede quedar parcial si falla un elemento posterior. |
+| `ImageImporter`, `ImageImporterPresion` | Seleccionar imagen; extraer; propuesta/confianza; corregir; integrar; cancelar | ExtraccionBitacora, Captura, extraccion.ts | **Hecho** extracción individual T/HR, presión y filtros; revisión explícita, dudosos bloquean. **Hecho T3c-1** compresión derivada antes de envío y fecha detectada confirmable/corregible. |
+| Mismos | `aplicarLecturas`, `compressImage`, encabezados/fechas | propuestaSemana; lectura privada | **Hecho** mapa 21 celdas sin desplazar días; **hecho T3c-1** compresión y propuesta de lunes detectado, confirmada por capturista. |
+| `LoteFotosImporter` | Añadir/arrastrar; progreso; procesar secuencial; detectar fecha/duplicados; previsualizar; incluir/omitir; corregir lunes; reintentar; integrar/cancelar | Fotos por lote de Captura | **Hecho T3c-1**: agregar/arrastrar, progreso secuencial, propuesta independiente por foto, duplicados, previsualización, omitir, corregir lunes, revisión y confirmar. Fallos recuperables aislados; reintento por foto fallida, confirmación reintentable sin repetir IA; bloques terminales detienen llamadas. Dos propuestas QA confirmadas y leídas tras recarga. |
 | `reporte.index` | Recargar; fechas/año/T1–T4/S1/S2/anual; buscar; limpiar filtros | Reporte | **Hecho**. |
 | Mismo | Áreas → instrumentos → registros; volver; vistas área/instrumento/avance | Reporte/ReporteVistas | **Hecho** jerarquía/área efectiva. |
 | Mismo | Excel/PDF consolidado; consolidar/detectar duplicados/fusionar/eliminar | Reporte, avance, export-normativo | **Hecho** consolidación en memoria y descargas. **Cambiado a propósito** conservar originales; **falta** fusión persistente conservadora/retiro. |
@@ -87,7 +87,7 @@ Las nueve rutas del módulo están registradas. Reporte sí está en los accesos
 | Configuración áreas | Alta/editar; código/nombre/ISO/HVAC; activo; guardar/cancelar | Catálogos | **Hecho**. |
 | Configuración instrumentos | Código/bitácora/tipo/área/libre/parámetro/especificación/rangos/baseline/saturación; activo; guardar/cancelar | Catálogos | **Hecho parcial** campos principales/normativos; **falta** búsqueda/filtros/ayudas contextuales y comprobar semántica antigua lie_pa/lse_pa. |
 | Configuración objetivos | Par X/Y/manómetro/HEPA/instrumento/ISO/unidad/límites; activo; guardar/cancelar | Catálogos | **Hecho**, ayudas/validación contextual no idénticas. |
-| `CambiosFiltroEditor` | Listar por instrumento; fecha/nota; agregar/quitar | Catálogos | **Hecho** listar/crear/editar; **falta** filtro contextual y retiro; **cambiado a propósito** no borrar. |
+| `CambiosFiltroEditor` | Listar por instrumento; fecha/nota; agregar/quitar | Catálogos | **Hecho** listar/crear/editar; **hecho T3c-1** retiro motivado; filtro contextual sigue **falta** para T3c-2; **cambiado a propósito** no borrar. |
 | `PendientesValidacionTab` | Contar/filtrar; validar/editar/N/A; límites/HR/área/referencia/fecha; guardar/cancelar | Campos normativos Catálogos | **Hecho parcial** edición; **falta** bandeja especializada/conteos/flujo. |
 | `FormatoForVal16Tab` | Logo/versiones/firmantes/textos/ISO; guardar nueva versión; restaurar sección/quitar logo | Configuración | **Hecho** cargar/reemplazar/guardar; **falta** restaurar precargado por sección/quitar logo. Formatos por módulo después. |
 | `LocalMigrationCard` | Detectar locales/importar/resultado/limpiar | Sin equivalente | **Falta** migración local; limpieza requiere conservación, no DELETE implícito. |
@@ -113,14 +113,14 @@ Las nueve rutas del módulo están registradas. Reporte sí está en los accesos
 | `imagen-grafica.ts` | layoutPNG, graficaPNG, descargarBlob, copiarImagen, copiarHTML; PX_16x9, PX_16x5, ESCALA_PNG | Homónimo: **hecho**, canvas guards. |
 | `TendenciaCard.tsx` | leyendaDe, nombreArchivo, pngsDeTarjeta, tablaHTML, TendenciaCard | Homónimo: **hecho**. |
 | `formato-forval16.ts` | cargarFormato, guardarFormato, sustituir; SECCIONES_FIJAS, FORMATO_DEFAULT | Constantes/helper homónimos y persistencia: **hecho / cambiado a propósito**, formato versionado por empresa. |
-| `catalogos.ts` | listSistemasHVAC, upsertSistemaHVAC, setSistemaHVACActivo; listAreas, upsertArea, setAreaActivo; listInstrumentos, upsertInstrumento, setInstrumentoActivo; listCambiosFiltro, addCambioFiltro, deleteCambioFiltro; ISO_CLASES, ISO_LIMIT_PA, ISO_TEMP_HR | Constantes homónimas; listarCatalogo/guardarCatalogo/Catálogos: **hecho parcial**; deleteCambioFiltro no migrado por conservación, retiro **falta**. |
-| `objetivos-presion.ts` | listObjetivosPresion, upsertObjetivoPresion, setObjetivoPresionActivo, describirLimite, alertaBaseline; TIPO_OBJETIVO_LABEL | Helpers homónimos y persistencia genérica: **hecho parcial**; alerta/selector completo no conectados en captura. |
+| `catalogos.ts` | listSistemasHVAC, upsertSistemaHVAC, setSistemaHVACActivo; listAreas, upsertArea, setAreaActivo; listInstrumentos, upsertInstrumento, setInstrumentoActivo; listCambiosFiltro, addCambioFiltro, deleteCambioFiltro; ISO_CLASES, ISO_LIMIT_PA, ISO_TEMP_HR | Constantes homónimas; listarCatalogo/guardarCatalogo/Catálogos: **hecho parcial**; deleteCambioFiltro no migrado por conservación, retiro **hecho T3c-1** mediante tend_retirar, sin DELETE. |
+| `objetivos-presion.ts` | listObjetivosPresion, upsertObjetivoPresion, setObjetivoPresionActivo, describirLimite, alertaBaseline; TIPO_OBJETIVO_LABEL | Helpers homónimos y persistencia genérica: **hecho parcial**; alertaBaseline original y selector conectados T3c-1; ayudas de catálogo adicionales T3c-2. |
 | `seleccion-forval16.ts` | unirPorInstrumento, hvacDe, codigoRegistro; MODULOS_TENDENCIA | Homónimo: **hecho**, adaptado/conectado. |
 | `semanas.ts` utilidades | lunesDe, nombreMes, semanaVacia, lecturasEsperadas, lecturasCapturadas, esSemanaCompleta, esSemanaVacia, rangoFechasRegistro, nombreRegistroConFechas, detectarDuplicados, flattenLecturas; DIAS, TURNOS, DIAS_NO_LABORABLES_DEFAULT | Homónimo: **hecho**, adaptado. |
 | `semanas.ts` persistencia | listRegistros, getRegistro, upsertRegistro | listarRegistros/guardarRegistro/guardarSemana: **cambiado a propósito**, empresa activa y RPC motivada. |
 | `semanas.ts` conservación | fusionarRegistros, deleteRegistro | **Cambiado a propósito** no DELETE; **falta** fusión persistente conservadora/retiro. |
 | `semanas.ts` migración | getLocalRegistros, migrateLocalToCloud, clearLocalRegistros | **Falta** importación local; limpieza por definir sin pérdida. |
-| `fotos-bitacora.ts` | mesesEncabezado, detectarLunesFoto, subirFotoBitacora, urlFotoBitacora | subirFoto/abrirFoto: **hecho**; helpers de fecha **faltan** conectados. |
+| `fotos-bitacora.ts` | mesesEncabezado, detectarLunesFoto, subirFotoBitacora, urlFotoBitacora | subirFoto/abrirFoto: **hecho**; helpers de fecha **hecho T3c-1**, propuesta de lunes conectada individual/lote. |
 | `storage.ts` | loadJSON, saveJSON, removeKey | **Cambiado a propósito** persistencia Cloud; puente de migración **falta**. |
 | `diafra-data.ts` | SISTEMAS_HVAC, ISO_LIMITS, MODULOS | Catálogos por empresa/catalogos/Tablero: **cambiado a propósito**, no datos DIAFRA globales. |
 | `utils.ts` | cn | `src/lib/utils.ts`: **hecho**, compartido. |
@@ -160,15 +160,15 @@ Descarga real QA `/tendencias/reporte`: PDF de cinco páginas, 3,683,687 bytes, 
 
 ## 5. Diferencias pendientes que impiden declarar equivalencia total
 
-1. Extracción IA por lote: actual lote solo guarda fotos; faltan propuestas/progreso/omitir/reintentar/integrar por archivo.
-2. Fecha detectada y compresión de imágenes: el capturista selecciona el lunes, no se aplica automáticamente el encabezado.
-3. Captura avanzada contextual: área/HVAC/etapa/límites/unidad/objetivo semanal, antefirma editable y ayudas especializadas.
-4. N/A día entero, mover/limpiar día; descartar/diálogo postguardado; corregir fecha persistida con colisiones.
+1. **Hecho T3c-1**: lote IA independiente revisado, secuencial, progreso, previsualizar, omitir, duplicados, fecha y reintento. Recuperación de propuestas tras recarga por historial individual; cola de archivos local no se conserva al recargar.
+2. **Hecho T3c-1**: helpers originales de lunes; fecha propuesta confirmable; compresión derivada antes de IA.
+3. **Hecho T3c-1**: contexto, antefirma editable, objetivos/selector semanal y baseline; alta contextual mantiene admin-only (cambiado a propósito por permisos aprobados).
+4. **Hecho T3c-1**: N/A/mover/limpiar, descartar/postguardado y corregir lunes conservando ID, con motivo/auditoría y colisiones.
 5. PDF semanal y análisis local dentro de captura.
 6. Detalle `/reporte/$id` y conexiones: ReporteVistas envía `registroId`, Captura no lo consume; envía `ids` de registros/fechas a Análisis que selecciona instrumentos y solo consume `at`; enlace general tampoco precarga fechas.
-7. Retiro/anulación motivada de registros/semanas/cambios de filtro y fusión persistente conservadora; consolidar en memoria no sustituye esas acciones.
+7. **Hecho T3c-1**: retiros motivados conservados en historial y fuera de nuevos cálculos; emitidos bloqueados. Fusión persistente espera confirmación de Jaime, no construida.
 8. Bandeja de validación, filtros/búsquedas/ayudas catálogo y restaurar textos precargados/quitar logo.
-9. Migración local; explorador específico de Auditoría e historial AT global.
+9. Migración local **no aplica**, TRACEA no tiene datos locales que migrar; explorador específico de Auditoría e historial AT global espera T3c-2.
 10. Modo histórico independiente solo lectura; Word anulado actualmente se trata como emitido en la entrada del generador; Excel de RegistroAT sin tachado de anulados.
 11. Exportadores generales originales `export-utils` no portados tal cual (se reemplazaron por normativos); paridad de hojas/layout no demostrada.
 12. Tarjetas/acceso lateral propios de Reporte/Cumplimiento; Reporte accesible desde Marco, no inaccesible.
@@ -195,3 +195,12 @@ Son faltantes explícitos, no motivos autorizados inventados. Se entregan los cu
 - Navegador autenticado QA: tres llamadas IA reales, corrección/confirmación persistente de presión, suplencia/aviso/reintento/revocación y descarga PDF con todas sus páginas inspeccionadas.
 - Buzón del RS, dos invocaciones simultáneas reales, todas las rutas administrativas y todos los escenarios de límite/errores no se probaron de principio a fin.
 - Última señal de compilación: build OK; no ejecutar pruebas en empresas reales. Agua permanece manual, sin cambios a Riesgos/Cerebro/atdiafra.
+
+
+## 8. Entrega T3c-1
+
+Archivos: Captura, LoteFotosImporter, AltaContextual, ControlesSemana, ExtraccionBitacora, Catalogos, hooks; lib/persistencia, semanas, fotos-bitacora, compress-image, extraccion-cliente, captura-controles y sus pruebas. Migración 0059 aplicada; t2_down.sql, t3c1_pruebas.sql, AGENTS.md R24, docs/reglas-detalle.md y roadmap actualizados. Motor y skills no modificados.
+
+Evidencia: 129/129 pruebas en 19 archivos; 71 de bibliotecas Tendencias incluidas (motor/Word original). t3c1_pruebas.sql ejecutado con rollback solo QA: motivos, corrección de fecha conservando ID, auditoría anterior/nuevo, colisiones, retiros de tres tipos, no reactivación, snapshots sin inactivos, bloqueo emitido por edición manual/extracción/fecha y tres retiros. Navegador QA: nueva captura, mover T/HR, N/A, guardar y readback; corregir fecha; dos fotos extraídas, revisadas, confirmadas y readback 22/45; retiro visible en historial. No se simuló fallo real del proveedor: aislamiento y parada terminal probados unitariamente.
+
+T3c-2 no ejecutado. PDF semanal/análisis local y fusión persistente esperan decisión; formatos/Part 11/Revisó posteriores. No se declara paridad total.
