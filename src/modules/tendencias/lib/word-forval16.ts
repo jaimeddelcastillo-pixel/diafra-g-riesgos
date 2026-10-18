@@ -14,7 +14,8 @@ import { sustituir, type FormatoForVal16 } from "./formato-forval16";
 export interface CambioVersion { de: string; a: string; fecha: string; descripcion: string; por: string }
 export interface WordArgs {
   formato: FormatoForVal16;
-  codigoAT: string; version: number; estado: "borrador" | "emitido"; emitidoAt: string | null;
+  codigoAT: string; version: number; estado: "borrador" | "emitido" | "anulado"; emitidoAt: string | null;
+  anuladoEn?: string | null; motivoAnulacion?: string | null;
   sistema: string; tituloSistema: string; periodo: string; desde: string; hasta: string;
   bloques: Bloque[]; texto: TextoForVal16; justificaciones: Record<string, string>;
   cambios: CambioVersion[];
@@ -95,15 +96,15 @@ async function tamImagen(bytes: Uint8Array): Promise<{ w: number; h: number }> {
   } finally { URL.revokeObjectURL(url); }
 }
 
-async function marcaAgua(): Promise<Uint8Array> {
+async function marcaAgua(anulado = false): Promise<Uint8Array> {
   const c = document.createElement("canvas");
   c.width = 1600; c.height = 1600;
   const ctx = c.getContext("2d"); if (!ctx) throw new Error("Canvas no disponible");
   ctx.translate(800, 800); ctx.rotate(-Math.PI / 4);
   ctx.fillStyle = "rgba(192, 0, 0, 0.18)"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
   ctx.font = "bold 92px Arial, sans-serif";
-  ctx.fillText("BORRADOR – NO VÁLIDO", 0, -60);
-  ctx.fillText("PARA EMISIÓN", 0, 60);
+  ctx.fillText(anulado ? "ANULADO" : "BORRADOR – NO VÁLIDO", 0, -60);
+  ctx.fillText(anulado ? "NO VÁLIDO" : "PARA EMISIÓN", 0, 60);
   const blob = await new Promise<Blob>((r, reject) => c.toBlob((b) => b ? r(b) : reject(new Error("Imagen no disponible")), "image/png"));
   return bytesDe(blob);
 }
@@ -134,6 +135,7 @@ export async function generarWordForVal16(a: WordArgs): Promise<{ blob: Blob; ar
   const f = a.formato;
   if (!f.identidad || !f.logo) throw new Error("Configura la identidad y el logo de la empresa antes de generar el Word");
   const emitido = a.estado === "emitido";
+  const anulado = a.estado === "anulado";
   const areas = a.areas.length ? a.areas : [...new Set(a.bloques.map((b) => ubicacionTxt(b.ubicacion)))];
   const clases = [...new Set(a.bloques.map((b) => b.iso).filter(Boolean))].sort();
   const vars = { empresa: f.identidad.nombre, sistema: a.tituloSistema, periodo: a.periodo, areas: listaEs(areas) || "—", clases_iso: listaEs(clases) || "—" };
@@ -157,7 +159,7 @@ export async function generarWordForVal16(a: WordArgs): Promise<{ blob: Blob; ar
       new TableRow({ children: ["Código del reporte", "Versión", "Sustituye a", "Fecha de aplicación", "Página"].map((t, i) => celda([pc(t, { b: true, sz: 8 })], c5[i], { head: true })) }),
       new TableRow({ children: [
         celda([pc(a.codigoAT)], c5[0]),
-        celda([pc(emitido ? String(a.version).padStart(2, "0") : "Borrador")], c5[1]),
+        celda([pc(anulado ? `Anulado · ${String(a.version).padStart(2, "0")}` : emitido ? String(a.version).padStart(2, "0") : "Borrador")], c5[1]),
         celda([pc(a.sustituye || "N/A")], c5[2]),
         celda([pc(emitido && a.emitidoAt ? fmtDMY(a.emitidoAt.slice(0, 10)) : "—")], c5[3]),
         celda([new Paragraph({ alignment: AlignmentType.CENTER, children: [
@@ -168,9 +170,9 @@ export async function generarWordForVal16(a: WordArgs): Promise<{ blob: Blob; ar
   });
   const headerChildren: (Paragraph | Table)[] = [headerTable, new Paragraph({ children: [], spacing: { after: 60 } })];
   if (!emitido) {
-    const wm = await marcaAgua();
+    const wm = await marcaAgua(anulado);
     headerChildren.push(new Paragraph({ children: [new ImageRun({
-      type: "png", data: wm, transformation: { width: 560, height: 560 }, altText: { title: "Borrador", description: "Marca de agua de borrador", name: "borrador" },
+      type: "png", data: wm, transformation: { width: 560, height: 560 }, altText: { title: anulado ? "ANULADO" : "Borrador", description: anulado ? "Marca de agua de anulado" : "Marca de agua de borrador", name: anulado ? "anulado" : "borrador" },
       floating: {
         horizontalPosition: { relative: HorizontalPositionRelativeFrom.PAGE, align: HorizontalPositionAlign.CENTER },
         verticalPosition: { relative: VerticalPositionRelativeFrom.PAGE, align: VerticalPositionAlign.CENTER },
@@ -178,6 +180,8 @@ export async function generarWordForVal16(a: WordArgs): Promise<{ blob: Blob; ar
       },
     })] }));
   }
+
+  if (anulado) headerChildren.push(par(`ANULADO · Fecha: ${a.anuladoEn ? new Date(a.anuladoEn).toLocaleDateString('es-MX', { timeZone: 'America/Mexico_City' }) : '—'} · Motivo: ${a.motivoAnulacion ?? '—'}`, { b: true, sz: 9, al: AlignmentType.LEFT }));
 
   const footer = new Footer({ children: [
     new Paragraph({ border: { top: { style: BorderStyle.SINGLE, size: 4, color: "7F7F7F", space: 2 } }, children: [run(f.version_formato, { b: true, sz: 8 })] }),
@@ -197,7 +201,7 @@ export async function generarWordForVal16(a: WordArgs): Promise<{ blob: Blob; ar
       width: { size: W, type: WidthType.DXA }, columnWidths: firmaCols,
       rows: [
         new TableRow({ children: [celda([pc("Recuadro de firmas.", { b: true })], W, { span: 3, head: true })] }),
-        new TableRow({ children: [celda([pc("El presente documento ha sido revisado en formato y contenido, y es aprobado para su emisión.", { sz: 9 })], W, { span: 3 })] }),
+        new TableRow({ children: [celda([pc(anulado ? "Documento ANULADO. No válido para su aplicación." : "El presente documento ha sido revisado en formato y contenido, y es aprobado para su emisión.", { sz: 9 })], W, { span: 3 })] }),
         new TableRow({ children: ["", "FIRMA", "FECHA"].map((t, i) => celda([pc(t, { b: true })], firmaCols[i], { head: true })) }),
         ...f.firmantes.map((s) => new TableRow({ cantSplit: true, height: { value: 1100, rule: "atLeast" }, children: [
           celda([pc(`${s.rol.toUpperCase()}:`, { b: true, al: AlignmentType.LEFT }), pc(s.nombre, { al: AlignmentType.LEFT }), pc(s.cargo, { al: AlignmentType.LEFT })], firmaCols[0]),
