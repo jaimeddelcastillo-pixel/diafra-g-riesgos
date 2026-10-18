@@ -1,4 +1,4 @@
-export type SkillTraza = { clave: string; version: string; estado?: string; sha256: string };
+export type SkillTraza = { clave: string; version: string; estado?: string; sha256: string; modelo_ia?: string };
 export type ContextoConocimiento = import("../../supabase/functions/_shared/conocimiento-contexto").ConocimientoContexto;
 export type TrazaIA = { skills_usadas?: SkillTraza[] | null; modelo_ia?: string | null; mensaje_id?: string; contexto_usado?: ContextoConocimiento[] | null; contexto_cerebro?: import("../../supabase/functions/_shared/conocimiento-contexto").DiagnosticoCerebro | null };
 

@@ -10,7 +10,7 @@ import {InformacionRespuestaIA} from '@/components/InformacionRespuestaIA';
 import type {TrazaIA} from '@/lib/skills-presentacion';
 import {Sparkles,Check} from 'lucide-react';
 import {Input} from '@/components/ui/input';
-import {detectarLunesFoto} from './lib/fotos-bitacora';
+import {detectarLunesFoto,rangoRegistro} from './lib/fotos-bitacora';
 import {extraerBitacora} from './lib/extraccion-cliente';
 import {toast} from 'sonner';
 import {empresaActiva} from './lib/persistencia';

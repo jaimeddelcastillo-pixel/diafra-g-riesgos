@@ -1,0 +1,16 @@
+# T3d — extracción y pendientes
+
+- Modelo de las tres tareas: `google/gemini-3.8-flash`, elegido por Jaime y verificado en el catálogo autenticado. Se carga de `ia_skills.modelo_ia`; edición super-admin motivada en Skills de IA. Extracción por Chat Completions con el helper existente, sin opciones de razonamiento forzado ni cambios de dependencias. Modelo almacenado en `modelo_ia` y en cada entrada de `skills_usadas`.
+- Compresión existente intacta: eje mayor 2800 px, fondo blanco, JPEG .75, ajuste adaptativo mínimo .35 y 4 MB.
+- Lote: dos trabajadores de extracción; resultados/error/reintento por foto, no comienza trabajo nuevo después de un error terminal. Las solicitudes ya iniciadas terminan y conservan sus resultados. Confirmación humana secuencial; sin lunes detectado no se inventa el lunes actual.
+- Fechas: año de hoja antes de mes y votación ponderada. Rango histórico derivado de semanas activas guardadas del registro (incluido domingo final); sin semanas, año actual de México ±1. Las fechas nunca se confirman automáticamente.
+- `requiere_revision` es diagnóstico cuando más del 15% de las celdas son dudosas; confianza menor a .70 o nula y valor nulo son dudosos. Toda propuesta sigue necesitando revisión humana.
+- Tres v1.1 **borrador**, no publicadas: T/HR y presiones sustituyen el veto histórico 2024 por rango parametrizado; presiones añade alineación explícita de columnas/huecos. Filtros añade fechas_columnas, confianza, año/mes, fin de semana y alineación. Dígitos manuscritos originales e identidad parametrizada conservados. Las v1.0 vigentes permanecen intactas y siguen en uso hasta que Jaime publique: la regla antigua de año de esas dos v1.0 todavía aplica en el prompt.
+- Word: conteos n días/n lecturas enteros. Referencia de regresión actualizada con el cambio existente del original atdiafra; motor y restantes secciones intactos.
+- Captura: aviso exacto de soporte solo lectura; Excel por registro y periodo con datos crudos/origen/N/A y hoja de correcciones con anterior/nuevo y motivo. La RPC deriva empresa activa y limita la auditoría al registro, sin ampliar SELECT de audit_trail para operadores.
+- Migración `0060_t3d_skill_modelo_y_exportacion_cruda.sql` aplicada. Función `tend-extract-bitacora` desplegada.
+- Suite existente: **129/129, 19 archivos**. Vista: build OK. Sin navegador, llamadas de generación IA ni inspección de descargas.
+- `t3d_pruebas.sql` conserva cinco controles nuevos solo QA y rollback. Ejecución bloqueada por el permiso de la conexión de pruebas para adoptar el rol authenticated; la transacción falló y no persistió fixtures. No se modificaron permisos para sortear el bloqueo.
+
+## Archivos
+`src/modules/tendencias/{Captura,ExtraccionBitacora,LoteFotosImporter,ExportarCrudo}.tsx`, `lib/{captura-controles,fotos-bitacora,extraccion,export-crudo,word-forval16}.ts`, referencia `lib/__tests__/word-atdiafra.reference.ts`, `src/pages/AdminAgentes.tsx`, `src/components/admin/ModeloSkill.tsx`, `src/lib/skills-presentacion.ts`, `supabase/functions/tend-extract-bitacora/index.ts`, migración 0060, `t3d_pruebas.sql`, `AGENTS.md`, `docs/reglas-detalle.md`, `roadmap.md`. Tipos regenerados automáticamente por Lovable Cloud. Skills v1.1 y configuración persistidas en la base.
