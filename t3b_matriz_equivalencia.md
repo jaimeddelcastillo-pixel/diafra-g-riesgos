@@ -2,6 +2,17 @@
 
 ## Actualización de implementación y evidencia
 
+### Reporte consolidado y Cumplimiento — entrega frontend
+- Creados: `Reporte.tsx`, `ReporteVistas.tsx`, `lib/avance.ts`, `lib/export-normativo.ts`, `lib/__tests__/avance.test.ts` dentro de `src/modules/tendencias`.
+- Editados: `Cumplimiento.tsx`, `module.ts`, esta matriz y `roadmap.md`.
+- Portados: área efectiva con respaldo por instrumento, clave/consolidación por instrumento (deduplicación por fecha y saved_at), presets, exploración jerárquica, catálogo completo, exportación individual, matriz de hasta 60 lunes, estados/KPIs, desplazamiento y Excel de avance.
+- Exportadores normativos: seis hojas (Resumen, Estadísticas, Evaluación, No conformidades, Alertas estadísticas, Observaciones); PDF con portada, indicadores, hallazgos, agrupación, estadísticas, cobertura y encabezado/pie; identidad TRACEA sin logo de referencia.
+- Cumplimiento: KPIs por pestaña antes de solo no conformes, cobertura real global/individual, clasificación Todos/Áreas-pares/Instrumentos, chips removibles, limpieza, orden y agrupación de exportación registro/área/HVAC/módulo.
+- Desviaciones conscientes: gráficas PDF omitidas para no introducir el renderer canvas de referencia; duplicados únicamente informativos, consolidación solo en memoria, ninguna acción de eliminación/fusión persistente; motores, BD y edge functions intactos. date-fns ya estaba instalado.
+- Evidencia: `npx vitest run`: 16 archivos y 110 pruebas pasan, incluyendo 4 nuevas sobre deduplicación, inmutabilidad, estados, KPIs, N/A y límite de lunes; build de producción no ejecutado.
+- Pendiente: revisión visual en navegador autenticado y validación manual de descargas PDF/Excel con datos reales; inclusión opcional de gráficas PDF.
+
+
 Esta sección prevalece sobre el inventario previo que sigue abajo, conservado como referencia de lo encontrado antes de implementar. No se declara equivalencia completa.
 
 |Función|Destino actual|Estado verificado / pendiente|

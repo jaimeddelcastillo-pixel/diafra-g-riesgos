@@ -10,7 +10,7 @@ import { analizarRegistro, type Periodo } from "./lib/normativo";
 import { exportarNormativoPDF, exportarNormativoExcel } from "./lib/export-normativo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { cn } from "./lib/utils";
+import { cn } from "@/lib/utils";
 import type { Instrumento, AreaClasificada } from "./lib/catalogos";
 import {
   lunesDe, lecturasCapturadas, lecturasEsperadas, esSemanaCompleta,
@@ -168,7 +168,7 @@ function descargarReporte(f: Fila, desde: Date, hasta: Date, formato: "pdf" | "e
   setTimeout(() => {
     try {
       const periodo: Periodo = { tipo: "custom", desde: d, hasta: h };
-      const analisis = [analizarRegistro(f.registro, periodo)];
+      const analisis = [analizarRegistro({...f.registro, semanas: [...f.semanas.values()].sort((a,b)=>a.semana_inicio.localeCompare(b.semana_inicio))}, periodo)];
       const cat = { areas: new Map(), hvac: new Map() };
       if (formato === "pdf") exportarNormativoPDF(analisis, "registro", cat, { incluirGraficas: true });
       else exportarNormativoExcel(analisis, "registro", cat);

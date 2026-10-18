@@ -9,7 +9,7 @@ import { ChevronLeft, Trash, Eye, RefreshCw, FileSpreadsheet, FileText, Merge, C
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { cn } from "./lib/utils";
+import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import {
   rangoFechasRegistro,
@@ -177,9 +177,9 @@ export default function Reporte() {
       // Consolida múltiples registros del mismo instrumento en uno solo
       // (1 página por instrumento, no 1 por semana/importación)
       const consolidados = consolidarPorInstrumento(registrosParaExportar);
-      const analisis = consolidados.map((r) => analizarRegistro(r, periodo));
+      const analisis = consolidados.map((r) => {const a=areaEfectiva(r,areasMap,instrMap);return analizarRegistro({...r,area_id:a.key,nombre_area_libre:a.etiqueta}, periodo);});
       const cat = {
-        areas: new Map(areas.map((a) => [a.id, `${a.codigo} · ${a.nombre}`])),
+        areas: new Map(registrosParaExportar.map(r=>{const a=areaEfectiva(r,areasMap,instrMap);return [a.key,a.etiqueta];})),
         hvac: hvacMap,
       };
       if (tipo === "excel") exportarNormativoExcel(analisis, "area", cat);
@@ -249,8 +249,8 @@ export default function Reporte() {
                   initialFocus
                   captionLayout="dropdown"
                   defaultMonth={desde}
-                  startMonth={new Date(2000, 0)}
-                  endMonth={new Date(new Date().getFullYear() + 1, 11)}
+                  fromMonth={new Date(2000, 0)}
+                  toMonth={new Date(new Date().getFullYear() + 1, 11)}
                   className={cn("p-3 pointer-events-auto")}
                 />
               </PopoverContent>
@@ -273,8 +273,8 @@ export default function Reporte() {
                   initialFocus
                   captionLayout="dropdown"
                   defaultMonth={hasta}
-                  startMonth={new Date(2000, 0)}
-                  endMonth={new Date(new Date().getFullYear() + 1, 11)}
+                  fromMonth={new Date(2000, 0)}
+                  toMonth={new Date(new Date().getFullYear() + 1, 11)}
                   className={cn("p-3 pointer-events-auto")}
                 />
               </PopoverContent>
@@ -417,6 +417,7 @@ export default function Reporte() {
           )}
         </div>
 
+        {q.isError && <p role="alert" className="text-destructive">No se pudieron cargar los datos. Intenta actualizar.</p>}
         {/* Duplicados (colapsable / pequeño) */}
         {duplicados.length > 0 && !areaSel && (
           <section className="mt-4 rounded-xl border border-warning/40 bg-warning/5 p-3">
