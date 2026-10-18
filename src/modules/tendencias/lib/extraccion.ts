@@ -14,7 +14,7 @@ export function propuestaSemana(propuesta: Record<string, unknown>, registro: Re
     }
     return base.lecturas.map(cell => {
       const p = rows.find(p => p.dia===cell.dia && p.turno===cell.turno);
-      return {...cell,valor:typeof p.valor==='number' && Number.isFinite(p.valor)?p.valor:null,hora:p.hora ?? null,quien:p.quien ?? null,_na:false,_dudoso:p.valor==null || (typeof p.confianza==='number' && p.confianza<0.7)};
+      return {...cell,valor:typeof p.valor==='number' && Number.isFinite(p.valor)?p.valor:null,hora:p.hora ?? null,quien:p.quien ?? null,_na:false,_dudoso:p.valor==null || typeof p.confianza!=='number' || p.confianza<0.7};
     });
   };
   return {...base,lecturas:convertir(registro.modulo==='temphr'?'lecturas_t':'lecturas'),lecturas_hr:registro.modulo==='temphr'?convertir('lecturas_hr'):undefined,observaciones:String(propuesta.observaciones ?? ''),source:'ia'};
