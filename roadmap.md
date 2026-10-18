@@ -1,5 +1,7 @@
 # Roadmap
 
+- [ ] T3c-2: detalle y precargas, bandeja validación, Word anulado/Excel tachado/histórico solo lectura, tarjetas/menú/aviso dudosos; solo filas afectadas de matriz. Suite existente únicamente; sin navegador/IA real/descargas. Resto pospuesto por Jaime.
+
 - [x] Reconfirmación T3c-1: diferencias 1/2/3/4/7 revisadas; aviso de semana existente en lote y bloqueo/aviso de confirmación individual sin motivo añadidos. Suite existente 129/129, 19 archivos; sin nuevas reglas SQL/pruebas, navegador, llamadas IA ni inspección de descargas. Pruebas funcionales a cargo de Jaime. T3c-2 no ejecutado.
 
 - [x] T3c-1 verificado: lote IA con propuestas/revisión/reintento; fecha detectada y compresión; captura contextual/antefirma/objetivo/baseline; acciones por día/descarte/fecha con colisiones; retiro motivado de registros/semanas/cambios de filtro y pruebas QA. Motor intacto; 129/129 pruebas, controles SQL rollback QA y lote revisado/readback real. Alta catálogo conserva admin-only. T3c-2 espera aprobación de esta parte.
