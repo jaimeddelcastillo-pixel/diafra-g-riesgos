@@ -1,4 +1,5 @@
 import {useState} from 'react';
+import {useAuth} from '@/hooks/useAuth';
 import {useQuery} from '@tanstack/react-query';
 import {supabase} from '@/integrations/supabase/client';
 import type {Json} from '@/integrations/supabase/types';
@@ -14,9 +15,10 @@ import {propuestaSemana,revisionPendiente} from './lib/extraccion';
 import type {Registro,Semana} from './lib/semanas';
 
 export default function ExtraccionBitacora({registro,semana,puedeEditar,motivo,onPropuesta,onConfirmado}:{registro:Registro;semana:Semana|null;puedeEditar:boolean;motivo:string;onPropuesta:(s:Semana)=>void;onConfirmado:()=>void}){
+ const auth=useAuth();
  const [busy,setBusy]=useState(false);const [revisado,setRevisado]=useState(false);const [id,setId]=useState<string|null>(null);
  const historial=useQuery({queryKey:['tend-extracciones',registro.id],queryFn:async()=>{const org=await empresaActiva();const {data,error}=await supabase.from('tend_extracciones').select('*').eq('org_id',org).eq('registro_id',registro.id).order('created_at',{ascending:false});if(error)throw error;return data ?? [];}});
- const consumo=useQuery({queryKey:['tend-consumo'],queryFn:async()=>{const org=await empresaActiva();const {count,error}=await supabase.from('tend_extracciones').select('id',{count:'exact',head:true}).eq('org_id',org);if(error)throw error;return count ?? 0;}});
+ const consumo=useQuery({queryKey:['tend-consumo',auth.orgId],queryFn:async()=>{const org=await empresaActiva();const {count,error}=await supabase.from('tend_extracciones').select('id',{count:'exact',head:true}).eq('org_id',org);if(error)throw error;return count ?? 0;}});
  const cargar=(x:NonNullable<typeof historial.data>[number])=>{if(!semana || !x.valores_propuestos || typeof x.valores_propuestos!=='object')return;onPropuesta({...propuestaSemana(x.valores_propuestos as Record<string,unknown>,registro,semana.semana_inicio),foto_path:x.foto_path});setId(x.id);setRevisado(false);};
  if(registro.modulo==='agua')return null;
  const extraer=async()=>{if(!semana?.foto_path || !puedeEditar)return;setBusy(true);try{const {data,error}=await supabase.functions.invoke('tend-extract-bitacora',{body:{registro_id:registro.id,foto_path:semana.foto_path}});if(error || data?.error){let message=data?.error ?? error?.message;if(error && 'context' in error && error.context instanceof Response){try{message=(await error.context.json()).error ?? message;}catch{/* retain error */}}throw new Error(message ?? 'No se pudo extraer');}onPropuesta({...propuestaSemana(data.propuesta,registro,semana.semana_inicio),foto_path:semana.foto_path});setId(data.id);setRevisado(false);toast.success('Propuesta lista para revisión');}catch(e){toast.error(e instanceof Error?e.message:String(e));}finally{setBusy(false);void historial.refetch();void consumo.refetch();}};
