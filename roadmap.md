@@ -4,7 +4,8 @@
 
 - [x] T2 Tendencias: 0050 aplicada, 11 tend_ + org_suplencias, RLS/roles, historial inmutable, bucket privado y auditoría horaria de vencimientos; beta manual solo adminqa sin precios/planes. Siete pruebas SQL y avisos admin/RS pasan con ROLLBACK solo QA; t2_down.sql no destructivo y t2_reporte.md.
 - [x] T3b punto 0: matriz de rutas/acciones/funciones, inventario intacto/adaptado y nueva ejecución 36/36 originales, 42/42 totales (Word 1/1). Entrega t3b_matriz_equivalencia.md y verificación previa; sin cambios funcionales.
-- [ ] T3b implementación bloqueada por decisiones de Jaime: revisión persistida o etapa de borrador; ajustes mínimos T2 para anular borrador/avisos/identidad y consumo IA; prompt vacío de agua e identidad fija/unidades del origen. Después análisis/reporte consolidado/normativo y brechas de captura, Registro AT, suplencias con correo/reintentos e IA. Navegador de Jaime; no firma Part 11, Riesgos ni Cerebro.
+- [ ] T3b controles autorizados: tres estados sin revisión nueva; anular borrador por autor/admin/RS/suplente con motivo; avisos solo sistema; copias de identidad; extracciones trazables y consumo; reversión y siete pruebas QA.
+- [ ] T3b pantallas: análisis/reporte consolidado/normativo, captura pendiente de equivalencia, Registro AT y Word/historial, suplencias con correo/reintentos e IA (agua manual, tres skills v1.0 originales parametrizadas). Navegador de Jaime; no firma Part 11, Riesgos ni Cerebro.
 
 - [x] Soporte: actualizar adopta contexto del servidor sin cierre por marca local ausente; 10 pruebas pasan. Navegador QA adminqa: Cerebro conserva soporte tras recargar sin marca local y Terminar soporte vuelve al Panel.
 
