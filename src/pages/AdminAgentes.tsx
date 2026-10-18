@@ -18,10 +18,12 @@ import { toast } from "@/hooks/use-toast";
 import { ChevronLeft, Loader2, Sparkles } from "lucide-react";
 import { contarEmpresasSkill, grupoSkill, textoSkillParaGuardar } from "@/lib/skills-presentacion";
 import ProbarComposicion from "@/components/admin/ProbarComposicion";
+import ModeloSkill from "@/components/admin/ModeloSkill";
 
 type Skill = {
   clave: string; nombre: string; ambito: "plataforma" | "norma" | "modulo" | "tarea" | "alcance";
   modulo: string | null; norma: string | null; descripcion: string | null;
+  modelo_ia: string | null;
 };
 type Version = {
   id: string; nombre: string; system_prompt: string; version: string;
@@ -279,6 +281,7 @@ function SkillDetalle({ clave, onVolver }: { clave: string; onVolver: () => void
         <p className="text-sm text-muted-foreground">{skill?.descripcion}</p>
       </div>
 
+      {skill?.ambito === 'tarea' && <ModeloSkill key={clave} clave={clave} modelo={skill.modelo_ia}/>}
       {isLoading ? (
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin" /> Cargando versiones…
