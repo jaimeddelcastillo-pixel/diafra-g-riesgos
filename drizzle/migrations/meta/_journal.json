@@ -407,6 +407,13 @@
       "when": 1792291971311,
       "tag": "0057_t3b_aviso_claim_y_bloqueo_ia",
       "breakpoints": true
+    },
+    {
+      "idx": 58,
+      "version": "7",
+      "when": 1792292831860,
+      "tag": "0058_t3b_anulacion_borrador_rs_suplente",
+      "breakpoints": true
     }
   ]
 }
