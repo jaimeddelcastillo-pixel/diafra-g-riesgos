@@ -11,8 +11,10 @@ import {resolverFechasBitacora} from '../_shared/bitacora-fechas.ts';
 import {getLovableAiGatewayRunId,getLovableAiGatewayResponseHeaders} from '../_shared/run-id.ts';
 
 const requestSchema=z.object({registro_id:z.string().uuid(),foto_path:z.string().min(1).max(500)}).strict();
-const lectura=z.object({dia:z.string(),turno:z.string(),valor:z.number().nullable(),hora:z.string().nullable(),quien:z.string().nullable(),confianza:z.number().nullable()});
-const comunes={mes:z.string(),anio:z.string(),instrumento:z.string(),area:z.string(),observaciones:z.string()};
+const texto=z.union([z.string(),z.number()]).nullish().transform(v=>v==null?'':String(v));
+const lectura=z.object({dia:z.string(),turno:z.string(),valor:z.number().nullish().transform(v=>v??null),hora:texto.transform(v=>v||null),quien:texto.transform(v=>v||null),confianza:z.number().nullish().transform(v=>v??null)});
+const comunes={mes:texto,anio:texto,instrumento:texto,area:texto,observaciones:texto};
+const anioDudoso=z.boolean().nullish().transform(v=>v??null);
 const dias=['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'];
 const turnos=['Mañana','Media tarde','Tarde'];
 function comprobarLecturas(rows:unknown){
