@@ -333,8 +333,13 @@ function TabLog() {
                 <td className="p-2">
                   <div className="flex items-center gap-1">
                     <User className="h-3 w-3 text-muted-foreground" />
-                    {getNombre(entry.user_id)}
+                    {(entry as any).origen === "sistema" ? "Sistema / migración" : getNombre(entry.user_id)}
                   </div>
+                  {((entry as any).motivo || (entry as any).autorizado_por) && (
+                    <div className="text-[10px] text-muted-foreground">
+                      {(entry as any).motivo}{(entry as any).autorizado_por ? ` · Autorizó: ${(entry as any).autorizado_por}` : ""}
+                    </div>
+                  )}
                 </td>
                 <td className="p-2">
                   <Badge variant="outline" className="text-[9px]">

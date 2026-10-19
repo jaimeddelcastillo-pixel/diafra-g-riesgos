@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { DesactivarUsuarioDialog } from "@/components/DesactivarUsuarioDialog";
 import ComposicionIACard from "@/components/admin/ComposicionIACard";
+import NormaTendenciasCard from "@/components/admin/NormaTendenciasCard";
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -525,6 +526,8 @@ export default function Admin() {
           <KPI label="Folios este mes"   value={metrics?.folios_mes ?? 0}       icon={FileText}     color="bg-purple-50 text-purple-600" />
         </div>
       )}
+
+      {isSuperAdmin() && <NormaTendenciasCard />}
 
       {/* ── Alertas ── */}
       {!isLoading && totalAlertas > 0 && (
