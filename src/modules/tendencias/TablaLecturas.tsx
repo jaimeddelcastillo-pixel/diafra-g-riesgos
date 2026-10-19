@@ -4,8 +4,8 @@ import { ArrowLeft, ArrowRight, Eraser } from 'lucide-react';
 import { DIAS, TURNOS, type Dia, type PuntoLectura, type Semana } from './lib/semanas';
 
 type Campo = 'lecturas' | 'lecturas_hr';
-export default function TablaLecturas({ semana, titulo, unidad, limite, esTHR, nombreVariable, puedeEditar, fuera, alerta, editar, accion }: {
-  semana: Semana; titulo: string; unidad: string; limite: string; esTHR: boolean; nombreVariable: string; puedeEditar: boolean;
+export default function TablaLecturas({ quienPorDefecto, semana, titulo, unidad, limite, esTHR, nombreVariable, puedeEditar, fuera, alerta, editar, accion }: {
+  quienPorDefecto?: string | null; semana: Semana; titulo: string; unidad: string; limite: string; esTHR: boolean; nombreVariable: string; puedeEditar: boolean;
   fuera: (campo: Campo, v: number | null) => boolean; alerta?: (p: PuntoLectura) => string | null;
   editar: (campo: Campo, dia: string, turno: string, cambio: Partial<PuntoLectura>) => void;
   accion: (dia: Dia, a: 'na' | 'limpiar' | -1 | 1) => void;
@@ -18,7 +18,7 @@ export default function TablaLecturas({ semana, titulo, unidad, limite, esTHR, n
     const aviso = p ? alerta?.(p) : null;
     return <td className={`${celda} ${out ? 'bg-destructive/10' : ''} ${dudoso ? 'bg-warning/10' : ''}`} title={out ? `Fuera de límite: ${limite}` : dudoso ? 'Lectura marcada de baja confianza por la IA — verifica' : aviso ?? (p?._edited ? 'Editado' : undefined)}>
       <input aria-label={`${campo === 'lecturas_hr' ? 'HR' : 'Valor'} ${dia} ${turno}`} type="number" step="any" inputMode="decimal" disabled={!puedeEditar || !!p?._na}
-        value={p?.valor ?? ''} onChange={e => editar(campo, dia, turno, { valor: e.target.value === '' ? null : Number(e.target.value) })}
+        value={p?.valor ?? ''} onChange={e => editar(campo, dia, turno, { valor: e.target.value === '' ? null : Number(e.target.value), ...(quienPorDefecto && !p?.quien ? { quien: quienPorDefecto } : {}) })}
         className={`w-full border-0 bg-transparent text-right font-mono text-xs ${out ? 'font-semibold text-destructive' : ''}`} />
       {aviso && <span role="alert" className="block text-[10px] text-destructive">{aviso}</span>}
     </td>;
