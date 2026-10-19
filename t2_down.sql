@@ -2,6 +2,9 @@
 -- Conserva datos, originales, historial y audit_trail. No usar DROP/CASCADE.
 -- T3a corrigió tend_areas_iso_check para admitir el valor original «No clasificada».
 -- Esta reversión conserva esa ampliación: estrecharla invalidaría registros existentes.
+-- T3d (0061) amplió catálogos a admin+responsable_sanitario; para volver a solo admin:
+-- replace en tend_guard ARRAY['admin','responsable_sanitario'] -> ARRAY['admin'] (validando cambio)
+-- y ALTER POLICY <tabla>_insert/_update con ARRAY['admin']. La sección A ya cierra todo acceso.
 -- Aplicar sección A por herramienta de migraciones; sección B por herramienta de datos.
 
 -- A: deshabilitar todos los accesos T2 sin eliminar registros.

@@ -111,5 +111,12 @@ BEGIN
  END LOOP;
  EXECUTE 'RESET ROLE';
 END $$;
+-- P8 (T3d): catálogos editables solo por admin y responsable_sanitario (política y trigger).
+DO $$ DECLARE t text; BEGIN
+ FOREACH t IN ARRAY ARRAY['tend_sistemas_hvac','tend_areas','tend_instrumentos','tend_objetivos_presion','tend_formato','tend_config'] LOOP
+  IF (SELECT count(*) FROM pg_policies WHERE tablename=t AND policyname IN (t||'_insert',t||'_update') AND coalesce(with_check,'') LIKE '%''admin''::text, ''responsable_sanitario''::text]%' AND coalesce(with_check,'') NOT LIKE '%operador%' AND coalesce(with_check,'') NOT LIKE '%comite%')<>2 THEN RAISE EXCEPTION 'P8 política %',t; END IF;
+ END LOOP;
+ IF pg_get_functiondef('public.tend_guard'::regproc) NOT LIKE '%THEN ARRAY[''admin'',''responsable_sanitario''] ELSE%' THEN RAISE EXCEPTION 'P8 trigger'; END IF;
+END $$;
 SELECT unnest(ARRAY['P1 A no ve B: PASA','P2 Sin módulo no lee/escribe: PASA','P3 Consultor solo empresa activa A/B: PASA','P4 Operador no emite: PASA','P5 RS autor no autoriza: PASA','P6 Historial authenticated/service_role inmutable: PASA','P7 Super_admin soporte solo lectura: PASA','Aviso RS admin=true / RS=false: PASA']) AS resultado;
 ROLLBACK;
