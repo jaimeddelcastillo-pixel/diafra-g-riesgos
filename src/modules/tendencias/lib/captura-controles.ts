@@ -43,3 +43,9 @@ export async function procesarLote<T>(items: T[], procesar: (item: T) => Promise
   };
   await Promise.all(Array.from({length: Math.min(items.length, Math.max(1, Math.min(2, concurrencia)))}, worker));
 }
+/** Foto subida/tomada pendiente de extraer; ligada al registro donde se tomó. */
+export type FotoPendiente = { path: string; registroId: string; id: number };
+/** Solo extrae una foto nueva del mismo registro y no consumida; un cambio de selección nunca reenvía. */
+export function fotoParaExtraer(p: FotoPendiente | undefined, registroId: string, consumida?: number): string | undefined {
+  return p && p.registroId === registroId && p.id !== consumida ? p.path : undefined;
+}

@@ -17,3 +17,10 @@ describe('T3c-1 controles sin cambiar motor',()=>{
  it('meses cruzados se conservan como en atdiafra',()=>{expect(mesesEncabezado('Septiembre/Octubre')).toEqual([9,10]);});
  it('baseline usa la tolerancia original y no especificaciones normativas',()=>{expect(alertaBaseline(11,10,10)).toBe('ok');expect(alertaBaseline(11.1,10,10)).toBe('warning');expect(alertaBaseline(11,null,10)).toBeNull();});
 });
+import { fotoParaExtraer } from '../captura-controles';
+describe('Foto pendiente de extracción', () => {
+  const p = { path: 'org/a.jpg', registroId: 'r1', id: 1 };
+  it('extrae la foto nueva del mismo registro', () => { expect(fotoParaExtraer(p, 'r1')).toBe('org/a.jpg'); });
+  it('cambiar de registro o sistema no reenvía la foto anterior', () => { expect(fotoParaExtraer(p, 'r2')).toBeUndefined(); expect(fotoParaExtraer(undefined, 'r1')).toBeUndefined(); });
+  it('una foto ya enviada no se vuelve a enviar', () => { expect(fotoParaExtraer(p, 'r1', 1)).toBeUndefined(); });
+});
