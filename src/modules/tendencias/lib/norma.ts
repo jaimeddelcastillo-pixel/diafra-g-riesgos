@@ -59,6 +59,8 @@ export function revisarInstrumento(
   const presion = !variablesDe(i).includes("temperatura");
   const lie = i.spec_lie ?? null, lse = i.spec_lse ?? null;
   const texto = (i.spec_texto ?? i.especificacion ?? "").trim();
+  if (pareceDescripcionEquipo(i.spec_texto) || pareceDescripcionEquipo(i.especificacion))
+    h.push({ clave: "spec_descripcion", nivel: "amarillo", mensaje: "Especificación con texto de descripción (marca, modelo, resolución o ubicación)" });
 
   if (!i.spec_estado || i.spec_estado === "pendiente" || (lie == null && lse == null && i.spec_estado !== "na"))
     h.push({ clave: "sin_spec", nivel: "amarillo", mensaje: "Sin especificación o pendiente de validar" });
