@@ -428,6 +428,13 @@
       "when": 1792351115125,
       "tag": "0060_t3d_skill_modelo_y_exportacion_cruda",
       "breakpoints": true
+    },
+    {
+      "idx": 61,
+      "version": "7",
+      "when": 1792435597636,
+      "tag": "0061_t3d_catalogos_admin_rs",
+      "breakpoints": true
     }
   ]
 }
