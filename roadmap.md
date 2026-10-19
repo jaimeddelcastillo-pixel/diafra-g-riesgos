@@ -1,6 +1,7 @@
 # Roadmap
 
 - [x] Fase 1: Captura y Análisis adaptados desde atdiafra; exportación cruda única, pendientes/historial separados, cuatro secciones con gráficas, buscador/guía/consecutivo y avisos. Identificadores y descargas configurables; unicidad activa normalizada aplicada, adminqa sin duplicados activos ni retiros. Suite 143/143 y compilación OK; sin navegador/IA/dependencias. Verificación visual y funcional a cargo de Jaime.
+- [x] Fase 2: Captura (popover Exportar PDF + Excel crudo, análisis del registro, zona de peligro con retiro auditado y bloqueo por AT emitido), Cumplimiento copiado de reporte.normativo, paso a Análisis con instrumentos/periodo/sistema. Reporte consolidado ya era copia; Fusionar/Borrar siguen fuera (no borrado). Verificación visual a cargo de Jaime.
 
 - [x] Complemento T3d: Gemini 3.8 Flash con razonamiento minimal; tres v1.1 siguen en borrador con año escrito prioritario y candidatos desde primera fecha hasta actual +1. Comprobación compartida servidor/UI de todas las columnas; sin candidato requiere_revision, sin prohibición de 2024/anteriores y originales conservados. Función desplegada, huellas/estados leídos; suite 129/129 y build OK. Sin navegador/IA real/dependencias; validación funcional de extracción a cargo de Jaime.
 
