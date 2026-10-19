@@ -1,6 +1,827 @@
-import {exportarNormativoExcel,exportarNormativoPDF} from './lib/export-normativo';
-import {tipoRegistroReporte,semanasDelPeriodo,type AgruparPor} from './lib/normativo';
-import {coberturaReal} from './lib/fechas-lectura';
-import {useMemo,useState} from 'react';import {Link,useSearchParams} from 'react-router-dom';import {RefreshCw,Download,Link2} from 'lucide-react';import {Button} from '@/components/ui/button';import {Input} from '@/components/ui/input';import {Label} from '@/components/ui/label';import {Checkbox} from '@/components/ui/checkbox';import {Select,SelectContent,SelectItem,SelectTrigger,SelectValue} from '@/components/ui/select';import {toast} from 'sonner';import Marco from './Marco';import {useTendencias} from './hooks';import {analizarRegistro,evaluarRegistro,ETIQUETA_CUMPLIMIENTO,ETIQUETA_CAPACIDAD,ETIQUETA_CONTROL,type Periodo} from './lib/normativo';import {SUBMODULOS} from './Tablero';
-export default function Cumplimiento({consolidado=false}:{consolidado?:boolean}){const q=useTendencias();const [search,setSearch]=useSearchParams();const [selected,setSelected]=useState<string[]|null>(null);const [sort,setSort]=useState('nombre');const [tab,setTab]=useState('todos');const [agrupar,setAgrupar]=useState<AgruparPor>('registro');const y=Number(search.get('anio') ?? new Date().getFullYear());const tipo=search.get('tipo') ?? 'trimestre';const trimestre=Number(search.get('q') ?? Math.ceil((new Date().getMonth()+1)/3)) as 1|2|3|4;const desde=search.get('desde') ?? `${y}-01-01`;const hasta=search.get('hasta') ?? `${y}-12-31`;const modulo=search.get('modulo') ?? 'todos';const area=search.get('area') ?? 'todos';const hvac=search.get('hvac') ?? 'todos';const nc=search.get('nc')==='1';const patch=(key:string,value:string)=>{const n=new URLSearchParams(search);n.set(key,value);setSearch(n);setSelected(null);};
-const periodo:Periodo=tipo==='anual'?{tipo:'anual',anio:y}:tipo==='custom'?{tipo:'custom',desde,hasta}:{tipo:'trimestre',anio:y,q:trimestre};const baseRows=useMemo(()=>{return (q.data?.registros ?? []).filter(r=>r.activo && (modulo==='todos' || r.modulo===modulo) && (area==='todos' || r.area_id===area) && (hvac==='todos' || r.hvac_id===hvac)).map(r=>evaluarRegistro(analizarRegistro(r,periodo))).filter(e=>tab==='todos'||(tab==='instrumento'?tipoRegistroReporte(e.analisis.registro)==='instrumento':tipoRegistroReporte(e.analisis.registro)!=='instrumento'));},[q.data,modulo,area,hvac,tipo,y,trimestre,desde,hasta,tab]);const rows=baseRows.filter(e=>!nc||e.cumplimiento==='no_cumple').sort((a,b)=>{const val=(e:typeof a)=>sort==='lecturas'?e.analisis.totalLecturas:sort==='minimo'?-Math.min(...e.analisis.series.map(s=>s.pctDentroSpec ?? 0)):sort==='capacidad'?-Math.min(...e.analisis.series.map(s=>s.ppk ?? Infinity)):e.analisis.series.reduce((n,s)=>n+s.fueraSpec.total,0);return sort==='nombre'?a.analisis.registro.nombre.localeCompare(b.analisis.registro.nombre):val(b)-val(a);});const cat={areas:new Map((q.data?.areas??[]).map(a=>[a.id,`${a.codigo} · ${a.nombre}`])),hvac:new Map((q.data?.hvac??[]).map(h=>[h.id,h.codigo]))};const cobertura=coberturaReal(baseRows.flatMap(e=>semanasDelPeriodo(e.analisis.registro,periodo)));const chosen=rows.filter(e=>selected===null || selected.includes(e.analisis.registro.id));return <Marco titulo={consolidado?'Reporte consolidado':'Cumplimiento normativo'}><div className="grid gap-3 sm:grid-cols-4"><div><Label>Periodo</Label><Select value={tipo} onValueChange={v=>patch('tipo',v)}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent><SelectItem value="trimestre">Trimestre</SelectItem><SelectItem value="anual">Anual</SelectItem><SelectItem value="custom">Rango</SelectItem></SelectContent></Select></div><div><Label>Año</Label><Input type="number" value={y} onChange={e=>patch('anio',e.target.value)}/></div>{tipo==='trimestre' && <div><Label>Trimestre</Label><Select value={String(trimestre)} onValueChange={v=>patch('q',v)}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent>{[1,2,3,4].map(i=><SelectItem key={i} value={String(i)}>T{i}</SelectItem>)}</SelectContent></Select></div>}{tipo==='custom' && <><div><Label>Desde</Label><Input type="date" value={desde} onChange={e=>patch('desde',e.target.value)}/></div><div><Label>Hasta</Label><Input type="date" value={hasta} onChange={e=>patch('hasta',e.target.value)}/></div></>}<div><Label>Sistema</Label><Select value={modulo} onValueChange={v=>patch('modulo',v)}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent><SelectItem value="todos">Todos</SelectItem>{SUBMODULOS.map(m=><SelectItem key={m.clave} value={m.clave}>{m.nombre}</SelectItem>)}</SelectContent></Select></div><div><Label>Área</Label><Select value={area} onValueChange={v=>patch('area',v)}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent><SelectItem value="todos">Todas</SelectItem>{q.data?.areas.map(a=><SelectItem key={a.id} value={a.id}>{a.codigo}</SelectItem>)}</SelectContent></Select></div><div><Label>HVAC</Label><Select value={hvac} onValueChange={v=>patch('hvac',v)}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent><SelectItem value="todos">Todos</SelectItem>{q.data?.hvac.map(h=><SelectItem key={h.id} value={h.id}>{h.codigo}</SelectItem>)}</SelectContent></Select></div><div><Label>Orden</Label><Select value={sort} onValueChange={setSort}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent><SelectItem value="nombre">Nombre</SelectItem><SelectItem value="lecturas">Lecturas</SelectItem><SelectItem value="minimo">% mínimo dentro de especificación</SelectItem><SelectItem value="capacidad">Peor capacidad</SelectItem><SelectItem value="oos">OOS</SelectItem></SelectContent></Select></div></div><div className="flex flex-wrap gap-3 items-center"><Label className="flex items-center gap-2"><Checkbox checked={nc} onCheckedChange={v=>patch('nc',v?'1':'0')}/>Solo no conformes</Label><Button variant="outline" onClick={()=>q.refresh()}><RefreshCw className="mr-2 h-4 w-4"/>Actualizar</Button><Button variant="outline" onClick={()=>{void navigator.clipboard.writeText(window.location.href);toast.success('Enlace copiado');}}><Link2 className="mr-2 h-4 w-4"/>Copiar enlace</Button><Button variant="outline" onClick={()=>setSelected(null)}>Todos</Button><Button variant="outline" onClick={()=>setSelected([])}>Ninguno</Button><Button variant="outline" onClick={()=>{if(!chosen.length){toast.info('Sin registros para exportar');return;}exportarNormativoExcel(chosen.map(e=>e.analisis),agrupar,cat);}}><Download className="mr-2 h-4 w-4"/>Excel</Button><Button variant="outline" onClick={()=>{if(!chosen.length){toast.info('Sin registros para exportar');return;}exportarNormativoPDF(chosen.map(e=>e.analisis),agrupar,cat,{incluirGraficas:false});}}><Download className="mr-2 h-4 w-4"/>PDF</Button></div><div className="flex flex-wrap gap-3">{[['todos','Todos'],['area','Áreas-pares'],['instrumento','Instrumentos']].map(([v,l])=><Button key={v} variant={tab===v?'default':'outline'} onClick={()=>{setTab(v);setSelected(null);}}>{l}</Button>)}<Label>Agrupar exportación<select className="ml-2 border rounded bg-background p-2" value={agrupar} onChange={e=>setAgrupar(e.target.value as AgruparPor)}>{['registro','area','hvac','modulo'].map(v=><option key={v} value={v}>{v}</option>)}</select></Label></div><div className="flex flex-wrap gap-2">{Array.from(search.entries()).map(([k,v])=><Button size="sm" variant="secondary" key={k} onClick={()=>{const n=new URLSearchParams(search);n.delete(k);setSearch(n);setSelected(null);}}>{k}: {v} ×</Button>)}<Button variant="ghost" onClick={()=>{setSearch({});setSelected(null);setTab('todos');setSort('nombre');}}>Limpiar todo</Button></div><div className="flex flex-wrap gap-5 border-y py-4"><span>Registros: {baseRows.length}</span><span>Cumplen normativo: {baseRows.filter(e=>e.cumplimiento==='cumple').length}/{baseRows.length}</span><span>No conformidades: {baseRows.reduce((n,e)=>n+e.hallazgos.filter(h=>h.categoria==='no_conformidad').length,0)}</span><span>Alertas estadísticas: {baseRows.reduce((n,e)=>n+e.hallazgos.filter(h=>h.categoria==='alerta_estadistica').length,0)}</span><span>Lecturas: {baseRows.reduce((n,e)=>n+e.analisis.totalLecturas,0)}</span><span>Cobertura real: {cobertura.primera ?? 'Sin lecturas'} – {cobertura.ultima ?? '—'} · {cobertura.dias} días</span></div>{q.isLoading && <p>Cargando…</p>}{q.isError && <p role="alert">No se pudieron cargar los datos.</p>}{!q.isLoading && !rows.length && <p>Sin registros para los filtros seleccionados.</p>}{rows.map(e=><section key={e.analisis.registro.id} className="border-b pb-4"><div className="flex items-center gap-3"><Checkbox aria-label={`Seleccionar ${e.analisis.registro.nombre}`} checked={selected===null || selected.includes(e.analisis.registro.id)} onCheckedChange={v=>{const base=selected ?? rows.map(e=>e.analisis.registro.id);setSelected(v?[...base,e.analisis.registro.id]:base.filter(id=>id!==e.analisis.registro.id));}}/><h2 className="font-semibold">{e.analisis.registro.nombre}</h2><span>{ETIQUETA_CUMPLIMIENTO[e.cumplimiento]}</span><Button asChild variant="link"><Link to={`/tendencias/captura?modulo=${e.analisis.registro.modulo}`}>Captura</Link></Button></div><p className="text-sm text-muted-foreground">Cobertura: {e.analisis.cobertura.primera ?? "Sin lecturas"} – {e.analisis.cobertura.ultima ?? "—"} · {e.analisis.cobertura.dias} días · {e.analisis.totalLecturas}/90 lecturas · {ETIQUETA_CONTROL[e.control]} · {ETIQUETA_CAPACIDAD[e.capacidad]}</p><details><summary className="cursor-pointer">Detalle estadístico</summary>{e.analisis.series.map(s=><div className="grid gap-3 sm:grid-cols-6 text-sm py-3" key={s.serie}><strong>{s.serie}</strong><span>n={s.n}</span><span>Media {s.media?.toFixed(3) ?? 'N/D'}</span><span>Cpk {s.cpkInsuficiente?'n insuficiente':s.cpk?.toFixed(3) ?? 'N/D'}</span><span>Ppk {s.ppk?.toFixed(3) ?? 'N/D'}</span><span>Fuera spec {s.fueraSpec.total}</span></div>)}<p className="text-sm">{e.conclusion}</p>{e.hallazgos.map((h,i)=><p key={i} className="text-sm py-1">{h.titulo}: {h.detalle}</p>)}</details></section>)}</Marco>;}
+// Copia de reporte.normativo (atdiafra). Adaptado: datos de la empresa activa (useTendencias), filtros en la URL, identidad del formato configurable.
+import { coberturaReal } from "./lib/fechas-lectura";
+import { Link, useSearchParams } from "react-router-dom";
+import { Fragment as FragmentWithKey, useMemo, useState } from "react";
+import {
+  ChevronLeft, RefreshCw, FileSpreadsheet, FileText, ShieldCheck,
+  AlertTriangle, XCircle, CheckCircle2, ChevronDown, ChevronRight,
+  X, ArrowUp, ArrowDown, Link2, Filter, LineChart,
+} from "lucide-react";
+import Marco from "./Marco";
+import { useTendencias } from "./hooks";
+import { cargarConfiguracion } from "./lib/persistencia";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { toast } from "sonner";
+import type { Modulo } from "./lib/semanas";
+import {
+  analizarRegistro, semanasDelPeriodo, rangoPeriodo, MINIMO_NORMATIVO, CPK_WARN, CPK_FAIL,
+  tipoRegistroReporte, etiquetaTipoRegistro,
+  type AgruparPor, type AnalisisRegistro, type Periodo, type Trimestre, type TipoRegistroReporte,
+} from "./lib/normativo";
+import { exportarNormativoExcel, exportarNormativoPDF } from "./lib/export-normativo";
+
+type TabKey = "todos" | "areas" | "instrumentos";
+type SortKey = "nombre" | "lecturas" | "porcentaje" | "cpk" | "fuera";
+type SortDir = "asc" | "desc";
+type Severidad = "ok" | "warning" | "critical";
+
+type SearchState = {
+  tipo?: "trimestre" | "anual" | "custom";
+  anio?: number;
+  q?: Trimestre;
+  desde?: string;
+  hasta?: string;
+  modulo?: Modulo | "";
+  area?: string;
+  hvac?: string;
+  agrupar?: AgruparPor;
+  tab?: TabKey;
+  sort?: SortKey;
+  dir?: SortDir;
+  nc?: boolean;
+};
+
+const MODULOS: { id: Modulo | ""; label: string }[] = [
+  { id: "", label: "Todos los módulos" },
+  { id: "temphr", label: "Temperatura y HR" },
+  { id: "filtros", label: "Filtros" },
+  { id: "presiones", label: "Presiones" },
+  { id: "agua", label: "Agua purificada" },
+];
+
+function trimestreActual(): Trimestre {
+  return Math.ceil((new Date().getMonth() + 1) / 3) as Trimestre;
+}
+
+/** Peor Cpk (mínimo entre series con n suficiente). null si ninguna. */
+function peorCpk(a: AnalisisRegistro): number | null {
+  const vals = a.series.filter((s) => !s.cpkInsuficiente && s.ppk != null).map((s) => s.ppk as number);
+  return vals.length ? Math.min(...vals) : null;
+}
+
+function hayFueraSpec(a: AnalisisRegistro): number {
+  return a.series.reduce((s, r) => s + r.fueraSpec.total, 0);
+}
+
+/**
+ * Tono de fila:
+ *  · critical → No Conformidad real (fueraSpec o sin mínimo normativo).
+ *  · warning  → Sin NC, pero hay alerta estadística (Cpk < 1.33).
+ *  · ok       → Conforme y capaz. NUNCA se marca critical por Cpk solo.
+ */
+function severidad(a: AnalisisRegistro): Severidad {
+  const fs = hayFueraSpec(a);
+  const cpk = peorCpk(a);
+  if (fs > 0 || !a.cumpleMinimo) return "critical";
+  if (cpk != null && cpk < CPK_WARN) return "warning";
+  return "ok";
+}
+
+function leerSearch(p: URLSearchParams): SearchState {
+  const num = (k: string) => { const n = parseInt(p.get(k) ?? "", 10); return Number.isFinite(n) ? n : undefined; };
+  const en = <T extends string>(k: string, ok: readonly T[]) => (ok as readonly string[]).includes(p.get(k) ?? "\u0000") ? (p.get(k) as T) : undefined;
+  const qN = num("q");
+  return {
+    tipo: en("tipo", ["trimestre", "anual", "custom"] as const), anio: num("anio"),
+    q: qN && qN >= 1 && qN <= 4 ? (qN as Trimestre) : undefined,
+    desde: p.get("desde") ?? undefined, hasta: p.get("hasta") ?? undefined,
+    modulo: en("modulo", ["temphr", "filtros", "presiones", "agua", ""] as const),
+    area: p.get("area") ?? undefined, hvac: p.get("hvac") ?? undefined,
+    agrupar: en("agrupar", ["registro", "area", "hvac", "modulo"] as const),
+    tab: en("tab", ["todos", "areas", "instrumentos"] as const),
+    sort: en("sort", ["nombre", "lecturas", "porcentaje", "cpk", "fuera"] as const),
+    dir: en("dir", ["asc", "desc"] as const),
+    nc: p.has("nc") ? ["true", "1"].includes(p.get("nc") ?? "") : undefined,
+  };
+}
+
+export default function Cumplimiento() {
+  const [params, setParams] = useSearchParams();
+  const search = leerSearch(params);
+  const qT = useTendencias();
+
+  // Defaults derivados
+  const currentYear = new Date().getFullYear();
+  const tipo: "trimestre" | "anual" | "custom" = search.tipo ?? "trimestre";
+  const anio = search.anio ?? currentYear;
+  const trimestre = (search.q ?? trimestreActual()) as Trimestre;
+  const desde = search.desde ?? `${currentYear}-01-01`;
+  const hasta = search.hasta ?? new Date().toISOString().slice(0, 10);
+  const modulo: Modulo | "" = search.modulo ?? "";
+  const filtroArea = search.area ?? "";
+  const filtroHvac = search.hvac ?? "";
+  const agrupar: AgruparPor = search.agrupar ?? "registro";
+  const tab: TabKey = search.tab ?? "todos";
+  const sort: SortKey = search.sort ?? "porcentaje";
+  const dir: SortDir = search.dir ?? "asc";
+  const soloNC = search.nc ?? false;
+
+  const updateSearch = (patch: Partial<SearchState>) => {
+    const next = new URLSearchParams(params);
+    for (const [k, v] of Object.entries(patch)) { if (v === undefined || v === "") next.delete(k); else next.set(k, String(v)); }
+    setParams(next, { replace: true });
+  };
+
+  const registros = useMemo(() => (qT.data?.registros ?? []).filter((r) => r.activo !== false), [qT.data]);
+  const areasMap = useMemo(() => new Map((qT.data?.areas ?? []).map((a) => [a.id, `${a.codigo} · ${a.nombre}`])), [qT.data]);
+  const hvacMap = useMemo(() => new Map((qT.data?.hvac ?? []).map((h) => [h.id, `${h.codigo} · ${h.nombre_uma}`])), [qT.data]);
+  const instrArea = useMemo(() => new Map<string, string | null>((qT.data?.instrumentos ?? []).map((i) => [i.id, i.area_id ?? null])), [qT.data]);
+  const loading = qT.isLoading;
+  const reload = () => { void qT.refresh(); };
+  const [incluirGraficas, setIncluirGraficas] = useState(true);
+  const [expandidos, setExpandidos] = useState<Set<string>>(new Set());
+  const [seleccionados, setSeleccionados] = useState<Set<string>>(new Set());
+  const [seleccionManual, setSeleccionManual] = useState(false);
+
+
+  const periodo: Periodo = useMemo(
+    () =>
+      tipo === "anual"
+        ? { tipo: "anual", anio }
+        : tipo === "custom"
+          ? { tipo: "custom", desde, hasta }
+          : { tipo: "trimestre", anio, q: trimestre },
+    [tipo, anio, trimestre, desde, hasta],
+  );
+
+  const filtrados = useMemo(() => {
+    return registros.filter((r) => {
+      if (modulo && r.modulo !== modulo) return false;
+      if (filtroArea && (r.area_id ?? (r.instrumento_id ? instrArea.get(r.instrumento_id) : null)) !== filtroArea) return false;
+      if (filtroHvac && r.hvac_id !== filtroHvac) return false;
+      return true;
+    });
+  }, [registros, modulo, filtroArea, filtroHvac, instrArea]);
+
+  const filtradosFinal = useMemo(
+    () => (seleccionManual ? filtrados.filter((r) => seleccionados.has(r.id)) : filtrados),
+    [filtrados, seleccionados, seleccionManual],
+  );
+
+  const analisisAll = useMemo<AnalisisRegistro[]>(
+    () => filtradosFinal.map((r) => analizarRegistro(r, periodo)),
+    [filtradosFinal, periodo],
+  );
+
+  // Split por tipo
+  const analisisAreas = useMemo(
+    () => analisisAll.filter((a) => tipoRegistroReporte(a.registro) !== "instrumento"),
+    [analisisAll],
+  );
+  const analisisInstrumentos = useMemo(
+    () => analisisAll.filter((a) => tipoRegistroReporte(a.registro) === "instrumento"),
+    [analisisAll],
+  );
+
+  // Analisis para exportar/analizar según tab activo
+  const analisisTab = tab === "areas" ? analisisAreas : tab === "instrumentos" ? analisisInstrumentos : analisisAll;
+
+  // Aplicar filtro "solo no conformidades"
+  const analisisVisible = useMemo(() => {
+    const base = soloNC ? analisisTab.filter((a) => severidad(a) === "critical") : analisisTab;
+    // Sort
+    const sorted = [...base].sort((a, b) => {
+      let av = 0, bv = 0, cmp = 0;
+      switch (sort) {
+        case "nombre":
+          cmp = a.registro.nombre.localeCompare(b.registro.nombre); break;
+        case "lecturas":
+          av = a.totalLecturas; bv = b.totalLecturas; cmp = av - bv; break;
+        case "porcentaje":
+          av = a.porcentajeMinimo; bv = b.porcentajeMinimo; cmp = av - bv; break;
+        case "cpk": {
+          const ac = peorCpk(a); const bc = peorCpk(b);
+          if (ac == null && bc == null) cmp = 0;
+          else if (ac == null) cmp = 1;
+          else if (bc == null) cmp = -1;
+          else cmp = ac - bc;
+          break;
+        }
+        case "fuera":
+          cmp = hayFueraSpec(a) - hayFueraSpec(b); break;
+      }
+      return dir === "asc" ? cmp : -cmp;
+    });
+    return sorted;
+  }, [analisisTab, soloNC, sort, dir]);
+
+  // KPIs sobre analisisTab (no filtrado por NC — la barra siempre refleja el total del tab)
+  const kpis = useMemo(() => {
+    const total = analisisTab.length;
+    const cumplen = analisisTab.filter((a) => a.cumpleMinimo).length;
+    const criticos = analisisTab.filter((a) => severidad(a) === "critical").length;
+    const advertencias = analisisTab.filter((a) => severidad(a) === "warning").length;
+    const totalLecturas = analisisTab.reduce((s, a) => s + a.totalLecturas, 0);
+    const cobertura = coberturaReal(analisisTab.flatMap((a) => semanasDelPeriodo(a.registro, a.periodo)));
+    return { total, cumplen, criticos, advertencias, totalLecturas, cobertura };
+  }, [analisisTab]);
+
+  const periodoEsParcial = tipo === "trimestre" && anio === currentYear && trimestre === trimestreActual();
+
+  const catalogos = async () => {
+    const { formato } = await cargarConfiguracion(qT.auth.org?.nombre ?? "", qT.auth.org?.logo_url ?? null);
+    return { areas: areasMap, hvac: hvacMap, formato, empresa: qT.auth.org?.nombre, logo: qT.auth.org?.logo_url } as Parameters<typeof exportarNormativoPDF>[2];
+  };
+  const handleExcel = async () => {
+    try {
+      exportarNormativoExcel(analisisTab, agrupar, await catalogos());
+      toast.success("Excel generado");
+    } catch (e: any) {
+      toast.error("Error: " + e.message);
+    }
+  };
+  const handlePDF = () => {
+    const t = toast.loading(incluirGraficas ? "Generando PDF con gráficas…" : "Generando PDF…");
+    setTimeout(async () => {
+      try {
+        exportarNormativoPDF(analisisTab, agrupar, await catalogos(), { incluirGraficas });
+        toast.success("PDF generado", { id: t });
+      } catch (e: any) {
+        toast.error("Error: " + e.message, { id: t });
+      }
+    }, 50);
+  };
+
+  const rango = rangoPeriodo(periodo);
+  const enlaceAnalisis = `/tendencias/analisis?ids=${analisisTab.map((a) => a.registro.id).join(",")}&desde=${rango.desde}&hasta=${rango.hasta}${filtroHvac ? `&hvac=${filtroHvac}` : ""}`;
+
+  const handleCopyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      toast.success("Enlace copiado — mismos filtros y ordenamiento");
+    } catch {
+      toast.error("No se pudo copiar el enlace");
+    }
+  };
+
+  const toggleExpand = (id: string) => {
+    const next = new Set(expandidos);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    setExpandidos(next);
+  };
+
+  const toggleSort = (key: SortKey) => {
+    if (sort === key) updateSearch({ dir: dir === "asc" ? "desc" : "asc" });
+    else updateSearch({ sort: key, dir: key === "nombre" ? "asc" : "desc" });
+  };
+
+  // Chips de filtros activos
+  const chips: { key: string; label: string; onRemove?: () => void }[] = [];
+  const periodoLabel =
+    tipo === "anual" ? `Anual ${anio}` :
+    tipo === "custom" ? `${desde} → ${hasta}` :
+    `Q${trimestre} ${anio}`;
+  chips.push({ key: "periodo", label: `Periodo: ${periodoLabel}` });
+  if (modulo) {
+    const l = MODULOS.find((m) => m.id === modulo)?.label ?? modulo;
+    chips.push({ key: "modulo", label: `Módulo: ${l}`, onRemove: () => updateSearch({ modulo: "" }) });
+  }
+  if (filtroArea) {
+    chips.push({ key: "area", label: `Área: ${areasMap.get(filtroArea) ?? filtroArea}`, onRemove: () => updateSearch({ area: "" }) });
+  }
+  if (filtroHvac) {
+    chips.push({ key: "hvac", label: `HVAC: ${hvacMap.get(filtroHvac) ?? filtroHvac}`, onRemove: () => updateSearch({ hvac: "" }) });
+  }
+  if (soloNC) {
+    chips.push({ key: "nc", label: "Solo no conformidades", onRemove: () => updateSearch({ nc: false }) });
+  }
+
+  return (
+    <Marco titulo="Cumplimiento normativo">
+      <main>
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+          <Link to="/tendencias/reporte" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-primary">
+            <ChevronLeft className="h-4 w-4" /> Reporte consolidado
+          </Link>
+        </div>
+
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h1 className="text-2xl font-semibold text-foreground flex items-center gap-2">
+              <ShieldCheck className="h-6 w-6 text-primary" />
+              Reporte normativo
+            </h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              Cumplimiento ≥ {MINIMO_NORMATIVO} lecturas por punto de muestreo. Trimestres parciales soportados.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button size="sm" variant="outline" onClick={reload} disabled={loading} className="gap-1">
+              <RefreshCw className="h-4 w-4" /> Actualizar
+            </Button>
+            <Button size="sm" variant="outline" onClick={handleCopyLink} className="gap-1">
+              <Link2 className="h-4 w-4" /> Copiar enlace
+            </Button>
+            <Button size="sm" variant="outline" asChild={analisisTab.length > 0} disabled={loading || analisisTab.length === 0} className="gap-1"
+              title="Abre el análisis de tendencias con estos registros y el periodo elegido">
+              {analisisTab.length > 0 ? <Link to={enlaceAnalisis}><LineChart className="h-4 w-4" /> Análisis de tendencias</Link> : <span><LineChart className="h-4 w-4" /> Análisis de tendencias</span>}
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => void handleExcel()} disabled={loading || analisisTab.length === 0} className="gap-1">
+              <FileSpreadsheet className="h-4 w-4" /> Excel
+            </Button>
+            <label className="inline-flex items-center gap-1 text-xs text-muted-foreground border border-input rounded-md px-2 h-9">
+              <input
+                type="checkbox"
+                checked={incluirGraficas}
+                onChange={(e) => setIncluirGraficas(e.target.checked)}
+                className="h-3.5 w-3.5"
+              />
+              Gráficas
+            </label>
+            <Button size="sm" onClick={handlePDF} disabled={loading || analisisTab.length === 0} className="gap-1">
+              <FileText className="h-4 w-4" /> PDF
+            </Button>
+          </div>
+        </div>
+
+        {/* Controles */}
+        <Card className="mt-6">
+          <CardContent className="pt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
+            <div>
+              <label className="text-xs font-medium text-muted-foreground">Periodo</label>
+              <Select value={tipo} onValueChange={(v) => updateSearch({ tipo: v as SearchState["tipo"] })}>
+                <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="trimestre">Trimestral</SelectItem>
+                  <SelectItem value="anual">Anual</SelectItem>
+                  <SelectItem value="custom">Personalizado</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {tipo !== "custom" && (
+              <div>
+                <label className="text-xs font-medium text-muted-foreground">Año</label>
+                <input
+                  type="number"
+                  value={anio}
+                  onChange={(e) => updateSearch({ anio: parseInt(e.target.value, 10) || currentYear })}
+                  className="mt-1 block w-full rounded-md border border-input bg-background px-2 py-1.5 text-sm h-9"
+                />
+              </div>
+            )}
+            {tipo === "trimestre" && (
+              <div>
+                <label className="text-xs font-medium text-muted-foreground">Trimestre</label>
+                <Select value={String(trimestre)} onValueChange={(v) => updateSearch({ q: Number(v) as Trimestre })}>
+                  <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {[1, 2, 3, 4].map((q) => <SelectItem key={q} value={String(q)}>Q{q}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            {tipo === "custom" && (
+              <>
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground">Desde</label>
+                  <input
+                    type="date"
+                    value={desde}
+                    max={hasta}
+                    onChange={(e) => updateSearch({ desde: e.target.value })}
+                    className="mt-1 block w-full rounded-md border border-input bg-background px-2 py-1.5 text-sm h-9"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground">Hasta</label>
+                  <input
+                    type="date"
+                    value={hasta}
+                    min={desde}
+                    onChange={(e) => updateSearch({ hasta: e.target.value })}
+                    className="mt-1 block w-full rounded-md border border-input bg-background px-2 py-1.5 text-sm h-9"
+                  />
+                </div>
+              </>
+            )}
+            <div>
+              <label className="text-xs font-medium text-muted-foreground">Módulo</label>
+              <Select value={modulo || "all"} onValueChange={(v) => updateSearch({ modulo: v === "all" ? "" : v as Modulo })}>
+                <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  {MODULOS.filter((m) => m.id).map((m) => <SelectItem key={m.id} value={m.id}>{m.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground">Área</label>
+              <Select value={filtroArea || "all"} onValueChange={(v) => updateSearch({ area: v === "all" ? "" : v })}>
+                <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas</SelectItem>
+                  {Array.from(areasMap.entries()).map(([id, label]) => (
+                    <SelectItem key={id} value={id}>{label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground">HVAC</label>
+              <Select value={filtroHvac || "all"} onValueChange={(v) => updateSearch({ hvac: v === "all" ? "" : v })}>
+                <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  {Array.from(hvacMap.entries()).map(([id, label]) => (
+                    <SelectItem key={id} value={id}>{label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="sm:col-span-2 lg:col-span-6">
+              <label className="text-xs font-medium text-muted-foreground">Agrupar en el reporte (PDF/Excel)</label>
+              <div className="mt-1 inline-flex rounded-md border border-input bg-background p-0.5">
+                {(["registro", "area", "hvac", "modulo"] as AgruparPor[]).map((opt) => (
+                  <button
+                    key={opt}
+                    onClick={() => updateSearch({ agrupar: opt })}
+                    className={`px-3 py-1 text-xs rounded ${agrupar === opt ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                  >
+                    {opt === "registro" ? "Registro" : opt === "area" ? "Área" : opt === "hvac" ? "HVAC" : "Módulo"}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Selección manual (colapsable) */}
+        <Card className="mt-4">
+          <CardContent className="pt-6 space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <label className="inline-flex items-center gap-2 text-sm text-foreground">
+                <input
+                  type="checkbox"
+                  checked={seleccionManual}
+                  onChange={(e) => {
+                    setSeleccionManual(e.target.checked);
+                    if (e.target.checked && seleccionados.size === 0) {
+                      setSeleccionados(new Set(filtrados.map((r) => r.id)));
+                    }
+                  }}
+                />
+                Selección manual de registros
+                <span className="text-xs text-muted-foreground">
+                  ({seleccionManual ? `${seleccionados.size} de ${filtrados.length}` : `todos: ${filtrados.length}`})
+                </span>
+              </label>
+              {seleccionManual && (
+                <div className="flex gap-2">
+                  <Button size="sm" variant="ghost" onClick={() => setSeleccionados(new Set(filtrados.map((r) => r.id)))}>
+                    Todos
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => setSeleccionados(new Set())}>
+                    Ninguno
+                  </Button>
+                </div>
+              )}
+            </div>
+            {seleccionManual && (
+              <div className="max-h-56 overflow-y-auto rounded-md border border-border p-2 grid gap-1 sm:grid-cols-2 lg:grid-cols-3">
+                {filtrados.length === 0 ? (
+                  <p className="text-xs text-muted-foreground col-span-full">Ningún registro coincide con los filtros.</p>
+                ) : (
+                  filtrados.map((r) => (
+                    <label key={r.id} className="inline-flex items-center gap-2 text-xs text-foreground hover:bg-muted/50 rounded px-1 py-0.5 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={seleccionados.has(r.id)}
+                        onChange={(e) => {
+                          const next = new Set(seleccionados);
+                          if (e.target.checked) next.add(r.id);
+                          else next.delete(r.id);
+                          setSeleccionados(next);
+                        }}
+                      />
+                      <span className="truncate">{r.nombre}</span>
+                      <span className="text-[10px] text-muted-foreground shrink-0">{r.modulo}</span>
+                    </label>
+                  ))
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <p className="mt-4 text-sm text-muted-foreground">
+          {kpis.cobertura.dias > 0 ? (
+            <>Datos reales del <strong className="text-foreground">{fmtFechaISO(kpis.cobertura.primera)}</strong> al{" "}
+              <strong className="text-foreground">{fmtFechaISO(kpis.cobertura.ultima)}</strong> ·{" "}
+              <strong className="text-foreground">{kpis.cobertura.dias}</strong> días con lectura</>
+          ) : "Sin lecturas en el periodo seleccionado."}
+        </p>
+
+        {qT.isError && <p role="alert" className="mt-3 text-sm text-destructive">No se pudieron cargar los datos. Intenta actualizar.</p>}
+        {/* KPIs semáforo */}
+        <div className="mt-4 grid gap-3 sm:grid-cols-3 lg:grid-cols-6">
+          <KPI label="Registros" value={kpis.total} tone="default" />
+          <KPI label="Cumplen normativo" value={`${kpis.total - kpis.criticos}/${kpis.total}`} tone={kpis.criticos === 0 ? "success" : "destructive"} />
+          <KPI label="No conformidades" value={kpis.criticos} tone={kpis.criticos === 0 ? "success" : "destructive"} />
+          <KPI label="Alertas estadísticas" value={kpis.advertencias} tone={kpis.advertencias === 0 ? "success" : "warning"} />
+          <KPI label="Lecturas" value={kpis.totalLecturas.toLocaleString("es-MX")} tone="default" />
+          <KPI label="Cobertura (días con lectura)" value={kpis.cobertura.dias} tone={kpis.cobertura.dias > 0 ? "default" : "warning"} />
+        </div>
+
+        {periodoEsParcial && (
+          <div className="mt-3 rounded-md border border-warning/30 bg-warning/10 p-3 text-sm text-foreground">
+            <strong>Trimestre parcial:</strong> Q{trimestre} {anio} aún en curso. Las métricas reflejan lo capturado hasta hoy.
+          </div>
+        )}
+
+        {/* Chips de filtros activos */}
+        {chips.length > 0 && (
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+              <Filter className="h-3.5 w-3.5" /> Filtros:
+            </span>
+            {chips.map((c) => (
+              <span
+                key={c.key}
+                className="inline-flex items-center gap-1 rounded-full border border-border bg-muted/50 px-2.5 py-1 text-xs text-foreground"
+              >
+                {c.label}
+                {c.onRemove && (
+                  <button
+                    onClick={c.onRemove}
+                    className="hover:text-destructive rounded-full"
+                    aria-label={`Quitar ${c.label}`}
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                )}
+              </span>
+            ))}
+            {chips.some((c) => c.onRemove) && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 text-xs"
+                onClick={() => updateSearch({ modulo: "", area: "", hvac: "", nc: false })}
+              >
+                Limpiar todo
+              </Button>
+            )}
+          </div>
+        )}
+
+        {/* Tabs + acciones de tabla */}
+        <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
+          <Tabs value={tab} onValueChange={(v) => updateSearch({ tab: v as TabKey })}>
+            <TabsList>
+              <TabsTrigger value="todos">Todos <Badge variant="secondary" className="ml-2">{analisisAll.length}</Badge></TabsTrigger>
+              <TabsTrigger value="areas">Áreas / pares <Badge variant="secondary" className="ml-2">{analisisAreas.length}</Badge></TabsTrigger>
+              <TabsTrigger value="instrumentos">Instrumentos <Badge variant="secondary" className="ml-2">{analisisInstrumentos.length}</Badge></TabsTrigger>
+            </TabsList>
+          </Tabs>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <label className="inline-flex items-center gap-2 text-xs text-foreground border border-input rounded-md px-2 h-9 cursor-pointer hover:bg-muted/50">
+              <input
+                type="checkbox"
+                checked={soloNC}
+                onChange={(e) => updateSearch({ nc: e.target.checked })}
+              />
+              Solo no conformidades
+            </label>
+          </div>
+        </div>
+
+        {/* Tabla */}
+        <Card className="mt-4">
+          <CardContent className="p-0 overflow-x-auto">
+            {loading ? (
+              <p className="text-sm text-muted-foreground p-6">Cargando…</p>
+            ) : analisisVisible.length === 0 ? (
+              <p className="text-sm text-muted-foreground p-6">
+                {soloNC ? "Sin no conformidades en el periodo seleccionado." : "Sin datos para el periodo y filtros seleccionados."}
+              </p>
+            ) : (
+              <table className="w-full text-sm">
+                <thead className="bg-muted/50 sticky top-0 z-10">
+                  <tr className="text-xs uppercase tracking-wide text-muted-foreground">
+                    <th className="w-8 px-2 py-3"></th>
+                    <SortableTh label="Registro" onClick={() => toggleSort("nombre")} active={sort === "nombre"} dir={dir} align="left" />
+                    <th className="px-3 py-3 text-left font-medium">Tipo</th>
+                    <SortableTh label="Lecturas" onClick={() => toggleSort("lecturas")} active={sort === "lecturas"} dir={dir} />
+                    <SortableTh label={`% vs ${MINIMO_NORMATIVO}`} onClick={() => toggleSort("porcentaje")} active={sort === "porcentaje"} dir={dir} />
+                    <SortableTh label="Cpk peor" onClick={() => toggleSort("cpk")} active={sort === "cpk"} dir={dir} />
+                    <SortableTh label="Fuera spec" onClick={() => toggleSort("fuera")} active={sort === "fuera"} dir={dir} />
+                    <th className="px-3 py-3 text-center font-medium">Estado</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {analisisVisible.map((a) => {
+                    const isOpen = expandidos.has(a.registro.id);
+                    const sev = severidad(a);
+                    const cpk = peorCpk(a);
+                    const fs = hayFueraSpec(a);
+                    const rowTone =
+                      sev === "critical" ? "bg-destructive/5 hover:bg-destructive/10" :
+                      sev === "warning" ? "bg-warning/5 hover:bg-warning/10" :
+                      "hover:bg-muted/30";
+                    const tipoReg: TipoRegistroReporte = tipoRegistroReporte(a.registro);
+                    return (
+                      <FragmentWithKey key={a.registro.id}>
+                        <tr
+                          className={`border-t border-border cursor-pointer transition-colors ${rowTone}`}
+                          onClick={() => toggleExpand(a.registro.id)}
+                        >
+                          <td className="px-2 py-3 text-center">
+                            {isOpen
+                              ? <ChevronDown className="h-4 w-4 text-muted-foreground inline" />
+                              : <ChevronRight className="h-4 w-4 text-muted-foreground inline" />}
+                          </td>
+                          <td className="px-3 py-3">
+                            <div className="font-medium text-foreground">{a.registro.nombre}</div>
+                            <div className="text-[11px] text-muted-foreground">
+                              {a.registro.modulo}
+                              {a.registro.iso ? ` · ${a.registro.iso}` : ""}
+                              {a.registro.area_id && areasMap.get(a.registro.area_id)
+                                ? ` · ${areasMap.get(a.registro.area_id)}`
+                                : ""}
+                            </div>
+                          </td>
+                          <td className="px-3 py-3">
+                            <Badge
+                              variant="outline"
+                              className={
+                                tipoReg === "instrumento" ? "border-accent text-accent-foreground" :
+                                tipoReg === "par_cuartos" ? "border-primary/40 text-primary" : ""
+                              }
+                            >
+                              {etiquetaTipoRegistro(tipoReg)}
+                            </Badge>
+                          </td>
+                          <td className="px-3 py-3 text-center tabular-nums">
+                            {a.totalLecturas}
+                            {a.cobertura.dias > 0 && (
+                              <span className="block text-[10px] text-muted-foreground">
+                                {fmtFechaISO(a.cobertura.primera)}–{fmtFechaISO(a.cobertura.ultima)} · {a.cobertura.dias} días
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-3 py-3 text-center tabular-nums">
+                            <span className={a.cumpleMinimo ? "text-success font-medium" : a.porcentajeMinimo >= 60 ? "text-warning font-medium" : "text-destructive font-medium"}>
+                              {a.porcentajeMinimo}%
+                            </span>
+                          </td>
+                          <td className="px-3 py-3 text-center tabular-nums">
+                            {cpk == null ? (
+                              <span className="text-[11px] italic text-muted-foreground">n insuf.</span>
+                            ) : (
+                              <span
+                                className={cpk < CPK_WARN ? "text-warning font-medium" : "text-success font-medium"}
+                                title={cpk < CPK_FAIL ? "Capacidad baja — alerta estadística (no NC)" : cpk < CPK_WARN ? "Capacidad marginal" : "Capacidad adecuada"}
+                              >
+                                {cpk.toFixed(2)}
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-3 py-3 text-center">
+                            {fs === 0 ? (
+                              <span className="text-success">0</span>
+                            ) : (
+                              <span className="text-destructive font-medium">{fs}</span>
+                            )}
+                          </td>
+                          <td className="px-3 py-3 text-center">
+                            {sev === "critical" ? <XCircle className="inline h-5 w-5 text-destructive" /> :
+                             sev === "warning" ? <AlertTriangle className="inline h-5 w-5 text-warning" /> :
+                             <CheckCircle2 className="inline h-5 w-5 text-success" />}
+                          </td>
+                        </tr>
+                        {isOpen && (
+                          <tr className="bg-muted/20 border-t border-border">
+                            <td colSpan={8} className="p-4">
+                              <SerieDetail a={a} />
+                            </td>
+                          </tr>
+                        )}
+                      </FragmentWithKey>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
+          </CardContent>
+        </Card>
+
+        <p className="mt-3 text-xs text-muted-foreground">
+          Se muestran {analisisVisible.length} de {analisisTab.length} registro(s) en la vista "{tab === "todos" ? "Todos" : tab === "areas" ? "Áreas / pares" : "Instrumentos"}"
+          {soloNC ? " · filtrando solo no conformidades" : ""}
+          {" · "}Agrupación en reporte: {agrupar}
+        </p>
+      </main>
+    </Marco>
+  );
+}
+
+function SortableTh({
+  label, onClick, active, dir, align = "center",
+}: { label: string; onClick: () => void; active: boolean; dir: SortDir; align?: "left" | "center" }) {
+  return (
+    <th className={`px-3 py-3 font-medium ${align === "left" ? "text-left" : "text-center"}`}>
+      <button
+        onClick={onClick}
+        className={`inline-flex items-center gap-1 hover:text-foreground ${active ? "text-foreground" : "text-muted-foreground"}`}
+      >
+        {label}
+        {active && (dir === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />)}
+      </button>
+    </th>
+  );
+}
+
+function SerieDetail({ a }: { a: AnalisisRegistro }) {
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-xs">
+        <thead className="text-muted-foreground">
+          <tr>
+            <th className="px-2 py-1.5 text-left font-medium">Serie</th>
+            <th className="px-2 py-1.5 text-center font-medium">n</th>
+            <th className="px-2 py-1.5 text-center font-medium">Media</th>
+            <th className="px-2 py-1.5 text-center font-medium">σ</th>
+            <th className="px-2 py-1.5 text-center font-medium">Min</th>
+            <th className="px-2 py-1.5 text-center font-medium">Max</th>
+            <th className="px-2 py-1.5 text-center font-medium">LIE / LSE</th>
+            <th className="px-2 py-1.5 text-center font-medium">% dentro</th>
+            <th className="px-2 py-1.5 text-center font-medium">Cpk</th>
+            <th className="px-2 py-1.5 text-center font-medium">Fuera spec</th>
+          </tr>
+        </thead>
+        <tbody>
+          {a.series.map((s) => (
+            <tr key={s.serie} className="border-t border-border/60">
+              <td className="px-2 py-1.5">
+                {s.serie} <span className="text-muted-foreground">{s.unidad}</span>
+              </td>
+              <td className="px-2 py-1.5 text-center tabular-nums">{s.n}</td>
+              <td className="px-2 py-1.5 text-center tabular-nums">{s.media != null ? s.media.toFixed(2) : "—"}</td>
+              <td className="px-2 py-1.5 text-center tabular-nums">{s.sd != null ? s.sd.toFixed(2) : "—"}</td>
+              <td className="px-2 py-1.5 text-center tabular-nums">{s.min != null ? s.min.toFixed(2) : "—"}</td>
+              <td className="px-2 py-1.5 text-center tabular-nums">{s.max != null ? s.max.toFixed(2) : "—"}</td>
+              <td className="px-2 py-1.5 text-center text-muted-foreground">{s.lie ?? "—"} / {s.lse ?? "—"}</td>
+              <td className="px-2 py-1.5 text-center tabular-nums">
+                {s.pctDentroSpec != null ? `${s.pctDentroSpec.toFixed(1)}%` : "—"}
+              </td>
+              <td className="px-2 py-1.5 text-center tabular-nums">
+                {s.cpkInsuficiente ? (
+                  <span className="text-[10px] italic text-muted-foreground">n insuf.</span>
+                ) : s.ppk != null ? (
+                  <span
+                    className={s.ppk < CPK_WARN ? "text-warning font-medium" : "text-success font-medium"}
+                    title={s.ppk < CPK_FAIL ? "Capacidad baja (Ppk) — alerta estadística" : s.ppk < CPK_WARN ? "Capacidad marginal (Ppk)" : "Capacidad adecuada (Ppk)"}
+                  >
+                    Ppk {s.ppk.toFixed(2)}
+                  </span>
+                ) : "—"}
+                {!s.cpkInsuficiente && (
+                  <span className="block text-[10px] text-muted-foreground" title="Cpk: referencia (variación dentro del día)">
+                    {s.cpk != null ? `Cpk ref. ${s.cpk.toFixed(2)}` : ""}{s.notaCpk ? ` · ${s.notaCpk}` : ""}
+                  </span>
+                )}
+              </td>
+              <td className="px-2 py-1.5 text-center">
+                {s.fueraSpec.total === 0 ? (
+                  <span className="text-success">0</span>
+                ) : (
+                  <span className="text-destructive font-medium">
+                    {s.fueraSpec.total} <span className="text-[10px]">({s.fueraSpec.altos}↑ {s.fueraSpec.bajos}↓)</span>
+                  </span>
+                )}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function KPI({ label, value, tone = "default" }: { label: string; value: string | number; tone?: "default" | "success" | "warning" | "destructive" }) {
+  const toneClass = {
+    default: "text-foreground border-l-border",
+    success: "text-success border-l-success",
+    warning: "text-warning border-l-warning",
+    destructive: "text-destructive border-l-destructive",
+  }[tone];
+  const [textColor, borderColor] = toneClass.split(" ");
+  return (
+    <Card className={`border-l-4 ${borderColor}`}>
+      <CardContent className="pt-6">
+        <p className="text-xs text-muted-foreground">{label}</p>
+        <p className={`text-2xl font-semibold tabular-nums mt-1 ${textColor}`}>{value}</p>
+      </CardContent>
+    </Card>
+  );
+}
+
+function fmtFechaISO(iso: string | null): string {
+  return iso ? `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}` : "—";
+}
