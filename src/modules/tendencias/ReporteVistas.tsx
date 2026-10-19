@@ -8,6 +8,7 @@ import { ChevronLeft, ChevronRight, FileSpreadsheet, FileText, LineChart } from 
 import { toast } from "sonner";
 import { analizarRegistro, type Periodo } from "./lib/normativo";
 import { exportarNormativoPDF, exportarNormativoExcel } from "./lib/export-normativo";
+import { cargarConfiguracion } from './lib/persistencia';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -165,11 +166,12 @@ function descargarReporte(f: Fila, desde: Date, hasta: Date, formato: "pdf" | "e
     return;
   }
   const t = toast.loading(`Generando reporte de ${f.codigo}…`);
-  setTimeout(() => {
+  setTimeout(async () => {
     try {
       const periodo: Periodo = { tipo: "custom", desde: d, hasta: h };
       const analisis = [analizarRegistro({...f.registro, semanas: [...f.semanas.values()].sort((a,b)=>a.semana_inicio.localeCompare(b.semana_inicio))}, periodo)];
-      const cat = { areas: new Map(), hvac: new Map() };
+      const config=await cargarConfiguracion('',null);
+      const cat = { areas: new Map<string,string>(), hvac: new Map<string,string>(),formato:config.formato,empresa:config.formato.identidad?.nombre,logo:config.formato.logo };
       if (formato === "pdf") exportarNormativoPDF(analisis, "registro", cat, { incluirGraficas: true });
       else exportarNormativoExcel(analisis, "registro", cat);
       toast.success("Reporte descargado", { id: t });

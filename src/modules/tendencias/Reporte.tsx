@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { format } from "date-fns";
 import Marco from "./Marco";
 import {useTendencias} from "./hooks";
+import { cargarConfiguracion } from './lib/persistencia';
 
 
 import { ChevronLeft, Trash, Eye, RefreshCw, FileSpreadsheet, FileText, Merge, ChevronRight, CalendarIcon } from "lucide-react";
@@ -168,7 +169,7 @@ export default function Reporte() {
   }, [areaSel, instrSel, grupoPorArea, registrosDelInstrumento, registros]);
 
   const duplicados = useMemo(() => detectarDuplicados(registros), [registros]);
-  const onExport = (tipo: "excel" | "pdf") => {
+  const onExport = async (tipo: "excel" | "pdf") => {
     if (registrosParaExportar.length === 0) {
       toast.error("No hay registros para exportar en la selección actual");
       return;
@@ -178,7 +179,9 @@ export default function Reporte() {
       // (1 página por instrumento, no 1 por semana/importación)
       const consolidados = consolidarPorInstrumento(registrosParaExportar);
       const analisis = consolidados.map((r) => {const a=areaEfectiva(r,areasMap,instrMap);return analizarRegistro({...r,area_id:a.key,nombre_area_libre:a.etiqueta}, periodo);});
+      const {formato}=await cargarConfiguracion(q.auth.org?.nombre ?? '',q.auth.org?.logo_url ?? null);
       const cat = {
+        formato,
         empresa: q.auth.org?.nombre,
         logo: q.auth.org?.logo_url,
         areas: new Map(registrosParaExportar.map(r=>{const a=areaEfectiva(r,areasMap,instrMap);return [a.key,a.etiqueta];})),
