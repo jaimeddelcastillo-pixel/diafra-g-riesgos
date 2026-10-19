@@ -196,8 +196,8 @@ export default function Reporte() {
   };
 
   return (
-    <Marco titulo="Reporte consolidado">
-      <main className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+    <Marco titulo="Reporte consolidado" propio>
+      <main>
         <div className="flex items-center justify-between mb-3">
           <Link to="/tendencias" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-primary">
             <ChevronLeft className="h-4 w-4" /> Tablero

@@ -41,7 +41,8 @@ export function FloatingAssistantButton() {
     return () => window.removeEventListener("tracea:open-assistant", handler);
   }, []);
 
-  if (HIDDEN_ROUTES.some((p) => location.pathname.startsWith(p))) return null;
+  // Tendencias conserva la apariencia de atdiafra: sin botón flotante de IA.
+  if (HIDDEN_ROUTES.some((p) => location.pathname.startsWith(p)) || location.pathname.startsWith("/tendencias")) return null;
 
   const effectiveFolioId = overrideFolio?.id ?? folioId;
   const effectiveFolioCodigo = overrideFolio?.codigo ?? folio?.codigo ?? null;

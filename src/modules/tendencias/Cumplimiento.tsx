@@ -292,7 +292,7 @@ export default function Cumplimiento() {
   }
 
   return (
-    <Marco titulo="Cumplimiento normativo">
+    <Marco titulo="Cumplimiento normativo" propio>
       <main>
         <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
           <Link to="/tendencias/reporte" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-primary">

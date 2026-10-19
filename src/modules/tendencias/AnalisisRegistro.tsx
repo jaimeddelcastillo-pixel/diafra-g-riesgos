@@ -169,7 +169,7 @@ export default function AnalisisRegistro({ registro, unidad }: { registro: Regis
       ]
     : [{ campo: "lecturas", label: registro.modulo === "presiones" ? "Presión diferencial" : "Lectura", unit: unidad, LSL: registro.lie ?? null, USL: registro.lse ?? null, color: "hsl(var(--primary))" }];
   return (
-    <section className="space-y-5 border-t pt-4" aria-label="Análisis del registro">
+    <section className="space-y-5" aria-label="Análisis del registro">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <h3 className="font-semibold">Análisis del registro</h3>
         <div className="flex flex-wrap gap-3">
