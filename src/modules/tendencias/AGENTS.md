@@ -1,0 +1,7 @@
+# Tendencias module rules (moved from root AGENTS.md)
+
+- R22 Tendencias isolates copied atdiafra calculation/report engines from tenant persistence adapters; issued Word inputs and calculation date come only from issuance snapshots, with original-source regression tests; why: preserve validated calculations and reproducible historical reports without live catalogs or embedded client identity.
+- R24 Capture batch extraction uses bounded workers and isolates per-photo proposals and failures; confirmation remains sequential, shared calendar checks verify written-year priority and candidate column alignment server-side before UI date proposals, and raw exports use a guarded active-company RPC; why: recoverable human review and immutable tenant-isolated history without changing the engine.
+- R25 Report detail/inbox use registry and guarded persistence; historical views are read-only, cancellation overlays snapshots, AT Excel uses xlsx-js-style; why: reproducible audited reports.
+- R26 Source screen hierarchy stays separate from guarded adapters; identifiers use versioned format config, active codes a normalized tenant-unique index; why: parity without engine changes.
+- R27 Tendencias normative specs live in one global reference table edited only by super_admin and are only suggested to instruments (never auto-validated); system/migration data changes set tracea.origen/motivo/autorizado_por, which audit_trigger_func records; why: human acceptance and attributed system changes (IM-20).
