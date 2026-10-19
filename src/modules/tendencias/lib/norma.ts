@@ -107,3 +107,8 @@ export function claseEfectiva(i: Pick<Instrumento, "tipo" | "clase_instrumento">
   if (i.clase_instrumento) return i.clase_instrumento;
   return i.tipo === "manometro_diferencial" || i.tipo === "otro" ? "diferencial_sala" : i.tipo === "manometro_filtro" ? "filtro_ducto" : "equipo";
 }
+
+/** Detecta texto de descripción del equipo guardado por error en la especificación (solo lo lista; no lo mueve). */
+export function pareceDescripcionEquipo(t: string | null | undefined): boolean {
+  return !!t && /\b(marca|modelo|mod\.|resoluci[oó]n|ubicaci[oó]n|magnehelic|dwyer|testo|vaisala|serie|s\/n)\b/i.test(t);
+}
