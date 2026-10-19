@@ -58,10 +58,16 @@ function AnalysisBlock({ semanas, cfg }: { semanas: Semana[]; cfg: VarConfig }) 
     );
   }
 
-  const cpkTone: "ok" | "warn" | "bad" = cap.Cpk == null ? "warn" : cap.Cpk >= 1.33 ? "ok" : "warn";
-  const oosTone: "ok" | "warn" | "bad" = cap.withinSpec >= 100 ? "ok" : cap.withinSpec >= 95 ? "warn" : "bad";
+  // Como atdiafra: especificación de un solo lado → Cpk unilateral y «≥/≤ Límite».
+  const uni: "lie" | "lse" | null = cfg.LSL != null && cfg.USL == null ? "lie" : cfg.USL != null && cfg.LSL == null ? "lse" : null;
+  const cpkUni = !uni || !(sigma > 0) ? null : uni === "lie" ? (mean - (cfg.LSL as number)) / (3 * sigma) : ((cfg.USL as number) - mean) / (3 * sigma);
+  const dentro = uni === "lie" ? (values.filter((v) => v >= (cfg.LSL as number)).length / values.length) * 100
+    : uni === "lse" ? (values.filter((v) => v <= (cfg.USL as number)).length / values.length) * 100 : cap.withinSpec;
+  const cpkRef = uni ? cpkUni : cap.Cpk;
+  const cpkTone: "ok" | "warn" | "bad" = cpkRef == null ? "warn" : cpkRef >= 1.33 ? "ok" : "warn";
+  const oosTone: "ok" | "warn" | "bad" = dentro >= 100 ? "ok" : dentro >= 95 ? "warn" : "bad";
   const hayOOS = outliers.some((d) => d.oos);
-  const spec = `${cfg.LSL ?? "—"}–${cfg.USL ?? "—"} ${cfg.unit}`;
+  const spec = uni === "lie" ? `≥ ${cfg.LSL} ${cfg.unit}` : uni === "lse" ? `≤ ${cfg.USL} ${cfg.unit}` : `${cfg.LSL ?? "—"}–${cfg.USL ?? "—"} ${cfg.unit}`;
   const lo = cfg.LSL ?? Infinity;
   const hi = cfg.USL ?? -Infinity;
 
@@ -70,7 +76,7 @@ function AnalysisBlock({ semanas, cfg }: { semanas: Semana[]; cfg: VarConfig }) 
       <div className="px-5 py-3 border-b border-border bg-muted/30 flex items-center justify-between">
         <div>
           <h3 className="text-sm font-semibold text-foreground">{cfg.label}</h3>
-          <p className="text-xs text-muted-foreground">Especificación: {spec} · n = {stats.n}</p>
+          <p className="text-xs text-muted-foreground">{cfg.label} · Especificación {spec} · n = {stats.n}</p>
         </div>
         {we.length === 0 && outliers.length === 0 ? (
           <span className="inline-flex items-center gap-1 text-xs font-medium text-success">
@@ -78,7 +84,7 @@ function AnalysisBlock({ semanas, cfg }: { semanas: Semana[]; cfg: VarConfig }) 
           </span>
         ) : hayOOS ? (
           <span className="inline-flex items-center gap-1 text-xs font-medium text-destructive">
-            <AlertTriangle className="h-3.5 w-3.5" /> Fuera de spec · {outliers.filter((d) => d.oos).length}
+            <AlertTriangle className="h-3.5 w-3.5" /> {uni ? "Fuera de límite" : "Fuera de spec"} · {outliers.filter((d) => d.oos).length}
           </span>
         ) : (
           <span className="inline-flex items-center gap-1 text-xs font-medium text-warning">
@@ -93,9 +99,13 @@ function AnalysisBlock({ semanas, cfg }: { semanas: Semana[]; cfg: VarConfig }) 
           <StatCard label="σ (s)" value={fmt(stats.stdev, 3)} />
           <StatCard label="Mín / Máx" value={`${fmt(stats.min)} / ${fmt(stats.max)}`} />
           <StatCard label="P5 / P95" value={`${fmt(stats.p5)} / ${fmt(stats.p95)}`} />
+          {uni ? (
+            <StatCard label="Cpk (unilateral)" value={fmt(cpkUni)} tone={cpkTone} sub={`vs ${spec}`} />
+          ) : (
           <StatCard label="Cpk / Ppk" value={`${fmt(cap.Cpk)} / ${fmt(cap.Ppk)}`} tone={cpkTone}
             sub={cap.Cp != null ? `Cp ${fmt(cap.Cp)}` : undefined} />
-          <StatCard label="Dentro de spec" value={`${fmt(cap.withinSpec, 1)} %`} tone={oosTone} />
+          )}
+          <StatCard label={uni === "lie" ? "≥ Límite" : uni === "lse" ? "≤ Límite" : "Dentro de especificación"} value={`${fmt(dentro, 1)} %`} tone={oosTone} />
         </div>
 
         <div className="h-72 w-full">
@@ -107,7 +117,8 @@ function AnalysisBlock({ semanas, cfg }: { semanas: Semana[]; cfg: VarConfig }) 
               <YAxis domain={[
                   (dataMin: number) => Math.min(dataMin, lo) - sigma,
                   (dataMax: number) => Math.max(dataMax, hi) + sigma,
-                ]} fontSize={11} stroke="hsl(var(--muted-foreground))" width={40} />
+                ]} fontSize={11} stroke="hsl(var(--muted-foreground))" width={52}
+                tickFormatter={(v) => { const n = Number(v); return Number.isInteger(n) ? String(n) : n.toFixed(1); }} />
               <Tooltip labelFormatter={(v) => new Date(v as number).toLocaleString()}
                 formatter={(val) => [`${fmt(Number(val))} ${cfg.unit}`, cfg.label]} />
               <Legend wrapperStyle={{ fontSize: 11 }} />
@@ -125,9 +136,9 @@ function AnalysisBlock({ semanas, cfg }: { semanas: Semana[]; cfg: VarConfig }) 
               {cfg.USL != null && <ReferenceLine y={cfg.USL} stroke="hsl(var(--destructive))" label={{ value: `LSE ${cfg.USL}`, position: "insideTopRight", fontSize: 11, fill: "hsl(var(--destructive))" }} />}
               {cfg.LSL != null && <ReferenceLine y={cfg.LSL} stroke="hsl(var(--destructive))" label={{ value: `LIE ${cfg.LSL}`, position: "insideBottomRight", fontSize: 11, fill: "hsl(var(--destructive))" }} />}
 
-              <Line type="monotone" dataKey="value" name={cfg.label} stroke={cfg.color} strokeWidth={2}
-                dot={{ r: 3, fill: cfg.color }} activeDot={{ r: 5 }} isAnimationActive={false} />
-              <Scatter data={outliers} dataKey="value" fill="hsl(var(--destructive))" name="Fuera de spec / 3σ" />
+              <Line type="monotone" dataKey="value" name={cfg.label} stroke={cfg.color} strokeWidth={1.2}
+                dot={{ r: 2, fill: cfg.color, stroke: cfg.color, strokeWidth: 0.5 }} activeDot={{ r: 4 }} isAnimationActive={false} />
+              <Scatter data={outliers} dataKey="value" fill="hsl(var(--destructive))" name={uni ? "Fuera de límite / 3σ" : "Fuera de spec / 3σ"} />
               <Scatter data={editados} dataKey="value" fill="hsl(var(--warning))" shape="triangle" name="Editado manualmente" />
             </ComposedChart>
           </ResponsiveContainer>
