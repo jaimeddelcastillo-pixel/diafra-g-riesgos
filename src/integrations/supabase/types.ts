@@ -6188,6 +6188,16 @@ export type Database = {
         Args: { _motivo?: string; _registro: string; _semana: Json }
         Returns: string
       }
+      tend_importar_atdiafra: {
+        Args: {
+          _autorizado_por: string
+          _conteos: Json
+          _motivo: string
+          _org: string
+          _paquete: Json
+        }
+        Returns: Json
+      }
       tend_media_trimestre: {
         Args: never
         Returns: {
