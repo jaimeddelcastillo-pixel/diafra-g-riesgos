@@ -105,7 +105,7 @@ export default function ImportarTendenciasCard() {
         s.foto_path = path;
       }
       const { data, error } = await supabase.rpc('tend_importar_atdiafra', {
-        _org: org, _paquete: tablas, _conteos: conteos, _motivo: motivo.trim(), _autorizado_por: autorizado.trim(),
+        _org: org, _paquete: tablas as never, _conteos: conteos as never, _motivo: motivo.trim(), _autorizado_por: autorizado.trim(),
       });
       if (error) throw error;
       const informe = construirInforme(respaldo, excl, previa.sospechosos, snapshots);
