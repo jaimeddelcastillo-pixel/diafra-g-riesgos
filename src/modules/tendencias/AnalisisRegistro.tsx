@@ -167,7 +167,7 @@ export default function AnalisisRegistro({ registro, unidad }: { registro: Regis
         { campo: "lecturas", label: "Temperatura", unit: "°C", LSL: registro.lie_t ?? registro.lie ?? null, USL: registro.lse_t ?? registro.lse ?? null, color: "hsl(var(--primary))" },
         { campo: "lecturas_hr", label: "Humedad Relativa", unit: "%", LSL: registro.lie_hr ?? null, USL: registro.lse_hr ?? null, color: "hsl(var(--accent-foreground))" },
       ]
-    : [{ campo: "lecturas", label: registro.modulo === "presiones" ? "Presión diferencial" : "Lectura", unit, LSL: registro.lie ?? null, USL: registro.lse ?? null, color: "hsl(var(--primary))" }];
+    : [{ campo: "lecturas", label: registro.modulo === "presiones" ? "Presión diferencial" : "Lectura", unit: unidad, LSL: registro.lie ?? null, USL: registro.lse ?? null, color: "hsl(var(--primary))" }];
   return (
     <section className="space-y-5 border-t pt-4" aria-label="Análisis del registro">
       <div className="flex flex-wrap items-end justify-between gap-3">
