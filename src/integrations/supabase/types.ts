@@ -4689,6 +4689,7 @@ export type Database = {
           codigo_bitacora: string | null
           created_at: string
           created_by: string | null
+          descripcion_equipo: string | null
           dp_final_fabricante: number | null
           escala_max: number | null
           escala_min: number | null
@@ -4732,6 +4733,7 @@ export type Database = {
           codigo_bitacora?: string | null
           created_at?: string
           created_by?: string | null
+          descripcion_equipo?: string | null
           dp_final_fabricante?: number | null
           escala_max?: number | null
           escala_min?: number | null
@@ -4775,6 +4777,7 @@ export type Database = {
           codigo_bitacora?: string | null
           created_at?: string
           created_by?: string | null
+          descripcion_equipo?: string | null
           dp_final_fabricante?: number | null
           escala_max?: number | null
           escala_min?: number | null
