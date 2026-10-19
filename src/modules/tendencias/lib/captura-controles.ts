@@ -31,17 +31,32 @@ export function duplicadosLote(items: { incluir: boolean; registro: string; lune
   return duplicados;
 }
 
-/** Isolate each failure; terminal account blocks stop the remaining paid work. */
-export async function procesarLote<T>(items: T[], procesar: (item: T) => Promise<void>, fallo: (item: T, error: unknown) => void, concurrencia = 1): Promise<void> {
-  let siguiente = 0; let detenido = false;
+/** Configuration/service failure (not caused by the photo itself). */
+export function esErrorServicio(e: unknown): boolean {
+  if (!(e instanceof Error) || !('status' in e) || typeof e.status !== 'number') return false;
+  if (/propuesta|foto|registro no disponible/i.test(e.message)) return false;
+  return [401, 402, 403, 404, 408, 429].includes(e.status) || e.status >= 500;
+}
+export type ResultadoLote = { detenido: 'usuario' | 'servicio' | 'terminal' | null; error?: string };
+/** Isolate each failure; terminal blocks, a user stop, or two consecutive identical service errors stop remaining paid work. */
+export async function procesarLote<T>(items: T[], procesar: (item: T) => Promise<void>, fallo: (item: T, error: unknown) => void, concurrencia = 1, detener?: () => boolean): Promise<ResultadoLote> {
+  let siguiente = 0; let resultado: ResultadoLote = { detenido: null }; let ultimoServicio: string | null = null;
   const worker = async () => {
-    while (!detenido && siguiente < items.length) {
+    while (!resultado.detenido && siguiente < items.length) {
+      if (detener?.()) { resultado = { detenido: 'usuario' }; break; }
       const item = items[siguiente++];
-      try { await procesar(item); }
-      catch (e) { if (e instanceof Error && 'terminal' in e && e.terminal) detenido = true; fallo(item, e); }
+      try { await procesar(item); ultimoServicio = null; }
+      catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        if (e instanceof Error && 'terminal' in e && e.terminal) resultado = { detenido: 'terminal', error: msg };
+        else if (esErrorServicio(e)) { if (ultimoServicio === msg && !resultado.detenido) resultado = { detenido: 'servicio', error: msg }; ultimoServicio = msg; }
+        else ultimoServicio = null;
+        fallo(item, e);
+      }
     }
   };
   await Promise.all(Array.from({length: Math.min(items.length, Math.max(1, Math.min(2, concurrencia)))}, worker));
+  return resultado;
 }
 /** Foto subida/tomada pendiente de extraer; ligada al registro donde se tomó. */
 export type FotoPendiente = { path: string; registroId: string; id: number };

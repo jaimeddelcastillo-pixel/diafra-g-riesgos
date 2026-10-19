@@ -24,3 +24,9 @@ describe('Foto pendiente de extracción', () => {
   it('cambiar de registro o sistema no reenvía la foto anterior', () => { expect(fotoParaExtraer(p, 'r2')).toBeUndefined(); expect(fotoParaExtraer(undefined, 'r1')).toBeUndefined(); });
   it('una foto ya enviada no se vuelve a enviar', () => { expect(fotoParaExtraer(p, 'r1', 1)).toBeUndefined(); });
 });
+describe('lote: detener y fallas de servicio',()=>{
+ const svc=(m:string,status=503)=>Object.assign(Error(m),{status});
+ it('Detener lote conserva lo procesado y no llama a las restantes',async()=>{let stop=false;const orden:number[]=[];const r=await procesarLote([1,2,3,4],async n=>{orden.push(n);if(n===2)stop=true;},()=>{},1,()=>stop);expect(orden).toEqual([1,2]);expect(r.detenido).toBe('usuario');});
+ it('dos fallas seguidas del mismo error de servicio detienen el lote',async()=>{const orden:number[]=[];const r=await procesarLote([1,2,3,4],async n=>{orden.push(n);throw svc('Servicio no disponible');},()=>{});expect(orden).toEqual([1,2]);expect(r).toEqual({detenido:'servicio',error:'Servicio no disponible'});});
+ it('fallas por la foto no detienen el lote',async()=>{const orden:number[]=[];const r=await procesarLote([1,2,3],async n=>{orden.push(n);throw svc('La IA no produjo una propuesta válida; la foto permanece para captura manual',500);},()=>{});expect(orden).toEqual([1,2,3]);expect(r.detenido).toBeNull();});
+});
