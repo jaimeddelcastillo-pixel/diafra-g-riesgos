@@ -216,12 +216,12 @@ export default function Reporte() {
               <RefreshCw className="h-4 w-4" /> Actualizar
             </Button>
             <Button size="sm" asChild disabled={loading} className="gap-1">
-              <Link to={`/tendencias/analisis?desde=${format(desde,"yyyy-MM-dd")}&hasta=${format(hasta,"yyyy-MM-dd")}`}>
-                <FileSpreadsheet className="h-4 w-4" /> Análisis de tendencias FOR-VAL-16-02
+              <Link to={`/tendencias/analisis?ids=${registrosParaExportar.map(r=>r.id).join(",")}&desde=${format(desde,"yyyy-MM-dd")}&hasta=${format(hasta,"yyyy-MM-dd")}`}>
+                <FileSpreadsheet className="h-4 w-4" /> Análisis de tendencias
               </Link>
             </Button>
             <Button size="sm" variant="outline" asChild className="gap-1">
-              <Link to="/tendencias/registro-at"><FileSpreadsheet className="h-4 w-4" /> Registro AT (FOR-VAL-16-01)</Link>
+              <Link to="/tendencias/registro-at"><FileSpreadsheet className="h-4 w-4" /> Registro de reportes</Link>
             </Button>
             <Button size="sm" variant="outline" onClick={() => onExport("excel")} disabled={loading} className="gap-1">
               <FileSpreadsheet className="h-4 w-4" /> Excel

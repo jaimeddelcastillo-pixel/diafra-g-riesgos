@@ -25,7 +25,7 @@ export const SECCIONES_FIJAS: { k: ClaveTexto; titulo: string; ayuda?: string }[
 
 export const FORMATO_DEFAULT: FormatoForVal16 = {
   version: 0,
-  version_formato: "FOR-VAL-16-02 (00)",
+  version_formato: "Plantilla del reporte (00)",
   logo: null,
   firmantes: [],
   textos: {

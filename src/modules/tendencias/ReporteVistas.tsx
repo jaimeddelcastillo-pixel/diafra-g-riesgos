@@ -188,7 +188,7 @@ export function VistaInstrumentos({ registros, areaDe, instrMap, catalogo, areas
     <section className="mt-3">
       <Leyenda>
         Lista de <b className="text-foreground">todo el catálogo de instrumentos</b>, sin importar el módulo. Los marcados como <b className="text-warning">Sin capturas</b> aún no tienen ningún registro: son los que faltan por capturar.
-        "% completo" son las lecturas capturadas contra las esperadas en el periodo (sin contar días N/A). "Fuera de límites" cuenta lecturas fuera de LIE/LSE. Usa <b className="text-foreground">FOR-VAL-16-02</b> para abrir el análisis de tendencias (gráficas, texto y paquete Excel) del periodo elegido; "Ver bitácora" abre la captura para corregir.
+        "% completo" son las lecturas capturadas contra las esperadas en el periodo (sin contar días N/A). "Fuera de límites" cuenta lecturas fuera de LIE/LSE. Usa <b className="text-foreground">Análisis de tendencias</b> para abrir el análisis de tendencias (gráficas, texto y paquete Excel) del periodo elegido; "Ver bitácora" abre la captura para corregir.
       </Leyenda>
       {ui}
       <div className="mt-3 rounded-xl border border-border bg-card overflow-x-auto">
@@ -244,10 +244,10 @@ export function VistaInstrumentos({ registros, areaDe, instrMap, catalogo, areas
                         <>
                           {(f.modulo === "temphr" || f.modulo === "presiones" || f.modulo === "filtros") && (
                             <Button type="button" size="sm" variant="outline" asChild
-                              title="Análisis de tendencias FOR-VAL-16-02: gráficas, límites y texto del periodo elegido"
+                              title="Análisis de tendencias Análisis de tendencias: gráficas, límites y texto del periodo elegido"
                               className="h-7 gap-1 px-2 text-xs">
                               <Link to={`/tendencias/analisis?ids=${f.registro.id}&desde=${format(desde,"yyyy-MM-dd")}&hasta=${format(hasta,"yyyy-MM-dd")}`}>
-                                <LineChart className="h-3.5 w-3.5" /> FOR-VAL-16-02
+                                <LineChart className="h-3.5 w-3.5" /> Análisis de tendencias
                               </Link>
                             </Button>
                           )}
@@ -328,7 +328,7 @@ export function VistaAvance({ registros, areaDe, instrMap, catalogo, areasMap, d
     ws["!cols"] = [{ wch: 14 }, { wch: 40 }, { wch: 40 }, { wch: 12 }, ...lunes.map(() => ({ wch: 16 }))];
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Avance");
-    XLSX.writeFile(wb, `avance-semanal-diafra-${format(new Date(), "yyyyMMdd")}.xlsx`);
+    XLSX.writeFile(wb, `avance-semanal-${format(new Date(), "yyyyMMdd")}.xlsx`);
   };
 
   return (

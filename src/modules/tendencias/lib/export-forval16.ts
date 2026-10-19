@@ -61,6 +61,9 @@ type BaseBloque = Omit<Bloque, "n" | "media" | "s" | "min" | "max" | "LAS" | "LA
 
 export interface PaqueteArgs {
   empresa?: string;
+  codigoFormato?: string;
+  prefijoArchivos?: string;
+  versionReporte?: number;
   fechaCalculo?: string;
   codigoAT: string;
   sistema: string;
@@ -511,7 +514,7 @@ export async function exportarPaqueteForVal16(a: PaqueteArgs): Promise<{ archivo
   {
     const b = new HojaBuilder();
     b.set(0, 0, a.empresa ?? "", ST.titulo);
-    b.set(1, 0, "FOR-VAL-16-02 · Análisis de tendencias (PNO-VAL-16)", ST.bold);
+    b.set(1, 0, `${a.codigoFormato ?? "Plantilla del reporte"} · Análisis de tendencias`, ST.bold);
     const datos: [string, string][] = [["Código de reporte", a.codigoAT], ["Sistema", a.sistema], ["Periodo", rango], ["Fecha de emisión", format(a.fechaCalculo ? new Date(a.fechaCalculo + 'T12:00:00') : new Date(), "dd/MM/yyyy")]];
     datos.forEach(([k, v], i) => { b.set(3 + i, 0, k, ST.head); b.set(3 + i, 1, v, ST.txt); });
     b.fila(9, 0, ["Instrumento", "Bitácora", "Variable", "n de datos"], ST.head);
@@ -641,7 +644,7 @@ export async function exportarPaqueteForVal16(a: PaqueteArgs): Promise<{ archivo
   zip.file("[Content_Types].xml", ct.replace("</Types>", `${overrides.join("")}</Types>`));
 
   const limpio = (s: string) => s.replace(/[^\w.-]+/g, "_").replace(/_+/g, "_").replace(/^_|_$/g, "");
-  const archivo = `FOR-VAL-16-02_${limpio(a.codigoAT)}_${limpio(a.sistema)}_${limpio(etiquetaPeriodo(a.desde, a.hasta))}.xlsx`;
+  const archivo = `${limpio(a.prefijoArchivos ?? a.codigoFormato ?? "Analisis-de-tendencias")}_${limpio(a.codigoAT)}_${limpio(a.sistema)}_${limpio(etiquetaPeriodo(a.desde, a.hasta))}_v${a.versionReporte ?? 1}.xlsx`;
   const blob = await zip.generateAsync({ type: typeof window === "undefined" ? "nodebuffer" : "blob", mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" } as JSZip.JSZipGeneratorOptions<"blob">);
   if (typeof window !== "undefined") {
     const url = URL.createObjectURL(blob as Blob);
