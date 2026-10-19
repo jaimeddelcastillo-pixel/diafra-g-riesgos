@@ -93,3 +93,18 @@ export async function guardarConfiguracion(f:FormatoForVal16,autoemision:boolean
   const {error}=await supabase.from('tend_formato').insert({org_id:org,version:(ult?.version ?? 0)+1,version_formato:f.version_formato,logo:f.logo,firmantes:f.firmantes as unknown as Json,textos:textos as Json,tabla_iso:f.textos.tablaClases.split('\n').map(r=>r.split('|').map(c=>c.trim()))}); if(error) throw error;
   const {error:ce}=await supabase.from('tend_config').upsert({org_id:org,permitir_autoemision:autoemision},{onConflict:'org_id'}); if(ce) throw ce;
 }
+// T4c: catálogo normativo (lectura global; solo super_admin escribe) y revisión del catálogo.
+export async function listarNormas(){
+  const {data,error}=await supabase.from('tend_norma_especificaciones').select('*').order('variable').order('clase_iso');
+  if(error) throw error; return (data ?? []) as unknown as import('./norma').NormaEspecificacion[];
+}
+export async function guardarNorma(id:string,valores:Record<string,unknown>){
+  const {error}=await supabase.from('tend_norma_especificaciones').update(valores as never).eq('id',id); if(error) throw error;
+}
+export async function mediasTrimestre(){
+  const {data,error}=await supabase.rpc('tend_media_trimestre'); if(error) throw error;
+  return new Map((data ?? []).map(r=>[r.instrumento_id as string, Number(r.media)]));
+}
+export async function editarInstrumento(id:string,cambios:Record<string,unknown>,motivo:string){
+  const {error}=await supabase.rpc('tend_editar_instrumento',{_id:id,_cambios:cambios as unknown as Json,_motivo:motivo}); if(error) throw error;
+}
