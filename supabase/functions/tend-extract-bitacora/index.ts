@@ -59,10 +59,10 @@ Deno.serve(async req=>{
     runId=aiRes.headers.get('X-Lovable-AIG-Run-ID') ?? runIn;
     if(!aiRes.ok){const t=await aiRes.text();let m=`Error de IA (${aiRes.status})`;try{const j=JSON.parse(t);m=j.message ?? j.error?.message ?? m;}catch{/* keep */}throw new HttpError(m,aiRes.status);}
     const aiJson=await aiRes.json();
-    const texto=String(aiJson?.choices?.[0]?.message?.content ?? '').replace(/^```(?:json)?\s*|\s*```$/g,'').trim();
-    if(!texto)throw new Error('La IA no produjo una propuesta; solicitud terminada');
+    const contenido=String(aiJson?.choices?.[0]?.message?.content ?? '').replace(/^```(?:json)?\s*|\s*```$/g,'').trim();
+    if(!contenido)throw new Error('La IA no produjo una propuesta; solicitud terminada');
    let propuesta:any;
-   try{propuesta=schema.parse(JSON.parse(texto));}catch{throw new Error('La IA no produjo una propuesta válida; la foto permanece para captura manual');}
+   try{propuesta=schema.parse(JSON.parse(contenido));}catch{throw new Error('La IA no produjo una propuesta válida; la foto permanece para captura manual');}
   if(r.modulo==='temphr'){propuesta.lecturas_t=comprobarLecturas(propuesta.lecturas_t);propuesta.lecturas_hr=comprobarLecturas(propuesta.lecturas_hr);}else propuesta.lecturas=comprobarLecturas(propuesta.lecturas);
    const rows=[...(propuesta.lecturas_t ?? []),...(propuesta.lecturas_hr ?? []),...(propuesta.lecturas ?? [])];
    const fechasComprobadas=resolverFechasBitacora(propuesta,primera?.semana_inicio,anioActual);
