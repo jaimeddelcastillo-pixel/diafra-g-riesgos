@@ -1,14 +1,14 @@
 import {createClient} from 'npm:@supabase/supabase-js@2';
 import {corsHeaders} from 'npm:@supabase/supabase-js@2/cors';
 import {z} from 'npm:zod@3';
-import {streamText,Output,NoObjectGeneratedError,APICallError} from 'npm:ai@6';
+class HttpError extends Error{constructor(m:string,public status:number){super(m);}}
 import {resolverContextoOrg,ContextoOrgError} from '../_shared/contexto-org.ts';
 import {cargarSkill,interpolar,registrarSkillFaltante} from '../_shared/skills.ts';
 import {leerBitacoraPrivada} from '../_shared/documento-contenido.ts';
 import {contextoFechaMexico,fechaMexico} from '../_shared/fecha-mexico.ts';
 import {normalizarLecturas} from '../_shared/bitacora-lecturas.ts';
 import {resolverFechasBitacora} from '../_shared/bitacora-fechas.ts';
-import {createLovableAiGatewayProvider,getLovableAiGatewayRunId,getLovableAiGatewayResponseHeaders} from '../_shared/gateway-helpers.ts';
+import {getLovableAiGatewayRunId,getLovableAiGatewayResponseHeaders} from '../_shared/run-id.ts';
 
 const requestSchema=z.object({registro_id:z.string().uuid(),foto_path:z.string().min(1).max(500)}).strict();
 const lectura=z.object({dia:z.string(),turno:z.string(),valor:z.number().nullable(),hora:z.string().nullable(),quien:z.string().nullable(),confianza:z.number().nullable()});
@@ -24,7 +24,7 @@ Deno.serve(async req=>{
  const respond=(data:unknown,status=200,extra?:HeadersInit)=>new Response(JSON.stringify(data),{status,headers:getLovableAiGatewayResponseHeaders(extra,{...corsHeaders,'Content-Type':'application/json'})});
  if(req.method==='OPTIONS')return new Response('ok',{headers:corsHeaders});
  if(req.method!=='POST')return respond({error:'Método no permitido'},405);
-  let admin:any;let id:string|undefined;let orgId:string|undefined;let skills:unknown[]=[];let modelo:string|undefined;
+  let admin:any;let id:string|undefined;let orgId:string|undefined;let skills:unknown[]=[];let modelo:string|undefined;let runId:string|null|undefined;
  try{
   const ctx=await resolverContextoOrg(req);orgId=ctx.orgId;
   if(ctx.esSuperAdmin || !['admin','responsable_sanitario','comite_tecnico','operador'].includes(ctx.rolEnOrg ?? ''))return respond({error:'Sin permiso de extracción'},403);
@@ -52,11 +52,15 @@ Deno.serve(async req=>{
   const {data:reserva,error:reserveError}=await user.from('tend_extracciones').insert({org_id:ctx.orgId,registro_id:r.id,modulo:r.modulo,foto_path:body.data.foto_path,solicitado_por:ctx.userId}).select('id').single();if(reserveError)throw reserveError;id=reserva.id;
   const fechas=z.array(z.object({dia:z.string(),fecha:z.string()}));
    const schema=r.modulo==='temphr'?z.object({...comunes,anio_dudoso:z.boolean().nullable(),fechas_columnas:fechas,lecturas_t:z.array(lectura),lecturas_hr:z.array(lectura)}):z.object({...comunes,anio_dudoso:z.boolean().nullable(),unidad:z.string(),fechas_columnas:fechas,lecturas:z.array(lectura)});
-   const provider=createLovableAiGatewayProvider(key,getLovableAiGatewayRunId(req),{baseURL:'https://ai.gateway.lovable.dev/v1'});
-   const result=streamText({model:provider(modelo),providerOptions:{lovable:{reasoningEffort:'minimal'}},system:`${interpolar(skill.texto,{...vars,empresa:org.nombre})}\n${contextoFechaMexico()}`,messages:[{role:'user',content:[{type:'image',image:new URL(`data:${media.mime};base64,${media.base64}`)}]}],output:Output.object({schema}),maxRetries:0,abortSignal:req.signal});
-  let propuesta:any;
-  try{propuesta=await result.output;}catch(e){if(!NoObjectGeneratedError.isInstance(e))throw e;try{propuesta=schema.parse(JSON.parse(e.text));}catch{throw new Error('La IA no produjo una propuesta válida; la foto permanece para captura manual');}}
-  if(!propuesta)throw new Error('La IA no produjo una propuesta; solicitud terminada');
+    const runIn=getLovableAiGatewayRunId(req);
+    const aiRes=await fetch('https://ai.gateway.lovable.dev/v1/chat/completions',{method:'POST',signal:req.signal,headers:{'Authorization':`Bearer ${key}`,'Content-Type':'application/json','X-Lovable-AIG-SDK':'fetch',...(runIn?{'X-Lovable-AIG-Run-ID':runIn}:{})},body:JSON.stringify({model:modelo,reasoning_effort:'minimal',response_format:{type:'json_object'},messages:[{role:'system',content:`${interpolar(skill.texto,{...vars,empresa:org.nombre})}\n${contextoFechaMexico()}\nResponde únicamente con JSON.`},{role:'user',content:[{type:'image_url',image_url:{url:`data:${media.mime};base64,${media.base64}`}}]}]})});
+    runId=aiRes.headers.get('X-Lovable-AIG-Run-ID') ?? runIn;
+    if(!aiRes.ok){const t=await aiRes.text();let m=`Error de IA (${aiRes.status})`;try{const j=JSON.parse(t);m=j.message ?? j.error?.message ?? m;}catch{/* keep */}throw new HttpError(m,aiRes.status);}
+    const aiJson=await aiRes.json();
+    const texto=String(aiJson?.choices?.[0]?.message?.content ?? '').replace(/^```(?:json)?\s*|\s*```$/g,'').trim();
+    if(!texto)throw new Error('La IA no produjo una propuesta; solicitud terminada');
+   let propuesta:any;
+   try{propuesta=schema.parse(JSON.parse(texto));}catch{throw new Error('La IA no produjo una propuesta válida; la foto permanece para captura manual');}
   if(r.modulo==='temphr'){propuesta.lecturas_t=comprobarLecturas(propuesta.lecturas_t);propuesta.lecturas_hr=comprobarLecturas(propuesta.lecturas_hr);}else propuesta.lecturas=comprobarLecturas(propuesta.lecturas);
    const rows=[...(propuesta.lecturas_t ?? []),...(propuesta.lecturas_hr ?? []),...(propuesta.lecturas ?? [])];
    const fechasComprobadas=resolverFechasBitacora(propuesta,primera?.semana_inicio,anioActual);
@@ -64,12 +68,12 @@ Deno.serve(async req=>{
    propuesta.fechas_columnas=fechasComprobadas.fechas_columnas;
    propuesta.fechas_requieren_revision=fechasComprobadas.requiere_revision;
    propuesta.requiere_revision=fechasComprobadas.requiere_revision || (rows.length>0 && rows.filter(p=>p.valor===null || p.confianza===null || p.confianza<0.70).length/rows.length>0.15);
-  const usage=await result.totalUsage;
-  const {error:saveError}=await admin.rpc('tend_extraccion_resultado',{_id:id,_propuesta:propuesta,_skills:skills,_modelo:modelo,_input:usage.inputTokens ?? 0,_output:usage.outputTokens ?? 0});if(saveError)throw saveError;
-   return respond({id,propuesta,skills_usadas:skills,modelo_ia:modelo},200,provider.getRunId()?{'X-Lovable-AIG-Run-ID':provider.getRunId() ?? ''}:undefined);
+   const usage=aiJson?.usage ?? {};
+   const {error:saveError}=await admin.rpc('tend_extraccion_resultado',{_id:id,_propuesta:propuesta,_skills:skills,_modelo:modelo,_input:usage.prompt_tokens ?? 0,_output:usage.completion_tokens ?? 0});if(saveError)throw saveError;
+    return respond({id,propuesta,skills_usadas:skills,modelo_ia:modelo},200,runId?{'X-Lovable-AIG-Run-ID':runId}:undefined);
  }catch(e){
-  let status=e instanceof ContextoOrgError?e.status:500;let message=e instanceof Error?e.message:'No se pudo extraer la bitácora';
-  if(APICallError.isInstance(e)){status=e.statusCode ?? 500;try{const upstream=JSON.parse(e.responseBody ?? '{}');message=upstream.message ?? upstream.error?.message ?? message;}catch{/* preserve safe SDK error */}}
+   let status=e instanceof ContextoOrgError||e instanceof HttpError?e.status:500;const message=e instanceof Error?e.message:'No se pudo extraer la bitácora';
+   if(e instanceof DOMException && e.name==='AbortError')status=499;
   if(admin && orgId && [402,403].includes(status)){const {error}=await admin.from('tend_ia_control').upsert({org_id:orgId,bloqueado:true,status,mensaje:message,updated_at:new Date().toISOString()});if(error)console.error('No se pudo persistir pausa IA',error.code);}
   if(admin && id){const {error}=await admin.rpc('tend_extraccion_resultado',{_id:id,_propuesta:null,_skills:skills,_modelo:modelo,_error:message});if(error)console.error('No se pudo registrar error de extracción',error.code);}
   return respond({error:message,id},status);
