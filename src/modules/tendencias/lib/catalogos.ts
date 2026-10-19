@@ -54,6 +54,10 @@ export interface Instrumento {
   spec_texto_hr?: string | null; spec_lie_hr?: number | null; spec_lse_hr?: number | null;
   spec_referencia?: string | null; spec_fecha_validacion?: string | null;
   area_estado?: "validada" | "pendiente"; area_nota?: string | null;
+  /** T4c: clase de instrumento, escala física y criterio interno más estricto que la norma. */
+  clase_instrumento?: "diferencial_sala" | "filtro_ducto" | "aire_proceso" | "equipo" | null;
+  escala_min?: number | null; escala_max?: number | null; escala_unidad?: string | null;
+  spec_criterio_interno?: boolean; spec_nota?: string | null;
 }
 
 // La interfaz ParCuartos fue retirada al unificar el catálogo en `objetivos_presion`.
