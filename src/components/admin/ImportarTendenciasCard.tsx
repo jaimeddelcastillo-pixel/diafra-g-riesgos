@@ -11,7 +11,6 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useQuery } from '@tanstack/react-query';
 import { listarNormas } from '@/modules/tendencias/lib/persistencia';
-import { descargarArchivo } from '@/lib/descargarArchivo';
 import {
   vistaPrevia, aplicarExclusiones, mapearInstrumento, construirSnapshotAT, verificarConteos, construirInforme,
   TABLAS_MIGRACION, type Respaldo, type Exclusion, type VistaPrevia,
@@ -57,9 +56,6 @@ export default function ImportarTendenciasCard() {
     setOcupado(true);
     try {
       const r = await leerZip(file);
-      const { data: miembros, error } = await supabase.rpc('mis_organizaciones');
-      if (error) throw error;
-      void miembros;
       const { data: correos, error: e2 } = await supabase
         .from('org_members').select('profiles(email)').eq('org_id', org);
       if (e2) throw e2;
@@ -113,7 +109,9 @@ export default function ImportarTendenciasCard() {
       });
       if (error) throw error;
       const informe = construirInforme(respaldo, excl, previa.sospechosos, snapshots);
-      descargarArchivo(new Blob([JSON.stringify(informe, null, 2)], { type: 'application/json' }), 'informe-migracion-atdiafra.json');
+      const url = URL.createObjectURL(new Blob([JSON.stringify(informe, null, 2)], { type: 'application/json' }));
+      const a = document.createElement('a'); a.href = url; a.download = 'informe-migracion-atdiafra.json';
+      document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000);
       toast.success(`Migración aplicada: ${JSON.stringify(data)}`);
       setRespaldo(null); setPrevia(null); setExcluidas({});
     } catch (e) { toast.error(`Se revirtió todo: ${e instanceof Error ? e.message : String(e)}`); }
