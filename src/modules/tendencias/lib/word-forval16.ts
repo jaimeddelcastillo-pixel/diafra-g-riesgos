@@ -190,7 +190,7 @@ export async function generarWordForVal16(a: WordDocumentoArgs): Promise<{ blob:
   if (anulado) headerChildren.push(par(`ANULADO · Fecha: ${a.anuladoEn ? new Date(a.anuladoEn).toLocaleDateString('es-MX', { timeZone: 'America/Mexico_City' }) : '—'} · Motivo: ${a.motivoAnulacion ?? '—'}`, { b: true, sz: 9, al: AlignmentType.LEFT }));
 
   const footer = new Footer({ children: [
-    new Paragraph({ border: { top: { style: BorderStyle.SINGLE, size: 4, color: "7F7F7F", space: 2 } }, children: [run(f.version_formato, { b: true, sz: 8 })] }),
+    new Paragraph({ border: { top: { style: BorderStyle.SINGLE, size: 4, color: "7F7F7F", space: 2 } }, children: [run((f.textos as Record<string,string>).codigoFormato ? `${identificadoresReporte(f).codigoFormato} · ${f.version_formato}` : f.version_formato, { b: true, sz: 8 })] }),
     new Paragraph({ alignment: AlignmentType.JUSTIFIED, children: [run(f.identidad.confidencialidad, { sz: 7 })] }),
   ] });
 

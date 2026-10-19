@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { analizarRegistro, type Periodo } from "./lib/normativo";
 import { exportarNormativoPDF, exportarNormativoExcel } from "./lib/export-normativo";
 import { cargarConfiguracion } from './lib/persistencia';
+import {identificadoresReporte,nombreArchivoReporte} from './lib/configuracion-reporte';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -311,7 +312,9 @@ export function VistaAvance({ registros, areaDe, instrMap, catalogo, areasMap, d
 
   const resumen = useMemo(() => resumenAvance(filtradas, lunes, instrMap), [filtradas, lunes, instrMap]);
 
-  const exportar = () => {
+  const exportar = async () => {
+    try {
+    const config=await cargarConfiguracion('',null);
     const header = ["Instrumento", "Nombre", "Área", "Módulo", ...lunes];
     const filasXls = filtradas.map((f) => [
       f.codigo, f.nombre, f.area, MODULO_LABEL[f.modulo] ?? f.modulo,
@@ -323,14 +326,15 @@ export function VistaAvance({ registros, areaDe, instrMap, catalogo, areasMap, d
       }),
     ]);
     const ws = XLSX.utils.aoa_to_sheet([
-      ["TRACEA — Avance semanal de captura"],
+      [`${config.formato.identidad?.nombre ?? 'TRACEA'} — Avance semanal de captura`],
       [`Periodo: ${format(desde, "dd/MM/yyyy")} – ${format(hasta, "dd/MM/yyyy")}`],
       [], header, ...filasXls,
     ]);
     ws["!cols"] = [{ wch: 14 }, { wch: 40 }, { wch: 40 }, { wch: 12 }, ...lunes.map(() => ({ wch: 16 }))];
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Avance");
-    XLSX.writeFile(wb, `avance-semanal-${format(new Date(), "yyyyMMdd")}.xlsx`);
+    XLSX.writeFile(wb,nombreArchivoReporte(identificadoresReporte(config.formato).prefijoArchivos,['Avance-semanal',format(desde,'yyyy-MM-dd'),format(hasta,'yyyy-MM-dd'),`v${config.formato.version}`],'xlsx'));
+    } catch(e) { toast.error(e instanceof Error?e.message:String(e)); }
   };
 
   return (
