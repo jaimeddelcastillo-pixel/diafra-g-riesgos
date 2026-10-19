@@ -65,7 +65,7 @@ export default function RevisionCatalogo({ instrumentos, areas, puedeEditar, onC
       }
       v.especificacion = v.spec_texto;
       v.tipo = edit.tipo;
-      const final = marcarCriterioInterno(normas, isoDe(edit as Instrumento), v);
+      const final = marcarCriterioInterno(normas, isoDe({ area_id: (edit.area_id as string | null) ?? null }), v);
       delete final.tipo;
       await editarInstrumento(String(edit.id), final, motivo.trim());
       toast.success('Instrumento actualizado; el cambio quedó en la auditoría con su motivo');
@@ -108,7 +108,7 @@ export default function RevisionCatalogo({ instrumentos, areas, puedeEditar, onC
         <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
           <DialogHeader><DialogTitle>Editar instrumento · {String(edit?.codigo ?? '')}</DialogTitle></DialogHeader>
           {edit && <form className="grid gap-4 sm:grid-cols-2" onSubmit={e => { e.preventDefault(); void guardar(); }}>
-            <SugerenciaNorma valores={edit} iso={isoDe(edit as Instrumento)} onAplicar={c => setEdit(e => ({ ...e, ...c }))} />
+            <SugerenciaNorma valores={edit} iso={isoDe({ area_id: (edit.area_id as string | null) ?? null })} onAplicar={c => setEdit(e => ({ ...e, ...c }))} />
             {CAMPOS.map(c => {
               const val = edit[c.key];
               return <div key={c.key} className="space-y-2">

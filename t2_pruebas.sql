@@ -122,5 +122,13 @@ END $$;
 DO $$ DECLARE d text:=pg_get_functiondef('public.tend_retirar_registro_completo(uuid,text,text)'::regprocedure); BEGIN
  IF d NOT LIKE '%ARRAY[''admin'',''responsable_sanitario'']%' OR d NOT LIKE '%Retirar requiere motivo%' OR d NOT LIKE '%Confirmación incorrecta%' OR d NOT LIKE '%AT emitido%' OR d ILIKE '%DELETE FROM%' THEN RAISE EXCEPTION 'P9 zona de peligro'; END IF;
 END $$;
+-- P10 (T4c): catálogo normativo precargado, solo super_admin escribe, sin borrado; edición de instrumento con motivo; IM-20.
+DO $$ DECLARE d text:=pg_get_functiondef('public.tend_editar_instrumento(uuid,jsonb,text)'::regprocedure); g text:=pg_get_functiondef('public.tend_guard'::regproc); au text:=pg_get_functiondef('public.audit_trigger_func'::regproc); BEGIN
+ IF (SELECT count(*) FROM public.tend_norma_especificaciones WHERE norma='NOM-241' AND activo)<>9 THEN RAISE EXCEPTION 'P10 precarga'; END IF;
+ IF NOT EXISTS(SELECT 1 FROM public.tend_norma_especificaciones WHERE clase_iso='ISO-7' AND variable='presion' AND lie=10 AND lie_estricto) THEN RAISE EXCEPTION 'P10 ISO-7 > 10 Pa'; END IF;
+ IF (SELECT count(*) FROM pg_policies WHERE tablename='tend_norma_especificaciones' AND cmd IN('INSERT','UPDATE') AND coalesce(with_check,'') LIKE '%is_super_admin%')<>2 OR EXISTS(SELECT 1 FROM pg_policies WHERE tablename='tend_norma_especificaciones' AND cmd='DELETE') THEN RAISE EXCEPTION 'P10 políticas norma'; END IF;
+ IF d NOT LIKE '%Editar requiere motivo%' OR d NOT LIKE '%ARRAY[''admin'',''responsable_sanitario'']%' OR d NOT LIKE '%tracea.motivo%' OR d ILIKE '%DELETE FROM%' THEN RAISE EXCEPTION 'P10 edición con motivo'; END IF;
+ IF g NOT LIKE '%tracea.autorizado_por%' OR au NOT LIKE '%tracea.autorizado_por%' OR au NOT LIKE '%''sistema''%' THEN RAISE EXCEPTION 'P10 IM-20 atribución'; END IF;
+END $$;
 SELECT unnest(ARRAY['P1 A no ve B: PASA','P2 Sin módulo no lee/escribe: PASA','P3 Consultor solo empresa activa A/B: PASA','P4 Operador no emite: PASA','P5 RS autor no autoriza: PASA','P6 Historial authenticated/service_role inmutable: PASA','P7 Super_admin soporte solo lectura: PASA','Aviso RS admin=true / RS=false: PASA']) AS resultado;
 ROLLBACK;
