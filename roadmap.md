@@ -1,6 +1,6 @@
 # Roadmap
 
-- [ ] Complemento T3d: razonamiento minimal en Gemini 3.8 Flash; v1.1 borrador con año escrito prioritario y candidatos desde primera fecha hasta actual +1, comprobación de columnas en servidor y requiere_revision sin candidato. Solo suite automática, sin navegador/IA real/dependencias.
+- [x] Complemento T3d: Gemini 3.8 Flash con razonamiento minimal; tres v1.1 siguen en borrador con año escrito prioritario y candidatos desde primera fecha hasta actual +1. Comprobación compartida servidor/UI de todas las columnas; sin candidato requiere_revision, sin prohibición de 2024/anteriores y originales conservados. Función desplegada, huellas/estados leídos; suite 129/129 y build OK. Sin navegador/IA real/dependencias; validación funcional de extracción a cargo de Jaime.
 
 - [x] T3d implementado: Gemini 3.8 Flash configurable por skill (elección de Jaime), sin razonamiento forzado, fotos intactas, extracción dos fotos y confirmación secuencial, rango histórico/fecha/confianza, tres v1.1 borrador sin publicar, enteros Word, aviso soporte y Excel crudo/correcciones mediante RPC acotada. 0060 aplicada y función desplegada; suite 129/129, build OK; sin navegador/IA real/dependencias. Detalles en t3d_reporte.md.
 - [ ] T3d controles nuevos SQL QA: t3d_pruebas.sql (cinco reglas, rollback) no pudo ejecutarse porque la conexión de pruebas no puede adoptar authenticated; requiere conexión de pruebas autorizada. Pruebas funcionales y publicación v1.1 a cargo de Jaime; textos v1.0 vigentes intactos hasta publicar.
