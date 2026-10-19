@@ -118,5 +118,9 @@ DO $$ DECLARE t text; BEGIN
  END LOOP;
  IF pg_get_functiondef('public.tend_guard'::regproc) NOT LIKE '%THEN ARRAY[''admin'',''responsable_sanitario''] ELSE%' THEN RAISE EXCEPTION 'P8 trigger'; END IF;
 END $$;
+-- P9 (Fase 2): zona de peligro retira registro y semanas solo admin/RS, con motivo, código y bloqueo por AT emitido.
+DO $$ DECLARE d text:=pg_get_functiondef('public.tend_retirar_registro_completo(uuid,text,text)'::regprocedure); BEGIN
+ IF d NOT LIKE '%ARRAY[''admin'',''responsable_sanitario'']%' OR d NOT LIKE '%Retirar requiere motivo%' OR d NOT LIKE '%Confirmación incorrecta%' OR d NOT LIKE '%AT emitido%' OR d ILIKE '%DELETE FROM%' THEN RAISE EXCEPTION 'P9 zona de peligro'; END IF;
+END $$;
 SELECT unnest(ARRAY['P1 A no ve B: PASA','P2 Sin módulo no lee/escribe: PASA','P3 Consultor solo empresa activa A/B: PASA','P4 Operador no emite: PASA','P5 RS autor no autoriza: PASA','P6 Historial authenticated/service_role inmutable: PASA','P7 Super_admin soporte solo lectura: PASA','Aviso RS admin=true / RS=false: PASA']) AS resultado;
 ROLLBACK;

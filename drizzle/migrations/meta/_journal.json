@@ -442,6 +442,13 @@
       "when": 1792447138184,
       "tag": "0062_tend_instrumentos_codigo_activo_unico",
       "breakpoints": true
+    },
+    {
+      "idx": 63,
+      "version": "7",
+      "when": 1792449083632,
+      "tag": "0063_tend_retirar_registro_completo",
+      "breakpoints": true
     }
   ]
 }

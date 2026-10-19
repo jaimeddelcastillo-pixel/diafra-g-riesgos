@@ -29,6 +29,7 @@ REVOKE ALL ON FUNCTION public.tend_aviso_tomar(uuid) FROM PUBLIC,anon,authentica
 REVOKE ALL ON FUNCTION public.tend_aviso_terminar(uuid,boolean,text) FROM PUBLIC,anon,authenticated,service_role;
 REVOKE ALL ON TABLE public.tend_avisos_control,public.tend_ia_control FROM PUBLIC,anon,authenticated,service_role;
 REVOKE ALL ON FUNCTION public.tend_resolver_instrumentos(uuid,jsonb,jsonb) FROM PUBLIC,anon,authenticated,service_role;
+REVOKE ALL ON FUNCTION public.tend_retirar_registro_completo(uuid,text,text) FROM PUBLIC,anon,authenticated,service_role;
 -- Bloquea archivos T2 sin afectar los demás buckets ni borrar originales.
 DROP POLICY IF EXISTS tend_bitacoras_select ON storage.objects;
 DROP POLICY IF EXISTS tend_bitacoras_insert ON storage.objects;
