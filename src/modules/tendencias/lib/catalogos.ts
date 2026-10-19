@@ -58,6 +58,8 @@ export interface Instrumento {
   clase_instrumento?: "diferencial_sala" | "filtro_ducto" | "aire_proceso" | "equipo" | null;
   escala_min?: number | null; escala_max?: number | null; escala_unidad?: string | null;
   spec_criterio_interno?: boolean; spec_nota?: string | null;
+  /** Descripción del equipo: marca, modelo, resolución, ubicación. */
+  descripcion_equipo?: string | null;
 }
 
 // La interfaz ParCuartos fue retirada al unificar el catálogo en `objetivos_presion`.
