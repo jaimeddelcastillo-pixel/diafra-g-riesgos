@@ -156,10 +156,13 @@ export type Database = {
       audit_trail: {
         Row: {
           accion: string
+          autorizado_por: string | null
           created_at: string
           id: string
           ip: string | null
+          motivo: string | null
           org_id: string | null
+          origen: string
           registro_id: string
           solicitado_por: string | null
           tabla: string
@@ -169,10 +172,13 @@ export type Database = {
         }
         Insert: {
           accion: string
+          autorizado_por?: string | null
           created_at?: string
           id?: string
           ip?: string | null
+          motivo?: string | null
           org_id?: string | null
+          origen?: string
           registro_id: string
           solicitado_por?: string | null
           tabla: string
@@ -182,10 +188,13 @@ export type Database = {
         }
         Update: {
           accion?: string
+          autorizado_por?: string | null
           created_at?: string
           id?: string
           ip?: string | null
+          motivo?: string | null
           org_id?: string | null
+          origen?: string
           registro_id?: string
           solicitado_por?: string | null
           tabla?: string
@@ -4675,11 +4684,15 @@ export type Database = {
           area_nota: string | null
           baseline_pa: number | null
           baseline_tolerancia_pct: number | null
+          clase_instrumento: string | null
           codigo: string
           codigo_bitacora: string | null
           created_at: string
           created_by: string | null
           dp_final_fabricante: number | null
+          escala_max: number | null
+          escala_min: number | null
+          escala_unidad: string | null
           especificacion: string | null
           id: string
           lie_pa: number | null
@@ -4689,6 +4702,7 @@ export type Database = {
           op_min_pa: number | null
           org_id: string
           parametro: string
+          spec_criterio_interno: boolean
           spec_estado: string | null
           spec_fecha_validacion: string | null
           spec_lie: number | null
@@ -4697,6 +4711,7 @@ export type Database = {
           spec_lse: number | null
           spec_lse_estricto: boolean
           spec_lse_hr: number | null
+          spec_nota: string | null
           spec_referencia: string | null
           spec_texto: string | null
           spec_texto_hr: string | null
@@ -4712,11 +4727,15 @@ export type Database = {
           area_nota?: string | null
           baseline_pa?: number | null
           baseline_tolerancia_pct?: number | null
+          clase_instrumento?: string | null
           codigo: string
           codigo_bitacora?: string | null
           created_at?: string
           created_by?: string | null
           dp_final_fabricante?: number | null
+          escala_max?: number | null
+          escala_min?: number | null
+          escala_unidad?: string | null
           especificacion?: string | null
           id?: string
           lie_pa?: number | null
@@ -4726,6 +4745,7 @@ export type Database = {
           op_min_pa?: number | null
           org_id: string
           parametro: string
+          spec_criterio_interno?: boolean
           spec_estado?: string | null
           spec_fecha_validacion?: string | null
           spec_lie?: number | null
@@ -4734,6 +4754,7 @@ export type Database = {
           spec_lse?: number | null
           spec_lse_estricto?: boolean
           spec_lse_hr?: number | null
+          spec_nota?: string | null
           spec_referencia?: string | null
           spec_texto?: string | null
           spec_texto_hr?: string | null
@@ -4749,11 +4770,15 @@ export type Database = {
           area_nota?: string | null
           baseline_pa?: number | null
           baseline_tolerancia_pct?: number | null
+          clase_instrumento?: string | null
           codigo?: string
           codigo_bitacora?: string | null
           created_at?: string
           created_by?: string | null
           dp_final_fabricante?: number | null
+          escala_max?: number | null
+          escala_min?: number | null
+          escala_unidad?: string | null
           especificacion?: string | null
           id?: string
           lie_pa?: number | null
@@ -4763,6 +4788,7 @@ export type Database = {
           op_min_pa?: number | null
           org_id?: string
           parametro?: string
+          spec_criterio_interno?: boolean
           spec_estado?: string | null
           spec_fecha_validacion?: string | null
           spec_lie?: number | null
@@ -4771,6 +4797,7 @@ export type Database = {
           spec_lse?: number | null
           spec_lse_estricto?: boolean
           spec_lse_hr?: number | null
+          spec_nota?: string | null
           spec_referencia?: string | null
           spec_texto?: string | null
           spec_texto_hr?: string | null
@@ -4794,6 +4821,66 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      tend_norma_especificaciones: {
+        Row: {
+          activo: boolean
+          apartado: string | null
+          clase_iso: string
+          created_at: string
+          id: string
+          lie: number | null
+          lie_estricto: boolean
+          lse: number | null
+          lse_estricto: boolean
+          norma: string
+          nota: string | null
+          sin_valor: boolean
+          texto: string
+          unidad: string | null
+          updated_at: string
+          updated_by: string | null
+          variable: string
+        }
+        Insert: {
+          activo?: boolean
+          apartado?: string | null
+          clase_iso: string
+          created_at?: string
+          id?: string
+          lie?: number | null
+          lie_estricto?: boolean
+          lse?: number | null
+          lse_estricto?: boolean
+          norma: string
+          nota?: string | null
+          sin_valor?: boolean
+          texto: string
+          unidad?: string | null
+          updated_at?: string
+          updated_by?: string | null
+          variable: string
+        }
+        Update: {
+          activo?: boolean
+          apartado?: string | null
+          clase_iso?: string
+          created_at?: string
+          id?: string
+          lie?: number | null
+          lie_estricto?: boolean
+          lse?: number | null
+          lse_estricto?: boolean
+          norma?: string
+          nota?: string | null
+          sin_valor?: boolean
+          texto?: string
+          unidad?: string | null
+          updated_at?: string
+          updated_by?: string | null
+          variable?: string
+        }
+        Relationships: []
       }
       tend_objetivos_presion: {
         Row: {
@@ -6074,6 +6161,10 @@ export type Database = {
         Args: { _id: string; _inicio: string; _motivo?: string }
         Returns: undefined
       }
+      tend_editar_instrumento: {
+        Args: { _cambios: Json; _id: string; _motivo: string }
+        Returns: undefined
+      }
       tend_exportar_crudo: {
         Args: { _desde: string; _hasta: string; _registro: string }
         Returns: Json
@@ -6093,6 +6184,14 @@ export type Database = {
       tend_guardar_semana: {
         Args: { _motivo?: string; _registro: string; _semana: Json }
         Returns: string
+      }
+      tend_media_trimestre: {
+        Args: never
+        Returns: {
+          instrumento_id: string
+          media: number
+          n: number
+        }[]
       }
       tend_resolver_instrumentos: {
         Args: { _instrumentos: Json; _org: string; _seleccion: Json }
