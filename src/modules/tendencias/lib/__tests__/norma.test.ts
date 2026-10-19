@@ -44,3 +44,9 @@ describe('Clase de instrumento', () => {
     expect(claseEfectiva({ tipo: 'manometro_filtro', clase_instrumento: null })).toBe('filtro_ducto');
   });
 });
+
+import { pareceDescripcionEquipo } from "../norma";
+describe("descripción en especificación", () => {
+  it("detecta marca/modelo", () => { expect(pareceDescripcionEquipo("Magnehelic Dwyer modelo 2001, resolución 1 Pa")).toBe(true); });
+  it("no marca una especificación real", () => { expect(pareceDescripcionEquipo("> 10 Pa ISO-8")).toBe(false); });
+});

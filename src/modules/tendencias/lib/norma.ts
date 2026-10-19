@@ -59,6 +59,8 @@ export function revisarInstrumento(
   const presion = !variablesDe(i).includes("temperatura");
   const lie = i.spec_lie ?? null, lse = i.spec_lse ?? null;
   const texto = (i.spec_texto ?? i.especificacion ?? "").trim();
+  if (pareceDescripcionEquipo(i.spec_texto) || pareceDescripcionEquipo(i.especificacion))
+    h.push({ clave: "spec_descripcion", nivel: "amarillo", mensaje: "Especificación con texto de descripción (marca, modelo, resolución o ubicación)" });
 
   if (!i.spec_estado || i.spec_estado === "pendiente" || (lie == null && lse == null && i.spec_estado !== "na"))
     h.push({ clave: "sin_spec", nivel: "amarillo", mensaje: "Sin especificación o pendiente de validar" });
@@ -104,4 +106,9 @@ export const semaforo = (h: Hallazgo[]): "verde" | "amarillo" | "rojo" =>
 export function claseEfectiva(i: Pick<Instrumento, "tipo" | "clase_instrumento">): Instrumento["clase_instrumento"] {
   if (i.clase_instrumento) return i.clase_instrumento;
   return i.tipo === "manometro_diferencial" || i.tipo === "otro" ? "diferencial_sala" : i.tipo === "manometro_filtro" ? "filtro_ducto" : "equipo";
+}
+
+/** Detecta texto de descripción del equipo guardado por error en la especificación (solo lo lista; no lo mueve). */
+export function pareceDescripcionEquipo(t: string | null | undefined): boolean {
+  return !!t && /\b(marca|modelo|mod\.|resoluci[oó]n|ubicaci[oó]n|magnehelic|dwyer|testo|vaisala|serie|s\/n)\b/i.test(t);
 }
