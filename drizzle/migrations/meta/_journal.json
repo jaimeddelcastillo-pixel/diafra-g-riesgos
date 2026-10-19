@@ -449,6 +449,13 @@
       "when": 1792449083632,
       "tag": "0063_tend_retirar_registro_completo",
       "breakpoints": true
+    },
+    {
+      "idx": 64,
+      "version": "7",
+      "when": 1792451082702,
+      "tag": "0064_t4c_catalogo_normativo",
+      "breakpoints": true
     }
   ]
 }
