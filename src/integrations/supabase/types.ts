@@ -6102,6 +6102,10 @@ export type Database = {
         Args: { _id: string; _motivo: string; _tipo: string }
         Returns: undefined
       }
+      tend_retirar_registro_completo: {
+        Args: { _confirmacion: string; _id: string; _motivo: string }
+        Returns: number
+      }
       tend_semana_en_emitido: {
         Args: { _org: string; _semana: string }
         Returns: boolean
