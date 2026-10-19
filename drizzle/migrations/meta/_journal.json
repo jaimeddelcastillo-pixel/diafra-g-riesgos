@@ -435,6 +435,13 @@
       "when": 1792435597636,
       "tag": "0061_t3d_catalogos_admin_rs",
       "breakpoints": true
+    },
+    {
+      "idx": 62,
+      "version": "7",
+      "when": 1792447138184,
+      "tag": "0062_tend_instrumentos_codigo_activo_unico",
+      "breakpoints": true
     }
   ]
 }
