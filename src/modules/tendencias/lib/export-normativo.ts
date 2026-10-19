@@ -2,6 +2,8 @@
 import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import type { FormatoForVal16 } from './formato-forval16';
+import { identificadoresReporte,nombreArchivoReporte } from './configuracion-reporte';
 import { generarBloqueEstadisticoRegistro } from "./chart-renderer";
 import { westernElectric } from "./statistics";
 import {
@@ -26,13 +28,9 @@ import {
 } from "./normativo";
 
 
-const diafraLogo = "";
+type Catalogos = { areas: Map<string, string>; hvac: Map<string, string>; empresa?: string; logo?: string | null; formato?: FormatoForVal16 };
 
-type Catalogos = { areas: Map<string, string>; hvac: Map<string, string>; empresa?: string; logo?: string | null };
-
-// ===== Identidad documental DIAFRA (formato controlado) =====
-const DOC_CODIGO = "FOR-VAL-16";
-const DOC_VERSION = "(01)";
+// Identidad documental configurada por empresa.
 const DOC_DEPARTAMENTO = "FORMATO — DEPARTAMENTO: VALIDACIÓN Y MONITOREO AMBIENTAL";
 const DOC_TITULO_DEFAULT = "REPORTE NORMATIVO DE MONITOREO AMBIENTAL";
 const DOC_FOOTER =
@@ -105,7 +103,7 @@ function pintarEncabezadoPie(doc: jsPDF, periodo: string, titulo: string = DOC_T
     doc.setFontSize(9).setFont("helvetica", "bold");
     doc.text("CÓDIGO", xCodigo + wCodigo / 2, 32, { align: "center" });
     doc.setFontSize(9).setFont("helvetica", "normal");
-    doc.text(`${DOC_CODIGO} ${DOC_VERSION}`, xCodigo + wCodigo / 2, 46, { align: "center" });
+    doc.text(`${identificadoresReporte(identidad?.formato).codigoFormato} (${identidad?.formato?.version ?? 0})`, xCodigo + wCodigo / 2, 46, { align: "center" });
     doc.setFontSize(8);
     doc.text(`Página ${i} de ${total}`, xCodigo + wCodigo / 2, 60, { align: "center" });
 
@@ -114,7 +112,7 @@ function pintarEncabezadoPie(doc: jsPDF, periodo: string, titulo: string = DOC_T
     doc.line(20, pageH - FOOTER_H, pageW - 20, pageH - FOOTER_H);
 
     doc.setFontSize(7).setFont("helvetica", "normal").setTextColor(80);
-    doc.text(DOC_FOOTER, pageW / 2, pageH - 16, { align: "center" });
+    doc.text(identidad?.formato?.identidad?.confidencialidad || DOC_FOOTER, pageW / 2, pageH - 16, { align: "center" });
     doc.setFontSize(7).setTextColor(120);
     doc.text(`${DOC_NORMA} · Periodo: ${periodo}`, 22, pageH - 6);
     doc.text(
@@ -235,7 +233,7 @@ export function exportarNormativoExcel(
     "Observaciones",
   );
 
-  XLSX.writeFile(wb, `normativo-${periodo.replace(/\s+/g, "_")}-${fechaArchivo()}.xlsx`);
+  XLSX.writeFile(wb,nombreArchivoReporte(identificadoresReporte(cat.formato).prefijoArchivos,['Normativo',periodo,fechaArchivo(),`v${cat.formato?.version ?? 0}`],'xlsx'));
 }
 
 export function exportarNormativoPDF(
@@ -628,7 +626,7 @@ export function exportarNormativoPDF(
   // Pintar encabezado y pie en TODAS las páginas al final
   pintarEncabezadoPie(doc, periodo, tituloDoc, cat);
 
-  doc.save(`normativo-${periodo.replace(/\s+/g, "_")}-${fechaArchivo()}.pdf`);
+  doc.save(nombreArchivoReporte(identificadoresReporte(cat.formato).prefijoArchivos,['Normativo',periodo,fechaArchivo(),`v${cat.formato?.version ?? 0}`],'pdf'));
 }
 
 

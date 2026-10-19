@@ -8,6 +8,8 @@ import { ChevronLeft, ChevronRight, FileSpreadsheet, FileText, LineChart } from 
 import { toast } from "sonner";
 import { analizarRegistro, type Periodo } from "./lib/normativo";
 import { exportarNormativoPDF, exportarNormativoExcel } from "./lib/export-normativo";
+import { cargarConfiguracion } from './lib/persistencia';
+import {identificadoresReporte,nombreArchivoReporte} from './lib/configuracion-reporte';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -165,11 +167,12 @@ function descargarReporte(f: Fila, desde: Date, hasta: Date, formato: "pdf" | "e
     return;
   }
   const t = toast.loading(`Generando reporte de ${f.codigo}…`);
-  setTimeout(() => {
+  setTimeout(async () => {
     try {
       const periodo: Periodo = { tipo: "custom", desde: d, hasta: h };
       const analisis = [analizarRegistro({...f.registro, semanas: [...f.semanas.values()].sort((a,b)=>a.semana_inicio.localeCompare(b.semana_inicio))}, periodo)];
-      const cat = { areas: new Map(), hvac: new Map() };
+      const config=await cargarConfiguracion('',null);
+      const cat = { areas: new Map<string,string>(), hvac: new Map<string,string>(),formato:config.formato,empresa:config.formato.identidad?.nombre,logo:config.formato.logo };
       if (formato === "pdf") exportarNormativoPDF(analisis, "registro", cat, { incluirGraficas: true });
       else exportarNormativoExcel(analisis, "registro", cat);
       toast.success("Reporte descargado", { id: t });
@@ -188,7 +191,7 @@ export function VistaInstrumentos({ registros, areaDe, instrMap, catalogo, areas
     <section className="mt-3">
       <Leyenda>
         Lista de <b className="text-foreground">todo el catálogo de instrumentos</b>, sin importar el módulo. Los marcados como <b className="text-warning">Sin capturas</b> aún no tienen ningún registro: son los que faltan por capturar.
-        "% completo" son las lecturas capturadas contra las esperadas en el periodo (sin contar días N/A). "Fuera de límites" cuenta lecturas fuera de LIE/LSE. Usa <b className="text-foreground">FOR-VAL-16-02</b> para abrir el análisis de tendencias (gráficas, texto y paquete Excel) del periodo elegido; "Ver bitácora" abre la captura para corregir.
+        "% completo" son las lecturas capturadas contra las esperadas en el periodo (sin contar días N/A). "Fuera de límites" cuenta lecturas fuera de LIE/LSE. Usa <b className="text-foreground">Análisis de tendencias</b> para abrir el análisis de tendencias (gráficas, texto y paquete Excel) del periodo elegido; "Ver bitácora" abre la captura para corregir.
       </Leyenda>
       {ui}
       <div className="mt-3 rounded-xl border border-border bg-card overflow-x-auto">
@@ -244,10 +247,10 @@ export function VistaInstrumentos({ registros, areaDe, instrMap, catalogo, areas
                         <>
                           {(f.modulo === "temphr" || f.modulo === "presiones" || f.modulo === "filtros") && (
                             <Button type="button" size="sm" variant="outline" asChild
-                              title="Análisis de tendencias FOR-VAL-16-02: gráficas, límites y texto del periodo elegido"
+                              title="Análisis de tendencias Análisis de tendencias: gráficas, límites y texto del periodo elegido"
                               className="h-7 gap-1 px-2 text-xs">
                               <Link to={`/tendencias/analisis?ids=${f.registro.id}&desde=${format(desde,"yyyy-MM-dd")}&hasta=${format(hasta,"yyyy-MM-dd")}`}>
-                                <LineChart className="h-3.5 w-3.5" /> FOR-VAL-16-02
+                                <LineChart className="h-3.5 w-3.5" /> Análisis de tendencias
                               </Link>
                             </Button>
                           )}
@@ -309,7 +312,9 @@ export function VistaAvance({ registros, areaDe, instrMap, catalogo, areasMap, d
 
   const resumen = useMemo(() => resumenAvance(filtradas, lunes, instrMap), [filtradas, lunes, instrMap]);
 
-  const exportar = () => {
+  const exportar = async () => {
+    try {
+    const config=await cargarConfiguracion('',null);
     const header = ["Instrumento", "Nombre", "Área", "Módulo", ...lunes];
     const filasXls = filtradas.map((f) => [
       f.codigo, f.nombre, f.area, MODULO_LABEL[f.modulo] ?? f.modulo,
@@ -321,14 +326,15 @@ export function VistaAvance({ registros, areaDe, instrMap, catalogo, areasMap, d
       }),
     ]);
     const ws = XLSX.utils.aoa_to_sheet([
-      ["TRACEA — Avance semanal de captura"],
+      [`${config.formato.identidad?.nombre ?? 'TRACEA'} — Avance semanal de captura`],
       [`Periodo: ${format(desde, "dd/MM/yyyy")} – ${format(hasta, "dd/MM/yyyy")}`],
       [], header, ...filasXls,
     ]);
     ws["!cols"] = [{ wch: 14 }, { wch: 40 }, { wch: 40 }, { wch: 12 }, ...lunes.map(() => ({ wch: 16 }))];
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Avance");
-    XLSX.writeFile(wb, `avance-semanal-diafra-${format(new Date(), "yyyyMMdd")}.xlsx`);
+    XLSX.writeFile(wb,nombreArchivoReporte(identificadoresReporte(config.formato).prefijoArchivos,['Avance-semanal',format(desde,'yyyy-MM-dd'),format(hasta,'yyyy-MM-dd'),`v${config.formato.version}`],'xlsx'));
+    } catch(e) { toast.error(e instanceof Error?e.message:String(e)); }
   };
 
   return (

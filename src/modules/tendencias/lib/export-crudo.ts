@@ -1,5 +1,7 @@
 import * as XLSX from 'xlsx';
 import { supabase } from '@/integrations/supabase/client';
+import { cargarConfiguracion } from './persistencia';
+import { identificadoresReporte,nombreArchivoReporte } from './configuracion-reporte';
 import { fechaRealISO } from './fechas-lectura';
 import type { Semana, Registro } from './semanas';
 type EstadoSemana = Pick<Semana,'semana_inicio'|'lecturas'|'lecturas_hr'|'source'>;
@@ -13,6 +15,7 @@ function filas(s:EstadoSemana,registro:Registro,desde:string,hasta:string) {
   }));
 }
 export async function exportarCrudo(registro:Registro,desde:string,hasta:string) {
+  const config=await cargarConfiguracion('',null);
   const {data,error}=await supabase.rpc('tend_exportar_crudo',{_registro:registro.id,_desde:desde,_hasta:hasta});
   if(error)throw error;
   const datos=data as unknown as Datos;
@@ -24,5 +27,5 @@ export async function exportarCrudo(registro:Registro,desde:string,hasta:string)
   const libro=XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(libro,XLSX.utils.json_to_sheet(lecturas.length?lecturas:[{Registro:registro.nombre,Desde:desde,Hasta:hasta}]),'Datos crudos');
   XLSX.utils.book_append_sheet(libro,XLSX.utils.json_to_sheet(correcciones.length?correcciones:[{Registro:registro.nombre,Motivo:'Sin correcciones en el periodo'}]),'Correcciones');
-  XLSX.writeFile(libro,`Bitacora_${registro.nombre.replace(/[^\p{L}\p{N}_-]/gu,'_')}_${desde}_${hasta}.xlsx`);
+  XLSX.writeFile(libro,nombreArchivoReporte(identificadoresReporte(config.formato).prefijoArchivos,['Datos-crudos',registro.nombre,desde,hasta],'xlsx'));
 }
