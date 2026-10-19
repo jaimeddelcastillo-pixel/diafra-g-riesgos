@@ -11,8 +11,10 @@ import {resolverFechasBitacora} from '../_shared/bitacora-fechas.ts';
 import {getLovableAiGatewayRunId,getLovableAiGatewayResponseHeaders} from '../_shared/run-id.ts';
 
 const requestSchema=z.object({registro_id:z.string().uuid(),foto_path:z.string().min(1).max(500)}).strict();
-const lectura=z.object({dia:z.string(),turno:z.string(),valor:z.number().nullable(),hora:z.string().nullable(),quien:z.string().nullable(),confianza:z.number().nullable()});
-const comunes={mes:z.string(),anio:z.string(),instrumento:z.string(),area:z.string(),observaciones:z.string()};
+const texto=z.union([z.string(),z.number()]).nullish().transform(v=>v==null?'':String(v));
+const lectura=z.object({dia:z.string(),turno:z.string(),valor:z.number().nullish().transform(v=>v??null),hora:texto.transform(v=>v||null),quien:texto.transform(v=>v||null),confianza:z.number().nullish().transform(v=>v??null)});
+const comunes={mes:texto,anio:texto,instrumento:texto,area:texto,observaciones:texto};
+const anioDudoso=z.boolean().nullish().transform(v=>v??null);
 const dias=['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'];
 const turnos=['Mañana','Media tarde','Tarde'];
 function comprobarLecturas(rows:unknown){
@@ -51,7 +53,7 @@ Deno.serve(async req=>{
   const {data:org,error:oe}=await admin.from('organizations').select('nombre').eq('id',ctx.orgId).single();if(oe)throw oe;
   const {data:reserva,error:reserveError}=await user.from('tend_extracciones').insert({org_id:ctx.orgId,registro_id:r.id,modulo:r.modulo,foto_path:body.data.foto_path,solicitado_por:ctx.userId}).select('id').single();if(reserveError)throw reserveError;id=reserva.id;
   const fechas=z.array(z.object({dia:z.string(),fecha:z.string()}));
-   const schema=r.modulo==='temphr'?z.object({...comunes,anio_dudoso:z.boolean().nullable(),fechas_columnas:fechas,lecturas_t:z.array(lectura),lecturas_hr:z.array(lectura)}):z.object({...comunes,anio_dudoso:z.boolean().nullable(),unidad:z.string(),fechas_columnas:fechas,lecturas:z.array(lectura)});
+   const schema=r.modulo==='temphr'?z.object({...comunes,anio_dudoso:anioDudoso,fechas_columnas:fechas,lecturas_t:z.array(lectura),lecturas_hr:z.array(lectura)}):z.object({...comunes,anio_dudoso:anioDudoso,unidad:texto,fechas_columnas:fechas,lecturas:z.array(lectura)});
     const runIn=getLovableAiGatewayRunId(req);
     const aiRes=await fetch('https://ai.gateway.lovable.dev/v1/chat/completions',{method:'POST',signal:req.signal,headers:{'Authorization':`Bearer ${key}`,'Content-Type':'application/json','X-Lovable-AIG-SDK':'fetch',...(runIn?{'X-Lovable-AIG-Run-ID':runIn}:{})},body:JSON.stringify({model:modelo,reasoning_effort:'minimal',response_format:{type:'json_object'},messages:[{role:'system',content:`${interpolar(skill.texto,{...vars,empresa:org.nombre})}\n${contextoFechaMexico()}\nResponde únicamente con JSON.`},{role:'user',content:[{type:'image_url',image_url:{url:`data:${media.mime};base64,${media.base64}`}}]}]})});
     runId=aiRes.headers.get('X-Lovable-AIG-Run-ID') ?? runIn;
