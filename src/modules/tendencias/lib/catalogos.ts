@@ -75,12 +75,7 @@ export const ISO_LIMIT_PA: Record<IsoClase, number> = {
 };
 
 // Límites de T/HR por ISO (NOM-241). 'No clasificada' usa rangos amplios por defecto; ajustar por área si aplica.
-export const ISO_TEMP_HR: Record<IsoClase, { tempMin: number; tempMax: number; hrMin: number; hrMax: number }> = {
-  // Legacy defaults are unused; normative suggestions come from the reference catalog.
-  "Clase A": { tempMin: 18, tempMax: 25, hrMin: 30, hrMax: 65 },
-  "Clase B": { tempMin: 18, tempMax: 25, hrMin: 30, hrMax: 65 },
-  "Área limpia": { tempMin: 18, tempMax: 25, hrMin: 0, hrMax: 100 },
-  "Área gris": { tempMin: 0, tempMax: 100, hrMin: 0, hrMax: 100 },
+export const ISO_TEMP_HR: Partial<Record<IsoClase, { tempMin: number; tempMax: number; hrMin: number; hrMax: number }>> = {
   "ISO-5": { tempMin: 18, tempMax: 25, hrMin: 30, hrMax: 65 },
   "ISO-6": { tempMin: 18, tempMax: 25, hrMin: 30, hrMax: 65 },
   "ISO-7": { tempMin: 18, tempMax: 25, hrMin: 30, hrMax: 65 },
