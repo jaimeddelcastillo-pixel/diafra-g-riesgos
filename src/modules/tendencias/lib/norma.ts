@@ -49,7 +49,7 @@ export function numerosDeTexto(t: string | null | undefined): number[] {
   return (t ?? "").replace(/ISO[-\s]?\d/gi, "").match(/-?\d+(?:[.,]\d+)?/g)?.map((x) => Number(x.replace(",", "."))) ?? [];
 }
 
-export type Nivel = "rojo" | "amarillo";
+export type Nivel = "rojo" | "naranja";
 export interface Hallazgo { clave: string; nivel: Nivel; mensaje: string }
 
 export function revisarInstrumento(
@@ -60,10 +60,10 @@ export function revisarInstrumento(
   const lie = i.spec_lie ?? null, lse = i.spec_lse ?? null;
   const texto = (i.spec_texto ?? i.especificacion ?? "").trim();
   if (pareceDescripcionEquipo(i.spec_texto) || pareceDescripcionEquipo(i.especificacion))
-    h.push({ clave: "spec_descripcion", nivel: "amarillo", mensaje: "Especificación con texto de descripción (marca, modelo, resolución o ubicación)" });
+    h.push({ clave: "spec_descripcion", nivel: "naranja", mensaje: "Especificación con texto de descripción (marca, modelo, resolución o ubicación)" });
 
   if (!i.spec_estado || i.spec_estado === "pendiente" || (lie == null && lse == null && i.spec_estado !== "na"))
-    h.push({ clave: "sin_spec", nivel: "amarillo", mensaje: "Sin especificación o pendiente de validar" });
+    h.push({ clave: "sin_spec", nivel: "naranja", mensaje: "Sin especificación o pendiente de validar" });
 
   if (texto) {
     const nums = numerosDeTexto(texto);
@@ -86,21 +86,21 @@ export function revisarInstrumento(
     if (lie != null && lie > media)
       h.push({ clave: "lie_media", nivel: "rojo", mensaje: `LIE ${lie} mayor que la media del trimestre (${media.toFixed(1)})` });
     else if ((lie != null && media - lie < 1) || (lse != null && lse - media < 1))
-      h.push({ clave: "margen", nivel: "amarillo", mensaje: `Margen justo: media ${media.toFixed(1)} a menos de 1 unidad del límite` });
+      h.push({ clave: "margen", nivel: "naranja", mensaje: `Margen justo: media ${media.toFixed(1)} a menos de 1 unidad del límite` });
     const emax = i.escala_max ?? null, emin = i.escala_min ?? 0;
     if (emax != null && emax > emin && (media - emin) / (emax - emin) >= 0.9)
-      h.push({ clave: "tope_escala", nivel: "amarillo", mensaje: `Media cerca del tope de la escala (${emax})` });
+      h.push({ clave: "tope_escala", nivel: "naranja", mensaje: `Media cerca del tope de la escala (${emax})` });
   }
 
   const bit = (i.codigo_bitacora ?? "").trim();
-  if (!bit) h.push({ clave: "bitacora", nivel: "amarillo", mensaje: "Código de bitácora vacío" });
-  else if (bit.length > 24 || /\s/.test(bit)) h.push({ clave: "bitacora", nivel: "amarillo", mensaje: "Código de bitácora con texto largo" });
+  if (!bit) h.push({ clave: "bitacora", nivel: "naranja", mensaje: "Código de bitácora vacío" });
+  else if (bit.length > 24 || /\s/.test(bit)) h.push({ clave: "bitacora", nivel: "naranja", mensaje: "Código de bitácora con texto largo" });
 
   return h;
 }
 
-export const semaforo = (h: Hallazgo[]): "verde" | "amarillo" | "rojo" =>
-  h.some((x) => x.nivel === "rojo") ? "rojo" : h.length ? "amarillo" : "verde";
+export const semaforo = (h: Hallazgo[]): "verde" | "naranja" | "rojo" =>
+  h.some((x) => x.nivel === "rojo") ? "rojo" : h.length ? "naranja" : "verde";
 
 /** Solo «diferencial de sala» entra al análisis de presiones de áreas; «filtro o ducto» va a Banco de filtros. */
 export function claseEfectiva(i: Pick<Instrumento, "tipo" | "clase_instrumento">): Instrumento["clase_instrumento"] {
@@ -111,4 +111,23 @@ export function claseEfectiva(i: Pick<Instrumento, "tipo" | "clase_instrumento">
 /** Detecta texto de descripción del equipo guardado por error en la especificación (solo lo lista; no lo mueve). */
 export function pareceDescripcionEquipo(t: string | null | undefined): boolean {
   return !!t && /\b(marca|modelo|mod\.|resoluci[oó]n|ubicaci[oó]n|magnehelic|dwyer|testo|vaisala|serie|s\/n)\b/i.test(t);
+}
+
+/** Variables del instrumento (antes «Parámetro»). */
+export const VARIABLES_INSTRUMENTO = ["Presión diferencial", "Temperatura", "HR", "ΔP de filtro"] as const;
+export const unidadVariable = (v: unknown) => v === "Temperatura" ? "°C" : v === "HR" ? "%" : "Pa";
+/** Texto de especificación generado solo con LIE, LSE y la comparación («> 5 Pa» si es estricta, «≥ 5 Pa» si no). */
+export function textoEspecificacion(lie: number | null | undefined, lse: number | null | undefined, lieEstricto: boolean | null | undefined, lseEstricto: boolean | null | undefined, u: string): string | null {
+  const p = [lie != null ? `${lieEstricto ? ">" : "≥"} ${lie} ${u}` : null, lse != null ? `${lseEstricto ? "<" : "≤"} ${lse} ${u}` : null].filter(Boolean);
+  return p.length ? p.join(" y ") : null;
+}
+const num = (v: unknown) => v === null || v === undefined || v === "" ? null : Number(v);
+/** Reglas de guardado del instrumento: «validada» exige al menos un límite; «área validada» exige área. */
+export function erroresInstrumento(v: Record<string, unknown>): string[] {
+  const e: string[] = [];
+  const thr = v.tipo === "termohigrometro";
+  if (v.spec_estado === "validada" && num(v.spec_lie) == null && num(v.spec_lse) == null && !(thr && (num(v.spec_lie_hr) != null || num(v.spec_lse_hr) != null)))
+    e.push("No puedes guardar la especificación como «validada» sin al menos un límite (LIE o LSE).");
+  if (v.area_estado === "validada" && !v.area_id) e.push("No puedes marcar «Validación de área: validada» sin un área asignada.");
+  return e;
 }

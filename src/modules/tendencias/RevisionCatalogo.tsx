@@ -15,7 +15,7 @@ import { revisarInstrumento, semaforo, CLASES_INSTRUMENTO } from './lib/norma';
 import { editarInstrumento, mediasTrimestre } from './lib/persistencia';
 import SugerenciaNorma, { useNormas, marcarCriterioInterno } from './SugerenciaNorma';
 
-const COLOR = { verde: 'bg-success', amarillo: 'bg-warning', rojo: 'bg-destructive' } as const;
+const COLOR = { verde: 'bg-success', naranja: 'bg-caution', rojo: 'bg-destructive' } as const;
 const CAMPOS: { key: string; label: string; type?: 'number' | 'boolean' | 'clase' | 'estado' }[] = [
   { key: 'codigo_bitacora', label: 'Código de bitácora (corto, p. ej. BIT-CMB-24-43)' },
   { key: 'clase_instrumento', label: 'Tipo de instrumento', type: 'clase' },
@@ -47,7 +47,7 @@ export default function RevisionCatalogo({ instrumentos, areas, puedeEditar, onC
   const filas = useMemo(() => instrumentos.filter(i => i.activo).map(i => {
     const h = revisarInstrumento(i, isoDe(i), medias?.get(i.id) ?? null, normas);
     return { i, h, s: semaforo(h) };
-  }).sort((a, b) => ['rojo', 'amarillo', 'verde'].indexOf(a.s) - ['rojo', 'amarillo', 'verde'].indexOf(b.s)),
+  }).sort((a, b) => ['rojo', 'naranja', 'verde'].indexOf(a.s) - ['rojo', 'naranja', 'verde'].indexOf(b.s)),
   // eslint-disable-next-line react-hooks/exhaustive-deps
   [instrumentos, areas, normas, medias]);
 
@@ -79,7 +79,7 @@ export default function RevisionCatalogo({ instrumentos, areas, puedeEditar, onC
       <div>
         <h2 className="font-semibold">Revisión del catálogo</h2>
         <p className="text-sm text-muted-foreground">Revisión automática de cada instrumento contra la norma y la media real del último trimestre. Solo señala; tú decides cada cambio.</p>
-        <p className="text-xs text-muted-foreground mt-1">🔴 {cuenta('rojo')} · 🟡 {cuenta('amarillo')} · 🟢 {cuenta('verde')}</p>
+        <p className="text-xs text-muted-foreground mt-1">🔴 {cuenta('rojo')} · 🟠 {cuenta('naranja')} · 🟢 {cuenta('verde')}</p>
       </div>
       <div className="overflow-x-auto border rounded-md">
         <Table>
@@ -95,7 +95,7 @@ export default function RevisionCatalogo({ instrumentos, areas, puedeEditar, onC
                 <TableCell>{areas.find(a => a.id === i.area_id)?.nombre ?? i.area_libre ?? '—'} · {isoDe(i) ?? '—'}</TableCell>
                 <TableCell>{i.spec_texto || i.especificacion || '—'}{i.spec_criterio_interno && <div className="text-xs text-muted-foreground">criterio interno</div>}</TableCell>
                 <TableCell className="tabular-nums">{medias?.get(i.id) != null ? medias.get(i.id)!.toFixed(1) : '—'}</TableCell>
-                <TableCell><ul className="text-xs space-y-0.5">{h.map((x, k) => <li key={k} className={x.nivel === 'rojo' ? 'text-destructive' : 'text-warning'}>{x.mensaje}</li>)}{!h.length && <li className="text-success">Sin observaciones</li>}</ul></TableCell>
+                <TableCell><ul className="text-xs space-y-0.5">{h.map((x, k) => <li key={k} className={x.nivel === 'rojo' ? 'text-destructive' : 'text-caution'}>{x.mensaje}</li>)}{!h.length && <li className="text-success">Sin observaciones</li>}</ul></TableCell>
                 {puedeEditar && <TableCell><Button size="icon" variant="ghost" aria-label={`Editar ${i.codigo}`} onClick={() => { setMotivo(''); setEdit({ ...i }); }}><Pencil className="h-4 w-4" /></Button></TableCell>}
               </TableRow>
             ))}

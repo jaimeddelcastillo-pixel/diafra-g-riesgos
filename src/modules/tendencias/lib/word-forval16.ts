@@ -6,6 +6,7 @@ import {
 } from "docx";
 
 import { identificadoresReporte,nombreArchivoReporte } from "./configuracion-reporte";
+import { firmantesReporte } from "./formato-forval16";
 import type { Bloque } from "./export-forval16";
 import { fmtDMY, specTxt } from "./export-forval16";
 import type { TextoForVal16 } from "./texto-forval16";
@@ -209,7 +210,7 @@ export async function generarWordForVal16(a: WordDocumentoArgs): Promise<{ blob:
         new TableRow({ children: [celda([pc("Recuadro de firmas.", { b: true })], W, { span: 3, head: true })] }),
         new TableRow({ children: [celda([pc(anulado ? "Documento ANULADO. No válido para su aplicación." : "El presente documento ha sido revisado en formato y contenido, y es aprobado para su emisión.", { sz: 9 })], W, { span: 3 })] }),
         new TableRow({ children: ["", "FIRMA", "FECHA"].map((t, i) => celda([pc(t, { b: true })], firmaCols[i], { head: true })) }),
-        ...f.firmantes.map((s) => new TableRow({ cantSplit: true, height: { value: 1100, rule: "atLeast" }, children: [
+        ...firmantesReporte(f.firmantes).map((s) => new TableRow({ cantSplit: true, height: { value: 1100, rule: "atLeast" }, children: [
           celda([pc(`${s.rol.toUpperCase()}:`, { b: true, al: AlignmentType.LEFT }), pc(s.nombre, { al: AlignmentType.LEFT }), pc(s.cargo, { al: AlignmentType.LEFT })], firmaCols[0]),
           celda([pc("")], firmaCols[1]), celda([pc("")], firmaCols[2]),
         ] })),
@@ -245,7 +246,7 @@ export async function generarWordForVal16(a: WordDocumentoArgs): Promise<{ blob:
     ? (b.opMin != null && b.opMax != null ? `${b.opMin} – ${b.opMax} ${b.unidad}` : b.opMin != null ? `≥ ${b.opMin} ${b.unidad}` : `≤ ${b.opMax} ${b.unidad}`) : "—");
   cuerpo.push(par("Variables de Control de Proceso (PPC) y CQA´s", { b: true, al: AlignmentType.CENTER, keep: true }));
   cuerpo.push(tablaSimple([["Variable", "Código de instrumento", "Ubicación", "Especificación normativa", "Rango de operación"],
-    ...ppc.map((b) => [b.variable, b.codigo, ubicacionTxt(b.ubicacion), specTxt(b.lie, b.lse, b.unidad, b.specTexto) + (b.pendientes?.some((x) => x.startsWith("Especificación")) ? " (pendiente de validar)" : ""), rangoOp(b)])], anchosPPC));
+    ...ppc.map((b) => [b.variable, b.codigo, ubicacionTxt(b.ubicacion), specTxt(b.lie, b.lse, b.unidad, b.specTexto, b.lieEstricto, b.lseEstricto) + (b.pendientes?.some((x) => x.startsWith("Especificación")) ? " (pendiente de validar)" : ""), rangoOp(b)])], anchosPPC));
 
   cuerpo.push(h1("Responsabilidades."), ...parrafosPlantilla(f.textos.s4, vars));
   cuerpo.push(h1("Abreviaturas, símbolos y definiciones."), ...parrafosPlantilla(f.textos.s5, vars));

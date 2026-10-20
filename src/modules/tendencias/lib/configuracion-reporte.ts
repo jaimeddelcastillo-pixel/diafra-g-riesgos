@@ -5,7 +5,7 @@ export function identificadoresReporte(formato?: FormatoForVal16 | null) {
     codigoFormato: textos?.codigoFormato || formato?.version_formato || 'Plantilla del reporte',
     codigoRegistro: textos?.codigoRegistro || 'Registro de reportes',
     versionRegistro: textos?.versionRegistro || '00',
-    prefijoArchivos: textos?.prefijoArchivos || textos?.codigoFormato || formato?.version_formato || 'Analisis-de-tendencias',
+    prefijoArchivos: textos?.prefijoArchivos || textos?.codigoFormato || '',
   };
 }
 export function nombreArchivoReporte(prefijo: string, partes: (string | number | null | undefined)[], extension: string) {

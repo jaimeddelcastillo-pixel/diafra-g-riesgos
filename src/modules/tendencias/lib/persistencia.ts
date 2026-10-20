@@ -19,9 +19,10 @@ export async function listarCatalogo(tabla: TablaCatalogo) {
 }
 export async function guardarCatalogo(tabla: TablaCatalogo, valores: Record<string,unknown>, id?: string) {
   const org=await empresaActiva();
-  const q=id ? supabase.from(tabla).update(valores as never).eq('org_id',org).eq('id',id) : supabase.from(tabla).insert({...valores,org_id:org} as never);
-  const {error}=await q;
+  const q=id ? supabase.from(tabla).update(valores as never).eq('org_id',org).eq('id',id).select('id') : supabase.from(tabla).insert({...valores,org_id:org} as never).select('id');
+  const {data,error}=await q;
   if(error) throw error;
+  return (data as {id:string}[] | null)?.[0]?.id ?? id;
 }
 export async function listarRegistros():Promise<Registro[]> {
   const org=await empresaActiva();
