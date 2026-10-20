@@ -484,6 +484,13 @@
       "when": 1792534598497,
       "tag": "0068_t4f_clases_apendice_a",
       "breakpoints": true
+    },
+    {
+      "idx": 69,
+      "version": "7",
+      "when": 1792534725436,
+      "tag": "0069_t4f_snapshot_apendice_compartido",
+      "breakpoints": true
     }
   ]
 }
