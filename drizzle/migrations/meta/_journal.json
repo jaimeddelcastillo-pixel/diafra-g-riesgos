@@ -477,6 +477,13 @@
       "when": 1792509083937,
       "tag": "0067_org_logos_policies_fix",
       "breakpoints": true
+    },
+    {
+      "idx": 68,
+      "version": "7",
+      "when": 1792534598497,
+      "tag": "0068_t4f_clases_apendice_a",
+      "breakpoints": true
     }
   ]
 }
