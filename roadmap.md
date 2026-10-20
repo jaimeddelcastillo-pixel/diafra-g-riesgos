@@ -1,5 +1,7 @@
 # Roadmap
 
+- [ ] T4e: plantilla Excel versionada, exportación de catálogo, vista previa sin escritura, aplicación admin/RS atómica motivada, equivalencias sin columnas nuevas y suite con alta/cambio/bloqueo/reversión; sin navegador/IA/dependencias ni motor.
+
 - [x] T4f: tabla normativa compartida NOM-241/NOM-059, citas Word, clases y sugerencias; nuevas emisiones congelan tabla común, históricos intactos; suite automática sin navegador/dependencias.
 
 - [x] Fase 1: Captura y Análisis adaptados desde atdiafra; exportación cruda única, pendientes/historial separados, cuatro secciones con gráficas, buscador/guía/consecutivo y avisos. Identificadores y descargas configurables; unicidad activa normalizada aplicada, adminqa sin duplicados activos ni retiros. Suite 143/143 y compilación OK; sin navegador/IA/dependencias. Verificación visual y funcional a cargo de Jaime.
