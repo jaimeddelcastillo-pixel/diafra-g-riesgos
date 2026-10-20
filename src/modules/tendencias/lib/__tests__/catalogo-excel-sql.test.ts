@@ -21,6 +21,7 @@ describe.skipIf(!process.env.PGHOST)('T4e transacción PostgreSQL aislada',()=>{
       CREATE TRIGGER t4e_audit AFTER INSERT OR UPDATE ON tend_sistemas_hvac FOR EACH ROW EXECUTE FUNCTION pg_temp.t4e_auditar();
       ${body.replaceAll('public.','pg_temp.').replace('SET search_path=public','SET search_path=pg_temp,public')}
       ${readFileSync('drizzle/migrations/0071_t4e_catalogo_consistencia_saturacion.sql','utf8').replaceAll('public.','pg_temp.')}
+      ${readFileSync('drizzle/migrations/0072_t4e_saturacion_estado_y_conflictos.sql','utf8').replaceAll('public.','pg_temp.')}
       DO $$ DECLARE org uuid; pkg jsonb; before_count integer; failed boolean:=false; row_before jsonb; BEGIN
         SELECT org_id INTO org FROM pg_temp.contexto_org_actual();
         IF org IS NULL THEN RAISE EXCEPTION 'Prueba requiere empresa es_prueba'; END IF;
@@ -38,6 +39,17 @@ describe.skipIf(!process.env.PGHOST)('T4e transacción PostgreSQL aislada',()=>{
         failed:=false;pkg:=jsonb_set(pkg,'{version}','"otra"');
         BEGIN PERFORM pg_temp.tend_importar_catalogo_excel(pkg,'Prueba versión inválida'); EXCEPTION WHEN raise_exception THEN failed:=true; END;
         IF NOT failed THEN RAISE EXCEPTION 'Versión inválida aceptada'; END IF;
+        pkg:=jsonb_build_object('version','T4e-1','filas',jsonb_build_array(
+          jsonb_build_object('hoja','Areas','estado','nuevo','errores','[]'::jsonb,'anterior',null,'valores',jsonb_build_object('codigo','AREA-QA','nombre','Área QA','iso','ISO-8','hvac_codigo','T4E-QA','activo',true)),
+          jsonb_build_object('hoja','Instrumentos','estado','nuevo','errores','[]'::jsonb,'anterior',null,'valores',jsonb_build_object('codigo','FILTRO-QA','tipo','manometro_filtro','clase_instrumento','filtro_ducto','parametro','ΔP de filtro','area_codigo','AREA-QA','escala_unidad','Pa','spec_estado','pendiente','activo',true)),
+          jsonb_build_object('hoja','Objetivos_presion','estado','nuevo','errores','[]'::jsonb,'anterior',null,'valores',jsonb_build_object('codigo','OBJ-QA','nombre','Objetivo QA','uso','par de cuartos','instrumento_codigo','FILTRO-QA','cuarto_x_codigo','AREA-QA','limite_normativo_pa',5,'unidad','Pa','activo',true)),
+          jsonb_build_object('hoja','Objetivos_presion','estado','nuevo','errores','[]'::jsonb,'anterior',null,'valores',jsonb_build_object('uso','saturación','instrumento_codigo','FILTRO-QA','dp_final_fabricante',250,'escala_unidad','Pa','activo',true))));
+        PERFORM pg_temp.tend_importar_catalogo_excel(pkg,'Prueba relación y saturación');
+        IF NOT EXISTS(SELECT 1 FROM tend_instrumentos i JOIN tend_areas a ON a.id=i.area_id JOIN tend_sistemas_hvac h ON h.id=a.hvac_id JOIN tend_objetivos_presion o ON o.instrumento_id=i.id WHERE i.codigo='FILTRO-QA' AND i.dp_final_fabricante=250 AND o.limite_normativo_pa=5 AND h.codigo='T4E-QA') THEN RAISE EXCEPTION 'Relaciones de catálogo fallaron'; END IF;
+        SELECT to_jsonb(i) INTO row_before FROM tend_instrumentos i WHERE codigo='FILTRO-QA';
+        pkg:=jsonb_build_object('version','T4e-1','filas',jsonb_build_array(jsonb_build_object('hoja','Instrumentos','estado','cambia','errores','[]'::jsonb,'anterior',row_before,'valores',jsonb_build_object('codigo','FILTRO-QA','tipo','manometro_filtro','clase_instrumento','filtro_ducto','parametro','ΔP de filtro','area_codigo','AREA-QA','escala_unidad','Pa','spec_estado','pendiente','activo',false))));
+        PERFORM pg_temp.tend_importar_catalogo_excel(pkg,'Prueba desactivación motivada');
+        IF NOT EXISTS(SELECT 1 FROM tend_instrumentos WHERE codigo='FILTRO-QA' AND NOT activo) THEN RAISE EXCEPTION 'Retiro sin borrar falló'; END IF;
       END $$;
       SELECT 'T4e SQL OK'; ROLLBACK;`;
     const result=execFileSync('psql',['-X','-v','ON_ERROR_STOP=1','-At'],{input:setup,encoding:'utf8',stdio:['pipe','pipe','pipe']});
