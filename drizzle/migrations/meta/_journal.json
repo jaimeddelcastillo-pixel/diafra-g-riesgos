@@ -505,6 +505,13 @@
       "when": 1792537167272,
       "tag": "0071_t4e_catalogo_consistencia_saturacion",
       "breakpoints": true
+    },
+    {
+      "idx": 72,
+      "version": "7",
+      "when": 1792537277197,
+      "tag": "0072_t4e_saturacion_estado_y_conflictos",
+      "breakpoints": true
     }
   ]
 }

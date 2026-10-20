@@ -73,6 +73,9 @@ export function exportarFilas(c:Catalogo):Record<Hoja,Fila[]> {
 export async function crearPlantilla(c?:Catalogo):Promise<Uint8Array> {
   const wb=XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([['Versión de plantilla',VERSION_CATALOGO],['Catálogo de Tendencias','IM-23'],['Instrucciones','Llenar solo columnas con encabezado. * obligatorio. EJEMPLO en la columna sin encabezado marca filas ignoradas; no usar esa marca en datos.'],...ayudas]),'Instrucciones');
+  const instrucciones=wb.Sheets.Instrucciones;
+  instrucciones['!cols']=[{wch:38},{wch:110}];
+  for(const addr of Object.keys(instrucciones).filter(a=>!a.startsWith('!')))instrucciones[addr].s={font:{name:'Arial',sz:11},alignment:{wrapText:true,vertical:'top'}};
   const datos=c?exportarFilas(c):null;
   for(const hoja of Object.keys(HOJAS) as Hoja[]) {
     const headers=HOJAS[hoja];
@@ -161,7 +164,9 @@ export function previsualizarCatalogo(libro:LibroCatalogo,c:Catalogo,normas:Norm
           const i=libro.hojas.Instrumentos.find(i=>normal(i.codigo)===normal(r.instrumento)); const actual=porCodigo(c.instrumentos,r.instrumento)[0];
           if((i?.tipo_analisis ?? actual?.clase_instrumento)!=='Filtro o ducto' && (i?.tipo_analisis ?? actual?.clase_instrumento)!=='filtro_ducto')err.push('Saturación requiere filtro o ducto');
           if(i && texto(i.dp_saturacion)!=='' && Number(i.dp_saturacion)!==r.valor)err.push('Saturación contradice dp_saturacion del instrumento');
-          valores={instrumento_codigo:r.instrumento,uso:r.uso,dp_final_fabricante:r.valor,escala_unidad:r.unidad};prev=actual?[actual]:[];
+          if(i && texto(i.unidad)!==texto(r.unidad))err.push('Unidad de saturación distinta a la del instrumento');
+          if(i && texto(i.activo) && (i.activo==='Sí')!==r.activo)err.push('Estado de saturación contradice activo del instrumento');
+          valores={instrumento_codigo:r.instrumento,uso:r.uso,dp_final_fabricante:r.valor,escala_unidad:r.unidad,activo:r.activo};prev=actual?[actual]:[];
         } else {
           valores={codigo,nombre:texto(r.nombre)||codigo,instrumento_codigo:r.instrumento,uso:r.uso,cuarto_x_codigo:texto(r.area_mayor)||null,cuarto_y_codigo:texto(r.area_menor)||null,limite_normativo_pa:r.valor,unidad:r.unidad,activo:r.activo};prev=porCodigo(c.objetivos,codigo);
         }
