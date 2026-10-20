@@ -19,7 +19,7 @@ export default function TablaLecturas({ quienPorDefecto, semana, titulo, unidad,
     return <td className={`${celda} ${out ? 'bg-destructive/10' : ''} ${dudoso ? 'bg-warning/10' : ''}`} title={out ? `Fuera de límite: ${limite}` : dudoso ? 'Lectura marcada de baja confianza por la IA — verifica' : aviso ?? (p?._edited ? 'Editado' : undefined)}>
       <input aria-label={`${campo === 'lecturas_hr' ? 'HR' : 'Valor'} ${dia} ${turno}`} type="number" step="any" inputMode="decimal" disabled={!puedeEditar || !!p?._na}
         value={p?.valor ?? ''} onChange={e => editar(campo, dia, turno, { valor: e.target.value === '' ? null : Number(e.target.value), ...(quienPorDefecto && !p?.quien ? { quien: quienPorDefecto } : {}) })}
-        className={`w-full border-0 bg-transparent text-right font-mono text-xs ${out ? 'font-semibold text-destructive' : ''}`} />
+        className={`min-w-[3.5rem] w-full border-0 bg-transparent text-right font-mono text-xs ${out ? 'font-semibold text-destructive' : ''}`} />
       {aviso && <span role="alert" className="block text-[10px] text-destructive">{aviso}</span>}
     </td>;
   };
@@ -50,8 +50,8 @@ export default function TablaLecturas({ quienPorDefecto, semana, titulo, unidad,
             </div>}
           </td>}
           <td className={celda}>{turno}</td>
-          <td className={celda}><input type="time" aria-label={`Hora ${dia} ${turno}`} value={p?.hora ?? ''} disabled={!puedeEditar || na} onChange={e => editar('lecturas', dia, turno, { hora: e.target.value })} className="w-full border-0 bg-transparent text-xs" /></td>
-          <td className={celda}><input type="text" aria-label={`Antefirma ${dia} ${turno}`} placeholder="Iniciales" value={p?.quien ?? ''} disabled={!puedeEditar || na} onChange={e => editar('lecturas', dia, turno, { quien: e.target.value })} className="w-full border-0 bg-transparent text-xs" /></td>
+          <td className={celda}><input type="time" aria-label={`Hora ${dia} ${turno}`} value={p?.hora ?? ''} disabled={!puedeEditar || na} onChange={e => editar('lecturas', dia, turno, { hora: e.target.value })} className="min-w-[6.5rem] w-full border-0 bg-transparent text-xs" /></td>
+          <td className={celda}><input type="text" aria-label={`Antefirma ${dia} ${turno}`} placeholder="Iniciales" value={p?.quien ?? ''} disabled={!puedeEditar || na} onChange={e => editar('lecturas', dia, turno, { quien: e.target.value })} className="min-w-[5rem] w-full border-0 bg-transparent text-xs" /></td>
           {valor('lecturas', dia, turno, p)}
           {esTHR && valor('lecturas_hr', dia, turno, punto('lecturas_hr', dia, turno))}
           <td className={`${celda} text-center`}><input type="checkbox" aria-label={`N/A ${dia} ${turno}`} checked={na} disabled={!puedeEditar} title="Marcar día/turno como No Aplica (festivo, paro, etc.)"
