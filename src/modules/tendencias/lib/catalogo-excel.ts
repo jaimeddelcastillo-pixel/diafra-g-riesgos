@@ -1,6 +1,6 @@
 import * as XLSX from 'xlsx-js-style';
 import JSZip from 'jszip';
-import { ISO_CLASES, type Instrumento } from './catalogos';
+import { ISO_CLASES, etiquetaIso, isoDesdeEtiqueta, type Instrumento } from './catalogos';
 import { CLASES_INSTRUMENTO, VARIABLES_INSTRUMENTO, revisarInstrumento, textoEspecificacion, type NormaEspecificacion } from './norma';
 
 export const VERSION_CATALOGO = 'T4e-1';
@@ -28,13 +28,13 @@ const clave = (v:string) => v.replace(/\*$/,'');
 const igual = (a:unknown,b:unknown) => (a ?? null)===(b ?? null);
 const porCodigo = (rows:Fila[],code:unknown) => rows.filter(r=>normal(r.codigo)===normal(code));
 const listas: Partial<Record<Hoja,Record<string,readonly string[]>>> = {
-  Sistemas_HVAC:{activo:siNo}, Areas:{clase:ISO_CLASES,activo:siNo},
+  Sistemas_HVAC:{activo:siNo}, Areas:{clase:ISO_CLASES.map(etiquetaIso),activo:siNo},
   Instrumentos:{tipo_equipo:Object.values(TIPOS_EQUIPO),tipo_analisis:CLASES_INSTRUMENTO.map(c=>c.label),variable:VARIABLES_INSTRUMENTO,lie_estricto:siNo,lse_estricto:siNo,criterio_interno:siNo,estado_especificacion:['pendiente','validada','na'],activo:siNo},
   Objetivos_presion:{uso:['par de cuartos','saturación'],activo:siNo},
 };
 const ejemplos:Record<Hoja,Fila> = {
   Sistemas_HVAC:{codigo:'EJEMPLO-UMA',nombre:'Ejemplo UMA',activo:'Sí'},
-  Areas:{codigo:'EJEMPLO-AREA',nombre:'Ejemplo área',clase:'ISO-8',sistema_hvac:'EJEMPLO-UMA',activo:'Sí'},
+  Areas:{codigo:'EJEMPLO-AREA',nombre:'Ejemplo área',clase:'Clase D (ISO-8)',sistema_hvac:'EJEMPLO-UMA',activo:'Sí'},
   Instrumentos:{codigo:'EJEMPLO-INS',tipo_equipo:'Manómetro diferencial',tipo_analisis:'Diferencial de sala',variable:'Presión diferencial',area:'EJEMPLO-AREA',unidad:'Pa',lie:5,lie_estricto:'Sí',estado_especificacion:'pendiente',activo:'Sí'},
   Objetivos_presion:{instrumento:'EJEMPLO-INS',uso:'par de cuartos',area_mayor:'EJEMPLO-AREA',valor:5,unidad:'Pa',codigo:'EJEMPLO-OBJ',activo:'Sí'},
 };
@@ -63,7 +63,7 @@ export function exportarFilas(c:Catalogo):Record<Hoja,Fila[]> {
   const code=(rows:Fila[],id:unknown)=>texto(rows.find(r=>r.id===id)?.codigo);
   return {
     Sistemas_HVAC:c.hvac.map(r=>({codigo:r.codigo,nombre:r.nombre_uma,descripcion:r.descripcion,activo:r.activo===false?'No':'Sí'})),
-    Areas:c.areas.map(r=>({codigo:r.codigo,nombre:r.nombre,clase:r.iso,sistema_hvac:code(c.hvac,r.hvac_id),activo:r.activo===false?'No':'Sí'})),
+    Areas:c.areas.map(r=>({codigo:r.codigo,nombre:r.nombre,clase:etiquetaIso(r.iso),sistema_hvac:code(c.hvac,r.hvac_id),activo:r.activo===false?'No':'Sí'})),
     Instrumentos:c.instrumentos.map(r=>Object.fromEntries(Object.entries(MAPA_INSTRUMENTO).map(([k,v])=>[k,k==='area'?code(c.areas,r.area_id):k==='tipo_equipo'?TIPOS_EQUIPO[r.tipo as keyof typeof TIPOS_EQUIPO] ?? r.tipo:k==='tipo_analisis'?CLASES_INSTRUMENTO.find(x=>x.value===r.clase_instrumento)?.label ?? '':booleanos.includes(k)?(r[v]?'Sí':'No'):r[v] ?? '']))),
     Objetivos_presion:c.objetivos.map(r=>({instrumento:code(c.instrumentos,r.instrumento_id),uso:'par de cuartos',area_mayor:code(c.areas,r.cuarto_x_id),area_menor:code(c.areas,r.cuarto_y_id),valor:r.limite_normativo_pa,unidad:r.unidad,codigo:r.codigo,nombre:r.nombre,activo:r.activo===false?'No':'Sí'})),
   };
@@ -94,7 +94,7 @@ export async function crearPlantilla(c?:Catalogo):Promise<Uint8Array> {
   for(const hoja of Object.keys(HOJAS) as Hoja[]) {
     const path=`xl/worksheets/sheet${index++}.xml`; const entry=zip.file(path); if(!entry)continue;
     const valid=Object.entries(listas[hoja] ?? {}).map(([key,values])=>{const col=XLSX.utils.encode_col(HOJAS[hoja].findIndex(h=>clave(h)===key));return `<dataValidation type="list" allowBlank="1" showErrorMessage="1" errorTitle="Valor no válido" error="Selecciona un valor de la lista" sqref="${col}2:${col}1048576"><formula1>&quot;${escape(values.join(','))}&quot;</formula1></dataValidation>`;});
-    zip.file(path,(await entry.async('string')).replace('</worksheet>',`<dataValidations count="${valid.length}">${valid.join('')}</dataValidations></worksheet>`));
+    zip.file(path,insertarValidaciones(await entry.async('string'),`<dataValidations count="${valid.length}">${valid.join('')}</dataValidations>`));
   }
   return zip.generateAsync({type:'uint8array'});
 }
@@ -135,7 +135,7 @@ export function previsualizarCatalogo(libro:LibroCatalogo,c:Catalogo,normas:Norm
       if(hoja==='Sistemas_HVAC'){valores={codigo,nombre_uma:texto(r.nombre),descripcion:texto(r.descripcion),activo:r.activo};prev=porCodigo(c.hvac,codigo);}
       if(hoja==='Areas'){
         if(!refs('Sistemas_HVAC',c.hvac,r.sistema_hvac))err.push('Sistema HVAC inexistente');
-        valores={codigo,nombre:texto(r.nombre),iso:r.clase,hvac_codigo:texto(r.sistema_hvac)||null,activo:r.activo};prev=porCodigo(c.areas,codigo);
+        valores={codigo,nombre:texto(r.nombre),iso:isoDesdeEtiqueta(r.clase),hvac_codigo:texto(r.sistema_hvac)||null,activo:r.activo};prev=porCodigo(c.areas,codigo);
       }
       if(hoja==='Instrumentos'){
         if(!refs('Areas',c.areas,r.area))err.push('Área inexistente');
@@ -154,7 +154,7 @@ export function previsualizarCatalogo(libro:LibroCatalogo,c:Catalogo,normas:Norm
         valores.spec_texto_hr=textoEspecificacion(r.lie_hr as number|null,r.lse_hr as number|null,false,false,'%');
         prev=porCodigo(c.instrumentos,codigo);
         if(prev[0]?.area_estado==='validada' && !texto(r.area))err.push('Área validada sin área asignada');
-        const iso=libro.hojas.Areas.find(a=>normal(a.codigo)===normal(r.area))?.clase ?? porCodigo(c.areas,r.area)[0]?.iso;
+        const iso=libro.hojas.Areas.find(a=>normal(a.codigo)===normal(r.area))?.clase;const iso2=iso?isoDesdeEtiqueta(iso):porCodigo(c.areas,r.area)[0]?.iso;
         avisos.push(...revisarInstrumento({...prev[0],...valores} as unknown as Instrumento,texto(iso),medias.get(texto(prev[0]?.id)),normas).map(h=>h.mensaje));
       }
       if(hoja==='Objetivos_presion'){
@@ -181,4 +181,12 @@ export function previsualizarCatalogo(libro:LibroCatalogo,c:Catalogo,normas:Norm
   }
   errores.push(...filas.flatMap(f=>f.errores.map(e=>`${f.hoja} ${f.renglon}: ${e}`)));
   return {filas,errores,paquete:{version:libro.version,filas}};
+}
+/** Inserta dataValidations en la posición que exige el esquema OOXML (CT_Worksheet). */
+const DESPUES_DE_VALIDACIONES=['hyperlinks','printOptions','pageMargins','pageSetup','headerFooter','rowBreaks','colBreaks','customProperties','cellWatches','ignoredErrors','smartTags','drawing','legacyDrawing','legacyDrawingHF','drawingHF','picture','oleObjects','controls','webPublishItems','tableParts','extLst'];
+export function insertarValidaciones(xml:string,bloque:string):string{
+  let pos=-1;
+  for(const t of DESPUES_DE_VALIDACIONES){const m=new RegExp(`<${t}[\\s>/]`).exec(xml);if(m && (pos<0 || m.index<pos))pos=m.index;}
+  if(pos<0)pos=xml.lastIndexOf('</worksheet>');
+  return xml.slice(0,pos)+bloque+xml.slice(pos);
 }
