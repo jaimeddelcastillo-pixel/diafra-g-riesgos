@@ -46,7 +46,7 @@ describe('T4f Apéndice A compartido', () => {
   it.each(['Área limpia','Área gris'])('%s no establece valores salvo temperatura en limpia', clase => {
     expect(APENDICE_A.find(c => c.clase === clase)).toMatchObject({ particulas05: 'n.a.', particulas5: 'n.a.', monitoreo: 'n.a.', ufc: 'n.a.', presion: 'n.a.', aire: 'n.a.', hr: 'n.a.', temperatura: clase === 'Área limpia' ? '18–25 °C' : 'n.a.' });
   });
-  it.each(['Clase A','Clase B','Área limpia','Área gris'])('permite %s en Áreas', clase => expect(ISO_CLASES).toContain(clase));
+  it.each(['ISO-5','Clase B','Área limpia','Área gris'])('permite %s en Áreas', clase => expect(ISO_CLASES).toContain(clase));
   it('ISO-5 recibe la sugerencia de Clase A sin validar el instrumento', () => {
     const n: NormaEspecificacion = { id:'qa', norma:REFERENCIA_APENDICE_A, apartado:'Apéndice A', clase_iso:'Clase A', variable:'presion', texto:'> 15 Pa', lie:15, lse:null, lie_estricto:true, lse_estricto:false, unidad:'Pa', sin_valor:false, nota:null, activo:true };
     expect(sugerir([n], 'ISO-5', 'presion')).toMatchObject({ lie:15, lie_estricto:true });
