@@ -77,7 +77,7 @@ export async function crearPlantilla(c?:Catalogo):Promise<Uint8Array> {
   for(const hoja of Object.keys(HOJAS) as Hoja[]) {
     const headers=HOJAS[hoja];
     const rows=[...datos?.[hoja] ?? []];
-    const ws=XLSX.utils.aoa_to_sheet([headers,[...headers.map(h=>ejemplos[hoja][clave(h)] ?? ''),'EJEMPLO'],...rows.map(r=>headers.map(h=>r[clave(h)] ?? ''))]);
+    const ws=XLSX.utils.aoa_to_sheet([[...headers],[...headers.map(h=>ejemplos[hoja][clave(h)] ?? ''),'EJEMPLO'],...rows.map(r=>headers.map(h=>r[clave(h)] ?? ''))]);
     ws['!cols']=headers.map(()=>({wch:24})); ws['!autofilter']={ref:`A1:${XLSX.utils.encode_col(headers.length-1)}${rows.length+2}`};
     for(const addr of Object.keys(ws).filter(a=>!a.startsWith('!'))) {
       const {r}=XLSX.utils.decode_cell(addr);
@@ -123,8 +123,8 @@ export function previsualizarCatalogo(libro:LibroCatalogo,c:Catalogo,normas:Norm
       const r={...raw};const err:string[]=[]; const avisos:string[]=[];const renglon=Number(r._renglon ?? index+2);
       for(const h of HOJAS[hoja])if(h.endsWith('*') && !texto(r[clave(h)]))err.push(`Falta ${clave(h)}`);
       for(const [key,options] of Object.entries(listas[hoja] ?? {}))if(texto(r[key]) && !options.includes(texto(r[key])))err.push(`${key}: lista inválida`);
-      for(const k of numericos.filter(k=>k in r)) { const v=texto(r[k]);r[k]=v===''?null:Number(v.replace(',','.'));if(v!=='' && !Number.isFinite(r[k]))err.push(`${k}: número inválido`); }
-      for(const k of booleanos.filter(k=>k in r))r[k]=texto(r[k])===''?(k==='activo'?true:k==='criterio_interno'?false:null):r[k]==='Sí';
+      for(const k of numericos.filter(k=>HOJAS[hoja].some(h=>clave(h)===k))) { const v=texto(r[k]);r[k]=v===''?null:Number(v.replace(',','.'));if(v!=='' && !Number.isFinite(r[k]))err.push(`${k}: número inválido`); }
+      for(const k of booleanos.filter(k=>HOJAS[hoja].some(h=>clave(h)===k)))r[k]=texto(r[k])===''?(k==='activo'?true:k==='criterio_interno'?false:null):r[k]==='Sí';
       const codigo=hoja==='Objetivos_presion'?(texto(r.codigo)||`OBJ-${texto(r.instrumento)}`):texto(r.codigo);
       const unique=hoja==='Objetivos_presion' && r.uso==='saturación'?`saturacion:${normal(r.instrumento)}`:normal(codigo);
       if(vistos.has(unique))err.push('Código duplicado');vistos.add(unique);
@@ -150,6 +150,7 @@ export function previsualizarCatalogo(libro:LibroCatalogo,c:Catalogo,normas:Norm
         valores.spec_texto=textoEspecificacion(r.lie as number|null,r.lse as number|null,!!r.lie_estricto,!!r.lse_estricto,texto(r.unidad));
         valores.spec_texto_hr=textoEspecificacion(r.lie_hr as number|null,r.lse_hr as number|null,false,false,'%');
         prev=porCodigo(c.instrumentos,codigo);
+        if(prev[0]?.area_estado==='validada' && !texto(r.area))err.push('Área validada sin área asignada');
         const iso=libro.hojas.Areas.find(a=>normal(a.codigo)===normal(r.area))?.clase ?? porCodigo(c.areas,r.area)[0]?.iso;
         avisos.push(...revisarInstrumento({...prev[0],...valores} as unknown as Instrumento,texto(iso),medias.get(texto(prev[0]?.id)),normas).map(h=>h.mensaje));
       }
