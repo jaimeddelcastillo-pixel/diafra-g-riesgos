@@ -2,8 +2,15 @@ import { describe, it, expect } from 'vitest';
 import { APENDICE_A, REFERENCIA_APENDICE_A, citarNormasCompartidas } from '../apendice-a';
 import { ISO_CLASES } from '../catalogos';
 import { sugerir, type NormaEspecificacion } from '../norma';
+import { readFileSync } from 'node:fs';
+import { TABLA_APENDICE_A } from '../apendice-a';
 
 describe('T4f Apéndice A compartido', () => {
+  it('las nuevas emisiones congelan exactamente los mismos valores normativos que el Word', () => {
+    const sql = readFileSync('drizzle/migrations/0069_t4f_snapshot_apendice_compartido.sql','utf8');
+    const tabla = sql.match(/\$tabla\$([\s\S]*?)\$tabla\$/)?.[1];
+    expect(tabla?.split('\n').map(r => r.split(' | '))).toEqual(TABLA_APENDICE_A.split('\n').map(r => r.split(' | ')));
+  });
   const filas = [
     ['Clase A', '3 520 / 3 520', '20 / 20', 'Continuo', 'n.a.'],
     ['Clase B', '3 520 / 352 000', '29 / 2 900', 'Cada 3 meses', '20 a 50'],
