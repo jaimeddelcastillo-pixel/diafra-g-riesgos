@@ -92,8 +92,8 @@ export async function cargarConfiguracion(nombre:string,logo:string|null):Promis
 export async function guardarConfiguracion(f:FormatoForVal16,autoemision:boolean) {
   const org=await empresaActiva();
   const {data:ult,error:e}=await supabase.from('tend_formato').select('version').eq('org_id',org).order('version',{ascending:false}).limit(1).maybeSingle(); if(e) throw e;
-  const textos={...f.textos,...{empresa:f.identidad?.nombre,logoDescripcion:f.identidad?.logoDescripcion,confidencialidad:f.identidad?.confidencialidad}};
-  const {error}=await supabase.from('tend_formato').insert({org_id:org,version:(ult?.version ?? 0)+1,version_formato:f.version_formato,logo:f.logo,firmantes:f.firmantes as unknown as Json,textos:textos as Json,tabla_iso:f.textos.tablaClases.split('\n').map(r=>r.split('|').map(c=>c.trim()))}); if(error) throw error;
+  const textos={...f.textos,tablaClases:TABLA_APENDICE_A,...{empresa:f.identidad?.nombre,logoDescripcion:f.identidad?.logoDescripcion,confidencialidad:f.identidad?.confidencialidad}};
+  const {error}=await supabase.from('tend_formato').insert({org_id:org,version:(ult?.version ?? 0)+1,version_formato:f.version_formato,logo:f.logo,firmantes:f.firmantes as unknown as Json,textos:textos as Json,tabla_iso:TABLA_APENDICE_A.split('\n').map(r=>r.split('|').map(c=>c.trim()))}); if(error) throw error;
   const {error:ce}=await supabase.from('tend_config').upsert({org_id:org,permitir_autoemision:autoemision},{onConflict:'org_id'}); if(ce) throw ce;
 }
 // T4c: catálogo normativo (lectura global; solo super_admin escribe) y revisión del catálogo.
