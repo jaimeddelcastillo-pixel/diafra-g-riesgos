@@ -155,7 +155,7 @@ export function previsualizarCatalogo(libro:LibroCatalogo,c:Catalogo,normas:Norm
         prev=porCodigo(c.instrumentos,codigo);
         if(prev[0]?.area_estado==='validada' && !texto(r.area))err.push('Área validada sin área asignada');
         const iso=libro.hojas.Areas.find(a=>normal(a.codigo)===normal(r.area))?.clase;const iso2=iso?isoDesdeEtiqueta(iso):porCodigo(c.areas,r.area)[0]?.iso;
-        avisos.push(...revisarInstrumento({...prev[0],...valores} as unknown as Instrumento,texto(iso),medias.get(texto(prev[0]?.id)),normas).map(h=>h.mensaje));
+        avisos.push(...revisarInstrumento({...prev[0],...valores} as unknown as Instrumento,texto(iso2),medias.get(texto(prev[0]?.id)),normas).map(h=>h.mensaje));
       }
       if(hoja==='Objetivos_presion'){
         if(!refs('Instrumentos',c.instrumentos,r.instrumento))err.push('Instrumento inexistente');
