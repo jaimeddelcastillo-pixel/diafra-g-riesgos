@@ -3,6 +3,10 @@ import { Camera, Upload, Sparkles, CalendarDays } from 'lucide-react';
 import { toast } from 'sonner';
 import LoteFotosImporter from './LoteFotosImporter';
 import { lunesDe, type Registro } from './lib/semanas';
+import { useQuery } from '@tanstack/react-query';
+import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
+import { empresaActiva } from './lib/persistencia';
 
 const TIPOS = ['image/png', 'image/jpeg', 'image/webp'];
 const PIE: Record<string, string> = { presiones: 'en Pa', filtros: 'en Pa', temphr: 'de temperatura y humedad relativa' };
@@ -12,6 +16,9 @@ const PIE: Record<string, string> = { presiones: 'en Pa', filtros: 'en Pa', temp
 export default function DigitalizarBitacora({ registro, nombreModulo, lunes, onLunes, disabled, onFoto, onConfirmado }: { registro: Registro; nombreModulo: string; lunes: string; onLunes: (f: string) => void; disabled: boolean; onFoto: (f: File) => void; onConfirmado: () => void }) {
   const [drag, setDrag] = useState(false);
   const [fecha, setFecha] = useState(lunes);
+  const auth = useAuth();
+  const verConsumo = auth.orgRole === 'admin' || auth.orgRole === 'responsable_sanitario';
+  const consumo = useQuery({ queryKey: ['tend-consumo', auth.orgId], enabled: verConsumo && !!auth.orgId, queryFn: async () => { const org = await empresaActiva(); const { count, error } = await supabase.from('tend_extracciones').select('id', { count: 'exact', head: true }).eq('org_id', org); if (error) throw error; return count ?? 0; } });
   if (registro.modulo === 'agua') return null;
   const elegir = (f?: File) => { if (!f) return; if (!TIPOS.includes(f.type)) { toast.error('Solo fotos JPG, PNG o WEBP'); return; } onFoto(f); };
   const zona = 'flex min-h-36 cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed p-5 transition-colors';
@@ -20,6 +27,7 @@ export default function DigitalizarBitacora({ registro, nombreModulo, lunes, onL
       <div>
         <h3 className="flex items-center gap-2 text-base font-semibold text-foreground"><Sparkles className="h-4 w-4 text-primary" /> Digitalizar bitácora de {nombreModulo.toLowerCase()}</h3>
         <p className="mt-1 text-sm text-muted-foreground">Una foto = una semana (Lunes–Domingo, 3 turnos). La IA extrae los valores escritos {PIE[registro.modulo] ?? ''}; tú revisas antes de guardar.</p>
+        {verConsumo && <p className="mt-1 text-xs text-muted-foreground">Consumo de la empresa: {consumo.data ?? '…'} extracciones</p>}
       </div>
       <div className="shrink-0"><LoteFotosImporter key={registro.id} registro={registro} disabled={disabled} onConfirmado={onConfirmado} /></div>
     </div>

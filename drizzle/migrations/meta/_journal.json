@@ -470,6 +470,13 @@
       "when": 1792452656811,
       "tag": "0066_f4a_importar_atdiafra",
       "breakpoints": true
+    },
+    {
+      "idx": 67,
+      "version": "7",
+      "when": 1792509083937,
+      "tag": "0067_org_logos_policies_fix",
+      "breakpoints": true
     }
   ]
 }
