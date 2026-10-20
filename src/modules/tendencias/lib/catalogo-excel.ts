@@ -125,7 +125,7 @@ export function previsualizarCatalogo(libro:LibroCatalogo,c:Catalogo,normas:Norm
     for(const [index,raw] of libro.hojas[hoja].entries()) {
       const r={...raw};const err:string[]=[]; const avisos:string[]=[];const renglon=Number(r._renglon ?? index+2);
       for(const h of HOJAS[hoja])if(h.endsWith('*') && !texto(r[clave(h)]))err.push(`Falta ${clave(h)}`);
-      for(const [key,options] of Object.entries(listas[hoja] ?? {}))if(texto(r[key]) && !options.includes(texto(r[key])))err.push(`${key}: lista inválida`);
+      for(const [key,options] of Object.entries(listas[hoja] ?? {}))if(texto(r[key]) && !options.includes(texto(r[key])) && !(key==='clase' && (ISO_CLASES as string[]).includes(isoDesdeEtiqueta(r[key]))))err.push(`${key}: lista inválida`);
       for(const k of numericos.filter(k=>HOJAS[hoja].some(h=>clave(h)===k))) { const v=texto(r[k]);r[k]=v===''?null:Number(v.replace(',','.'));if(v!=='' && !Number.isFinite(r[k]))err.push(`${k}: número inválido`); }
       for(const k of booleanos.filter(k=>HOJAS[hoja].some(h=>clave(h)===k)))r[k]=texto(r[k])===''?(k==='activo'?true:k==='criterio_interno'?false:null):r[k]==='Sí';
       const codigo=hoja==='Objetivos_presion'?(texto(r.codigo)||`OBJ-${texto(r.instrumento)}`):texto(r.codigo);
