@@ -27,7 +27,8 @@ export function variablesDe(i: Pick<Instrumento, "tipo">): VariableNorma[] {
 
 export function sugerir(normas: NormaEspecificacion[], iso: string | null | undefined, variable: VariableNorma): Sugerencia | null {
   if (!iso) return null;
-  const n = normas.find((x) => x.activo && x.clase_iso === iso && x.variable === variable);
+  const clase = iso === 'ISO-5' ? 'Clase A' : iso;
+  const n = normas.find((x) => x.activo && x.clase_iso === clase && x.variable === variable);
   if (!n) return null;
   return {
     texto: n.texto, lie: n.lie, lse: n.lse, lie_estricto: n.lie_estricto, lse_estricto: n.lse_estricto,

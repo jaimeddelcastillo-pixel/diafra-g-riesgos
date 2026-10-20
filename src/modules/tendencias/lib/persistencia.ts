@@ -3,6 +3,7 @@ import type { Json } from '@/integrations/supabase/types';
 import { FORMATO_DEFAULT, type FormatoForVal16, type Firmante } from './formato-forval16';
 import type { Registro, Semana } from './semanas';
 import { compressImage } from './compress-image';
+import { TABLA_APENDICE_A, citarNormasCompartidas } from './apendice-a';
 
 export type TablaCatalogo = 'tend_sistemas_hvac' | 'tend_areas' | 'tend_instrumentos' | 'tend_objetivos_presion' | 'tend_cambios_filtro';
 export async function empresaActiva() {
@@ -83,15 +84,16 @@ export async function cargarConfiguracion(nombre:string,logo:string|null):Promis
     supabase.from('tend_config').select('*').eq('org_id',org).maybeSingle()]);
   if(error || e) throw error ?? e;
   const textos: FormatoForVal16['textos'] & Record<string,string>={...FORMATO_DEFAULT.textos,...(f?.textos as Record<string,string> ?? {})};
-  if(Array.isArray(f?.tabla_iso) && f.tabla_iso.length) textos.tablaClases=(f.tabla_iso as unknown as string[][]).map(row=>row.join(' | ')).join('\n');
+  textos.tablaClases=TABLA_APENDICE_A;
+  for (const k of Object.keys(textos)) textos[k]=citarNormasCompartidas(textos[k]);
   const empresa=textos.empresa || nombre;
   return {autoemision:c?.permitir_autoemision ?? false,formato:{...FORMATO_DEFAULT,version:f?.version ?? 0,version_formato:f?.version_formato ?? FORMATO_DEFAULT.version_formato,logo:f?.logo || logo,firmantes:(f?.firmantes ?? []) as unknown as Firmante[],textos,identidad:{nombre:empresa,logoDescripcion:textos.logoDescripcion || `Logo ${empresa}`,confidencialidad:textos.confidencialidad || `Documento confidencial propiedad de ${empresa}. Queda prohibido su uso, divulgación y/o reproducción total o parcial sin previa autorización.`}}};
 }
 export async function guardarConfiguracion(f:FormatoForVal16,autoemision:boolean) {
   const org=await empresaActiva();
   const {data:ult,error:e}=await supabase.from('tend_formato').select('version').eq('org_id',org).order('version',{ascending:false}).limit(1).maybeSingle(); if(e) throw e;
-  const textos={...f.textos,...{empresa:f.identidad?.nombre,logoDescripcion:f.identidad?.logoDescripcion,confidencialidad:f.identidad?.confidencialidad}};
-  const {error}=await supabase.from('tend_formato').insert({org_id:org,version:(ult?.version ?? 0)+1,version_formato:f.version_formato,logo:f.logo,firmantes:f.firmantes as unknown as Json,textos:textos as Json,tabla_iso:f.textos.tablaClases.split('\n').map(r=>r.split('|').map(c=>c.trim()))}); if(error) throw error;
+  const textos={...f.textos,tablaClases:TABLA_APENDICE_A,...{empresa:f.identidad?.nombre,logoDescripcion:f.identidad?.logoDescripcion,confidencialidad:f.identidad?.confidencialidad}};
+  const {error}=await supabase.from('tend_formato').insert({org_id:org,version:(ult?.version ?? 0)+1,version_formato:f.version_formato,logo:f.logo,firmantes:f.firmantes as unknown as Json,textos:textos as Json,tabla_iso:TABLA_APENDICE_A.split('\n').map(r=>r.split('|').map(c=>c.trim()))}); if(error) throw error;
   const {error:ce}=await supabase.from('tend_config').upsert({org_id:org,permitir_autoemision:autoemision},{onConflict:'org_id'}); if(ce) throw ce;
 }
 // T4c: catálogo normativo (lectura global; solo super_admin escribe) y revisión del catálogo.

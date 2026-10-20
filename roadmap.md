@@ -1,5 +1,7 @@
 # Roadmap
 
+- [x] T4f: tabla normativa compartida NOM-241/NOM-059, citas Word, clases y sugerencias; nuevas emisiones congelan tabla común, históricos intactos; suite automática sin navegador/dependencias.
+
 - [x] Fase 1: Captura y Análisis adaptados desde atdiafra; exportación cruda única, pendientes/historial separados, cuatro secciones con gráficas, buscador/guía/consecutivo y avisos. Identificadores y descargas configurables; unicidad activa normalizada aplicada, adminqa sin duplicados activos ni retiros. Suite 143/143 y compilación OK; sin navegador/IA/dependencias. Verificación visual y funcional a cargo de Jaime.
 - [x] Fase 2: Captura (popover Exportar PDF + Excel crudo, análisis del registro, zona de peligro con retiro auditado y bloqueo por AT emitido), Cumplimiento copiado de reporte.normativo, paso a Análisis con instrumentos/periodo/sistema. Reporte consolidado ya era copia; Fusionar/Borrar siguen fuera (no borrado). Verificación visual a cargo de Jaime.
 

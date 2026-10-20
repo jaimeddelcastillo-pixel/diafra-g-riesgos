@@ -1,9 +1,9 @@
 // Cliente de catálogos contra Lovable Cloud (Supabase)
 import { supabase } from "@/integrations/supabase/client";
 
-export type IsoClase = "ISO-5" | "ISO-6" | "ISO-7" | "ISO-8" | "ISO-9" | "No clasificada";
+export type IsoClase = "ISO-5" | "ISO-6" | "ISO-7" | "ISO-8" | "ISO-9" | "No clasificada" | "Clase A" | "Clase B" | "Área limpia" | "Área gris";
 
-export const ISO_CLASES: IsoClase[] = ["ISO-5", "ISO-6", "ISO-7", "ISO-8", "ISO-9", "No clasificada"];
+export const ISO_CLASES: IsoClase[] = ["Clase A", "Clase B", "ISO-5", "ISO-6", "ISO-7", "ISO-8", "ISO-9", "Área limpia", "Área gris", "No clasificada"];
 export type InstrumentoTipo = "termohigrometro" | "manometro_filtro" | "manometro_diferencial" | "otro";
 
 export interface SistemaHVAC {
@@ -65,6 +65,7 @@ export interface Instrumento {
 // La interfaz ParCuartos fue retirada al unificar el catálogo en `objetivos_presion`.
 
 export const ISO_LIMIT_PA: Record<IsoClase, number> = {
+  "Clase A": 15, "Clase B": 15, "Área limpia": 0, "Área gris": 0,
   "ISO-5": 15,
   "ISO-6": 12,
   "ISO-7": 10,
@@ -74,7 +75,7 @@ export const ISO_LIMIT_PA: Record<IsoClase, number> = {
 };
 
 // Límites de T/HR por ISO (NOM-241). 'No clasificada' usa rangos amplios por defecto; ajustar por área si aplica.
-export const ISO_TEMP_HR: Record<IsoClase, { tempMin: number; tempMax: number; hrMin: number; hrMax: number }> = {
+export const ISO_TEMP_HR: Partial<Record<IsoClase, { tempMin: number; tempMax: number; hrMin: number; hrMax: number }>> = {
   "ISO-5": { tempMin: 18, tempMax: 25, hrMin: 30, hrMax: 65 },
   "ISO-6": { tempMin: 18, tempMax: 25, hrMin: 30, hrMax: 65 },
   "ISO-7": { tempMin: 18, tempMax: 25, hrMin: 30, hrMax: 65 },

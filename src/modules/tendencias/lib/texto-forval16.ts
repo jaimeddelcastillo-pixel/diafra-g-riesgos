@@ -2,6 +2,7 @@
 import type { Bloque } from "./export-forval16";
 import { fmtDMY } from "./export-forval16";
 import { etiquetaCapacidad, fueraDeSpec } from "./estadistica-pno";
+import { REFERENCIA_APENDICE_A } from './apendice-a';
 
 export interface TextoForVal16 { alcance: string; s81: string; s9: string; s10: string; s11: string }
 
@@ -177,6 +178,6 @@ export function generarTexto(bloques: Bloque[], cobertura: { primera: string | n
   const cap = bloques.length
     ? ` Capacidad: ${ok} de ${bloques.length} series con Ppk ≥ 1.33; ${bajos.length ? `las series con Ppk < 1.00 son: ${listaEs(bajos.map((b) => `${etq(b)} (Ppk ${n2(b.Ppk)})`))}` : "ninguna serie presenta Ppk < 1.00"}.`
     : "";
-  const s11 = `Con base en el análisis estadístico conforme a PNO-VAL-16 y a los requisitos de la NOM-241-SSA1-2025, el resultado global del periodo es ${g.cumplimiento} con especificación, con estado de control ${g.estado}.${cap}${inv.length ? " Los casos señalados en la sección 10 requieren investigación de causa raíz (PNO-VAL-16 9.4)." : ""}${vig.length ? " Los casos con alertas se vigilarán en el siguiente periodo (PNO-VAL-16 9.7.7)." : ""}`;
+  const s11 = `Con base en el análisis estadístico conforme a PNO-VAL-16 y a los requisitos de la ${REFERENCIA_APENDICE_A}, el resultado global del periodo es ${g.cumplimiento} con especificación, con estado de control ${g.estado}.${cap}${inv.length ? " Los casos señalados en la sección 10 requieren investigación de causa raíz (PNO-VAL-16 9.4)." : ""}${vig.length ? " Los casos con alertas se vigilarán en el siguiente periodo (PNO-VAL-16 9.7.7)." : ""}`;
   return { alcance: alcanceLinea, s81, s9, s10, s11 };
 }

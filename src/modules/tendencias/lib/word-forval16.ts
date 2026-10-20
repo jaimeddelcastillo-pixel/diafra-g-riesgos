@@ -7,6 +7,7 @@ import {
 
 import { identificadoresReporte,nombreArchivoReporte } from "./configuracion-reporte";
 import { firmantesReporte } from "./formato-forval16";
+import { TABLA_APENDICE_A, REFERENCIA_APENDICE_A, citarNormasCompartidas } from './apendice-a';
 import type { Bloque } from "./export-forval16";
 import { fmtDMY, specTxt } from "./export-forval16";
 import type { TextoForVal16 } from "./texto-forval16";
@@ -139,6 +140,9 @@ export function nombreArchivoWord(a: { codigoAT: string; sistema: string; period
 export type WordDocumentoArgs = Omit<WordArgs, "estado"> & { estado: "borrador" | "emitido" | "anulado" };
 
 export async function generarWordForVal16(a: WordDocumentoArgs): Promise<{ blob: Blob; archivo: string }> {
+  if (a.estado === 'borrador') {
+    a = { ...a, formato: { ...a.formato, textos: Object.fromEntries(Object.entries(a.formato.textos).map(([k,v]) => [k, k === 'tablaClases' ? TABLA_APENDICE_A : citarNormasCompartidas(v)])) as FormatoForVal16['textos'] }, texto: Object.fromEntries(Object.entries(a.texto).map(([k,v]) => [k,citarNormasCompartidas(v)])) as unknown as TextoForVal16 };
+  }
   const f = a.formato;
   if (!f.identidad || !f.logo) throw new Error("Configura la identidad y el logo de la empresa antes de generar el Word");
   const emitido = a.estado === "emitido";
@@ -233,7 +237,7 @@ export async function generarWordForVal16(a: WordDocumentoArgs): Promise<{ blob:
     const filas = [filasClases[0], ...(presentes.length ? presentes : cuerpoCl)];
     const n = filas[0].length;
     const ancho = Math.floor(W / n);
-    cuerpo.push(par("Especificaciones normativas por clase ISO", { b: true, al: AlignmentType.CENTER, keep: true }));
+    cuerpo.push(par(a.estado === 'borrador' || f.textos.tablaClases === TABLA_APENDICE_A ? `Especificaciones normativas por clase ISO · ${REFERENCIA_APENDICE_A}, Apéndice A` : "Especificaciones normativas por clase ISO", { b: true, al: AlignmentType.CENTER, keep: true }));
     cuerpo.push(tablaSimple(filas.map((r) => Array.from({ length: n }, (_, i) => r[i] ?? "")), Array(n).fill(ancho), { keep: true }));
     cuerpo.push(new Paragraph({ children: [], spacing: { after: 160 } }));
   }

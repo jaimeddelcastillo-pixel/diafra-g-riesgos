@@ -30,7 +30,7 @@ describe('T4d', () => {
   });
   it('tabla NOM-241 del Word: ISO-7 > 10 Pa e ISO-8 > 5 Pa', () => {
     expect(FORMATO_DEFAULT.textos.tablaClases).toContain('| > 10 Pa |');
-    expect(FORMATO_DEFAULT.textos.tablaClases).toContain('| > 5 Pa |');
+    expect(FORMATO_DEFAULT.textos.tablaClases).toContain('| > 5 Pa; negativa');
   });
   it('no permite «validada» sin límite ni área validada sin área', () => {
     expect(erroresInstrumento({ spec_estado: 'validada', area_estado: 'pendiente' })).toHaveLength(1);
