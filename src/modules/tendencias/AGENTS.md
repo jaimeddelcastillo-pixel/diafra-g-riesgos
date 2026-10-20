@@ -5,3 +5,4 @@
 - R25 Report detail/inbox use registry and guarded persistence; historical views are read-only, cancellation overlays snapshots, AT Excel uses xlsx-js-style; why: reproducible audited reports.
 - R26 Source screen hierarchy stays separate from guarded adapters; identifiers use versioned format config, active codes a normalized tenant-unique index; why: parity without engine changes.
 - R27 Tendencias normative specs live in one global reference table edited only by super_admin and are only suggested to instruments (never auto-validated); system/migration data changes set tracea.origen/motivo/autorizado_por, which audit_trigger_func records; why: human acceptance and attributed system changes (IM-20).
+- R28 Changing register or system clears the pending photo and proposal; extraction runs only on an explicit user photo capture/upload (gated by fotoParaExtraer), never on a selection change; why: no wrong-sheet proposals or wasted extraction credits.
