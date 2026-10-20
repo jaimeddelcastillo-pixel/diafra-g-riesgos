@@ -512,6 +512,13 @@
       "when": 1792537277197,
       "tag": "0072_t4e_saturacion_estado_y_conflictos",
       "breakpoints": true
+    },
+    {
+      "idx": 73,
+      "version": "7",
+      "when": 1792539068346,
+      "tag": "0073_t4g_normalizar_variable",
+      "breakpoints": true
     }
   ]
 }

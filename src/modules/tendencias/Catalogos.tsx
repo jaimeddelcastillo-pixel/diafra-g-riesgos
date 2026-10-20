@@ -13,7 +13,7 @@ import { toast } from 'sonner';
 import { useTendencias } from './hooks';
 import {instrumentoExistente} from './lib/instrumentos-activos';
 import { guardarCatalogo,retirarCaptura,type TablaCatalogo } from './lib/persistencia';
-import { ISO_CLASES } from './lib/catalogos';
+import { ISO_CLASES, ISO_ETIQUETAS } from './lib/catalogos';
 import Marco from './Marco';
 import PendientesValidacion from './PendientesValidacion';
 import RevisionCatalogo from './RevisionCatalogo';
@@ -27,7 +27,7 @@ const esTHR=(e:Record<string,unknown>)=>e.tipo==='termohigrometro';const esFiltr
 const TIPOS:Record<string,string>={termohigrometro:'Termohigrómetro',manometro_filtro:'Manómetro de filtro (Magnehelic)',manometro_diferencial:'Manómetro diferencial',otro:'Otro'};
 const CATALOGOS: {key:'hvac'|'areas'|'instrumentos'|'objetivos'|'cambios';nombre:string;tabla:TablaCatalogo;fields:Field[]}[]=[
  {key:'hvac',nombre:'Sistemas HVAC',tabla:'tend_sistemas_hvac',fields:[{key:'codigo',label:'Código',required:true},{key:'nombre_uma',label:'Nombre UMA',required:true},{key:'descripcion',label:'Descripción',type:'textarea'},{key:'etapas',label:'Etapas (una por línea)',type:'array'}]},
- {key:'areas',nombre:'Áreas',tabla:'tend_areas',fields:[{key:'codigo',label:'Código',required:true},{key:'nombre',label:'Nombre',required:true},{key:'iso',label:'Clasificación ISO',type:'select',options:ISO_CLASES,required:true},{key:'hvac_id',label:'Sistema HVAC',type:'select',relation:'hvac'},{key:'_instrumentos',label:'Instrumentos asignados al área',type:'multi',relation:'instrumentos'}]},
+ {key:'areas',nombre:'Áreas',tabla:'tend_areas',fields:[{key:'codigo',label:'Código',required:true},{key:'nombre',label:'Nombre',required:true},{key:'iso',label:'Clasificación ISO',type:'select',options:ISO_CLASES,labels:ISO_ETIQUETAS as Record<string,string>,required:true},{key:'hvac_id',label:'Sistema HVAC',type:'select',relation:'hvac'},{key:'_instrumentos',label:'Instrumentos asignados al área',type:'multi',relation:'instrumentos'}]},
  {key:'instrumentos',nombre:'Instrumentos',tabla:'tend_instrumentos',fields:[
   {key:'codigo',label:'Código',required:true,help:'Código de la etiqueta del instrumento.',ej:'INS-PRO-31'},
   {key:'tipo',label:'Tipo',type:'select',options:Object.keys(TIPOS),labels:TIPOS,required:true,help:'Equipo físico.',ej:'Manómetro diferencial'},
@@ -61,7 +61,7 @@ const CATALOGOS: {key:'hvac'|'areas'|'instrumentos'|'objetivos'|'cambios';nombre
   {key:'baseline_pa',label:'ΔP base',type:'number',help:'ΔP del filtro limpio, al instalarlo.',ej:'60',mostrar:esFiltro},
   {key:'baseline_tolerancia_pct',label:'Tolerancia base (%)',type:'number',help:'Variación aceptada sobre el ΔP base antes de alertar.',ej:'20',mostrar:esFiltro},
   {key:'dp_final_fabricante',label:'ΔP de saturación (fabricante)',type:'number',help:'ΔP máximo del fabricante para cambiar el filtro.',ej:'250',mostrar:esFiltro}]},
- {key:'objetivos',nombre:'Objetivos de presión',tabla:'tend_objetivos_presion',fields:[{key:'codigo',label:'Código',required:true},{key:'nombre',label:'Nombre',required:true},{key:'cuarto_x_id',label:'Cuarto X',type:'select',relation:'areas'},{key:'cuarto_y_id',label:'Cuarto Y',type:'select',relation:'areas'},{key:'instrumento_id',label:'Instrumento',type:'select',relation:'instrumentos'},{key:'iso',label:'Clasificación ISO',type:'select',options:ISO_CLASES},{key:'unidad',label:'Unidad',required:true},{key:'limite_normativo_pa',label:'Límite normativo (Pa)',type:'number'},{key:'lie_pa',label:'Límite inferior (Pa)',type:'number'},{key:'lse_pa',label:'Límite superior (Pa)',type:'number'}]},
+ {key:'objetivos',nombre:'Objetivos de presión',tabla:'tend_objetivos_presion',fields:[{key:'codigo',label:'Código',required:true},{key:'nombre',label:'Nombre',required:true},{key:'cuarto_x_id',label:'Cuarto X',type:'select',relation:'areas'},{key:'cuarto_y_id',label:'Cuarto Y',type:'select',relation:'areas'},{key:'instrumento_id',label:'Instrumento',type:'select',relation:'instrumentos'},{key:'iso',label:'Clasificación ISO',type:'select',options:ISO_CLASES,labels:ISO_ETIQUETAS as Record<string,string>},{key:'unidad',label:'Unidad',required:true},{key:'limite_normativo_pa',label:'Límite normativo (Pa)',type:'number'},{key:'lie_pa',label:'Límite inferior (Pa)',type:'number'},{key:'lse_pa',label:'Límite superior (Pa)',type:'number'}]},
  {key:'cambios',nombre:'Cambios de filtro',tabla:'tend_cambios_filtro',fields:[{key:'instrumento_id',label:'Instrumento',type:'select',relation:'instrumentos',required:true},{key:'fecha',label:'Fecha',type:'date',required:true},{key:'nota',label:'Nota',type:'textarea'}]},
 ];
 export default function Catalogos(){

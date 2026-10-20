@@ -1,0 +1,3 @@
+SELECT set_config('tracea.origen','sistema',true), set_config('tracea.motivo','Normalización T4d',true), set_config('tracea.autorizado_por','Jaime Del Castillo',true);
+UPDATE public.tend_instrumentos SET parametro = CASE clase_instrumento WHEN 'diferencial_sala' THEN 'Presión diferencial' ELSE 'ΔP de filtro' END
+WHERE parametro ~ '[<>≤≥]' AND clase_instrumento IN ('diferencial_sala','filtro_ducto');

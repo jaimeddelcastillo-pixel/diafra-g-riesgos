@@ -3,7 +3,10 @@ import { supabase } from "@/integrations/supabase/client";
 
 export type IsoClase = "ISO-5" | "ISO-6" | "ISO-7" | "ISO-8" | "ISO-9" | "No clasificada" | "Clase A" | "Clase B" | "Área limpia" | "Área gris";
 
-export const ISO_CLASES: IsoClase[] = ["Clase A", "Clase B", "ISO-5", "ISO-6", "ISO-7", "ISO-8", "ISO-9", "Área limpia", "Área gris", "No clasificada"];
+export const ISO_CLASES: IsoClase[] = ["ISO-5", "Clase B", "ISO-7", "ISO-8", "ISO-9", "Área limpia", "Área gris", "No clasificada"];
+export const ISO_ETIQUETAS: Partial<Record<IsoClase, string>> = { "ISO-5": "Clase A (ISO-5)", "Clase A": "Clase A (ISO-5)", "ISO-7": "Clase C (ISO-7)", "ISO-8": "Clase D (ISO-8)" };
+export const etiquetaIso = (v: string) => ISO_ETIQUETAS[v as IsoClase] ?? v;
+export const isoDesdeEtiqueta = (v: unknown) => { const t = String(v ?? '').trim(); const e = Object.entries(ISO_ETIQUETAS).find(([, l]) => l === t); return e ? (e[0] === 'Clase A' ? 'ISO-5' : e[0]) : t; };
 export type InstrumentoTipo = "termohigrometro" | "manometro_filtro" | "manometro_diferencial" | "otro";
 
 export interface SistemaHVAC {
