@@ -3,6 +3,7 @@
 // Líneas sin guion = párrafo sin número. Variables: {sistema}, {periodo}, {areas}, {clases_iso}.
 
 
+import { REFERENCIA_APENDICE_A, TABLA_APENDICE_A } from './apendice-a';
 export interface Firmante { rol: string; nombre: string; cargo: string }
 export type ClaveTexto = "s1" | "s3" | "s4" | "s5" | "s6" | "s7" | "s12" | "tablaClases";
 export interface FormatoForVal16 {
@@ -36,11 +37,7 @@ export const FORMATO_DEFAULT: FormatoForVal16 = {
       "El sistema HVAC cuenta con diferentes instrumentos críticos instalados dentro de las áreas, en la unidad manejadora de aire o en un tablero, que monitorean las variables de presión diferencial, temperatura y % de humedad relativa.",
       "El análisis de tendencias de las variables de control de proceso (PPC) y atributos críticos de calidad (CQA´s) del sistema HVAC es fundamental para garantizar que el sistema opera de forma consistente y reproducible a lo largo del tiempo.",
     ].join("\n"),
-    tablaClases: [
-      "Clasificación | Partículas ≥0.5 µm /m³ (estático / dinámico) | Partículas ≥5 µm /m³ | Frecuencia de monitoreo | UFC | Presión diferencial | Cambios de aire por hora | Temperatura y humedad",
-      "ISO-7 | 352 000 / 3 520 000 | 2 930 / 29 300 | Cada 6 meses | ≤100/m³; ≤50/placa | > 10 Pa | 20 a 50 | 18 a 25 °C; 30 a 65 % HR",
-      "ISO-8 | 3 520 000 / n.a. | 29 300 / n.a. | Cada 6 meses | ≤200/m³; ≤100/placa | > 5 Pa | 10 a 20 | 18 a 25 °C; 30 a 65 % HR",
-    ].join("\n"),
+    tablaClases: TABLA_APENDICE_A,
     s4: [
       "- Responsable Sanitario:",
       "-- Revisar y autorizar el presente análisis de tendencias.",
@@ -104,7 +101,7 @@ export const FORMATO_DEFAULT: FormatoForVal16 = {
       "El presente análisis permite identificar desviaciones y activar acciones correctivas y preventivas para evitar fallos en las áreas clasificadas {clases_iso}.",
     ].join("\n"),
     s12: [
-      "- NOM-241-SSA1-2025 «Buenas prácticas de fabricación de dispositivos médicos».",
+      `- ${REFERENCIA_APENDICE_A} «Buenas prácticas de fabricación», Apéndice A.`,
       "- Farmacopea de los Estados Unidos Mexicanos, edición vigente.",
       "- ISO 14644-2:2015. Cleanrooms and associated controlled environments — Part 2: Specifications for testing and monitoring to prove continued compliance with ISO 14644-1.",
       "- PNO-VAL-16 «Análisis de tendencias».",

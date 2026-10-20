@@ -2,6 +2,7 @@
 // Nada aquí escribe en la base de datos; la escritura es una sola transacción vía RPC tend_importar_atdiafra.
 import { revisarInstrumento, pareceDescripcionEquipo, type NormaEspecificacion, type Hallazgo } from './norma';
 import type { Instrumento } from './catalogos';
+import { TABLA_APENDICE_A } from './apendice-a';
 
 export const TABLAS_MIGRACION = [
   'tend_sistemas_hvac', 'tend_areas', 'tend_instrumentos', 'tend_objetivos_presion', 'tend_cambios_filtro',
@@ -72,14 +73,9 @@ export function mapearInstrumento(i: Record<string, unknown>): Record<string, un
   return m;
 }
 
-/** Tabla ISO según NOM-241 (ISO-7 >10 Pa, ISO-8 >5 Pa, ISO-9 positiva; criterio interno DIAFRA >5 Pa). */
+/** Apéndice A común; los criterios internos pertenecen al instrumento, no a la tabla normativa. */
 export function tablaIsoNom241(): string {
-  return [
-    'Clasificación | Partículas ≥0.5 µm /m³ (estático / dinámico) | Partículas ≥5 µm /m³ | Frecuencia de monitoreo | UFC | Presión diferencial | Cambios de aire por hora | Temperatura y humedad',
-    'ISO-7 | 352 000 / 3 520 000 | 2 930 / 29 300 | Cada 6 meses | ≤100/m³; ≤50/placa | >10 Pa | 20 a 50 | 18 a 25 °C; 30 a 65 % HR',
-    'ISO-8 | 3 520 000 / n.a. | 29 300 / n.a. | Cada 6 meses | ≤200/m³; ≤100/placa | >5 Pa (criterio interno DIAFRA) | 10 a 20 | 18 a 25 °C; 30 a 65 % HR',
-    'ISO-9 | n.a. | n.a. | Cada 6 meses | n.a. | Presión positiva | n.a. | 18 a 25 °C; 30 a 65 % HR',
-  ].join('\n');
+  return TABLA_APENDICE_A;
 }
 
 /** Reconstruye formato_snapshot y datos_snapshot de un AT emitido con los datos migrados de su periodo y selección. */

@@ -3,6 +3,7 @@ import type { Json } from '@/integrations/supabase/types';
 import { FORMATO_DEFAULT, type FormatoForVal16, type Firmante } from './formato-forval16';
 import type { Registro, Semana } from './semanas';
 import { compressImage } from './compress-image';
+import { TABLA_APENDICE_A, citarNormasCompartidas } from './apendice-a';
 
 export type TablaCatalogo = 'tend_sistemas_hvac' | 'tend_areas' | 'tend_instrumentos' | 'tend_objetivos_presion' | 'tend_cambios_filtro';
 export async function empresaActiva() {
@@ -83,7 +84,8 @@ export async function cargarConfiguracion(nombre:string,logo:string|null):Promis
     supabase.from('tend_config').select('*').eq('org_id',org).maybeSingle()]);
   if(error || e) throw error ?? e;
   const textos: FormatoForVal16['textos'] & Record<string,string>={...FORMATO_DEFAULT.textos,...(f?.textos as Record<string,string> ?? {})};
-  if(Array.isArray(f?.tabla_iso) && f.tabla_iso.length) textos.tablaClases=(f.tabla_iso as unknown as string[][]).map(row=>row.join(' | ')).join('\n');
+  textos.tablaClases=TABLA_APENDICE_A;
+  for (const k of Object.keys(textos)) textos[k]=citarNormasCompartidas(textos[k]);
   const empresa=textos.empresa || nombre;
   return {autoemision:c?.permitir_autoemision ?? false,formato:{...FORMATO_DEFAULT,version:f?.version ?? 0,version_formato:f?.version_formato ?? FORMATO_DEFAULT.version_formato,logo:f?.logo || logo,firmantes:(f?.firmantes ?? []) as unknown as Firmante[],textos,identidad:{nombre:empresa,logoDescripcion:textos.logoDescripcion || `Logo ${empresa}`,confidencialidad:textos.confidencialidad || `Documento confidencial propiedad de ${empresa}. Queda prohibido su uso, divulgación y/o reproducción total o parcial sin previa autorización.`}}};
 }

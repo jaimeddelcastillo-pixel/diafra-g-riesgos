@@ -1,5 +1,7 @@
 # Tendencias module rules (moved from root AGENTS.md)
 
+- R30 New Tendencias reports and imports share the Appendix A reference module for both standards; draft exports normalize old citations while issued/cancelled snapshots remain untouched; area suggestions stay in the protected global normative catalog and require human acceptance; why: one normative table without rewriting historical reports or calculations.
+
 - R22 Tendencias isolates copied atdiafra calculation/report engines from tenant persistence adapters; issued Word inputs and calculation date come only from issuance snapshots, with original-source regression tests; why: preserve validated calculations and reproducible historical reports without live catalogs or embedded client identity.
 - R24 Capture batch extraction uses bounded workers and isolates per-photo proposals and failures; confirmation remains sequential, shared calendar checks verify written-year priority and candidate column alignment server-side before UI date proposals, and raw exports use a guarded active-company RPC; why: recoverable human review and immutable tenant-isolated history without changing the engine.
 - R25 Report detail/inbox use registry and guarded persistence; historical views are read-only, cancellation overlays snapshots, AT Excel uses xlsx-js-style; why: reproducible audited reports.
