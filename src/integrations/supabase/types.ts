@@ -6198,6 +6198,10 @@ export type Database = {
         }
         Returns: Json
       }
+      tend_importar_catalogo_excel: {
+        Args: { _motivo: string; _paquete: Json }
+        Returns: Json
+      }
       tend_media_trimestre: {
         Args: never
         Returns: {
