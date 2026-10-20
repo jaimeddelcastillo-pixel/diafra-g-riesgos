@@ -63,7 +63,7 @@ export function exportarFilas(c:Catalogo):Record<Hoja,Fila[]> {
   const code=(rows:Fila[],id:unknown)=>texto(rows.find(r=>r.id===id)?.codigo);
   return {
     Sistemas_HVAC:c.hvac.map(r=>({codigo:r.codigo,nombre:r.nombre_uma,descripcion:r.descripcion,activo:r.activo===false?'No':'Sí'})),
-    Areas:c.areas.map(r=>({codigo:r.codigo,nombre:r.nombre,clase:etiquetaIso(r.iso),sistema_hvac:code(c.hvac,r.hvac_id),activo:r.activo===false?'No':'Sí'})),
+    Areas:c.areas.map(r=>({codigo:r.codigo,nombre:r.nombre,clase:etiquetaIso(String(r.iso ?? "")),sistema_hvac:code(c.hvac,r.hvac_id),activo:r.activo===false?'No':'Sí'})),
     Instrumentos:c.instrumentos.map(r=>Object.fromEntries(Object.entries(MAPA_INSTRUMENTO).map(([k,v])=>[k,k==='area'?code(c.areas,r.area_id):k==='tipo_equipo'?TIPOS_EQUIPO[r.tipo as keyof typeof TIPOS_EQUIPO] ?? r.tipo:k==='tipo_analisis'?CLASES_INSTRUMENTO.find(x=>x.value===r.clase_instrumento)?.label ?? '':booleanos.includes(k)?(r[v]?'Sí':'No'):r[v] ?? '']))),
     Objetivos_presion:c.objetivos.map(r=>({instrumento:code(c.instrumentos,r.instrumento_id),uso:'par de cuartos',area_mayor:code(c.areas,r.cuarto_x_id),area_menor:code(c.areas,r.cuarto_y_id),valor:r.limite_normativo_pa,unidad:r.unidad,codigo:r.codigo,nombre:r.nombre,activo:r.activo===false?'No':'Sí'})),
   };
