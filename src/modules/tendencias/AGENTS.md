@@ -1,5 +1,7 @@
 # Tendencias module rules (moved from root AGENTS.md)
 
+- R31 Catalog Excel uses a versioned header adapter and a single active-company admin/RS transactional RPC with row audit reasons and optimistic before-value checks; saturation maps to the instrument manufacturer limit, objectives preserve optional code/name/state, and missing rows and issued snapshots are untouched; why: IM-23 reversible tenant-safe catalog corrections without new columns or engine changes.
+
 - R30 New Tendencias reports and imports share the Appendix A reference module for both standards; draft exports normalize old citations, final issuance freezes the same table server-side after snapshot creation, and historical issued/cancelled snapshots remain untouched; SQL/reference parity is tested; area suggestions stay in the protected global normative catalog and require human acceptance; why: one normative table without rewriting historical reports or calculations.
 
 - R22 Tendencias isolates copied atdiafra calculation/report engines from tenant persistence adapters; issued Word inputs and calculation date come only from issuance snapshots, with original-source regression tests; why: preserve validated calculations and reproducible historical reports without live catalogs or embedded client identity.
