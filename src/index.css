@@ -45,6 +45,8 @@
 
     --warning: 38 92% 50%;
     --warning-foreground: 0 0% 100%;
+    --caution: 24 95% 50%;
+    --caution-foreground: 0 0% 100%;
     --success: 152 60% 40%;
     --success-foreground: 0 0% 100%;
     --npr-low: 152 60% 40%;

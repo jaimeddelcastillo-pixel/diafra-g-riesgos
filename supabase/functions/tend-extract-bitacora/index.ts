@@ -6,7 +6,7 @@ import {resolverContextoOrg,ContextoOrgError} from '../_shared/contexto-org.ts';
 import {cargarSkill,interpolar,registrarSkillFaltante} from '../_shared/skills.ts';
 import {leerBitacoraPrivada} from '../_shared/documento-contenido.ts';
 import {contextoFechaMexico,fechaMexico} from '../_shared/fecha-mexico.ts';
-import {normalizarLecturas} from '../_shared/bitacora-lecturas.ts';
+import {normalizarLecturas,marcarAtipicas} from '../_shared/bitacora-lecturas.ts';
 import {resolverFechasBitacora} from '../_shared/bitacora-fechas.ts';
 import {getLovableAiGatewayRunId,getLovableAiGatewayResponseHeaders} from '../_shared/run-id.ts';
 
@@ -36,7 +36,7 @@ Deno.serve(async req=>{
   const user=createClient(url,anon,{global:{headers:{Authorization:req.headers.get('Authorization') ?? ''}},auth:{persistSession:false}});admin=createClient(url,service);
   const {data:acceso,error:ae}=await user.rpc('tend_acceso',{_org:ctx.orgId,_escritura:true,_roles:['operador','comite_tecnico','admin','responsable_sanitario']});if(ae || !acceso)return respond({error:'Tendencias no disponible para extracción'},403);
   const {data:pausa,error:pauseError}=await admin.from('tend_ia_control').select('*').eq('org_id',ctx.orgId).maybeSingle();if(pauseError)throw pauseError;if(pausa?.bloqueado)return respond({error:pausa.mensaje},pausa.status ?? 403);
-  const {data:r,error:re}=await user.from('tend_registros').select('id,modulo,nombre,activo').eq('org_id',ctx.orgId).eq('id',body.data.registro_id).single();if(re || !r?.activo)return respond({error:'Registro no disponible'},404);
+  const {data:r,error:re}=await user.from('tend_registros').select('id,modulo,nombre,activo,instrumento_id,lie,lse,lie_t,lse_t,lie_hr,lse_hr').eq('org_id',ctx.orgId).eq('id',body.data.registro_id).single();if(re || !r?.activo)return respond({error:'Registro no disponible'},404);
   if(!['temphr','presiones','filtros'].includes(r.modulo))return respond({error:'Agua se captura manualmente'},400);
   const media=await leerBitacoraPrivada(user,ctx.orgId,body.data.foto_path);
   const clave=`extraccion_bitacora_${r.modulo}`;let skill;
@@ -64,6 +64,9 @@ Deno.serve(async req=>{
    let propuesta:any;
    try{propuesta=schema.parse(JSON.parse(contenido));}catch{throw new Error('La IA no produjo una propuesta válida; la foto permanece para captura manual');}
   if(r.modulo==='temphr'){propuesta.lecturas_t=comprobarLecturas(propuesta.lecturas_t);propuesta.lecturas_hr=comprobarLecturas(propuesta.lecturas_hr);}else propuesta.lecturas=comprobarLecturas(propuesta.lecturas);
+   {const {data:ins}=r.instrumento_id?await user.from('tend_instrumentos').select('spec_lie,spec_lse,spec_lie_estricto,spec_lse_estricto').eq('org_id',ctx.orgId).eq('id',r.instrumento_id).maybeSingle():{data:null};
+    const limP={lie:ins?.spec_lie ?? r.lie ?? r.lie_t ?? null,lse:ins?.spec_lse ?? r.lse ?? r.lse_t ?? null,lieEstricto:!!ins?.spec_lie_estricto,lseEstricto:!!ins?.spec_lse_estricto};
+    if(r.modulo==='temphr'){propuesta.lecturas_t=marcarAtipicas(propuesta.lecturas_t,limP);propuesta.lecturas_hr=marcarAtipicas(propuesta.lecturas_hr,{lie:r.lie_hr ?? null,lse:r.lse_hr ?? null});}else propuesta.lecturas=marcarAtipicas(propuesta.lecturas,limP);}
    const rows=[...(propuesta.lecturas_t ?? []),...(propuesta.lecturas_hr ?? []),...(propuesta.lecturas ?? [])];
    const fechasComprobadas=resolverFechasBitacora(propuesta,primera?.semana_inicio,anioActual);
    propuesta.fechas_columnas_originales=propuesta.fechas_columnas;

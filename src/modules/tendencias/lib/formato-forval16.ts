@@ -38,8 +38,8 @@ export const FORMATO_DEFAULT: FormatoForVal16 = {
     ].join("\n"),
     tablaClases: [
       "Clasificación | Partículas ≥0.5 µm /m³ (estático / dinámico) | Partículas ≥5 µm /m³ | Frecuencia de monitoreo | UFC | Presión diferencial | Cambios de aire por hora | Temperatura y humedad",
-      "ISO-7 | 352 000 / 3 520 000 | 2 930 / 29 300 | Cada 6 meses | ≤100/m³; ≤50/placa | ≥10 Pa | 20 a 50 | 18 a 25 °C; 30 a 65 % HR",
-      "ISO-8 | 3 520 000 / n.a. | 29 300 / n.a. | Cada 6 meses | ≤200/m³; ≤100/placa | ≥5 Pa | 10 a 20 | 18 a 25 °C; 30 a 65 % HR",
+      "ISO-7 | 352 000 / 3 520 000 | 2 930 / 29 300 | Cada 6 meses | ≤100/m³; ≤50/placa | > 10 Pa | 20 a 50 | 18 a 25 °C; 30 a 65 % HR",
+      "ISO-8 | 3 520 000 / n.a. | 29 300 / n.a. | Cada 6 meses | ≤200/m³; ≤100/placa | > 5 Pa | 10 a 20 | 18 a 25 °C; 30 a 65 % HR",
     ].join("\n"),
     s4: [
       "- Responsable Sanitario:",
@@ -114,4 +114,12 @@ export const FORMATO_DEFAULT: FormatoForVal16 = {
 
 export function sustituir(t: string, v: Record<string, string>): string {
   return t.replace(/\{(empresa|sistema|periodo|areas|clases_iso)\}/g, (_, k) => v[k] ?? "");
+}
+
+/** Recuadro de firmas del Word: siempre ELABORÓ, REVISÓ y AUTORIZÓ, cada uno con nombre y cargo («Revisor» → «Revisó»). */
+export const ROLES_FIRMA = ["Elaboró", "Revisó", "Autorizó"] as const;
+export function firmantesReporte(firmantes: Firmante[]): Firmante[] {
+  const clave = (r: string) => r.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  const raiz = { "Elaboró": /^elabor/, "Revisó": /^revis/, "Autorizó": /^(autoriz|aprob)/ } as const;
+  return ROLES_FIRMA.map(rol => { const f = firmantes.find(x => raiz[rol].test(clave(x.rol ?? ""))); return { rol, nombre: f?.nombre ?? "", cargo: f?.cargo ?? "" }; });
 }

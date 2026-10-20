@@ -160,14 +160,14 @@ function ubicacionDe(r: Registro, ins: Instrumento | undefined, areasMap: Map<st
   }
   const a = (ins?.area_id && areasMap.get(ins.area_id)) || (r.area_id && areasMap.get(r.area_id)) || undefined;
   if (a) return `${a.codigo} ${a.nombre}`;
-  return libre || r.nombre_area_libre || r.nombre;
+  return libre || r.nombre_area_libre || "Sin área asignada";
 }
 function isoDe(r: Registro, ins: Instrumento | undefined, areasMap: Map<string, AreaClasificada>) {
   const a = (ins?.area_id && areasMap.get(ins.area_id)) || (r.area_id && areasMap.get(r.area_id)) || undefined;
-  return a?.iso ?? r.iso ?? "No clasificada";
+  return a?.iso ?? r.iso ?? "Sin clase asignada";
 }
-export const specTxt = (lie: number | null, lse: number | null, u: string, texto?: string | null) =>
-  texto?.trim() ? texto.trim() : lie != null && lse != null ? `${lie} – ${lse} ${u}` : lse != null ? `≤ ${lse} ${u}` : lie != null ? `≥ ${lie} ${u}` : "Sin especificación";
+export const specTxt = (lie: number | null, lse: number | null, u: string, texto?: string | null, lieEstricto = false, lseEstricto = false) =>
+  texto?.trim() ? texto.trim() : lie != null && lse != null ? `${lie} – ${lse} ${u}` : lse != null ? `${lseEstricto ? "<" : "≤"} ${lse} ${u}` : lie != null ? `${lieEstricto ? ">" : "≥"} ${lie} ${u}` : "Sin especificación";
 
 export const dictTxt = (d: DictamenPNO | null) => (d ? `${d.estadoControl} · ${d.cumplimientoEspecificacion}` : "Sin datos");
 
@@ -274,7 +274,7 @@ function bloquePresion(base: BaseBloque,
       base.lse, base.lie, fuera ? r3(v) : null, idxSen.has(i) ? r3(v) : null,
       ...(tend ? [x >= desdeTend ? r3(tend(x)) : null] : []), ...(sat != null ? [sat] : []), ...(hayOp ? [base.opMax!, base.opMin!] : [])];
   });
-  const espTxt = specTxt(base.lie, base.lse, base.unidad, base.specTexto);
+  const espTxt = specTxt(base.lie, base.lse, base.unidad, base.specTexto, base.lieEstricto, base.lseEstricto);
   const tablaLimites: Fila[] = [
     ["Media", "s", "LAS", "LAI", "LAcS", "LAcI", "Especificación", "Ppk"],
     [r3(media), r3(s), r3(lim?.LAS), r3(lim?.LAI), r3(lim?.LAcS), r3(lim?.LAcI), espTxt, r3(cap?.Ppk)],
@@ -529,7 +529,7 @@ export async function exportarPaqueteForVal16(a: PaqueteArgs): Promise<{ archivo
     const head = ["Código", "Bitácora", "Variable", "Ubicación", "Clase ISO", "Especificación", "n", "Media", "s", "Mín", "Máx", "LAS", "LAI", "LAcS", "LAcI", "Cp", "Cpk", "Pp", "Ppk", "Normalidad", "N° señales", "Dictamen", "Requiere investigación", "Motivos"];
     b.fila(2, 0, head, ST.head);
     bloques.forEach((k, i) => b.fila(3 + i, 0, [
-      k.codigo, k.bitacora, k.variable, k.ubicacion, k.iso, specTxt(k.lie, k.lse, k.unidad, k.specTexto), k.n, k.media, k.s, k.min, k.max,
+      k.codigo, k.bitacora, k.variable, k.ubicacion, k.iso, specTxt(k.lie, k.lse, k.unidad, k.specTexto, k.lieEstricto, k.lseEstricto), k.n, k.media, k.s, k.min, k.max,
       k.LAS, k.LAI, k.LAcS, k.LAcI, k.Cp, k.Cpk, k.Pp, k.Ppk, k.normalidad, k.nSenales, dictTxt(k.dict),
       k.dict?.requiereInvestigacion ? "Sí" : "No", (k.dict?.motivos ?? []).join("; "),
     ], (v, j) => (j === 6 || j === 20 ? ST.txt : stVal(v))));
@@ -557,7 +557,7 @@ export async function exportarPaqueteForVal16(a: PaqueteArgs): Promise<{ archivo
   for (const k of bloques) {
     const b = new HojaBuilder();
     b.set(0, 0, `${k.codigo} — ${k.variable}`, ST.titulo);
-    b.set(1, 0, `${k.ubicacion} · ${k.iso} · ${rango} · Especificación ${specTxt(k.lie, k.lse, k.unidad, k.specTexto)}${k.pendientes?.length ? ` · ⚠ ${k.pendientes.join(" · ")}` : ""}`, ST.nota);
+    b.set(1, 0, `${k.ubicacion} · ${k.iso} · ${rango} · Especificación ${specTxt(k.lie, k.lse, k.unidad, k.specTexto, k.lieEstricto, k.lseEstricto)}${k.pendientes?.length ? ` · ⚠ ${k.pendientes.join(" · ")}` : ""}`, ST.nota);
     k.tablaLimites.forEach((f, i) => b.fila(3 + i, 0, f, i % 2 === 0 ? ST.head : ST.num));
     if (k.notaTabla) b.set(3 + k.tablaLimites.length, 0, k.notaTabla, ST.nota);
     const hRow = 3 + k.tablaLimites.length + 1; // 0-based
@@ -644,7 +644,7 @@ export async function exportarPaqueteForVal16(a: PaqueteArgs): Promise<{ archivo
   zip.file("[Content_Types].xml", ct.replace("</Types>", `${overrides.join("")}</Types>`));
 
   const limpio = (s: string) => s.replace(/[^\w.-]+/g, "_").replace(/_+/g, "_").replace(/^_|_$/g, "");
-  const archivo = `${limpio(a.prefijoArchivos ?? a.codigoFormato ?? "Analisis-de-tendencias")}_${limpio(a.codigoAT)}_${limpio(a.sistema)}_${limpio(etiquetaPeriodo(a.desde, a.hasta))}_v${a.versionReporte ?? 1}.xlsx`;
+  const archivo = [a.prefijoArchivos, a.codigoAT, a.sistema, etiquetaPeriodo(a.desde, a.hasta)].filter((x): x is string => !!x).map(limpio).join("_") + `_v${a.versionReporte ?? 1}.xlsx`;
   const blob = await zip.generateAsync({ type: typeof window === "undefined" ? "nodebuffer" : "blob", mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" } as JSZip.JSZipGeneratorOptions<"blob">);
   if (typeof window !== "undefined") {
     const url = URL.createObjectURL(blob as Blob);

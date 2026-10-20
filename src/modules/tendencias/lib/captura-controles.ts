@@ -64,3 +64,14 @@ export type FotoPendiente = { path: string; registroId: string; id: number };
 export function fotoParaExtraer(p: FotoPendiente | undefined, registroId: string, consumida?: number): string | undefined {
   return p && p.registroId === registroId && p.id !== consumida ? p.path : undefined;
 }
+export type CambioPrevio = { campo: 'lecturas' | 'lecturas_hr'; dia: string; turno: string; antes: number | null; despues: number | null };
+/** Celdas que tenían lectura guardada y cambiaron (valor o N/A); exigen motivo al guardar. */
+export function cambiosPrevios(antes: Semana | null | undefined, despues: Semana): CambioPrevio[] {
+  if (!antes) return [];
+  return (['lecturas', 'lecturas_hr'] as const).flatMap(campo => (antes[campo] ?? []).flatMap(p => {
+    if (p.valor === null || !Number.isFinite(p.valor)) return [];
+    const n = despues[campo]?.find(x => x.dia === p.dia && x.turno === p.turno);
+    const v = n?._na ? null : n?.valor ?? null;
+    return v === p.valor ? [] : [{ campo, dia: p.dia, turno: p.turno, antes: p.valor, despues: v }];
+  }));
+}
