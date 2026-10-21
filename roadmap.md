@@ -69,3 +69,8 @@ Implementados reporte independiente, vistas por área/instrumento/avance, consol
 ### Tendencias — T4h importación del catálogo por conjuntos
 - [x] RPC por conjuntos (un bloqueo por tabla, un upsert por hoja, auditoría masiva); 200 renglones ~0.2 s en prueba con reversión
 - [ ] Confirmar con sesión real de adminqa la importación parte 1 (72 renglones)
+
+### Tendencias — T4i auditoría del módulo e importación no bloqueante
+- [x] Auditoría de Tendencias en /tendencias/auditoria (menú, solo admin/RS): tend_* con fecha, usuario, acción, registro, antes→después, motivo y origen; filtros y exportación Excel
+- [x] Importación del catálogo: valida solo renglones del archivo; existentes incompletos avisan sin bloquear; renglones vacíos con formato ignorados
+- [x] Captura: etiqueta del objetivo «Objetivo N Pa»
