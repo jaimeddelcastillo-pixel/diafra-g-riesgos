@@ -12,8 +12,6 @@ import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
-const SIDEBAR_COOKIE_NAME = "sidebar:state";
-const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
 const SIDEBAR_WIDTH = "16rem";
 const SIDEBAR_WIDTH_MOBILE = "18rem";
 const SIDEBAR_WIDTH_ICON = "3rem";
@@ -64,8 +62,6 @@ const SidebarProvider = React.forwardRef<
         _setOpen(openState);
       }
 
-      // This sets the cookie to keep the sidebar state.
-      document.cookie = `${SIDEBAR_COOKIE_NAME}=${openState}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`;
     },
     [setOpenProp, open],
   );
@@ -218,7 +214,8 @@ Sidebar.displayName = "Sidebar";
 
 const SidebarTrigger = React.forwardRef<React.ElementRef<typeof Button>, React.ComponentProps<typeof Button>>(
   ({ className, onClick, ...props }, ref) => {
-    const { toggleSidebar } = useSidebar();
+    const { toggleSidebar, isMobile, openMobile, open } = useSidebar();
+    const label = isMobile ? (openMobile ? "Cerrar menú" : "Abrir menú") : (open ? "Contraer menú" : "Expandir menú");
 
     return (
       <Button
@@ -226,6 +223,9 @@ const SidebarTrigger = React.forwardRef<React.ElementRef<typeof Button>, React.C
         data-sidebar="trigger"
         variant="ghost"
         size="icon"
+        aria-label={label}
+        aria-expanded={isMobile ? openMobile : open}
+        title={label}
         className={cn("h-7 w-7", className)}
         onClick={(event) => {
           onClick?.(event);
@@ -234,7 +234,7 @@ const SidebarTrigger = React.forwardRef<React.ElementRef<typeof Button>, React.C
         {...props}
       >
         <PanelLeft />
-        <span className="sr-only">Toggle Sidebar</span>
+        <span className="sr-only">{label}</span>
       </Button>
     );
   },

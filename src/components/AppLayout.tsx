@@ -13,6 +13,17 @@ import { useMisModulos } from "@/hooks/useMisModulos";
 import { modulos } from "@/modules";
 import { encabezadoModulo, moduloEnRuta } from "@/modules/contexto";
 import { AvisoSuplencia } from '@/pages/Suplencias';
+import { useState } from "react";
+import { readSidebarPreference, saveSidebarPreference } from "@/lib/sidebar-preference";
+import { PlatformBreadcrumbs } from "@/components/PlatformBreadcrumbs";
+
+function UserSidebarProvider({ userId, children }: { userId?: string; children: React.ReactNode }) {
+  const [open, setOpen] = useState(() => readSidebarPreference(userId));
+  return <SidebarProvider open={open} onOpenChange={(value) => {
+    setOpen(value);
+    if (userId) saveSidebarPreference(userId, value);
+  }}>{children}</SidebarProvider>;
+}
 
 const roleLabels: Record<string, string> = {
   admin: "Administrador",
@@ -56,7 +67,7 @@ export function AppLayout() {
 
   return (
     <ProtectedRoute>
-      <SidebarProvider>
+      <UserSidebarProvider key={user?.id ?? "signed-out"} userId={user?.id}>
         <div className="min-h-screen flex w-full">
           <AppSidebar />
           <div className="flex-1 flex flex-col min-w-0">
@@ -116,13 +127,16 @@ export function AppLayout() {
             </header>
 
             <main className="flex-1 overflow-auto p-6">
+              {pathname === "/pendientes" && <PlatformBreadcrumbs page="Mis pendientes" />}
+              {pathname === "/configuracion" && <PlatformBreadcrumbs page="Configuración" />}
+              {pathname === "/configuracion/suplencias" && <PlatformBreadcrumbs page="Suplencias" configuracion />}
               <Outlet />
             </main>
           </div>
           <FloatingAssistantButton />
           <OnboardingController />
         </div>
-      </SidebarProvider>
+      </UserSidebarProvider>
     </ProtectedRoute>
   );
 }

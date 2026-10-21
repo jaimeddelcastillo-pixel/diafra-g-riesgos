@@ -43,14 +43,14 @@ export const SECTION_ORDER: NavSection[] = ["inicio", "modulos", "empresa", "adm
 
 /** Inicio arriba, los grupos de módulos (en el orden recibido) y Configuración/Ayuda. */
 export function construirNavegacion(gruposModulos: NavItem[]): NavItem[] {
-  return [itemInicio, ...gruposModulos, ...navegacionEmpresa];
+  return [itemInicio, itemPendientes, ...gruposModulos, ...navegacionEmpresa];
 }
 
 const itemInicio: NavItem = { id: "inicio", label: "Inicio", icon: Home, route: "/", exact: true, section: "inicio" };
+const itemPendientes: NavItem = { id: "pendientes", label: "Mis pendientes", icon: ClipboardCheck, route: "/pendientes", section: "inicio" };
 
 /** De la empresa, no de un módulo. */
 const navegacionEmpresa: NavItem[] = [
-  { id: "pendientes", label: "Mis pendientes", icon: ClipboardCheck, route: "/pendientes", section: "empresa" },
   { id: "configuracion", label: "Configuración", icon: Settings, route: "/configuracion", section: "empresa" },
   { id: "soporte", label: "Ayuda", icon: LifeBuoy, route: "/soporte", section: "empresa", roles: ["admin", "responsable_sanitario"], onboarding: "ayuda" },
 ];

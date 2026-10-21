@@ -42,12 +42,15 @@ export function NavLeaf({
   sub?: boolean;
   extra?: React.ReactNode;
 }) {
-  const { state } = useSidebar();
-  const collapsed = state === "collapsed";
+  const { state, isMobile, setOpenMobile } = useSidebar();
+  const collapsed = state === "collapsed" && !isMobile;
+  if (!item.route) return null;
   const active = isRouteActive(pathname, item);
   const content = (
     <NavLink
-      to={item.route!}
+      to={item.route}
+      aria-label={item.label}
+      onClick={() => { if (isMobile) setOpenMobile(false); }}
       end={item.exact}
       className="hover:bg-sidebar-accent/50"
       activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
@@ -75,7 +78,7 @@ export function NavLeaf({
 
   return (
     <SidebarMenuItem>
-      <SidebarMenuButton asChild isActive={active} className="h-auto min-h-8 py-1.5">
+      <SidebarMenuButton asChild tooltip={item.label} isActive={active} className="h-auto min-h-8 py-1.5">
         {content}
       </SidebarMenuButton>
     </SidebarMenuItem>
@@ -91,12 +94,14 @@ interface NavGroupProps {
 }
 
 export function NavGroup({ item, pathname, open, onOpenChange, renderExtra }: NavGroupProps) {
-  const { state } = useSidebar();
-  const collapsed = state === "collapsed";
+  const { state, isMobile } = useSidebar();
+  const collapsed = state === "collapsed" && !isMobile;
   const hasActive = groupContainsActive(pathname, item);
 
   const triggerButton = (
     <SidebarMenuButton
+      tooltip={item.label}
+      aria-label={item.label}
       className={cn(
         "h-auto min-h-8 py-1.5 hover:bg-sidebar-accent/50",
         hasActive && !open && "text-sidebar-primary",
@@ -129,10 +134,10 @@ export function NavGroup({ item, pathname, open, onOpenChange, renderExtra }: Na
           <DropdownMenuTrigger asChild>{triggerButton}</DropdownMenuTrigger>
           <DropdownMenuContent side="right" align="start" sideOffset={8} className="w-52">
             <DropdownMenuLabel>{item.label}</DropdownMenuLabel>
-            {(item.children ?? []).map((child) => (
+            {(item.children ?? []).filter((child) => child.route).map((child) => (
               <DropdownMenuItem key={child.id} asChild>
                 <NavLink
-                  to={child.route!}
+                  to={child.route ?? "/"}
                   end={child.exact}
                   className="flex w-full items-center gap-2"
                   activeClassName="bg-accent text-primary font-medium"
