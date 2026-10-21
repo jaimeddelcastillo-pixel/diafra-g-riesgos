@@ -12,6 +12,33 @@ const datos=()=>{
 };
 const normalize=(xml:string)=>xml.replace(/\b(?:r:id|r:embed)="[^"]+"/g,'r:id="REL"').replace(/(<wp:docPr[^>]*\bid=")[^"]+/g,'$1ID');
 describe('Regresión Word atdiafra con identidad en tend_formato',()=>{
+ it('T5c imprime un renglón por firmante, conservando varios Elaboró y Revisó',async()=>{
+  vi.stubGlobal('Blob', (await import('node:buffer')).Blob);
+  Object.defineProperty(URL,'createObjectURL',{configurable:true,value:()=> 'blob:qa'});
+  Object.defineProperty(URL,'revokeObjectURL',{configurable:true,value:()=>{}});
+  vi.stubGlobal('Image',TestImage);
+  try {
+   const {bloques,texto}=datos();
+   const firmantes=[
+    {rol:'Elaboró',user_id:'autor-qa',nombre:'Autor Uno QA',cargo:'Analista Uno QA'},
+    {rol:'Elaboró',user_id:'autor-dos-qa',nombre:'Autor Dos QA',cargo:'Analista Dos QA'},
+    {rol:'Revisó',user_id:'revisor-qa',nombre:'Revisor Uno QA',cargo:'Revisor Cargo Uno QA'},
+    {rol:'Revisó',user_id:'revisor-dos-qa',nombre:'Revisor Dos QA',cargo:'Revisor Cargo Dos QA'},
+    {rol:'Autorizó',user_id:'rs-qa',nombre:'Responsable QA',cargo:'Responsable Sanitario QA'},
+   ];
+   const result=await generarWordForVal16({formato:{...FORMATO_DEFAULT,logo,firmantes},codigoAT:'AT-QA-001',version:1,estado:'emitido',emitidoAt:'2025-04-01',sistema:'QA',tituloSistema:'Sistema QA',periodo:'enero–marzo 2025',desde:'2025-01-01',hasta:'2025-03-31',bloques,texto,justificaciones:{},cambios:[],sustituye:'N/A',areas:['QA-01'],png:async()=>[{nombre:'QA',blob:await(await fetch(logo)).blob()}]});
+   const zip=await JSZip.loadAsync(await result.blob.arrayBuffer());
+   const xml=await zip.file('word/document.xml')?.async('string') ?? '';
+   const filas=xml.match(/<w:tr\b[^>]*>[\s\S]*?<\/w:tr>/g) ?? [];
+   for(const f of firmantes) {
+    const propias=filas.filter(r=>r.includes(f.nombre));
+    expect(propias).toHaveLength(1);
+    expect(propias[0]).toContain(f.cargo);
+    expect(propias[0]).toContain(f.rol.toUpperCase()+':');
+   }
+   expect(filas.filter(r=>firmantes.some(f=>r.includes(f.nombre)))).toHaveLength(5);
+  } finally {vi.unstubAllGlobals();}
+ });
  it('mantiene mismas secciones, tablas, textos y resultados con los mismos datos',async()=>{
   vi.stubGlobal('Blob', (await import('node:buffer')).Blob);
   Object.defineProperty(URL,'createObjectURL',{configurable:true,value:()=> 'blob:qa'});
