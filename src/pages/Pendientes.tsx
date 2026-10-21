@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -12,21 +12,31 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { usePendientes } from "@/hooks/usePendientes";
-import { MODULO_LABEL, TIPO_LABEL, type Pendiente } from "@/lib/pendientes";
+import { MODULO_LABEL, TIPO_LABEL, contarPendientes, type Pendiente, type ColorPendiente } from "@/lib/pendientes";
 import { PuntoColor } from "@/components/pendientes/PuntoColor";
+import { PendienteEnlace } from "@/components/pendientes/PendienteEnlace";
+import { useSemaforoPendientes } from "@/hooks/useSemaforoPendientes";
 
 function Lista({ datos, cargando, error }: { datos?: Pendiente[]; cargando: boolean; error: unknown }) {
   const [modulo, setModulo] = useState("todos");
   const [tipo, setTipo] = useState("todos");
   const [color, setColor] = useState("todos");
+  const semaforo = useSemaforoPendientes();
   const lista = datos ?? [];
   const modulos = useMemo(() => [...new Set(lista.map((p) => p.modulo))], [lista]);
   const tipos = useMemo(() => [...new Set(lista.map((p) => p.tipo))], [lista]);
+  const conteo = contarPendientes(lista.filter((p) => (modulo === "todos" || p.modulo === modulo) && (tipo === "todos" || p.tipo === tipo)));
   const visibles = lista.filter((p) => (modulo === "todos" || p.modulo === modulo) && (tipo === "todos" || p.tipo === tipo) && (color === "todos" || p.color === color));
   if (cargando) return <Skeleton className="h-40" />;
   if (error) return <p role="alert" className="text-destructive">{(error as { message?: string }).message ?? "No se pudieron cargar los pendientes."}</p>;
   return (
     <div className="space-y-4">
+      <div className="flex flex-wrap gap-2" role="group" aria-label="Filtrar por urgencia">
+        <Button variant={color === "todos" ? "secondary" : "outline"} size="sm" aria-pressed={color === "todos"} onClick={() => setColor("todos")}>Todos ({conteo.rojo + conteo.naranja + conteo.verde})</Button>
+        {([ ["rojo", "Vencidos"], ["naranja", "Por vencer"], ["verde", "A tiempo"] ] as [ColorPendiente, string][]).map(([valor, etiqueta]) => (
+          <Button key={valor} variant={color === valor ? "secondary" : "outline"} size="sm" aria-pressed={color === valor} onClick={() => setColor(valor)}><PuntoColor color={valor} /><span className="ml-2">{etiqueta} ({conteo[valor]})</span></Button>
+        ))}
+      </div>
       <div className="flex flex-wrap gap-3">
         <Select value={modulo} onValueChange={setModulo}><SelectTrigger className="w-56" aria-label="Módulo"><SelectValue /></SelectTrigger>
           <SelectContent><SelectItem value="todos">Todos los módulos</SelectItem>{modulos.map((m) => <SelectItem key={m} value={m}>{MODULO_LABEL[m] ?? m}</SelectItem>)}</SelectContent></Select>
@@ -39,12 +49,7 @@ function Lista({ datos, cargando, error }: { datos?: Pendiente[]; cargando: bool
         <ul className="divide-y rounded-md border">
           {visibles.map((p) => (
             <li key={`${p.tipo}-${p.registro}-${p.titulo}`}>
-              <Link to={p.ruta} className="flex flex-wrap items-center gap-3 px-3 py-2 text-sm hover:bg-muted/50">
-                <PuntoColor color={p.color} />
-                <span className="min-w-0 flex-1">{p.titulo}</span>
-                <span className="text-xs text-muted-foreground">{MODULO_LABEL[p.modulo] ?? p.modulo} · {TIPO_LABEL[p.tipo] ?? p.tipo}</span>
-                <span className="text-xs text-muted-foreground">{p.dias} días{p.fecha_limite ? ` · límite ${new Date(`${p.fecha_limite}T12:00:00`).toLocaleDateString("es-MX")}` : ""}</span>
-              </Link>
+              <PendienteEnlace pendiente={p} semaforo={semaforo.data} />
             </li>
           ))}
         </ul>

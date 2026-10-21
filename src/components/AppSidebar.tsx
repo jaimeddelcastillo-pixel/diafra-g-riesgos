@@ -12,6 +12,7 @@ import { NavGroup, NavLeaf, groupContainsActive } from "@/components/sidebar/Nav
 import { SECTION_LABELS, type NavItem } from "@/config/navigation";
 import { getOrgLogoUrl } from "@/lib/orgLogo";
 import { cn } from "@/lib/utils";
+import { contarPendientes } from "@/lib/pendientes";
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel,
   SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarHeader, useSidebar,
@@ -34,8 +35,8 @@ function useBadgeFolios() {
 }
 
 export function AppSidebar() {
-  const { state } = useSidebar();
-  const collapsed = state === "collapsed";
+  const { state, isMobile } = useSidebar();
+  const collapsed = state === "collapsed" && !isMobile;
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const { org, orgId, orgRole, user, isImpersonating, stopImpersonation, cambiarEmpresa } = useAuth();
@@ -52,6 +53,7 @@ export function AppSidebar() {
   const { sections, isAdminNav } = useNavigationItems();
   const mostrarBadgeFolios = useBadgeFolios();
   const pendientes = usePendientes("mio", !isAdminNav);
+  const conteo = contarPendientes(pendientes.data ?? []);
 
   // Solo se abre el grupo del módulo donde está la persona (en Inicio, ninguno).
   const [openId, setOpenId] = useState<string | null>(null);
@@ -88,14 +90,14 @@ export function AppSidebar() {
 
   const renderExtra = (child: NavItem) =>
     child.route === "/pendientes" && pendientes.data?.length ? (
-      <span className="rounded-full bg-primary px-1.5 text-[10px] font-semibold text-primary-foreground" aria-label={`${pendientes.data.length} pendientes`}>{pendientes.data.length}</span>
+      <span className={cn("rounded-full px-1.5 text-[10px] font-semibold", conteo.rojo ? "bg-destructive text-destructive-foreground" : conteo.naranja ? "bg-warning text-warning-foreground" : "bg-primary text-primary-foreground")} aria-label={`${pendientes.data.length} pendientes, ${conteo.rojo} vencidos`}>{pendientes.data.length}</span>
     ) : child.route === "/folios" && mostrarBadgeFolios ? (
       <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" title="Nuevo" />
     ) : null;
 
   return (
     <Sidebar collapsible="icon">
-      <SidebarHeader className="p-4">
+      <SidebarHeader className={cn("p-4", collapsed && "p-2")}>
         <div className="flex items-center gap-3">
           {orgLogo ? (
             <img src={orgLogo} alt={org?.nombre ?? "Logo"} className="h-8 w-8 object-contain rounded bg-white/10 p-0.5 flex-shrink-0" />
@@ -179,6 +181,8 @@ export function AppSidebar() {
               <SidebarMenu>
                 <SidebarMenuItem>
                   <SidebarMenuButton
+                    tooltip="Salir de empresa"
+                    aria-label="Salir de empresa"
                     className="hover:bg-sidebar-accent/50 text-amber-400 hover:text-amber-300 cursor-pointer"
                     onClick={() => { stopImpersonation(); navigate("/admin"); }}
                   >
