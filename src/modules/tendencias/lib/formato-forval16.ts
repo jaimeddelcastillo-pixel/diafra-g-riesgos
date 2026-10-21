@@ -4,7 +4,7 @@
 
 
 import { REFERENCIA_APENDICE_A, TABLA_APENDICE_A } from './apendice-a';
-export interface Firmante { rol: string; nombre: string; cargo: string }
+export interface Firmante { rol: string; nombre: string; cargo: string; user_id?: string }
 export type ClaveTexto = "s1" | "s3" | "s4" | "s5" | "s6" | "s7" | "s12" | "tablaClases";
 export interface FormatoForVal16 {
   identidad?: { nombre: string; logoDescripcion: string; confidencialidad: string };

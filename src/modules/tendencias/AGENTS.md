@@ -1,6 +1,6 @@
 # Tendencias module rules (moved from root AGENTS.md)
 
-- Report-template signers select active company-member profiles through server-resolved company context and copy name/title into the existing signer structure; do not add authorization or signature behavior or rewrite historical templates; why: convenient institutional identities without changing report snapshots or approval rules.
+- Report-template signers store optional user_id with copied name/title from active company-member profiles; manual selection clears the identity and historical templates are never linked by text matching. Autorizó eligibility is advisory via server-scoped has_role and current autorizar substitutions, never a replacement for AT issuance guards; do not implement electronic signing or rewrite historical templates; why: preserve real signer identity for future signing without changing snapshots or approval rules.
 
 - R32 Tendencias has its own read-only audit screen at /tendencias/auditoria (menu, admin/RS only) over audit_trail tend_* rows with date/user/table/code filters, before→after, reason and origin (user vs "Sistema / migración"), and Excel export; it must not depend on the Gestión de Riesgos module. Catalog Excel import validates only file rows: existing records absent from the file never block (incomplete ones are warned, untouched) and blank formatted trailing rows are ignored; the capture pressure-objective label reads "Objetivo N Pa"; why: tenant-scoped traceability without cross-module coupling and non-blocking catalog corrections.
 
