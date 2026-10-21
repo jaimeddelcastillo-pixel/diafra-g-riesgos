@@ -116,6 +116,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     if (ctx?.soporte_log_id || (!ctx?.org_id)) {
       // super_admin (soporte o sin empresa) o usuario legacy sin membresía
+      setPuedeAdministrarUsuarios(false);
       const { data: rolesData } = await supabase.from("user_roles").select("role").eq("user_id", u.id);
       setRoles((rolesData || []).map((r: any) => r.role as AppRole));
     } else {

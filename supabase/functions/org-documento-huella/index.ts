@@ -31,7 +31,7 @@ Deno.serve(async (req) => {
   if (!doc || doc.org_id !== ctx.orgId || !String(doc.storage_path).startsWith(`${ctx.orgId}/`)) {
     return json({ error: "El documento no pertenece a tu organización" }, 403);
   }
-  const autorizado = doc.creado_por === ctx.userId || ["admin", "responsable_sanitario", "super_admin"].includes(ctx.rolEnOrg ?? "");
+  const autorizado = doc.creado_por === ctx.userId || (ctx.esSuperAdmin || ctx.rolesEfectivos.some(r => ["admin", "responsable_sanitario"].includes(r)));
   if (!autorizado) return json({ error: "sin_permiso" }, 403);
   if (doc.sha256_servidor) {
     return json({ sha256_servidor: doc.sha256_servidor, coincide: !doc.sha256 || doc.sha256 === doc.sha256_servidor, ya_registrada: true });
