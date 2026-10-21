@@ -22,18 +22,34 @@ const aTemporal=(sql:string)=>sql.replace(/CREATE OR REPLACE FUNCTION public\./,
   .replaceAll('public.tend_','pg_temp.tend_')
   .replaceAll('auth.uid()','pg_temp.uid()');
 
+/** T4h-1: aplica a la copia la misma sustitución de la migración t4h1 (WHERE explícito para pg_safeupdate). */
+function parcheT4h1(rpc:string){
+  const m=readFileSync(`drizzle/migrations/${readdirSync('drizzle/migrations').filter(f=>f.includes('t4h1_catalogo_excel_safeupdate')).sort().at(-1)}`,'utf8');
+  const lit=(n:string)=>m.match(new RegExp(`${n} := '((?:[^']|'')*)'`))![1].replaceAll("''","'");
+  const viejo=lit('v_old');
+  const nuevo=viejo.slice(0,-1)+'\n'+m.match(/chr\(10\)\|\|' ((?:[^']|'')*)'/)![1].replaceAll("''","'").replace(/^/,' ');
+  expect(rpc).toContain(viejo);
+  return rpc.replace(viejo,nuevo);
+}
+/** Cada UPDATE de nivel superior (no ON CONFLICT … DO UPDATE) debe llevar WHERE real, nunca WHERE true. */
+export function updatesSinWhere(sql:string){
+  return sql.replace(/--[^\n]*/g,'').split(';').map(s=>s.trim()).filter(s=>/^UPDATE\s/i.test(s)||/\n\s*UPDATE\s/i.test(s)&&!/DO\s+UPDATE/i.test(s))
+    .filter(s=>!/\bWHERE\b/i.test(s.slice(s.search(/UPDATE\s/i)))||/WHERE\s+true\b/i.test(s));
+}
+
 function cuerpoRpc(){
   const sql=migracion();
-  const rpc=bloque(sql,'rpc');
+  const rpc=parcheT4h1(bloque(sql,'rpc'));
   expect(rpc).toContain('ON CONFLICT (id) DO UPDATE');
   expect(rpc).not.toMatch(/EXECUTE\s+format/i);
   expect(rpc).not.toMatch(/FOR\s+UPDATE/i);
   expect(rpc).not.toMatch(/\bFOR\s+\w+\s+IN\s+SELECT/i);
+  expect(updatesSinWhere(rpc)).toEqual([]);
   return [bloque(sql,'guard'),bloque(sql,'audit'),rpc].map(aTemporal).join('\n');
 }
 
-function ejecutar(cuerpo:string){
-  const setup=`BEGIN;
+function ejecutar(cuerpo:string,previo=''){
+  const setup=`${previo}BEGIN;
     SET LOCAL request.jwt.claims='{"sub":"${USUARIO}","role":"authenticated"}';
     CREATE FUNCTION pg_temp.uid() RETURNS uuid LANGUAGE sql AS $$ select (current_setting('request.jwt.claims',true)::jsonb->>'sub')::uuid $$;
     CREATE FUNCTION pg_temp.contexto_org_actual() RETURNS TABLE(org_id uuid) LANGUAGE sql AS $$ select id from public.organizations where es_prueba and id='${ORG}' $$;
@@ -124,5 +140,20 @@ describe.skipIf(!process.env.PGHOST)('T4h importación del catálogo por conjunt
     expect(valores.cambio_auditoria).toBe(200);
     expect(valores.alta_ms).toBeLessThan(2000);
     expect(valores.cambio_ms).toBeLessThan(2000);
+  },60000);
+
+  it('T4h-1: con pg_safeupdate activo la función no tiene UPDATE sin WHERE y aplica el catálogo',()=>{
+    const psql=(sql:string)=>execFileSync('psql',['-X','-q','-At','-c',sql],{encoding:'utf8',timeout:60000});
+    const viva=psql("select pg_get_functiondef('public.tend_importar_catalogo_excel(jsonb,text)'::regprocedure)");
+    expect(viva).toContain('WHERE cl IS NULL');
+    expect(updatesSinWhere(viva)).toEqual([]);
+    let safe='';
+    try{psql("LOAD 'safeupdate'");safe="LOAD 'safeupdate'; SET safeupdate.enabled=1;\n";}catch{/* el entorno de pruebas no permite cargarla; queda la revisión estática */}
+    if(safe) expect(()=>execFileSync('psql',['-X','-q','-v','ON_ERROR_STOP=1','-At'],{input:`${safe}BEGIN; CREATE TEMP TABLE t4h1_x(a int); UPDATE t4h1_x SET a=1; ROLLBACK;`,encoding:'utf8',stdio:['pipe','pipe','pipe']})).toThrow(/WHERE clause/);
+    const out=ejecutar(`DO $$ BEGIN
+      PERFORM pg_temp.tend_importar_catalogo_excel(jsonb_build_object('version','T4e-1','filas',jsonb_build_array(${fila('Sistemas_HVAC',{codigo:'T4H1-QA',nombre_uma:'Safe',descripcion:'',activo:true})},${fila('Areas',{codigo:'T4H1-A',nombre:'Área',iso:'ISO-8',hvac_codigo:'T4H1-QA',activo:true})})),'Prueba pg_safeupdate T4h-1');
+      INSERT INTO t4h_resultado VALUES('safe',(SELECT count(*) FROM tend_areas WHERE codigo='T4H1-A'));
+    END $$;`,safe);
+    expect(out).toContain('safe=1');
   },60000);
 });
