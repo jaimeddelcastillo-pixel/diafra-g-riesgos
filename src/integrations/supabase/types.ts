@@ -165,6 +165,7 @@ export type Database = {
           origen: string
           registro_id: string
           solicitado_por: string | null
+          suplencias: Json | null
           tabla: string
           user_id: string | null
           valor_anterior: Json | null
@@ -181,6 +182,7 @@ export type Database = {
           origen?: string
           registro_id: string
           solicitado_por?: string | null
+          suplencias?: Json | null
           tabla: string
           user_id?: string | null
           valor_anterior?: Json | null
@@ -197,6 +199,7 @@ export type Database = {
           origen?: string
           registro_id?: string
           solicitado_por?: string | null
+          suplencias?: Json | null
           tabla?: string
           user_id?: string | null
           valor_anterior?: Json | null
@@ -2910,6 +2913,8 @@ export type Database = {
           cargo: string
           created_at: string
           fecha_firma: string | null
+          firma_por: string | null
+          firma_suplencia: Json | null
           firmado: boolean
           folio_id: string
           hash_documento: string
@@ -2925,6 +2930,8 @@ export type Database = {
           cargo: string
           created_at?: string
           fecha_firma?: string | null
+          firma_por?: string | null
+          firma_suplencia?: Json | null
           firmado?: boolean
           folio_id: string
           hash_documento?: string
@@ -2940,6 +2947,8 @@ export type Database = {
           cargo?: string
           created_at?: string
           fecha_firma?: string | null
+          firma_por?: string | null
+          firma_suplencia?: Json | null
           firmado?: boolean
           folio_id?: string
           hash_documento?: string
@@ -3053,6 +3062,8 @@ export type Database = {
           created_at: string
           created_by: string | null
           desviacion_id: string | null
+          dictamen_por: string | null
+          dictamen_suplencia: Json | null
           estado: Database["public"]["Enums"]["estado_folio"]
           fecha_cierre: string | null
           fecha_inicio: string
@@ -3091,6 +3102,8 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           desviacion_id?: string | null
+          dictamen_por?: string | null
+          dictamen_suplencia?: Json | null
           estado?: Database["public"]["Enums"]["estado_folio"]
           fecha_cierre?: string | null
           fecha_inicio?: string
@@ -3129,6 +3142,8 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           desviacion_id?: string | null
+          dictamen_por?: string | null
+          dictamen_suplencia?: Json | null
           estado?: Database["public"]["Enums"]["estado_folio"]
           fecha_cierre?: string | null
           fecha_inicio?: string
@@ -5884,6 +5899,8 @@ export type Database = {
           created_at: string
           created_by: string | null
           desviacion_id: string | null
+          dictamen_por: string | null
+          dictamen_suplencia: Json | null
           estado: Database["public"]["Enums"]["estado_folio"]
           fecha_cierre: string | null
           fecha_inicio: string
@@ -6066,6 +6083,16 @@ export type Database = {
         Returns: undefined
       }
       examen_validar_banco: { Args: { p_curso_id: string }; Returns: Json }
+      firmar_folio_suplencia: {
+        Args: {
+          _agente: string
+          _compromiso: string
+          _folio: string
+          _hash: string
+          _ip: string
+        }
+        Returns: string
+      }
       folios_revision_corte: { Args: { p_ahora?: string }; Returns: string }
       get_user_org_id: { Args: never; Returns: string }
       has_role: {
@@ -6220,6 +6247,13 @@ export type Database = {
         Returns: undefined
       }
       set_org_activa: { Args: { _org: string }; Returns: undefined }
+      suplencia_contexto: {
+        Args: {
+          _rol: Database["public"]["Enums"]["app_role"]
+          _usuario: string
+        }
+        Returns: Json
+      }
       tend_acceso: {
         Args: { _escritura?: boolean; _org: string; _roles?: string[] }
         Returns: boolean
