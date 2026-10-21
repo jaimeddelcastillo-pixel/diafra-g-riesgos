@@ -5,11 +5,13 @@
 
 import { REFERENCIA_APENDICE_A, TABLA_APENDICE_A } from './apendice-a';
 export interface Firmante { rol: string; nombre: string; cargo: string; user_id?: string }
+export interface ElegiblesFirmantes { rol: 'Elaboró' | 'Revisó' | 'Autorizó'; user_ids: string[]; default_user_id?: string }
 export type ClaveTexto = "s1" | "s3" | "s4" | "s5" | "s6" | "s7" | "s12" | "tablaClases";
 export interface FormatoForVal16 {
   identidad?: { nombre: string; logoDescripcion: string; confidencialidad: string };
   version: number; version_formato: string; logo: string | null;
   firmantes: Firmante[]; textos: Record<ClaveTexto, string>;
+  firmantes_elegibles?: ElegiblesFirmantes[];
   created_by_email?: string | null; created_at?: string;
 }
 
@@ -118,5 +120,5 @@ export const ROLES_FIRMA = ["Elaboró", "Revisó", "Autorizó"] as const;
 export function firmantesReporte(firmantes: Firmante[]): Firmante[] {
   const clave = (r: string) => r.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
   const raiz = { "Elaboró": /^elabor/, "Revisó": /^revis/, "Autorizó": /^(autoriz|aprob)/ } as const;
-  return ROLES_FIRMA.map(rol => { const f = firmantes.find(x => raiz[rol].test(clave(x.rol ?? ""))); return { rol, nombre: f?.nombre ?? "", cargo: f?.cargo ?? "" }; });
+  return ROLES_FIRMA.flatMap(rol => { const lista = firmantes.filter(x => raiz[rol].test(clave(x.rol ?? ""))); return lista.length ? lista.map(f => ({ ...f, rol })) : [{ rol, nombre: '', cargo: '' }]; });
 }
