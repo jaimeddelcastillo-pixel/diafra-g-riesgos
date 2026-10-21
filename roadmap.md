@@ -1,5 +1,7 @@
 # Roadmap
 
+- [ ] Firmantes: conservar user_id opcional, avisar sin bloquear Autorizó sin RS/suplencia vigente y cargo ausente; compatibilidad histórica y suite automática sin navegador/dependencias.
+
 - [x] Selector de usuarios activos de la empresa en Firmantes de Plantilla del reporte; copia nombre/cargo conservando rol y versiones anteriores; 184/184 pruebas de Tendencias, build OK; sin navegador ni dependencias.
 
 - [x] T4e implementado: plantilla Excel T4e-1, exportación, vista previa sin escritura y RPC admin/RS atómica motivada; equivalencias sin columnas nuevas; pruebas XLSX y transacción SQL temporal con alta/cambio/bloqueo/reversión. Sin navegador/IA/dependencias ni motor. Informe t4e_reporte.md; verificación funcional con sesión adminqa a cargo de Jaime (sandbox no permite authenticated/RPC productiva).
