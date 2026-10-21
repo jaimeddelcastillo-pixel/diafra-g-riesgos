@@ -80,3 +80,8 @@ Implementados reporte independiente, vistas por área/instrumento/avance, consol
 - [x] Auditoría de Tendencias en /tendencias/auditoria (menú, solo admin/RS): tend_* con fecha, usuario, acción, registro, antes→después, motivo y origen; filtros y exportación Excel
 - [x] Importación del catálogo: valida solo renglones del archivo; existentes incompletos avisan sin bloquear; renglones vacíos con formato ignorados
 - [x] Captura: etiqueta del objetivo «Objetivo N Pa»
+
+### T5d — suplencias de plataforma
+- [ ] Mover Suplencias a Configuración; designación admin/RS, categorías, aceptación, rechazo y terminación motivada; conservar existentes y avisos.
+- [ ] Unificar rol efectivo en servidor y permisos de Riesgos, Cerebro, Tendencias y plataforma sin mezcla de roles ni autoautorización.
+- [ ] Registrar identidad del titular en acciones y auditoría; suite automática con aceptación, vigencia, solapamientos y aislamiento RS/admin (sin navegador, IA ni dependencias).
