@@ -12,6 +12,7 @@ import ConfiguracionAsistente from "./pages/ConfiguracionAsistente";
 import Admin from "./pages/Admin";
 import AdminOrg from "./pages/AdminOrg";
 import AdminTickets from "./pages/AdminTickets";
+import AdminNormas from "./pages/AdminNormas";
 import AdminAgentes from "./pages/AdminAgentes";
 import AdminProtocolos from "./pages/AdminProtocolos";
 import AdminRecursos from "./pages/AdminRecursos";
@@ -87,6 +88,7 @@ const App = () => (
               <Route path="/configuracion/auditorias/:id" element={<AuditoriasExternas />} />
               <Route path="/admin" element={<Admin />} />
               <Route path="/admin/org/:id" element={<AdminOrg />} />
+              <Route path="/admin/normas" element={<AdminNormas />} />
               <Route path="/admin/tickets" element={<AdminTickets />} />
               <Route path="/admin/agentes-ia" element={<AdminAgentes />} />
               <Route path="/admin/protocolos" element={<AdminProtocolos />} />

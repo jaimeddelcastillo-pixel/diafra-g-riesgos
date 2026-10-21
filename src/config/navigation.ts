@@ -1,6 +1,6 @@
 import {
   Home, Settings, ShieldCheck, LifeBuoy, Ticket, Library, Sparkles, GraduationCap, FileBadge,
-  FileText, ClipboardCheck, Wrench, type LucideIcon,
+  FileText, ClipboardCheck, Wrench, Scale, type LucideIcon,
 } from "lucide-react";
 import { modulos } from "@/modules";
 
@@ -60,6 +60,7 @@ export const navigationConfig: NavItem[] = construirNavegacion(modulos.map((m) =
 /** Navegación del panel TRACEA (super admin sin impersonar). */
 export const adminNavigationConfig: NavItem[] = [
   { id: "admin-panel", label: "Panel TRACEA", icon: ShieldCheck, route: "/admin", exact: true, section: "admin" },
+  { id: "admin-normas", label: "Normas y especificaciones", icon: Scale, route: "/admin/normas", section: "admin" },
   { id: "admin-tickets", label: "Tickets", icon: Ticket, route: "/admin/tickets", section: "admin" },
   { id: "admin-agentes", label: "Skills de IA", icon: Sparkles, route: "/admin/agentes-ia", section: "admin" },
   { id: "admin-protocolos", label: "Protocolos (addon)", icon: FileBadge, route: "/admin/protocolos", section: "admin" },

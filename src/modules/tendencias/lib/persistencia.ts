@@ -101,8 +101,9 @@ export async function listarNormas(){
   const {data,error}=await supabase.from('tend_norma_especificaciones').select('*').order('variable').order('clase_iso');
   if(error) throw error; return (data ?? []) as unknown as import('./norma').NormaEspecificacion[];
 }
-export async function guardarNorma(id:string,valores:Record<string,unknown>){
-  const {error}=await supabase.from('tend_norma_especificaciones').update(valores as never).eq('id',id); if(error) throw error;
+export async function guardarNorma(id:string,valores:Record<string,unknown>,motivo:string){
+  if(motivo.trim().length<5) throw new Error('Motivo obligatorio (mínimo 5 caracteres)');
+  const {error}=await supabase.rpc('tend_guardar_norma',{_id:id,_valores:valores as unknown as Json,_motivo:motivo.trim()}); if(error) throw new Error(error.message);
 }
 export async function mediasTrimestre(){
   const {data,error}=await supabase.rpc('tend_media_trimestre'); if(error) throw error;
