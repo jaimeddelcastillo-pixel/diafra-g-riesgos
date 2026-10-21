@@ -1,6 +1,7 @@
 # Roadmap
 
-- [ ] P1-b: menú plegable por usuario y cajón móvil, pendientes arriba de módulos, migas de pan de plataforma, alertas por color y asunto del correo diario; suite sin navegador/IA/dependencias, sin cambios de permisos o lógica.
+- [x] P1-b: menú plegable por usuario y cajón móvil, pendientes arriba de módulos, migas de pan de plataforma, alertas por color; sin cambios de permisos o lógica, sin navegador/IA/dependencias.
+- [ ] P1-b asunto diario con vencidos: no existe remitente ni correo diario de Mis pendientes en el proyecto; requiere definir/autorizar ese envío antes de modificar un asunto inexistente.
 
 - [x] P1 Mis pendientes: pendientes_usuario, semáforo por empresa, bloque Inicio, /pendientes con pestañas y filtros, contador en menú, confirmación de perfil (firmantes), aviso de suplencia encimada; pruebas SQL temporales. Sin navegador/IA/dependencias.
 
