@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { Firmante } from './lib/formato-forval16';
-import { elegirFirmante, listarUsuariosFirmantes, usuarioDelFirmante } from './lib/firmantes-empresa';
+import { elegirFirmante, esAutorizante, listarUsuariosFirmantes, usuarioDelFirmante, verificarAutorizante } from './lib/firmantes-empresa';
 
 export default function FirmantesPlantilla({ firmantes, onChange, editable, orgId }: {
   firmantes: Firmante[]; onChange: (firmantes: Firmante[]) => void;
@@ -13,6 +13,10 @@ export default function FirmantesPlantilla({ firmantes, onChange, editable, orgI
 }) {
   const usuarios = useQuery({ queryKey: ['tend-firmantes-empresa', orgId],
     queryFn: listarUsuariosFirmantes, enabled: !!orgId });
+  const autorizantes = [...new Set(firmantes.filter(s => esAutorizante(s.rol) && s.user_id).map(s => s.user_id ?? ''))].sort();
+  const permisos = useQuery({ queryKey: ['tend-firmantes-autorizantes', orgId, autorizantes],
+    queryFn: async () => Object.fromEntries(await Promise.all(autorizantes.map(async id => [id, await verificarAutorizante(id)] as const))),
+    enabled: !!orgId && autorizantes.length > 0, refetchInterval: 15000 });
   const actualizar = (i: number, firmante: Firmante) => onChange(firmantes.map((f, j) => j === i ? firmante : f));
   return <section className="border-b pb-6 space-y-4">
     <div className="flex justify-between gap-3"><h2 className="font-semibold">Firmantes</h2>
@@ -24,13 +28,17 @@ export default function FirmantesPlantilla({ firmantes, onChange, editable, orgI
         <Label htmlFor={`firma-${i}-usuario`}>Usuario de la empresa</Label>
         <Select disabled={!editable || usuarios.isPending || !!usuarios.error}
           value={usuarioDelFirmante(s, usuarios.data ?? [])}
-          onValueChange={id => { if (id !== 'manual') actualizar(i, elegirFirmante(s, id, usuarios.data ?? [])); }}>
+          onValueChange={id => actualizar(i, elegirFirmante(s, id, usuarios.data ?? []))}>
           <SelectTrigger id={`firma-${i}-usuario`} className="w-full min-w-0 [&>span]:truncate"><SelectValue/></SelectTrigger>
-          <SelectContent><SelectItem value="manual">{usuarios.isPending ? 'Cargando…' : 'Nombre y cargo actuales'}</SelectItem>
-            {(usuarios.data ?? []).map(u => <SelectItem key={u.id} value={u.id}>{u.nombre || 'Sin nombre'}{u.cargo ? ` · ${u.cargo}` : ''}</SelectItem>)}
+          <SelectContent><SelectItem value="manual">{usuarios.isPending ? 'Cargando…' : 'Nombre y cargo manuales'}</SelectItem>
+            {s.user_id && !usuarios.data?.some(u => u.id === s.user_id) && <SelectItem value={s.user_id}>Usuario asociado no disponible · {s.nombre}</SelectItem>}
+            {(usuarios.data ?? []).map(u => <SelectItem key={u.id} value={u.id}>{u.nombre || 'Sin nombre'} · {u.cargo?.trim() || 'Sin cargo en el perfil'}</SelectItem>)}
           </SelectContent>
         </Select>
       </div>
+      {s.user_id && usuarios.data?.some(u => u.id === s.user_id && !u.cargo?.trim()) && <p className="text-sm text-muted-foreground">Sin cargo en el perfil</p>}
+      {esAutorizante(s.rol) && (!s.user_id || permisos.data?.[s.user_id] === false) && <p role="status" className="text-sm text-warning">Autorizó debe ser el Responsable Sanitario o su suplente vigente con facultad de autorizar. Puedes guardar la plantilla; la autorización del AT se verifica por separado.</p>}
+      {esAutorizante(s.rol) && s.user_id && permisos.error && <p role="status" className="text-sm text-warning">No se pudo verificar si este usuario es RS o suplente vigente. Puedes guardar la plantilla.</p>}
       <div className="grid gap-3 sm:grid-cols-[1fr_2fr_2fr_auto]">
         {(['rol', 'nombre', 'cargo'] as const).map(k => <div className="space-y-1 min-w-0" key={k}>
           <Label htmlFor={`firma-${i}-${k}`}>{k === 'rol' ? 'Rol' : k === 'nombre' ? 'Nombre' : 'Cargo'}</Label>
