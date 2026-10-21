@@ -561,6 +561,13 @@
       "when": 1792611821281,
       "tag": "0079_t5c_autorizantes_rol_empresa_activa",
       "breakpoints": true
+    },
+    {
+      "idx": 80,
+      "version": "7",
+      "when": 1792614935038,
+      "tag": "0080_t5d_suplencias_plataforma",
+      "breakpoints": true
     }
   ]
 }

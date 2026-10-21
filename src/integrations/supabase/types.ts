@@ -3635,77 +3635,107 @@ export type Database = {
       }
       org_suplencias: {
         Row: {
+          aceptada_en: string | null
           aviso_rs_enviado_en: string | null
           aviso_rs_error: string | null
           aviso_rs_requerido: boolean
+          categoria: string
           created_at: string
           created_by: string | null
           documento_respaldo: string | null
+          estado: string
           facultades: string[]
           fecha_fin: string
           fecha_inicio: string
           id: string
           motivo: string
+          motivo_terminacion: string | null
           org_id: string
           registrada_por: string | null
+          respondida_por: string | null
           revocada_en: string | null
           revocada_por: string | null
+          rol_sustituido: string
           rs_titular_cargo: string | null
           rs_titular_nombre: string | null
           rs_titular_user_id: string | null
           suplente_cargo: string
           suplente_nombre: string
           suplente_user_id: string
+          terminada_en: string | null
+          titular_cargo: string | null
+          titular_nombre: string | null
+          titular_user_id: string | null
           updated_at: string
           updated_by: string | null
         }
         Insert: {
+          aceptada_en?: string | null
           aviso_rs_enviado_en?: string | null
           aviso_rs_error?: string | null
           aviso_rs_requerido?: boolean
+          categoria?: string
           created_at?: string
           created_by?: string | null
           documento_respaldo?: string | null
+          estado?: string
           facultades: string[]
           fecha_fin: string
           fecha_inicio: string
           id?: string
           motivo: string
+          motivo_terminacion?: string | null
           org_id: string
           registrada_por?: string | null
+          respondida_por?: string | null
           revocada_en?: string | null
           revocada_por?: string | null
+          rol_sustituido?: string
           rs_titular_cargo?: string | null
           rs_titular_nombre?: string | null
           rs_titular_user_id?: string | null
           suplente_cargo?: string
           suplente_nombre?: string
           suplente_user_id: string
+          terminada_en?: string | null
+          titular_cargo?: string | null
+          titular_nombre?: string | null
+          titular_user_id?: string | null
           updated_at?: string
           updated_by?: string | null
         }
         Update: {
+          aceptada_en?: string | null
           aviso_rs_enviado_en?: string | null
           aviso_rs_error?: string | null
           aviso_rs_requerido?: boolean
+          categoria?: string
           created_at?: string
           created_by?: string | null
           documento_respaldo?: string | null
+          estado?: string
           facultades?: string[]
           fecha_fin?: string
           fecha_inicio?: string
           id?: string
           motivo?: string
+          motivo_terminacion?: string | null
           org_id?: string
           registrada_por?: string | null
+          respondida_por?: string | null
           revocada_en?: string | null
           revocada_por?: string | null
+          rol_sustituido?: string
           rs_titular_cargo?: string | null
           rs_titular_nombre?: string | null
           rs_titular_user_id?: string | null
           suplente_cargo?: string
           suplente_nombre?: string
           suplente_user_id?: string
+          terminada_en?: string | null
+          titular_cargo?: string | null
+          titular_nombre?: string | null
+          titular_user_id?: string | null
           updated_at?: string
           updated_by?: string | null
         }
@@ -5977,6 +6007,18 @@ export type Database = {
           id: string
         }[]
       }
+      designar_suplencia: {
+        Args: {
+          _categoria: string
+          _fin: string
+          _inicio: string
+          _motivo: string
+          _rol: Database["public"]["Enums"]["app_role"]
+          _suplente: string
+          _titular: string
+        }
+        Returns: string
+      }
       documento_tipos_uso: {
         Args: never
         Returns: {
@@ -6070,6 +6112,10 @@ export type Database = {
           rol: string
         }[]
       }
+      mis_roles_efectivos: {
+        Args: never
+        Returns: Database["public"]["Enums"]["app_role"][]
+      }
       next_diploma_folio: { Args: { p_org_id: string }; Returns: string }
       next_folio_code:
         | { Args: never; Returns: string }
@@ -6120,6 +6166,7 @@ export type Database = {
         Args: { p_motivo: string; p_prompt_id: string }
         Returns: undefined
       }
+      puede_administrar_usuarios: { Args: never; Returns: boolean }
       puede_editar_catalogo_documentos: { Args: never; Returns: boolean }
       purgar_documentos_eliminados: { Args: never; Returns: number }
       purgar_documentos_expirados: {
@@ -6149,11 +6196,22 @@ export type Database = {
         Args: { p_folio_id: string; p_orden: string[] }
         Returns: Json
       }
+      responder_suplencia: {
+        Args: { _aceptar: boolean; _id: string }
+        Returns: undefined
+      }
       restaurar_documento: { Args: { p_doc_id: string }; Returns: boolean }
       restaurar_documento_tipos: { Args: never; Returns: number }
       retirar_documento: {
         Args: { p_doc_id: string; p_motivo: string }
         Returns: undefined
+      }
+      rol_efectivo: {
+        Args: {
+          _rol: Database["public"]["Enums"]["app_role"]
+          _usuario: string
+        }
+        Returns: boolean
       }
       same_org_member: { Args: { _user_id: string }; Returns: boolean }
       seed_documento_tipos: { Args: { _org_id: string }; Returns: number }
@@ -6286,6 +6344,10 @@ export type Database = {
             }
             Returns: Json
           }
+      terminar_suplencia: {
+        Args: { _id: string; _motivo: string }
+        Returns: undefined
+      }
       todos_firmaron: { Args: { p_folio_id: string }; Returns: boolean }
       verificar_diploma: {
         Args: { p_hash: string }
