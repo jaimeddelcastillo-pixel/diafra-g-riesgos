@@ -41,7 +41,7 @@ describe.skipIf(!process.env.PGHOST)('T5d server rules, temporary QA only',()=>{
   it('accepted RS authorizes AT and signs the titular assignment, not users administration',()=>check(`s:=${designation()};${accept} IF NOT pg_temp.rol_efectivo('${id(3)}','responsable_sanitario') OR pg_temp.rol_efectivo('${id(3)}','admin') OR pg_temp.puede_administrar_usuarios() THEN RAISE EXCEPTION 'RS isolation failed';END IF;
 INSERT INTO tend_instrumentos(id,org_id,activo,spec_estado,area_estado) VALUES('${id(20)}','${id(100)}',true,'validada','validada');
 INSERT INTO tend_registros_at(id,org_id,codigo,fecha,estado,instrumentos) VALUES('${id(21)}','${id(100)}','AT-2026-001','2026-07-01','borrador','[{"id":"${id(20)}"}]');
-PERFORM set_config('qa.actor','${id(2)}',true);UPDATE tend_registros_at SET texto='QA corrección' WHERE id='${id(21)}';
+PERFORM set_config('qa.actor','${id(2)}',true);UPDATE tend_registros_at SET texto='{}'::jsonb WHERE id='${id(21)}';
 PERFORM set_config('qa.actor','${id(3)}',true);UPDATE tend_registros_at SET estado='emitido' WHERE id='${id(21)}';
 IF NOT EXISTS(SELECT 1 FROM tend_registros_at WHERE id='${id(21)}' AND estado='emitido' AND suplencia_id=s) THEN RAISE EXCEPTION 'AT not issued under substitution';END IF;
 INSERT INTO folios(id,org_id,estado,created_by) VALUES('${id(30)}','${id(100)}','En Firma','${id(2)}');
@@ -50,7 +50,7 @@ v:=pg_temp.firmar_folio_suplencia('${id(30)}','QA hash','QA IP','QA agent','QA c
 IF v<>'${id(31)}' OR NOT EXISTS(SELECT 1 FROM folio_comite WHERE id=v AND firmado AND firma_por='${id(3)}' AND firma_suplencia->>'titular_user_id'='${id(1)}' AND nombre='QA persona 3') THEN RAISE EXCEPTION 'Risk signature attribution failed';END IF;
 INSERT INTO audit_trail(user_id,org_id,tabla,registro_id,accion) VALUES('${id(3)}','${id(100)}','folios','${id(30)}','QA');
 IF NOT EXISTS(SELECT 1 FROM audit_trail WHERE accion='QA' AND suplencias->0->>'titular_user_id'='${id(1)}') THEN RAISE EXCEPTION 'Audit attribution missing';END IF;`),30000);
-  it('expired or revoked RS grants no role',()=>check(`s:=pg_temp.designar_suplencia('responsable_sanitario','${id(1)}','${id(3)}',now()-interval '1 hour',now()+interval '1 millisecond','ausencia','QA');PERFORM pg_sleep(0.02); -- transaction now remains fixed, use statement_timestamp through a past fixture instead
+  it('expired or revoked RS grants no role',()=>check(`s:=pg_temp.designar_suplencia('responsable_sanitario','${id(1)}','${id(3)}',now()-interval '1 hour',now()+interval '1 millisecond','ausencia','QA');
 ALTER TABLE org_suplencias DISABLE TRIGGER guard;UPDATE org_suplencias SET estado='activa',aceptada_en=now(),fecha_fin=now()-interval '1 second' WHERE id=s;ALTER TABLE org_suplencias ENABLE TRIGGER guard;
 IF pg_temp.rol_efectivo('${id(3)}','responsable_sanitario') THEN RAISE EXCEPTION 'Expired grants role';END IF;`),30000);
   it('two overlapping accepted substitutions of the same role are rejected',()=>check(`s:=${designation()};v:=${designation('responsable_sanitario',4)};${accept}PERFORM set_config('qa.actor','${id(4)}',true);BEGIN PERFORM pg_temp.responder_suplencia(v,true);EXCEPTION WHEN raise_exception THEN failed:=true;END;IF NOT failed THEN RAISE EXCEPTION 'Overlapping role accepted';END IF;`),30000);
