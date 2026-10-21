@@ -22,13 +22,29 @@ const aTemporal=(sql:string)=>sql.replace(/CREATE OR REPLACE FUNCTION public\./,
   .replaceAll('public.tend_','pg_temp.tend_')
   .replaceAll('auth.uid()','pg_temp.uid()');
 
+/** T4h-1: aplica a la copia la misma sustitución de la migración t4h1 (WHERE explícito para pg_safeupdate). */
+function parcheT4h1(rpc:string){
+  const m=readFileSync(`drizzle/migrations/${readdirSync('drizzle/migrations').filter(f=>f.includes('t4h1_catalogo_excel_safeupdate')).sort().at(-1)}`,'utf8');
+  const lit=(n:string)=>m.match(new RegExp(`${n} := '((?:[^']|'')*)'`))![1].replaceAll("''","'");
+  const viejo=lit('v_old');
+  const nuevo=viejo.slice(0,-1)+'\n'+m.match(/chr\(10\)\|\|' ((?:[^']|'')*)'/)![1].replaceAll("''","'").replace(/^/,' ');
+  expect(rpc).toContain(viejo);
+  return rpc.replace(viejo,nuevo);
+}
+/** Cada UPDATE de nivel superior (no ON CONFLICT … DO UPDATE) debe llevar WHERE real, nunca WHERE true. */
+export function updatesSinWhere(sql:string){
+  return sql.replace(/--[^\n]*/g,'').split(';').map(s=>s.trim()).filter(s=>/^UPDATE\s/i.test(s)||/\n\s*UPDATE\s/i.test(s)&&!/DO\s+UPDATE/i.test(s))
+    .filter(s=>!/\bWHERE\b/i.test(s.slice(s.search(/UPDATE\s/i)))||/WHERE\s+true\b/i.test(s));
+}
+
 function cuerpoRpc(){
   const sql=migracion();
-  const rpc=bloque(sql,'rpc');
+  const rpc=parcheT4h1(bloque(sql,'rpc'));
   expect(rpc).toContain('ON CONFLICT (id) DO UPDATE');
   expect(rpc).not.toMatch(/EXECUTE\s+format/i);
   expect(rpc).not.toMatch(/FOR\s+UPDATE/i);
   expect(rpc).not.toMatch(/\bFOR\s+\w+\s+IN\s+SELECT/i);
+  expect(updatesSinWhere(rpc)).toEqual([]);
   return [bloque(sql,'guard'),bloque(sql,'audit'),rpc].map(aTemporal).join('\n');
 }
 
