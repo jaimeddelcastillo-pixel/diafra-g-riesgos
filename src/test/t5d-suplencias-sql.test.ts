@@ -40,7 +40,7 @@ describe.skipIf(!process.env.PGHOST)('T5d server rules, temporary QA only',()=>{
   it('pending gives neither RS nor administrative permissions',()=>check(`s:=${designation()}; IF pg_temp.rol_efectivo('${id(3)}','responsable_sanitario') THEN RAISE EXCEPTION 'Pending grants RS';END IF;PERFORM set_config('qa.actor','${id(3)}',true);IF pg_temp.puede_administrar_usuarios() THEN RAISE EXCEPTION 'Pending grants administration';END IF;`),30000);
   it('accepted RS authorizes AT and signs the titular assignment, not users administration',()=>check(`s:=${designation()};${accept} IF NOT pg_temp.rol_efectivo('${id(3)}','responsable_sanitario') OR pg_temp.rol_efectivo('${id(3)}','admin') OR pg_temp.puede_administrar_usuarios() THEN RAISE EXCEPTION 'RS isolation failed';END IF;
 INSERT INTO tend_instrumentos(id,org_id,activo,spec_estado,area_estado) VALUES('${id(20)}','${id(100)}',true,'validada','validada');
-INSERT INTO tend_registros_at(id,org_id,codigo,fecha,estado,instrumentos) VALUES('${id(21)}','${id(100)}','AT-2026-001','2026-07-01','borrador','[{"id":"${id(20)}"}]');
+PERFORM set_config('qa.actor','${id(2)}',true);INSERT INTO tend_registros_at(id,org_id,codigo,fecha,estado,instrumentos) VALUES('${id(21)}','${id(100)}','AT-2026-001','2026-07-01','borrador','[{"id":"${id(20)}"}]');
 PERFORM set_config('qa.actor','${id(2)}',true);UPDATE tend_registros_at SET texto='{}'::jsonb WHERE id='${id(21)}';
 PERFORM set_config('qa.actor','${id(3)}',true);UPDATE tend_registros_at SET estado='emitido' WHERE id='${id(21)}';
 IF NOT EXISTS(SELECT 1 FROM tend_registros_at WHERE id='${id(21)}' AND estado='emitido' AND suplencia_id=s) THEN RAISE EXCEPTION 'AT not issued under substitution';END IF;
