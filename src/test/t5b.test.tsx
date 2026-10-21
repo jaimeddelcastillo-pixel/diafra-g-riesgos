@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 const rpc = vi.fn();
 vi.mock("@/integrations/supabase/client", () => ({ supabase: { rpc: (...a: unknown[]) => rpc(...a) } }));
+vi.mock("@/modules", () => ({ modulos: [] }));
 vi.mock("@/hooks/useAuth", () => ({
   useAuth: () => ({ orgId: "o1", user: { id: "u1" }, isSuperAdmin: () => false, isImpersonating: false, loading: false }),
 }));
