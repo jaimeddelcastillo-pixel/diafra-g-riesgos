@@ -561,6 +561,34 @@
       "when": 1792611821281,
       "tag": "0079_t5c_autorizantes_rol_empresa_activa",
       "breakpoints": true
+    },
+    {
+      "idx": 80,
+      "version": "7",
+      "when": 1792614935038,
+      "tag": "0080_t5d_suplencias_plataforma",
+      "breakpoints": true
+    },
+    {
+      "idx": 81,
+      "version": "7",
+      "when": 1792615001278,
+      "tag": "0081_t5d_trazabilidad_firma_roles",
+      "breakpoints": true
+    },
+    {
+      "idx": 82,
+      "version": "7",
+      "when": 1792615251052,
+      "tag": "0082_t5d_roles_modulos_dictamen",
+      "breakpoints": true
+    },
+    {
+      "idx": 83,
+      "version": "7",
+      "when": 1792615382264,
+      "tag": "0083_t5d_guardas_integracion",
+      "breakpoints": true
     }
   ]
 }

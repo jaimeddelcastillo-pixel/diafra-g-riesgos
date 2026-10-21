@@ -56,7 +56,7 @@ Deno.serve(async (req) => {
   if (!body) return json({ error: "payload_invalido" }, 400);
 
   // 3. Rol autorizado (rol local en la empresa, no user_roles)
-  const autorizado = esSuper || ctx.rolEnOrg === "admin" || ctx.rolEnOrg === "responsable_sanitario";
+  const autorizado = esSuper || ctx.rolesEfectivos.some(r => ["admin", "responsable_sanitario"].includes(r));
   if (!autorizado) return json({ error: "sin_permiso" }, 403);
 
   // 4. Módulo del Cerebro (decisión única en org_tiene_modulo)

@@ -7,6 +7,7 @@ export interface UsuarioFirmante { id: string; nombre: string | null; cargo: str
 export interface SuplenciaFirmante {
   suplente_user_id: string; fecha_inicio: string; fecha_fin: string;
   revocada_en: string | null; facultades: string[];
+  estado?: string; aceptada_en?: string | null; rol_sustituido?: string;
 }
 
 export function esAutorizante(rol: string): boolean {
@@ -15,6 +16,7 @@ export function esAutorizante(rol: string): boolean {
 
 export function tieneSuplenciaAutorizar(id: string, suplencias: SuplenciaFirmante[], ahora = Date.now()): boolean {
   return suplencias.some(s => s.suplente_user_id === id && !s.revocada_en
+    && s.estado === 'activa' && !!s.aceptada_en && s.rol_sustituido === 'responsable_sanitario'
     && Date.parse(s.fecha_inicio) <= ahora && ahora < Date.parse(s.fecha_fin)
     && s.facultades.includes('autorizar'));
 }
@@ -26,14 +28,12 @@ export async function verificarAutorizante(id: string): Promise<boolean> {
     .eq('org_id', org).eq('user_id', id).maybeSingle();
   if (error) throw error;
   if (!miembro) return false;
-  const [{ data: perfil, error: perfilError }, { data: rs, error: rolError }, { data: suplencias, error: suplenciaError }] = await Promise.all([
+  const [{ data: perfil, error: perfilError }, { data: rs, error: rolError }] = await Promise.all([
     supabase.from('profiles').select('id').eq('id', id).eq('activo', true).maybeSingle(),
-    supabase.rpc('has_role', { _user_id: id, _role: 'responsable_sanitario' }),
-    supabase.from('org_suplencias').select('suplente_user_id,fecha_inicio,fecha_fin,revocada_en,facultades')
-      .eq('org_id', org).eq('suplente_user_id', id),
+    supabase.rpc('rol_efectivo', { _usuario: id, _rol: 'responsable_sanitario' }),
   ]);
-  if (perfilError || rolError || suplenciaError) throw perfilError ?? rolError ?? suplenciaError;
-  return !!perfil && (!!rs || tieneSuplenciaAutorizar(id, suplencias ?? []));
+  if (perfilError || rolError) throw perfilError ?? rolError;
+  return !!perfil && !!rs;
 }
 
 export async function listarUsuariosFirmantes(): Promise<UsuarioFirmante[]> {

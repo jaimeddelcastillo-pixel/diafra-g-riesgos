@@ -39,12 +39,12 @@ const ACCIONES: Record<string, string> = {
 const IGNORAR = new Set(['updated_at', 'org_id']);
 const PAGE = 100;
 const MAX_EXPORT = 50000;
-const COLS = 'id, created_at, user_id, tabla, registro_id, accion, valor_anterior, valor_nuevo, motivo, origen, solicitado_por, autorizado_por';
+const COLS = 'id, created_at, user_id, tabla, registro_id, accion, valor_anterior, valor_nuevo, motivo, origen, solicitado_por, autorizado_por, suplencias';
 
 type Fila = {
   id: string; created_at: string; user_id: string | null; tabla: string; registro_id: string | null;
   accion: string; valor_anterior: Record<string, unknown> | null; valor_nuevo: Record<string, unknown> | null;
-  motivo: string | null; origen: string | null; solicitado_por: string | null; autorizado_por: string | null;
+  suplencias?: unknown; motivo: string | null; origen: string | null; solicitado_por: string | null; autorizado_por: string | null;
 };
 type Filtros = { desde: string; hasta: string; tabla: string; accion: string; persona: string };
 
@@ -80,7 +80,8 @@ function responsable(f: Fila, perfiles: Record<string, string>): { texto: string
     const solicitante = f.solicitado_por ?? f.autorizado_por;
     return { texto: solicitante ? `Sistema / migración, a solicitud de ${perfiles[solicitante] ?? solicitante}` : 'Sistema / migración', sistema: true };
   }
-  return { texto: perfiles[f.user_id] ?? f.user_id, sistema: false };
+  const titulares = Array.isArray(f.suplencias) ? f.suplencias.map(s => s?.titular_nombre).filter(Boolean) : [];
+  return { texto: [perfiles[f.user_id] ?? f.user_id, ...titulares.map(n => `por suplencia de ${n}`)].join(' · '), sistema: false };
 }
 
 function idsDePersonas(filas: Fila[]): string[] {

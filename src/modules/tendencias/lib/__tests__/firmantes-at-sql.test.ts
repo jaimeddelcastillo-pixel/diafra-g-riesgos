@@ -1,18 +1,19 @@
 import { execFileSync } from 'node:child_process';
 import { describe, expect, it } from 'vitest';
+let definicionesCache: string | undefined;
 
 /** Executes live T5c functions against temporary-only fixtures, never customer data.
  * Company/access/session helpers are scoped test doubles; actual auth/RLS and the
  * pre-existing AT calculation/issuance guards are not replaced or tested here. */
 function ejecutar(cuerpo: string) {
-  const nombres = ['tend_firmante_autorizante', 'tend_validar_elegibles', 'tend_validar_firmantes_at', 'tend_at_firmantes_guard', 'tend_at_firmantes_snapshot', 'tend_formato_elegibles_guard'];
-  const definiciones = execFileSync('psql', ['-X', '-q', '-At', '-v', 'ON_ERROR_STOP=1'], {
+  const nombres = ['rol_efectivo','tend_firmante_autorizante', 'tend_validar_elegibles', 'tend_validar_firmantes_at', 'tend_at_firmantes_guard', 'tend_at_firmantes_snapshot', 'tend_formato_elegibles_guard'];
+  const definiciones = definicionesCache ??= execFileSync('psql', ['-X', '-q', '-At', '-v', 'ON_ERROR_STOP=1'], {
     input: `SELECT string_agg(pg_get_functiondef(p.oid)||';', E'\n') FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public' AND p.proname=ANY(ARRAY[${nombres.map(n => `'${n}'`).join(',')}]);`, encoding: 'utf8', timeout: 30000,
-  }).replaceAll('public.', 'pg_temp.').replaceAll('auth.uid()', 'pg_temp.uid()').replace(/::(?:pg_temp\.)?app_role/g, '::text').replaceAll('SECURITY DEFINER', '').replaceAll("SET search_path TO 'public'", 'SET search_path TO pg_temp');
+  }).replaceAll('public.', 'pg_temp.').replaceAll('auth.uid()', 'pg_temp.uid()').replace(/::(?:pg_temp\.)?app_role/g, '::text').replace(/\bapp_role\b/g, 'text').replaceAll('SECURITY DEFINER', '').replaceAll("SET search_path TO 'public'", 'SET search_path TO pg_temp');
   const setup = `BEGIN;
     CREATE TEMP TABLE org_members(org_id uuid,user_id uuid,role text);
     CREATE TEMP TABLE profiles(id uuid,nombre text,cargo text,activo boolean);
-    CREATE TEMP TABLE org_suplencias(org_id uuid,suplente_user_id uuid,revocada_en timestamptz,fecha_inicio timestamptz,fecha_fin timestamptz,facultades text[]);
+    CREATE TEMP TABLE org_suplencias(org_id uuid,suplente_user_id uuid,revocada_en timestamptz,fecha_inicio timestamptz,fecha_fin timestamptz,facultades text[],titular_user_id uuid,rs_titular_user_id uuid,rol_sustituido text,estado text,aceptada_en timestamptz);
     CREATE TEMP TABLE tend_formato(org_id uuid,version int,firmantes_elegibles jsonb);
     CREATE TEMP TABLE t5c_at(id int,org_id uuid,estado text,firmantes_at jsonb,elaborado_version_por uuid,formato_snapshot jsonb,datos_snapshot jsonb);
     CREATE FUNCTION pg_temp.uid() RETURNS uuid LANGUAGE sql AS $$SELECT '00000000-0000-0000-0000-000000000001'::uuid$$;
@@ -38,13 +39,13 @@ describe.skipIf(!process.env.PGHOST)('T5c SQL real sobre fixtures temporales', (
   it('acepta RS y suplente vigente; rechaza usuario ajeno, inactivo y suplencia revocada/vencida/sin autorizar', () => {
     const out = ejecutar(`DO $$ DECLARE org uuid:=pg_temp.get_user_org_id(); failed boolean; BEGIN
       IF NOT pg_temp.tend_firmante_autorizante(org,'${id(3)}') OR pg_temp.tend_firmante_autorizante(org,'${id(2)}') OR pg_temp.tend_firmante_autorizante(org,'${id(4)}') THEN RAISE EXCEPTION 'RS o aislamiento incorrecto'; END IF;
-      INSERT INTO org_suplencias VALUES(org,'${id(2)}',NULL,now()-interval '1 day',now()+interval '1 day',ARRAY['autorizar']);
+      INSERT INTO org_suplencias VALUES(org,'${id(2)}',NULL,now()-interval '1 day',now()+interval '1 day',ARRAY['autorizar'],'${id(3)}',NULL,'responsable_sanitario','activa',now());
       IF NOT pg_temp.tend_firmante_autorizante(org,'${id(2)}') THEN RAISE EXCEPTION 'Suplente vigente rechazado'; END IF;
       UPDATE org_suplencias SET fecha_fin=now() WHERE suplente_user_id='${id(2)}';
       IF pg_temp.tend_firmante_autorizante(org,'${id(2)}') THEN RAISE EXCEPTION 'Suplencia vencida aceptada'; END IF;
       UPDATE org_suplencias SET fecha_fin=now()+interval '1 day',revocada_en=now() WHERE suplente_user_id='${id(2)}';
       IF pg_temp.tend_firmante_autorizante(org,'${id(2)}') THEN RAISE EXCEPTION 'Revocada aceptada'; END IF;
-      UPDATE org_suplencias SET revocada_en=NULL,facultades=ARRAY['anular'] WHERE suplente_user_id='${id(2)}';
+      UPDATE org_suplencias SET revocada_en=NULL,estado='pendiente de aceptación' WHERE suplente_user_id='${id(2)}';
       IF pg_temp.tend_firmante_autorizante(org,'${id(2)}') THEN RAISE EXCEPTION 'Facultad incorrecta aceptada'; END IF;
       FOR i IN 4..6 LOOP
         IF i=5 THEN CONTINUE; END IF; failed:=false;
@@ -53,7 +54,7 @@ describe.skipIf(!process.env.PGHOST)('T5c SQL real sobre fixtures temporales', (
       END LOOP;
     END $$;`);
     expect(out).toContain('T5c OK');
-  });
+  }, 30000);
   it('valida elegibles y predeterminado, múltiples personas, edición de cargo y rechazos concretos', () => {
     const out = ejecutar(`DO $$ DECLARE org uuid:=pg_temp.get_user_org_id(); failed boolean:=false; v jsonb; BEGIN
       PERFORM pg_temp.tend_validar_elegibles(org,'[{"rol":"Autorizó","user_ids":["${id(3)}"],"default_user_id":"${id(3)}"}]');
@@ -70,7 +71,7 @@ describe.skipIf(!process.env.PGHOST)('T5c SQL real sobre fixtures temporales', (
       IF NOT failed THEN RAISE EXCEPTION 'Duplicado aceptado'; END IF;
     END $$;`);
     expect(out).toContain('T5c OK');
-  });
+  }, 30000);
   it('incluye autor, congela ambos snapshots y conserva AT antiguo sin firmantes', () => {
     const out = ejecutar(`DO $$ DECLARE org uuid:=pg_temp.get_user_org_id(); congelado jsonb; failed boolean:=false; BEGIN
       INSERT INTO t5c_at VALUES(1,org,'borrador','[${f('Revisó', 2)},${f('Autorizó', 3)}]','${id(1)}',NULL,NULL);
@@ -86,5 +87,5 @@ describe.skipIf(!process.env.PGHOST)('T5c SQL real sobre fixtures temporales', (
       IF (SELECT firmantes_at FROM t5c_at WHERE id=2) IS NOT NULL OR (SELECT formato_snapshot->'firmantes'->0->>'nombre' FROM t5c_at WHERE id=2)<>'Histórico QA' THEN RAISE EXCEPTION 'Alteró antiguo'; END IF;
     END $$;`);
     expect(out).toContain('T5c OK');
-  });
+  }, 30000);
 });

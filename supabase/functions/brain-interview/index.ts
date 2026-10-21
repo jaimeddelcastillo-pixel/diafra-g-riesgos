@@ -1062,7 +1062,7 @@ Deno.serve(async (req) => {
     if (!org) return json({ error: "Usuario sin organización" }, 403);
 
     // ── 3. Feature institutional_brain + restricciones de plan
-    const esAdmin = esSuperAdmin || ctx.rolEnOrg === "admin";
+    const esAdmin = esSuperAdmin || ctx.rolesEfectivos.includes("admin");
     const plan = String(org.plan ?? "").toLowerCase();
     const { data: tieneModulo } = await admin.rpc("org_tiene_modulo", {
       _org: orgId,

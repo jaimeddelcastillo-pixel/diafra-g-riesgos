@@ -45,7 +45,7 @@ describe('Firmantes de la plantilla', () => {
     expect(esAutorizante('Revisó')).toBe(false);
   });
   const ahora = Date.parse('2026-10-21T19:22:00Z');
-  const suplencia = { suplente_user_id: 'qa-1', fecha_inicio: '2026-10-21T19:22:00Z', fecha_fin: '2026-10-22T19:22:00Z', revocada_en: null, facultades: ['autorizar'] };
+  const suplencia = { suplente_user_id: 'qa-1', fecha_inicio: '2026-10-21T19:22:00Z', fecha_fin: '2026-10-22T19:22:00Z', revocada_en: null, facultades: ['autorizar'], estado: 'activa', aceptada_en: '2026-10-21T19:22:00Z', rol_sustituido: 'responsable_sanitario' };
   it('acepta suplencia vigente de autorizar desde su inicio y no en su fin', () => {
     expect(tieneSuplenciaAutorizar('qa-1', [suplencia], ahora)).toBe(true);
     expect(tieneSuplenciaAutorizar('qa-1', [suplencia], Date.parse(suplencia.fecha_fin))).toBe(false);
@@ -70,7 +70,7 @@ describe('Firmantes de la plantilla', () => {
       return cadena;
     });
     expect(await verificarAutorizante('qa-1')).toBe(rs);
-    expect(mocks.rpc).toHaveBeenCalledWith('has_role', { _user_id: 'qa-1', _role: 'responsable_sanitario' });
+    expect(mocks.rpc).toHaveBeenCalledWith('rol_efectivo', { _usuario: 'qa-1', _rol: 'responsable_sanitario' });
     expect(filtros).toContainEqual(['org_id', 'empresa-es-prueba']);
     expect(filtros).toContainEqual(['activo', true]);
   });

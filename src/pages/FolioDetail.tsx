@@ -623,6 +623,16 @@ function SeccionComite({
   const { user, orgId } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { data: suplenciaFirma } = useQuery({
+    queryKey: ['firma-suplencia', orgId, user?.id, folioId],
+    enabled: !!user && !!orgId,
+    queryFn: async () => {
+      if (!user) return null;
+      const { data, error } = await supabase.rpc('suplencia_contexto', { _usuario: user.id, _rol: 'responsable_sanitario' });
+      if (error) throw error;
+      return data as { titular_user_id?: string } | null;
+    },
+  });
   const [firmando, setFirmando] = useState(false);
   const [showFirmaModal, setShowFirmaModal] = useState(false);
   // Estado para agregar nuevo miembro
@@ -769,13 +779,13 @@ function SeccionComite({
         </thead>
         <tbody>
           {comite.map((m) => {
-            const firmaPath = m.firmado ? getFirmaPath(m.user_id) : null;
-            const esMiembro = m.user_id === user?.id;
+            const firmaPath = m.firmado ? getFirmaPath(m.firma_por ?? m.user_id) : null;
+            const esMiembro = m.user_id === user?.id || m.user_id === suplenciaFirma?.titular_user_id;
             const puedeFiremar = esMiembro && !m.firmado && folioEstado === "En Firma";
 
             return (
               <tr key={m.id} className="border-b last:border-0">
-                <td className="p-2">{m.nombre}</td>
+                <td className="p-2">{m.nombre}{m.firma_suplencia && <div className="text-xs text-muted-foreground">por suplencia de {(m.firma_suplencia as { titular_nombre?: string }).titular_nombre}</div>}</td>
                 <td className="p-2 font-medium">{m.cargo}</td>
                 <td className="p-2 text-xs">{m.responsabilidad}</td>
                 <td className="p-2 text-center">

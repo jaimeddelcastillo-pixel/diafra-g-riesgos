@@ -165,6 +165,7 @@ export type Database = {
           origen: string
           registro_id: string
           solicitado_por: string | null
+          suplencias: Json | null
           tabla: string
           user_id: string | null
           valor_anterior: Json | null
@@ -181,6 +182,7 @@ export type Database = {
           origen?: string
           registro_id: string
           solicitado_por?: string | null
+          suplencias?: Json | null
           tabla: string
           user_id?: string | null
           valor_anterior?: Json | null
@@ -197,6 +199,7 @@ export type Database = {
           origen?: string
           registro_id?: string
           solicitado_por?: string | null
+          suplencias?: Json | null
           tabla?: string
           user_id?: string | null
           valor_anterior?: Json | null
@@ -464,6 +467,7 @@ export type Database = {
           session_id: string | null
           tema: string | null
           turn_id: string | null
+          ultima_suplencia: Json | null
           updated_at: string
         }
         Insert: {
@@ -491,6 +495,7 @@ export type Database = {
           session_id?: string | null
           tema?: string | null
           turn_id?: string | null
+          ultima_suplencia?: Json | null
           updated_at?: string
         }
         Update: {
@@ -518,6 +523,7 @@ export type Database = {
           session_id?: string | null
           tema?: string | null
           turn_id?: string | null
+          ultima_suplencia?: Json | null
           updated_at?: string
         }
         Relationships: [
@@ -618,6 +624,7 @@ export type Database = {
           storage_path: string | null
           tipo: string
           tipo_clave: string | null
+          ultima_suplencia: Json | null
           updated_at: string
         }
         Insert: {
@@ -651,6 +658,7 @@ export type Database = {
           storage_path?: string | null
           tipo?: string
           tipo_clave?: string | null
+          ultima_suplencia?: Json | null
           updated_at?: string
         }
         Update: {
@@ -684,6 +692,7 @@ export type Database = {
           storage_path?: string | null
           tipo?: string
           tipo_clave?: string | null
+          ultima_suplencia?: Json | null
           updated_at?: string
         }
         Relationships: [
@@ -927,6 +936,7 @@ export type Database = {
           tipo_brecha: string
           tipo_conocimiento: string | null
           turn_id: string | null
+          ultima_suplencia: Json | null
           updated_at: string
         }
         Insert: {
@@ -946,6 +956,7 @@ export type Database = {
           tipo_brecha?: string
           tipo_conocimiento?: string | null
           turn_id?: string | null
+          ultima_suplencia?: Json | null
           updated_at?: string
         }
         Update: {
@@ -965,6 +976,7 @@ export type Database = {
           tipo_brecha?: string
           tipo_conocimiento?: string | null
           turn_id?: string | null
+          ultima_suplencia?: Json | null
           updated_at?: string
         }
         Relationships: [
@@ -1165,6 +1177,7 @@ export type Database = {
           profile_id: string | null
           puesto: string | null
           razon_asignacion: string | null
+          ultima_suplencia: Json | null
           updated_at: string
         }
         Insert: {
@@ -1182,6 +1195,7 @@ export type Database = {
           profile_id?: string | null
           puesto?: string | null
           razon_asignacion?: string | null
+          ultima_suplencia?: Json | null
           updated_at?: string
         }
         Update: {
@@ -1199,6 +1213,7 @@ export type Database = {
           profile_id?: string | null
           puesto?: string | null
           razon_asignacion?: string | null
+          ultima_suplencia?: Json | null
           updated_at?: string
         }
         Relationships: [
@@ -1303,6 +1318,7 @@ export type Database = {
           org_id: string
           preguntas_realizadas: number
           resumen: string | null
+          ultima_suplencia: Json | null
           updated_at: string
         }
         Insert: {
@@ -1327,6 +1343,7 @@ export type Database = {
           org_id: string
           preguntas_realizadas?: number
           resumen?: string | null
+          ultima_suplencia?: Json | null
           updated_at?: string
         }
         Update: {
@@ -1351,6 +1368,7 @@ export type Database = {
           org_id?: string
           preguntas_realizadas?: number
           resumen?: string | null
+          ultima_suplencia?: Json | null
           updated_at?: string
         }
         Relationships: [
@@ -1483,6 +1501,7 @@ export type Database = {
           sustituido_por_id: string | null
           tipo: string
           turn_id: string | null
+          ultima_suplencia: Json | null
           updated_at: string
           validado_en: string | null
           validado_por: string | null
@@ -1517,6 +1536,7 @@ export type Database = {
           sustituido_por_id?: string | null
           tipo: string
           turn_id?: string | null
+          ultima_suplencia?: Json | null
           updated_at?: string
           validado_en?: string | null
           validado_por?: string | null
@@ -1551,6 +1571,7 @@ export type Database = {
           sustituido_por_id?: string | null
           tipo?: string
           turn_id?: string | null
+          ultima_suplencia?: Json | null
           updated_at?: string
           validado_en?: string | null
           validado_por?: string | null
@@ -1642,6 +1663,7 @@ export type Database = {
           seccion: string | null
           session_id: string | null
           tipo_fuente: string
+          ultima_suplencia: Json | null
         }
         Insert: {
           archivo_id?: string | null
@@ -1663,6 +1685,7 @@ export type Database = {
           seccion?: string | null
           session_id?: string | null
           tipo_fuente: string
+          ultima_suplencia?: Json | null
         }
         Update: {
           archivo_id?: string | null
@@ -1684,6 +1707,7 @@ export type Database = {
           seccion?: string | null
           session_id?: string | null
           tipo_fuente?: string
+          ultima_suplencia?: Json | null
         }
         Relationships: [
           {
@@ -1750,6 +1774,7 @@ export type Database = {
           proceso_id: string | null
           tipo: string
           titulo: string
+          ultima_suplencia: Json | null
           updated_at: string
           vigente_desde: string
           vigente_hasta: string | null
@@ -1766,6 +1791,7 @@ export type Database = {
           proceso_id?: string | null
           tipo?: string
           titulo: string
+          ultima_suplencia?: Json | null
           updated_at?: string
           vigente_desde?: string
           vigente_hasta?: string | null
@@ -1782,6 +1808,7 @@ export type Database = {
           proceso_id?: string | null
           tipo?: string
           titulo?: string
+          ultima_suplencia?: Json | null
           updated_at?: string
           vigente_desde?: string
           vigente_hasta?: string | null
@@ -2743,6 +2770,7 @@ export type Database = {
           orden: number
           org_id: string | null
           sinonimos: string[]
+          ultima_suplencia: Json | null
           updated_at: string
         }
         Insert: {
@@ -2757,6 +2785,7 @@ export type Database = {
           orden?: number
           org_id?: string | null
           sinonimos?: string[]
+          ultima_suplencia?: Json | null
           updated_at?: string
         }
         Update: {
@@ -2771,6 +2800,7 @@ export type Database = {
           orden?: number
           org_id?: string | null
           sinonimos?: string[]
+          ultima_suplencia?: Json | null
           updated_at?: string
         }
         Relationships: [
@@ -2790,6 +2820,7 @@ export type Database = {
           posicion_tipo_en_codigo: number
           revisado_en: string | null
           revisado_por: string | null
+          ultima_suplencia: Json | null
           updated_at: string
         }
         Insert: {
@@ -2798,6 +2829,7 @@ export type Database = {
           posicion_tipo_en_codigo?: number
           revisado_en?: string | null
           revisado_por?: string | null
+          ultima_suplencia?: Json | null
           updated_at?: string
         }
         Update: {
@@ -2806,6 +2838,7 @@ export type Database = {
           posicion_tipo_en_codigo?: number
           revisado_en?: string | null
           revisado_por?: string | null
+          ultima_suplencia?: Json | null
           updated_at?: string
         }
         Relationships: [
@@ -2910,6 +2943,8 @@ export type Database = {
           cargo: string
           created_at: string
           fecha_firma: string | null
+          firma_por: string | null
+          firma_suplencia: Json | null
           firmado: boolean
           folio_id: string
           hash_documento: string
@@ -2925,6 +2960,8 @@ export type Database = {
           cargo: string
           created_at?: string
           fecha_firma?: string | null
+          firma_por?: string | null
+          firma_suplencia?: Json | null
           firmado?: boolean
           folio_id: string
           hash_documento?: string
@@ -2940,6 +2977,8 @@ export type Database = {
           cargo?: string
           created_at?: string
           fecha_firma?: string | null
+          firma_por?: string | null
+          firma_suplencia?: Json | null
           firmado?: boolean
           folio_id?: string
           hash_documento?: string
@@ -3053,6 +3092,8 @@ export type Database = {
           created_at: string
           created_by: string | null
           desviacion_id: string | null
+          dictamen_por: string | null
+          dictamen_suplencia: Json | null
           estado: Database["public"]["Enums"]["estado_folio"]
           fecha_cierre: string | null
           fecha_inicio: string
@@ -3071,6 +3112,7 @@ export type Database = {
           proceso_equipo: string
           riesgo_residual_global: string
           tipo_folio: string | null
+          ultima_suplencia: Json | null
           updated_at: string
         }
         Insert: {
@@ -3091,6 +3133,8 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           desviacion_id?: string | null
+          dictamen_por?: string | null
+          dictamen_suplencia?: Json | null
           estado?: Database["public"]["Enums"]["estado_folio"]
           fecha_cierre?: string | null
           fecha_inicio?: string
@@ -3109,6 +3153,7 @@ export type Database = {
           proceso_equipo: string
           riesgo_residual_global?: string
           tipo_folio?: string | null
+          ultima_suplencia?: Json | null
           updated_at?: string
         }
         Update: {
@@ -3129,6 +3174,8 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           desviacion_id?: string | null
+          dictamen_por?: string | null
+          dictamen_suplencia?: Json | null
           estado?: Database["public"]["Enums"]["estado_folio"]
           fecha_cierre?: string | null
           fecha_inicio?: string
@@ -3147,6 +3194,7 @@ export type Database = {
           proceso_equipo?: string
           riesgo_residual_global?: string
           tipo_folio?: string | null
+          ultima_suplencia?: Json | null
           updated_at?: string
         }
         Relationships: [
@@ -3480,6 +3528,7 @@ export type Database = {
           storage_path: string
           tipo: string
           tipo_clave: string | null
+          ultima_suplencia: Json | null
           updated_at: string
           usar_en_ia: boolean
           version: string
@@ -3511,6 +3560,7 @@ export type Database = {
           storage_path: string
           tipo: string
           tipo_clave?: string | null
+          ultima_suplencia?: Json | null
           updated_at?: string
           usar_en_ia?: boolean
           version?: string
@@ -3542,6 +3592,7 @@ export type Database = {
           storage_path?: string
           tipo?: string
           tipo_clave?: string | null
+          ultima_suplencia?: Json | null
           updated_at?: string
           usar_en_ia?: boolean
           version?: string
@@ -3635,77 +3686,107 @@ export type Database = {
       }
       org_suplencias: {
         Row: {
+          aceptada_en: string | null
           aviso_rs_enviado_en: string | null
           aviso_rs_error: string | null
           aviso_rs_requerido: boolean
+          categoria: string
           created_at: string
           created_by: string | null
           documento_respaldo: string | null
+          estado: string
           facultades: string[]
           fecha_fin: string
           fecha_inicio: string
           id: string
           motivo: string
+          motivo_terminacion: string | null
           org_id: string
           registrada_por: string | null
+          respondida_por: string | null
           revocada_en: string | null
           revocada_por: string | null
+          rol_sustituido: string
           rs_titular_cargo: string | null
           rs_titular_nombre: string | null
           rs_titular_user_id: string | null
           suplente_cargo: string
           suplente_nombre: string
           suplente_user_id: string
+          terminada_en: string | null
+          titular_cargo: string | null
+          titular_nombre: string | null
+          titular_user_id: string | null
           updated_at: string
           updated_by: string | null
         }
         Insert: {
+          aceptada_en?: string | null
           aviso_rs_enviado_en?: string | null
           aviso_rs_error?: string | null
           aviso_rs_requerido?: boolean
+          categoria?: string
           created_at?: string
           created_by?: string | null
           documento_respaldo?: string | null
+          estado?: string
           facultades: string[]
           fecha_fin: string
           fecha_inicio: string
           id?: string
           motivo: string
+          motivo_terminacion?: string | null
           org_id: string
           registrada_por?: string | null
+          respondida_por?: string | null
           revocada_en?: string | null
           revocada_por?: string | null
+          rol_sustituido?: string
           rs_titular_cargo?: string | null
           rs_titular_nombre?: string | null
           rs_titular_user_id?: string | null
           suplente_cargo?: string
           suplente_nombre?: string
           suplente_user_id: string
+          terminada_en?: string | null
+          titular_cargo?: string | null
+          titular_nombre?: string | null
+          titular_user_id?: string | null
           updated_at?: string
           updated_by?: string | null
         }
         Update: {
+          aceptada_en?: string | null
           aviso_rs_enviado_en?: string | null
           aviso_rs_error?: string | null
           aviso_rs_requerido?: boolean
+          categoria?: string
           created_at?: string
           created_by?: string | null
           documento_respaldo?: string | null
+          estado?: string
           facultades?: string[]
           fecha_fin?: string
           fecha_inicio?: string
           id?: string
           motivo?: string
+          motivo_terminacion?: string | null
           org_id?: string
           registrada_por?: string | null
+          respondida_por?: string | null
           revocada_en?: string | null
           revocada_por?: string | null
+          rol_sustituido?: string
           rs_titular_cargo?: string | null
           rs_titular_nombre?: string | null
           rs_titular_user_id?: string | null
           suplente_cargo?: string
           suplente_nombre?: string
           suplente_user_id?: string
+          terminada_en?: string | null
+          titular_cargo?: string | null
+          titular_nombre?: string | null
+          titular_user_id?: string | null
           updated_at?: string
           updated_by?: string | null
         }
@@ -3815,6 +3896,7 @@ export type Database = {
           terminos_version: string | null
           tiene_curso_pagado: boolean
           trial_expires_at: string | null
+          ultima_suplencia: Json | null
           umbral_npr_alto: number
           umbral_npr_medio: number
           updated_at: string
@@ -3865,6 +3947,7 @@ export type Database = {
           terminos_version?: string | null
           tiene_curso_pagado?: boolean
           trial_expires_at?: string | null
+          ultima_suplencia?: Json | null
           umbral_npr_alto?: number
           umbral_npr_medio?: number
           updated_at?: string
@@ -3915,6 +3998,7 @@ export type Database = {
           terminos_version?: string | null
           tiene_curso_pagado?: boolean
           trial_expires_at?: string | null
+          ultima_suplencia?: Json | null
           umbral_npr_alto?: number
           umbral_npr_medio?: number
           updated_at?: string
@@ -4189,6 +4273,7 @@ export type Database = {
           severidad: number
           situacion_peligrosa: string
           tipo_escala_severidad: string
+          ultima_suplencia: Json | null
           updated_at: string
           verificado_por: string
         }
@@ -4229,6 +4314,7 @@ export type Database = {
           severidad?: number
           situacion_peligrosa?: string
           tipo_escala_severidad?: string
+          ultima_suplencia?: Json | null
           updated_at?: string
           verificado_por?: string
         }
@@ -4269,6 +4355,7 @@ export type Database = {
           severidad?: number
           situacion_peligrosa?: string
           tipo_escala_severidad?: string
+          ultima_suplencia?: Json | null
           updated_at?: string
           verificado_por?: string
         }
@@ -4318,6 +4405,7 @@ export type Database = {
           migrado_desde: string | null
           nombre: string
           org_id: string
+          ultima_suplencia: Json | null
           updated_at: string
           updated_by: string | null
         }
@@ -4332,6 +4420,7 @@ export type Database = {
           migrado_desde?: string | null
           nombre: string
           org_id: string
+          ultima_suplencia?: Json | null
           updated_at?: string
           updated_by?: string | null
         }
@@ -4346,6 +4435,7 @@ export type Database = {
           migrado_desde?: string | null
           nombre?: string
           org_id?: string
+          ultima_suplencia?: Json | null
           updated_at?: string
           updated_by?: string | null
         }
@@ -4406,6 +4496,7 @@ export type Database = {
           retirado_en: string | null
           retirado_motivo: string | null
           retirado_por: string | null
+          ultima_suplencia: Json | null
           updated_at: string
           updated_by: string | null
         }
@@ -4422,6 +4513,7 @@ export type Database = {
           retirado_en?: string | null
           retirado_motivo?: string | null
           retirado_por?: string | null
+          ultima_suplencia?: Json | null
           updated_at?: string
           updated_by?: string | null
         }
@@ -4438,6 +4530,7 @@ export type Database = {
           retirado_en?: string | null
           retirado_motivo?: string | null
           retirado_por?: string | null
+          ultima_suplencia?: Json | null
           updated_at?: string
           updated_by?: string | null
         }
@@ -4466,6 +4559,7 @@ export type Database = {
           migrado_desde: string | null
           org_id: string
           permitir_autoemision: boolean
+          ultima_suplencia: Json | null
           updated_at: string
           updated_by: string | null
         }
@@ -4476,6 +4570,7 @@ export type Database = {
           migrado_desde?: string | null
           org_id: string
           permitir_autoemision?: boolean
+          ultima_suplencia?: Json | null
           updated_at?: string
           updated_by?: string | null
         }
@@ -4486,6 +4581,7 @@ export type Database = {
           migrado_desde?: string | null
           org_id?: string
           permitir_autoemision?: boolean
+          ultima_suplencia?: Json | null
           updated_at?: string
           updated_by?: string | null
         }
@@ -4597,6 +4693,7 @@ export type Database = {
           org_id: string
           tabla_iso: Json
           textos: Json
+          ultima_suplencia: Json | null
           updated_at: string
           updated_by: string | null
           version: number
@@ -4614,6 +4711,7 @@ export type Database = {
           org_id: string
           tabla_iso?: Json
           textos?: Json
+          ultima_suplencia?: Json | null
           updated_at?: string
           updated_by?: string | null
           version?: number
@@ -4631,6 +4729,7 @@ export type Database = {
           org_id?: string
           tabla_iso?: Json
           textos?: Json
+          ultima_suplencia?: Json | null
           updated_at?: string
           updated_by?: string | null
           version?: number
@@ -4720,6 +4819,7 @@ export type Database = {
           spec_texto: string | null
           spec_texto_hr: string | null
           tipo: string
+          ultima_suplencia: Json | null
           updated_at: string
           updated_by: string | null
         }
@@ -4764,6 +4864,7 @@ export type Database = {
           spec_texto?: string | null
           spec_texto_hr?: string | null
           tipo: string
+          ultima_suplencia?: Json | null
           updated_at?: string
           updated_by?: string | null
         }
@@ -4808,6 +4909,7 @@ export type Database = {
           spec_texto?: string | null
           spec_texto_hr?: string | null
           tipo?: string
+          ultima_suplencia?: Json | null
           updated_at?: string
           updated_by?: string | null
         }
@@ -4907,6 +5009,7 @@ export type Database = {
           org_id: string
           par_cuartos_id: string | null
           tipo: string
+          ultima_suplencia: Json | null
           unidad: string
           updated_at: string
           updated_by: string | null
@@ -4929,6 +5032,7 @@ export type Database = {
           org_id: string
           par_cuartos_id?: string | null
           tipo?: string
+          ultima_suplencia?: Json | null
           unidad?: string
           updated_at?: string
           updated_by?: string | null
@@ -4951,6 +5055,7 @@ export type Database = {
           org_id?: string
           par_cuartos_id?: string | null
           tipo?: string
+          ultima_suplencia?: Json | null
           unidad?: string
           updated_at?: string
           updated_by?: string | null
@@ -5013,6 +5118,7 @@ export type Database = {
           retirado_en: string | null
           retirado_motivo: string | null
           retirado_por: string | null
+          ultima_suplencia: Json | null
           updated_at: string
           updated_by: string | null
         }
@@ -5042,6 +5148,7 @@ export type Database = {
           retirado_en?: string | null
           retirado_motivo?: string | null
           retirado_por?: string | null
+          ultima_suplencia?: Json | null
           updated_at?: string
           updated_by?: string | null
         }
@@ -5071,6 +5178,7 @@ export type Database = {
           retirado_en?: string | null
           retirado_motivo?: string | null
           retirado_por?: string | null
+          ultima_suplencia?: Json | null
           updated_at?: string
           updated_by?: string | null
         }
@@ -5152,6 +5260,7 @@ export type Database = {
           sistema: string
           suplencia_id: string | null
           texto: Json
+          ultima_suplencia: Json | null
           updated_at: string
           updated_by: string | null
           updated_by_email: string | null
@@ -5205,6 +5314,7 @@ export type Database = {
           sistema: string
           suplencia_id?: string | null
           texto?: Json
+          ultima_suplencia?: Json | null
           updated_at?: string
           updated_by?: string | null
           updated_by_email?: string | null
@@ -5258,6 +5368,7 @@ export type Database = {
           sistema?: string
           suplencia_id?: string | null
           texto?: Json
+          ultima_suplencia?: Json | null
           updated_at?: string
           updated_by?: string | null
           updated_by_email?: string | null
@@ -5380,6 +5491,7 @@ export type Database = {
           saved_at: string
           semana_inicio: string
           source: string
+          ultima_suplencia: Json | null
           unidad: string
           updated_at: string
           updated_by: string | null
@@ -5405,6 +5517,7 @@ export type Database = {
           saved_at?: string
           semana_inicio: string
           source?: string
+          ultima_suplencia?: Json | null
           unidad: string
           updated_at?: string
           updated_by?: string | null
@@ -5430,6 +5543,7 @@ export type Database = {
           saved_at?: string
           semana_inicio?: string
           source?: string
+          ultima_suplencia?: Json | null
           unidad?: string
           updated_at?: string
           updated_by?: string | null
@@ -5470,6 +5584,7 @@ export type Database = {
           migrado_desde: string | null
           nombre_uma: string
           org_id: string
+          ultima_suplencia: Json | null
           updated_at: string
           updated_by: string | null
         }
@@ -5484,6 +5599,7 @@ export type Database = {
           migrado_desde?: string | null
           nombre_uma: string
           org_id: string
+          ultima_suplencia?: Json | null
           updated_at?: string
           updated_by?: string | null
         }
@@ -5498,6 +5614,7 @@ export type Database = {
           migrado_desde?: string | null
           nombre_uma?: string
           org_id?: string
+          ultima_suplencia?: Json | null
           updated_at?: string
           updated_by?: string | null
         }
@@ -5854,6 +5971,8 @@ export type Database = {
           created_at: string
           created_by: string | null
           desviacion_id: string | null
+          dictamen_por: string | null
+          dictamen_suplencia: Json | null
           estado: Database["public"]["Enums"]["estado_folio"]
           fecha_cierre: string | null
           fecha_inicio: string
@@ -5872,6 +5991,7 @@ export type Database = {
           proceso_equipo: string
           riesgo_residual_global: string
           tipo_folio: string | null
+          ultima_suplencia: Json | null
           updated_at: string
         }
         SetofOptions: {
@@ -5977,6 +6097,22 @@ export type Database = {
           id: string
         }[]
       }
+      designar_suplencia: {
+        Args: {
+          _categoria: string
+          _fin: string
+          _inicio: string
+          _motivo: string
+          _rol: Database["public"]["Enums"]["app_role"]
+          _suplente: string
+          _titular: string
+        }
+        Returns: string
+      }
+      dictaminar_folio_efectivo: {
+        Args: { _conclusion: string; _folio: string; _motivo?: string }
+        Returns: undefined
+      }
       documento_tipos_uso: {
         Args: never
         Returns: {
@@ -6024,6 +6160,16 @@ export type Database = {
         Returns: undefined
       }
       examen_validar_banco: { Args: { p_curso_id: string }; Returns: Json }
+      firmar_folio_suplencia: {
+        Args: {
+          _agente: string
+          _compromiso: string
+          _folio: string
+          _hash: string
+          _ip: string
+        }
+        Returns: string
+      }
       folios_revision_corte: { Args: { p_ahora?: string }; Returns: string }
       get_user_org_id: { Args: never; Returns: string }
       has_role: {
@@ -6069,6 +6215,10 @@ export type Database = {
           org_id: string
           rol: string
         }[]
+      }
+      mis_roles_efectivos: {
+        Args: never
+        Returns: Database["public"]["Enums"]["app_role"][]
       }
       next_diploma_folio: { Args: { p_org_id: string }; Returns: string }
       next_folio_code:
@@ -6120,6 +6270,7 @@ export type Database = {
         Args: { p_motivo: string; p_prompt_id: string }
         Returns: undefined
       }
+      puede_administrar_usuarios: { Args: never; Returns: boolean }
       puede_editar_catalogo_documentos: { Args: never; Returns: boolean }
       purgar_documentos_eliminados: { Args: never; Returns: number }
       purgar_documentos_expirados: {
@@ -6149,11 +6300,22 @@ export type Database = {
         Args: { p_folio_id: string; p_orden: string[] }
         Returns: Json
       }
+      responder_suplencia: {
+        Args: { _aceptar: boolean; _id: string }
+        Returns: undefined
+      }
       restaurar_documento: { Args: { p_doc_id: string }; Returns: boolean }
       restaurar_documento_tipos: { Args: never; Returns: number }
       retirar_documento: {
         Args: { p_doc_id: string; p_motivo: string }
         Returns: undefined
+      }
+      rol_efectivo: {
+        Args: {
+          _rol: Database["public"]["Enums"]["app_role"]
+          _usuario: string
+        }
+        Returns: boolean
       }
       same_org_member: { Args: { _user_id: string }; Returns: boolean }
       seed_documento_tipos: { Args: { _org_id: string }; Returns: number }
@@ -6162,6 +6324,13 @@ export type Database = {
         Returns: undefined
       }
       set_org_activa: { Args: { _org: string }; Returns: undefined }
+      suplencia_contexto: {
+        Args: {
+          _rol: Database["public"]["Enums"]["app_role"]
+          _usuario: string
+        }
+        Returns: Json
+      }
       tend_acceso: {
         Args: { _escritura?: boolean; _org: string; _roles?: string[] }
         Returns: boolean
@@ -6286,6 +6455,10 @@ export type Database = {
             }
             Returns: Json
           }
+      terminar_suplencia: {
+        Args: { _id: string; _motivo: string }
+        Returns: undefined
+      }
       todos_firmaron: { Args: { p_folio_id: string }; Returns: boolean }
       verificar_diploma: {
         Args: { p_hash: string }

@@ -17,3 +17,5 @@
 - R29 Extracted readings out of spec or >40 % from the week median are marked doubtful server-side (_shared/bitacora-lecturas marcarAtipicas), without AI; saving a week with prior readings opens a dialog listing changed cells and requiring a reason (trigger tend_semana_integridad still enforces it); instrument spec text is derived only from LIE/LSE/strictness; why: catch misreads and keep ALCOA+ corrections explicit.
 
 - R33 La foto de la bitácora en Captura semanal va en el panel izquierdo (aside) debajo de «Registro activo», sticky con mostrar/ocultar; la tabla de lecturas ocupa el 100 % del ancho; no moverla sin instrucción expresa; why: la tabla semanal no debe cortarse.
+
+- Platform owns substitutions; /tendencias/suplencias only redirects to /configuracion/suplencias, without a Tendencias menu item or subscription gate. Authorization and signer eligibility use rol_efectivo with accepted, currently valid RS substitution; why: one platform rule and no admin-to-RS leakage.

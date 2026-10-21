@@ -57,7 +57,7 @@ Deno.serve(async (req) => {
       // Empresa y rol local resueltos por el servidor (contexto_org_actual) — C2a
       let ctx;
       try { ctx = await resolverContextoOrg(req); } catch (_e) { ctx = null; }
-      if (!ctx || ctx.soporteLogId || !["admin", "responsable_sanitario"].includes(ctx.rolEnOrg ?? "")) {
+      if (!ctx || ctx.soporteLogId || !ctx.puedeAdministrarUsuarios) {
         return json({ error: "Se requiere rol de administrador o Responsable Sanitario" }, 403);
       }
 

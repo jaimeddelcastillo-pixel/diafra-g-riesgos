@@ -350,7 +350,7 @@ Deno.serve(async (req) => {
       return json({ error: "Solo se puede convocar a votación mientras el folio está en Borrador" }, 400);
     }
     if (folio.created_by !== user.id) {
-      if (!["admin", "responsable_sanitario", "super_admin"].includes(callerRole ?? "")) {
+      if (!(ctx.esSuperAdmin || ctx.rolesEfectivos.some(r => ["admin", "responsable_sanitario"].includes(r)))) {
         return json({ error: "Sin permiso para convocar a votación en este folio" }, 403);
       }
     }
@@ -461,7 +461,7 @@ Deno.serve(async (req) => {
     if (folio.estado !== "Borrador") return json({ error: "El folio no está en Borrador" }, 400);
 
     if (folio.created_by !== user.id) {
-      if (!["admin", "responsable_sanitario"].includes(callerRole ?? "")) {
+      if (!ctx.rolesEfectivos.some(r => ["admin", "responsable_sanitario"].includes(r))) {
         return json({ error: "Sin permiso para enviar este folio" }, 403);
       }
     }
@@ -565,16 +565,6 @@ Deno.serve(async (req) => {
 
   // ─── ACCIÓN 2: Registrar firma ────────────────────────────────────────────────
   if (accion === "firmar") {
-    const { data: entrada } = await admin
-      .from("folio_comite")
-      .select("id, nombre, folio_id, firmado")
-      .eq("folio_id", folio_id)
-      .eq("user_id", user.id)
-      .single();
-
-    if (!entrada) return json({ error: "No eres miembro del comité de este folio" }, 403);
-    if (entrada.firmado) return json({ error: "Ya firmaste este folio" }, 400);
-
     const { data: folio } = await admin
       .from("folios")
       .select("codigo, proceso_equipo, estado, org_id, norma_folio")
@@ -601,26 +591,23 @@ Deno.serve(async (req) => {
     // Texto de compromiso conforme a la norma del folio
     const textoCompromiso = body.texto_compromiso || norma.textoCompromiso;
 
-    await admin.from("folio_comite").update({
-      firmado: true,
-      fecha_firma: new Date().toISOString(),
-      ip_firma: ipFirma,
-      user_agent: userAgent,
-      texto_compromiso: textoCompromiso,
-      hash_documento: hashDocumento,
-    }).eq("id", entrada.id);
+    const { error: firmaError } = await userClient.rpc("firmar_folio_suplencia", {
+      _folio: folio_id, _hash: hashDocumento, _ip: ipFirma,
+      _agente: userAgent, _compromiso: textoCompromiso,
+    });
+    if (firmaError) return json({ error: firmaError.message }, 403);
 
     const { data: todosOk } = await admin.rpc("todos_firmaron", { p_folio_id: folio_id });
 
     if (todosOk) {
       const orgInfo = await getOrgInfo(admin, folio?.org_id);
       // Notificar al aprobador final (RS). Fallback: admins de la org.
-      await notificarAprobadorFinal(admin, folio!.org_id, {
+      await notificarAprobadorFinal(admin, folio.org_id, {
         templateName: "folio-firmado",
         idempotencyPrefix: `folio-firmado-${folio_id}`,
         templateData: {
-          folio_codigo: folio!.codigo,
-          proceso: folio!.proceso_equipo,
+          folio_codigo: folio.codigo,
+          proceso: folio.proceso_equipo,
           organizacion: orgInfo.org_nombre,
           aprobador: norma.terminologia.aprobadorFinal,
           norma_nombre: norma.nombre,
@@ -647,10 +634,7 @@ Deno.serve(async (req) => {
 
     // RS es el aprobador natural; admin/super_admin pueden dictaminar como
     // fallback (queda auditado en audit_trail + hash de firma del comité).
-    const puedeDictar =
-      callerRole === "responsable_sanitario" ||
-      callerRole === "admin" ||
-      callerRole === "super_admin";
+    const puedeDictar = !ctx.esSuperAdmin && ctx.rolesEfectivos.some(r => r === "responsable_sanitario" || r === "admin");
     if (!puedeDictar) {
       return json({ error: "Solo el Responsable Sanitario o Administrador pueden emitir dictamen" }, 403);
     }
@@ -667,12 +651,10 @@ Deno.serve(async (req) => {
 
     const norma = getNorma((folio as any).norma_folio);
 
-    const nuevoEstado = conclusion === "Aprobado" ? "Aprobado" : "Borrador";
-
-    await admin.from("folios").update({
-      estado: nuevoEstado,
-      conclusion: conclusion,
-    }).eq("id", folio_id);
+    const { error: dictamenError } = await userClient.rpc("dictaminar_folio_efectivo", {
+      _folio: folio_id, _conclusion: conclusion, _motivo: motivo ?? "",
+    });
+    if (dictamenError) return json({ error: dictamenError.message }, 403);
 
     // Si fue rechazado, archivar versión y preparar nueva revisión
     if (conclusion !== "Aprobado") {
@@ -741,7 +723,7 @@ Deno.serve(async (req) => {
       return json({ error: "Solo se pueden reabrir folios Aprobados o Cerrados" }, 400);
     }
 
-    if (!["admin", "responsable_sanitario"].includes(callerRole ?? "")) {
+    if (!ctx.rolesEfectivos.some(r => ["admin", "responsable_sanitario"].includes(r))) {
       return json({ error: "Solo admin o RS puede reabrir un folio aprobado" }, 403);
     }
 

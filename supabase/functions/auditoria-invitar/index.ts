@@ -34,7 +34,7 @@ Deno.serve(async (req) => {
 
   if (reenviar) {
     // Reenvío: admin o RS de la empresa activa, solo expedientes activos y vigentes.
-    if (ctx.soporteLogId || !["responsable_sanitario", "admin"].includes(ctx.rolEnOrg ?? "")) {
+    if (ctx.soporteLogId || !ctx.rolesEfectivos.some(r => ["responsable_sanitario", "admin"].includes(r))) {
       return json({ error: "Solo el Administrador o el Responsable Sanitario reenvían la invitación" }, 403);
     }
     const { data: a } = await admin.from("auditorias_externas").select("*")
@@ -67,7 +67,7 @@ Deno.serve(async (req) => {
     return json({ success: true, reenviado: true });
   }
 
-  if (ctx.soporteLogId || ctx.rolEnOrg !== "responsable_sanitario") {
+  if (ctx.soporteLogId || !ctx.rolesEfectivos.includes("responsable_sanitario")) {
     return json({ error: "Solo el Responsable Sanitario activa el expediente" }, 403);
   }
   const { data: aud } = await admin.from("auditorias_externas").select("*")

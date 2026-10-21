@@ -100,7 +100,7 @@ Deno.serve(async (req) => {
       try { ctx = await resolverContextoOrg(req); }
       catch (e) { if (e instanceof ContextoOrgError) return json({ error: e.message }, e.status); throw e; }
       if (ctx.soporteLogId) return json({ error: "No disponible en modo soporte" }, 403);
-      if (ctx.rolEnOrg !== "admin" && ctx.rolEnOrg !== "responsable_sanitario") {
+      if (!ctx.puedeAdministrarUsuarios) {
         return json({ error: "Se requiere rol de administrador o Responsable Sanitario en la empresa activa" }, 403);
       }
       orgIdToUse = ctx.orgId;

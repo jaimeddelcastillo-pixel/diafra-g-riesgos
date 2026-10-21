@@ -57,7 +57,7 @@ Deno.serve(async (req) => {
       let ctx;
       try { ctx = await resolverContextoOrg(req); }
       catch (e) { if (e instanceof ContextoOrgError) return json({ error: e.message }, e.status); throw e; }
-      if (ctx.rolEnOrg !== "admin") return json({ error: "Se requiere rol de administrador" }, 403);
+      if (!ctx.rolesEfectivos.includes("admin")) return json({ error: "Se requiere rol de administrador" }, 403);
       const callerMember = { org_id: ctx.orgId };
 
       const { data: targetMember } = await adminClient

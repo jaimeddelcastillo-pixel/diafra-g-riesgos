@@ -533,7 +533,7 @@ export async function generateFolioPDF(
       comite.length === 0
         ? [["—", "—", "—", "—", "—"]]
         : comite.map((m) => [
-            m.nombre,
+            m.firma_suplencia ? `${m.nombre} · por suplencia de ${(m.firma_suplencia as any).titular_nombre ?? m.nombre}` : m.nombre,
             m.cargo,
             m.responsabilidad,
             m.firmado ? "✓ Firmado" : "",
