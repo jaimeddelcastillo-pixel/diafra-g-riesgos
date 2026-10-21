@@ -4,7 +4,6 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { DesactivarUsuarioDialog } from "@/components/DesactivarUsuarioDialog";
 import ComposicionIACard from "@/components/admin/ComposicionIACard";
-import NormaTendenciasCard from "@/components/admin/NormaTendenciasCard";
 import ImportarTendenciasCard from "@/components/admin/ImportarTendenciasCard";
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -528,7 +527,6 @@ export default function Admin() {
         </div>
       )}
 
-      {isSuperAdmin() && <NormaTendenciasCard />}
       {isSuperAdmin() && <ImportarTendenciasCard />}
 
       {/* ── Alertas ── */}

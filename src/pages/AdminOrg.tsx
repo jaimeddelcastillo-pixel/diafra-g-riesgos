@@ -10,6 +10,7 @@ import { ArrowLeft, Users, FileText, CheckCircle2, Clock, PenLine, Archive, Gift
 import { useToast } from "@/hooks/use-toast";
 import PanelGestionFirmas from "@/components/admin/PanelGestionFirmas";
 import ComposicionIACard from "@/components/admin/ComposicionIACard";
+import ModulosEmpresaCard from "@/components/admin/ModulosEmpresaCard";
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -362,6 +363,7 @@ export default function AdminOrg() {
       </div>
 
       {/* ── Gestión de firmas (solo super_admin) ── */}
+      {org && <ModulosEmpresaCard orgId={org.id} />}
       {org && <PanelGestionFirmas orgId={org.id} />}
     </div>
   );

@@ -20,7 +20,8 @@ export default function NormaTendenciasCard() {
   const set = (id: string, k: keyof NormaEspecificacion, v: unknown) => setEdit(e => ({ ...e, [id]: { ...e[id], [k]: v } }));
   const num = (v: string) => (v === '' ? null : Number(v));
   const guardar = async (n: NormaEspecificacion) => {
-    try { await guardarNorma(n.id, edit[n.id] ?? {}); setEdit(e => { const c = { ...e }; delete c[n.id]; return c; }); await qc.invalidateQueries({ queryKey: ['tend-normas'] }); toast.success('Especificación de la norma guardada'); }
+    const motivo = window.prompt('Motivo del cambio (obligatorio)') ?? '';
+    try { await guardarNorma(n.id, edit[n.id] ?? {}, motivo); setEdit(e => { const c = { ...e }; delete c[n.id]; return c; }); await qc.invalidateQueries({ queryKey: ['tend-normas'] }); toast.success('Especificación de la norma guardada'); }
     catch (e) { toast.error(e instanceof Error ? e.message : String(e)); }
   };
   return (
