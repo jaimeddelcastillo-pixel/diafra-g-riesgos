@@ -12,7 +12,7 @@ import { OnboardingController } from "@/components/onboarding/OnboardingControll
 import { useMisModulos } from "@/hooks/useMisModulos";
 import { modulos } from "@/modules";
 import { encabezadoModulo, moduloEnRuta } from "@/modules/contexto";
-import { AvisoSuplencia } from '@/modules/tendencias/Suplencias';
+import { AvisoSuplencia } from '@/pages/Suplencias';
 
 const roleLabels: Record<string, string> = {
   admin: "Administrador",

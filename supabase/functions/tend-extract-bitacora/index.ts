@@ -29,7 +29,7 @@ Deno.serve(async req=>{
   let admin:any;let id:string|undefined;let orgId:string|undefined;let skills:unknown[]=[];let modelo:string|undefined;let runId:string|null|undefined;
  try{
   const ctx=await resolverContextoOrg(req);orgId=ctx.orgId;
-  if(ctx.esSuperAdmin || !['admin','responsable_sanitario','comite_tecnico','operador'].includes(ctx.rolEnOrg ?? ''))return respond({error:'Sin permiso de extracción'},403);
+  if(ctx.esSuperAdmin || !ctx.rolesEfectivos.some(r=>['admin','responsable_sanitario','comite_tecnico','operador'].includes(r)))return respond({error:'Sin permiso de extracción'},403);
   const body=requestSchema.safeParse(await req.json());if(!body.success)return respond({error:'Solicitud inválida'},400);
   const url=Deno.env.get('SUPABASE_URL');const anon=Deno.env.get('SUPABASE_ANON_KEY');const service=Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');const key=Deno.env.get('LOVABLE_API_KEY');
   if(!url || !anon || !service || !key)return respond({error:'Extracción IA no configurada'},401);

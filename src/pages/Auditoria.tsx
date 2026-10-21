@@ -335,6 +335,7 @@ function TabLog() {
                     <User className="h-3 w-3 text-muted-foreground" />
                     {(entry as any).origen === "sistema" ? "Sistema / migración" : getNombre(entry.user_id)}
                   </div>
+                  {Array.isArray(entry.suplencias) && entry.suplencias.map((s: any, i: number) => <div key={i} className="text-xs text-muted-foreground">por suplencia de {s?.titular_nombre}</div>)}
                   {((entry as any).motivo || (entry as any).autorizado_por) && (
                     <div className="text-[10px] text-muted-foreground">
                       {(entry as any).motivo}{(entry as any).autorizado_por ? ` · Autorizó: ${(entry as any).autorizado_por}` : ""}

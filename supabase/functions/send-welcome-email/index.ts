@@ -76,8 +76,8 @@ Deno.serve(async (req) => {
 
     // Empresa de la sesión (C2b). super_admin sin soporte: empresa más antigua del destinatario.
     let sesionOrgId: string | null = null;
-    let sesionRol: string | null = null;
-    try { const ctx = await resolverContextoOrg(req); sesionOrgId = ctx.orgId; sesionRol = ctx.rolEnOrg; }
+    let sesionAdmin = false;
+    try { const ctx = await resolverContextoOrg(req); sesionOrgId = ctx.orgId; sesionAdmin = ctx.rolesEfectivos.includes("admin"); }
     catch (e) { if (!(e instanceof ContextoOrgError) || !isSuperAdmin) {
       return json({ error: e instanceof ContextoOrgError ? e.message : "Error" }, e instanceof ContextoOrgError ? e.status : 500);
     } }
@@ -91,7 +91,7 @@ Deno.serve(async (req) => {
 
     // Permisos: super_admin SIEMPRE puede; admin de org solo a usuarios de SU empresa activa
     if (!isSuperAdmin) {
-      if (sesionRol !== "admin") return json({ error: "Se requiere rol de administrador" }, 403);
+      if (!sesionAdmin) return json({ error: "Se requiere rol de administrador" }, 403);
       if (!targetMember) {
         return json({ error: "El usuario no pertenece a tu organización" }, 403);
       }
