@@ -5721,6 +5721,15 @@ export type Database = {
         Args: { p_curso_id: string; p_org: string }
         Returns: string
       }
+      admin_set_modulo: {
+        Args: {
+          _activo: boolean
+          _clave: string
+          _motivo: string
+          _org: string
+        }
+        Returns: undefined
+      }
       archivar_version_folio: {
         Args: { p_folio_id: string; p_motivo?: string }
         Returns: string
@@ -6182,6 +6191,10 @@ export type Database = {
           _propuesta: Json
           _skills: Json
         }
+        Returns: undefined
+      }
+      tend_guardar_norma: {
+        Args: { _id: string; _motivo: string; _valores: Json }
         Returns: undefined
       }
       tend_guardar_semana: {
