@@ -21,7 +21,7 @@ const booleanos = ['activo','lie_estricto','lse_estricto','criterio_interno'];
 export type Catalogo = { hvac: Fila[]; areas: Fila[]; instrumentos: Fila[]; objetivos: Fila[] };
 export type LibroCatalogo = { version:string; hojas: Record<Hoja,Fila[]> };
 export type CambioCatalogo = { hoja:Hoja; renglon:number; codigo:string; estado:'nuevo'|'cambia'|'sin cambio'|'error'; cambios:{campo:string;antes:unknown;despues:unknown}[]; errores:string[]; avisos:string[]; valores:Fila; anterior:Fila|null };
-export type PreviewCatalogo = { filas:CambioCatalogo[]; errores:string[]; paquete:{version:string;filas:CambioCatalogo[]} };
+export type PreviewCatalogo = { filas:CambioCatalogo[]; errores:string[]; avisosExistentes:string[]; paquete:{version:string;filas:CambioCatalogo[]} };
 const normal = (v:unknown) => String(v ?? '').trim().toLocaleLowerCase('es');
 const texto = (v:unknown) => String(v ?? '').trim();
 const clave = (v:string) => v.replace(/\*$/,'');
@@ -180,7 +180,17 @@ export function previsualizarCatalogo(libro:LibroCatalogo,c:Catalogo,normas:Norm
     }
   }
   errores.push(...filas.flatMap(f=>f.errores.map(e=>`${f.hoja} ${f.renglon}: ${e}`)));
-  return {filas,errores,paquete:{version:libro.version,filas}};
+  // T4i: los registros existentes que no vienen en el archivo nunca bloquean; si están incompletos solo se avisa.
+  const enArchivo=new Set(filas.map(f=>`${f.hoja}:${normal(f.codigo)}`));
+  const avisosExistentes:string[]=[];
+  for(const a of c.areas)if(!enArchivo.has(`Areas:${normal(a.codigo)}`) && a.activo!==false && !texto(a.iso))avisosExistentes.push(`Área ${a.codigo}: sin clase ISO (no viene en el archivo; no se modificó)`);
+  for(const i of c.instrumentos)if(!enArchivo.has(`Instrumentos:${normal(i.codigo)}`) && i.activo!==false) {
+    const sinLimites=i.spec_lie==null && i.spec_lse==null && i.spec_lie_hr==null && i.spec_lse_hr==null;
+    if(sinLimites)avisosExistentes.push(`Instrumento ${i.codigo}: sin límites de especificación (no viene en el archivo; no se modificó)`);
+    if(!i.area_id && !texto(i.area_libre))avisosExistentes.push(`Instrumento ${i.codigo}: sin área asignada (no viene en el archivo; no se modificó)`);
+  }
+  for(const o of c.objetivos)if(!enArchivo.has(`Objetivos_presion:${normal(o.codigo)}`) && o.activo!==false && o.limite_normativo_pa==null)avisosExistentes.push(`Objetivo ${o.codigo}: sin valor normativo (no viene en el archivo; no se modificó)`);
+  return {filas,errores,avisosExistentes,paquete:{version:libro.version,filas}};
 }
 /** Inserta dataValidations en la posición que exige el esquema OOXML (CT_Worksheet). */
 const DESPUES_DE_VALIDACIONES=['hyperlinks','printOptions','pageMargins','pageSetup','headerFooter','rowBreaks','colBreaks','customProperties','cellWatches','ignoredErrors','smartTags','drawing','legacyDrawing','legacyDrawingHF','drawingHF','picture','oleObjects','controls','webPublishItems','tableParts','extLst'];
