@@ -187,9 +187,10 @@ function FirmaUpload({
 
 export default function Configuracion() {
   const { hasRole, orgId, isSuperAdmin, user, orgRole } = useAuth();
-  const puedeDesactivar = orgRole === "admin" || orgRole === "responsable_sanitario";
+  const { puedeAdministrarUsuarios } = useAuth();
+  const puedeDesactivar = puedeAdministrarUsuarios;
   const [desactivarTarget, setDesactivarTarget] = useState<{ id: string; nombre: string; email: string } | null>(null);
-  const isAdmin = hasRole("admin") || hasRole("responsable_sanitario") || isSuperAdmin();
+  const isAdmin = puedeAdministrarUsuarios || isSuperAdmin();
   const { hash } = useLocation();
   useEffect(() => {
     if (!hash) return;
@@ -389,6 +390,7 @@ export default function Configuracion() {
           <p className="text-sm text-muted-foreground">Gestión de usuarios y roles de la organización</p>
         </div>
         <div className="flex gap-2">
+          <Button asChild variant="outline"><Link to="/configuracion/suplencias">Suplencias</Link></Button>
           {(orgRole === "admin" || orgRole === "responsable_sanitario" || isSuperAdmin()) && (
             <Button asChild variant="outline" className="gap-2">
               <Link to="/configuracion/asistente"><ListChecks className="h-4 w-4" /> Asistente de configuración</Link>

@@ -2,7 +2,7 @@ import {createElement} from 'react';
 import { Activity,ClipboardList,Database,Settings } from 'lucide-react';
 import type { ModuloDef } from '../tipos';import { ModuloTarjeta } from '../ModuloTarjeta';
 import Tablero from './Tablero';import Catalogos from './Catalogos';import Captura from './Captura';import Configuracion from './Configuracion';
-import Analisis from './Analisis';import RegistroAT from './RegistroAT';import Cumplimiento from './Cumplimiento';import Suplencias from './Suplencias';import Auditoria from './Auditoria';
+import Analisis from './Analisis';import RegistroAT from './RegistroAT';import Cumplimiento from './Cumplimiento';import Auditoria from './Auditoria';
 import Reporte from './Reporte';
 import ReporteDetalle from './ReporteDetalle';
 import { listarRegistros,empresaActiva } from './lib/persistencia';import { semanasSinCapturar } from './lib/pendientes';import { supabase } from '@/integrations/supabase/client';

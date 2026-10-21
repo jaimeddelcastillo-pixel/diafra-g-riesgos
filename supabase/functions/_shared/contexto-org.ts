@@ -9,6 +9,8 @@ export interface ContextoOrg {
   rolEnOrg: string | null;
   esSuperAdmin: boolean;
   soporteLogId: string | null;
+  rolesEfectivos: string[];
+  puedeAdministrarUsuarios: boolean;
 }
 
 export class ContextoOrgError extends Error {
@@ -34,6 +36,10 @@ export async function resolverContextoOrg(req: Request): Promise<ContextoOrg> {
   if (error) throw new ContextoOrgError("No se pudo resolver la organización", 500);
   const row = Array.isArray(data) ? data[0] : data;
   if (!row?.org_id) throw new ContextoOrgError("Usuario sin organización", 403);
+  const [{ data: roles, error: rolesError }, { data: administrar, error: administrarError }] = await Promise.all([
+    userClient.rpc('mis_roles_efectivos'), userClient.rpc('puede_administrar_usuarios'),
+  ]);
+  if (rolesError || administrarError) throw new ContextoOrgError('No se pudieron resolver los permisos vigentes', 500);
 
   return {
     userId: user.id,
@@ -42,5 +48,7 @@ export async function resolverContextoOrg(req: Request): Promise<ContextoOrg> {
     rolEnOrg: row.rol_en_org ?? null,
     esSuperAdmin: !!row.es_super_admin,
     soporteLogId: row.soporte_log_id ?? null,
+    rolesEfectivos: roles ?? [],
+    puedeAdministrarUsuarios: administrar === true,
   };
 }

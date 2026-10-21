@@ -38,6 +38,7 @@ interface AuthContextType {
   session: Session | null;
   profile: { nombre: string; email: string; cargo: string | null } | null;
   roles: AppRole[];
+  puedeAdministrarUsuarios: boolean;
   orgId: string | null;
   org: OrgInfo | null;
   orgRole: AppRole | null;
@@ -64,6 +65,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<AuthContextType["profile"]>(null);
   const [roles, setRoles] = useState<AppRole[]>([]);
+  const [puedeAdministrarUsuarios, setPuedeAdministrarUsuarios] = useState(false);
   const [orgId, setOrgId] = useState<string | null>(null);
   const [org, setOrg] = useState<OrgInfo | null>(null);
   const [orgRole, setOrgRole] = useState<AppRole | null>(null);
@@ -117,12 +119,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const { data: rolesData } = await supabase.from("user_roles").select("role").eq("user_id", u.id);
       setRoles((rolesData || []).map((r: any) => r.role as AppRole));
     } else {
-      setRoles(esSA ? [rol as AppRole, "super_admin"] : rol ? [rol] : []);
+      const [{ data: efectivos, error: rolesError }, { data: administrar, error: administrarError }] = await Promise.all([
+        supabase.rpc('mis_roles_efectivos'), supabase.rpc('puede_administrar_usuarios'),
+      ]);
+      setRoles(rolesError ? [] : [...(efectivos ?? []), ...(esSA ? ['super_admin' as AppRole] : [])]);
+      setPuedeAdministrarUsuarios(!administrarError && administrar === true);
     }
     setLoading(false);
   }, []);
 
   const limpiarEstado = () => {
+    setPuedeAdministrarUsuarios(false);
     setProfile(null); setRoles([]); setOrgId(null); setOrg(null); setOrgRole(null);
     setSoporteLogId(null);
   };
@@ -174,8 +181,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const refreshOrg = async () => {
     if (!user || !orgId) return;
-    const { data } = await supabase.from("organizations").select(ORG_COLS).eq("id", orgId).maybeSingle();
-    if (data) setOrg(data as any);
+    await cargarContexto(user);
   };
 
   const recargar = async () => {
@@ -259,7 +265,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider value={{
-      user, session, profile, roles,
+      user, session, profile, roles, puedeAdministrarUsuarios,
       orgId, org, orgRole,
       loading,
       isImpersonating, impersonatedOrg,
