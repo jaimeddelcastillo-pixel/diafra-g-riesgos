@@ -1,5 +1,7 @@
 # Roadmap
 
+- [ ] Selector de usuarios activos de la empresa en Firmantes de Plantilla del reporte; conservar rol, nombre/cargo y versiones anteriores; suite automática sin navegador ni dependencias.
+
 - [x] T4e implementado: plantilla Excel T4e-1, exportación, vista previa sin escritura y RPC admin/RS atómica motivada; equivalencias sin columnas nuevas; pruebas XLSX y transacción SQL temporal con alta/cambio/bloqueo/reversión. Sin navegador/IA/dependencias ni motor. Informe t4e_reporte.md; verificación funcional con sesión adminqa a cargo de Jaime (sandbox no permite authenticated/RPC productiva).
 
 - [x] T4f: tabla normativa compartida NOM-241/NOM-059, citas Word, clases y sugerencias; nuevas emisiones congelan tabla común, históricos intactos; suite automática sin navegador/dependencias.
