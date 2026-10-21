@@ -540,6 +540,13 @@
       "when": 1792605958579,
       "tag": "0076_t5b_modulos_y_normas",
       "breakpoints": true
+    },
+    {
+      "idx": 77,
+      "version": "7",
+      "when": 1792611434095,
+      "tag": "0077_t5c_firmantes_elegibles_por_at",
+      "breakpoints": true
     }
   ]
 }

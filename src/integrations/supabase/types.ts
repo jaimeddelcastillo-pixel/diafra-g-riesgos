@@ -4590,6 +4590,7 @@ export type Database = {
           created_by: string | null
           created_by_email: string | null
           firmantes: Json
+          firmantes_elegibles: Json | null
           id: string
           logo: string | null
           migrado_desde: string | null
@@ -4606,6 +4607,7 @@ export type Database = {
           created_by?: string | null
           created_by_email?: string | null
           firmantes?: Json
+          firmantes_elegibles?: Json | null
           id?: string
           logo?: string | null
           migrado_desde?: string | null
@@ -4622,6 +4624,7 @@ export type Database = {
           created_by?: string | null
           created_by_email?: string | null
           firmantes?: Json
+          firmantes_elegibles?: Json | null
           id?: string
           logo?: string | null
           migrado_desde?: string | null
@@ -5130,6 +5133,7 @@ export type Database = {
           en_suplencia: boolean
           estado: string
           fecha: string
+          firmantes_at: Json | null
           formato_snapshot: Json | null
           ia_origen: Json | null
           id: string
@@ -5182,6 +5186,7 @@ export type Database = {
           en_suplencia?: boolean
           estado?: string
           fecha?: string
+          firmantes_at?: Json | null
           formato_snapshot?: Json | null
           ia_origen?: Json | null
           id?: string
@@ -5234,6 +5239,7 @@ export type Database = {
           en_suplencia?: boolean
           estado?: string
           fecha?: string
+          firmantes_at?: Json | null
           formato_snapshot?: Json | null
           ia_origen?: Json | null
           id?: string
@@ -6193,6 +6199,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      tend_firmante_autorizante: {
+        Args: { _org: string; _user: string }
+        Returns: boolean
+      }
       tend_guardar_norma: {
         Args: { _id: string; _motivo: string; _valores: Json }
         Returns: undefined
@@ -6242,6 +6252,28 @@ export type Database = {
       tend_suplencia: {
         Args: { _facultad: string; _org: string }
         Returns: string
+      }
+      tend_usuarios_firmantes: {
+        Args: never
+        Returns: {
+          cargo: string
+          id: string
+          nombre: string
+          puede_autorizar: boolean
+        }[]
+      }
+      tend_validar_elegibles: {
+        Args: { _config: Json; _org: string }
+        Returns: undefined
+      }
+      tend_validar_firmantes_at: {
+        Args: {
+          _elegibles: Json
+          _emitir?: boolean
+          _firmantes: Json
+          _org: string
+        }
+        Returns: Json
       }
       todos_firmaron: { Args: { p_folio_id: string }; Returns: boolean }
       verificar_diploma: {
