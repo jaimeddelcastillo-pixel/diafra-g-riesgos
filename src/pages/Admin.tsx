@@ -672,7 +672,7 @@ export default function Admin() {
                       <tr key={org.id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
                         <td className="py-3">
                           <div>
-                            <span className="font-medium">{org.nombre}</span>
+                            <Link to={`/admin/org/${org.id}`} className="font-medium text-primary hover:underline">{org.nombre}</Link>
                             <span className="block text-[10px] font-mono text-muted-foreground">{org.slug}</span>
                           </div>
                         </td>
@@ -731,6 +731,14 @@ export default function Admin() {
                               onClick={() => { setImperOrg(org); setImperMotivo(""); }}
                             >
                               <LogIn className="h-3 w-3" /> Entrar
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-7 text-xs"
+                              onClick={() => navigate(`/admin/org/${org.id}`)}
+                            >
+                              Ver ficha
                             </Button>
                             <Button
                               variant="ghost"
