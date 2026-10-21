@@ -82,7 +82,9 @@ Implementados reporte independiente, vistas por área/instrumento/avance, consol
 - [x] Captura: etiqueta del objetivo «Objetivo N Pa»
 
 ### T5d — suplencias de plataforma
-- [ ] Informe final: listar funciones y comprobaciones migradas a rol_efectivo e identificar explícitamente pantallas o funciones sin migrar (solicitado tras aprobación).
-- [ ] Mover Suplencias a Configuración; designación admin/RS, categorías, aceptación, rechazo y terminación motivada; conservar existentes y avisos.
-- [ ] Unificar rol efectivo en servidor y permisos de Riesgos, Cerebro, Tendencias y plataforma sin mezcla de roles ni autoautorización.
-- [ ] Registrar identidad del titular en acciones y auditoría; suite automática con aceptación, vigencia, solapamientos y aislamiento RS/admin (sin navegador, IA ni dependencias).
+- [x] Informe final: listar funciones y comprobaciones migradas a rol_efectivo e identificar explícitamente pantallas o funciones sin migrar (solicitado tras aprobación).
+- [x] Mover Suplencias a Configuración; designación admin/RS, categorías, aceptación, rechazo y terminación motivada; conservar existentes y avisos.
+- [x] Unificar rol efectivo en servidor y permisos de Riesgos, Cerebro, Tendencias y plataforma sin mezcla de roles ni autoautorización.
+- [x] Registrar identidad del titular en acciones y auditoría; suite automática con aceptación, vigencia, solapamientos y aislamiento RS/admin (sin navegador, IA ni dependencias).
+
+- [ ] Verificación visual y recorrido autenticado de T5d: a cargo de Jaime; navegador expresamente excluido. Suite 279/279, funciones sobre fixtures temporales QA; no equivale a prueba de sesión/RLS real. Informe completo: t5d_reporte.md.

@@ -84,7 +84,7 @@ Deno.serve(async (req) => {
     );
 
     let member: { org_id: string | null; role: string | null } = { org_id: null, role: null };
-    try { const ctx = await resolverContextoOrg(req); member = { org_id: ctx.orgId, role: ctx.soporteLogId ? null : ctx.rolEnOrg }; }
+    try { const ctx = await resolverContextoOrg(req); member = { org_id: ctx.orgId, role: !ctx.soporteLogId && ctx.rolesEfectivos.includes("admin") ? "admin" : null }; }
     catch (e) { if (!(e instanceof ContextoOrgError)) throw e; }
 
     if (!member?.org_id) {

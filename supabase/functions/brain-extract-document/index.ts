@@ -66,7 +66,7 @@ Deno.serve(async (req) => {
     try {
       const ctx = await resolverContextoOrg(req);
       orgId = ctx.orgId;
-      puedeExtraer = ctx.esSuperAdmin || ctx.rolEnOrg === "admin" || ctx.rolEnOrg === "responsable_sanitario";
+      puedeExtraer = ctx.esSuperAdmin || ctx.rolesEfectivos.some(r => ["admin", "responsable_sanitario"].includes(r));
     } catch (_e) {
       return j({ error: "sin organización" }, 403);
     }
