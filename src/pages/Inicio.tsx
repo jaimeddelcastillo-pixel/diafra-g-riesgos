@@ -9,6 +9,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useMisModulos } from "@/hooks/useMisModulos";
 import { ordenarModulos, type ModuloDef } from "@/modules";
 import { TarjetaConfiguracionInicio } from "@/components/TarjetaConfiguracionInicio";
+import { MisPendientesCard } from "@/components/pendientes/MisPendientesCard";
 
 const ROL_LABEL: Record<string, string> = {
   admin: "Administrador", responsable_sanitario: "Responsable Sanitario", comite_tecnico: "Comité Técnico",
@@ -52,6 +53,8 @@ export default function Inicio() {
       </header>
 
       <TarjetaConfiguracionInicio />
+
+      <MisPendientesCard />
 
       {isLoading || loading ? (
         <div className="grid gap-4 md:grid-cols-2">

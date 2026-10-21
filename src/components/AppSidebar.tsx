@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigationItems } from "@/hooks/useNavigationItems";
+import { usePendientes } from "@/hooks/usePendientes";
 import { NavGroup, NavLeaf, groupContainsActive } from "@/components/sidebar/NavGroup";
 import { SECTION_LABELS, type NavItem } from "@/config/navigation";
 import { getOrgLogoUrl } from "@/lib/orgLogo";
@@ -50,6 +51,7 @@ export function AppSidebar() {
   const mostrarSelector = !isImpersonating && misOrgs.length > 1;
   const { sections, isAdminNav } = useNavigationItems();
   const mostrarBadgeFolios = useBadgeFolios();
+  const pendientes = usePendientes("mio", !isAdminNav);
 
   // Solo se abre el grupo del módulo donde está la persona (en Inicio, ninguno).
   const [openId, setOpenId] = useState<string | null>(null);
@@ -85,7 +87,9 @@ export function AppSidebar() {
   const orgLogo = !isAdminNav ? getOrgLogoUrl(org?.logo_url) : null;
 
   const renderExtra = (child: NavItem) =>
-    child.route === "/folios" && mostrarBadgeFolios ? (
+    child.route === "/pendientes" && pendientes.data?.length ? (
+      <span className="rounded-full bg-primary px-1.5 text-[10px] font-semibold text-primary-foreground" aria-label={`${pendientes.data.length} pendientes`}>{pendientes.data.length}</span>
+    ) : child.route === "/folios" && mostrarBadgeFolios ? (
       <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" title="Nuevo" />
     ) : null;
 

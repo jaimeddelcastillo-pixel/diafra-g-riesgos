@@ -59,6 +59,15 @@ export default function Suplencias() {
   const [busy, setBusy] = useState(false);
   const [terminar, setTerminar] = useState<string | null>(null);
   const [motivoFin, setMotivoFin] = useState('');
+  const traslape = useQuery({
+    queryKey: ['suplencia-traslape', rol, inicio, fin],
+    enabled: !!inicio && !!fin && Date.parse(fin) > Date.parse(inicio),
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('suplencias_traslape', { _rol: rol, _inicio: new Date(inicio).toISOString(), _fin: new Date(fin).toISOString() });
+      if (error) throw error;
+      return data ?? 0;
+    },
+  });
   const editable = !auth.isSuperAdmin() && (auth.hasRole('admin') || auth.hasRole('responsable_sanitario'));
   const recargar = async () => {
     await q.refetch();
@@ -92,6 +101,7 @@ export default function Suplencias() {
       <div className="space-y-2"><Label htmlFor="suplencia-inicio">Inicio</Label><Input id="suplencia-inicio" type="datetime-local" required value={inicio} onChange={e => setInicio(e.target.value)}/></div>
       <div className="space-y-2"><Label htmlFor="suplencia-fin">Fin</Label><Input id="suplencia-fin" type="datetime-local" required value={fin} onChange={e => setFin(e.target.value)}/></div>
       <div className="space-y-2 sm:col-span-2"><Label htmlFor="suplencia-motivo">Motivo (sin detalle médico)</Label><Textarea id="suplencia-motivo" required value={motivo} onChange={e => setMotivo(e.target.value)}/></div>
+      {!!traslape.data && <p role="alert" className="text-sm text-warning sm:col-span-2">Aviso: estas fechas se enciman con una suplencia activa del mismo rol. No podrá aceptarse mientras la otra siga vigente.</p>}
       <Button type="submit" disabled={busy || !titular || !suplente || !motivo.trim()}><Save className="mr-2 h-4 w-4"/>Designar suplencia</Button>
     </form>}
     <section className="space-y-4"><h2 className="font-semibold">Designaciones e historial</h2>{q.isLoading ? <p>Cargando…</p> : !q.data?.length ? <p className="text-muted-foreground">Sin suplencias registradas</p> : q.data.map(s => {
