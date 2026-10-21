@@ -190,7 +190,7 @@ export default function Configuracion() {
   const { puedeAdministrarUsuarios } = useAuth();
   const puedeDesactivar = puedeAdministrarUsuarios;
   const [desactivarTarget, setDesactivarTarget] = useState<{ id: string; nombre: string; email: string } | null>(null);
-  const isAdmin = puedeAdministrarUsuarios || isSuperAdmin();
+  const isAdmin = hasRole("admin") || hasRole("responsable_sanitario") || isSuperAdmin();
   const { hash } = useLocation();
   useEffect(() => {
     if (!hash) return;
