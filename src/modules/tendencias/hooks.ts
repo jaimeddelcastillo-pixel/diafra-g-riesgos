@@ -16,9 +16,7 @@ export function useFacultadesTendencias(){
  const auth=useAuth();
  return useQuery({queryKey:['tend-facultades',auth.orgId,auth.user?.id],enabled:!!auth.orgId && !auth.isSuperAdmin(),queryFn:async()=>{
   const {supabase}=await import('@/integrations/supabase/client');
-  const {data:org,error}=await supabase.rpc('get_user_org_id');if(error)throw error;if(!org)return {autorizar:false,anular:false};
-  const [autorizar,anular]=await Promise.all([supabase.rpc('tend_suplencia',{_org:org,_facultad:'autorizar'}),supabase.rpc('tend_suplencia',{_org:org,_facultad:'anular'})]);
-  if(autorizar.error || anular.error)throw autorizar.error ?? anular.error;
-  return {autorizar:auth.orgRole==='responsable_sanitario' || !!autorizar.data,anular:auth.orgRole==='responsable_sanitario' || !!anular.data};
+  const {data,error}=await supabase.rpc('rol_efectivo',{_usuario:auth.user?.id ?? '',_rol:'responsable_sanitario'});if(error)throw error;
+  return {autorizar:data===true,anular:data===true};
  }});
 }
