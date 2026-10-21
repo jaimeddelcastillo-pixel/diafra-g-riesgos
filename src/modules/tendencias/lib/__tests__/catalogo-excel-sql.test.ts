@@ -2,26 +2,34 @@ import { describe, it, expect } from 'vitest';
 import { execFileSync } from 'node:child_process';
 import { readFileSync, readdirSync } from 'node:fs';
 
-/** T4h: copia exacta del cuerpo productivo de la importación, ejecutada contra las tablas reales con sus
- * disparadores reales (tend_guard, auditoría), en la empresa QA es_prueba, dentro de BEGIN … ROLLBACK.
- * Solo se sustituyen auth.uid(), contexto_org_actual() y tend_acceso() de la RPC (el entorno de pruebas no puede
- * ejecutarlas); el rol authenticated y RLS no se simulan aquí. Nada se conserva en la base.
+/** T4h: copia exacta de la migración productiva (RPC, tend_guard y auditoría) sobre copias temporales de las
+ * cuatro tablas del catálogo (mismos índices, restricciones y datos de la empresa QA es_prueba), con la auditoría
+ * escrita en la bitácora real, todo dentro de BEGIN … ROLLBACK. Solo se sustituyen auth.uid(), contexto_org_actual()
+ * y tend_acceso() porque el entorno de pruebas no puede ejecutarlas; el rol authenticated y RLS no se simulan aquí.
  */
 const ORG='3868f88a-fa36-4467-9b31-653143c6ef7d';
 const USUARIO='4101c851-a9ac-480b-a1a2-8c3403a44ed4';
+const TABLAS=['tend_sistemas_hvac','tend_areas','tend_instrumentos','tend_objetivos_presion'];
+
+function migracion(){
+  const archivo=process.env.T4H_SQL ?? `drizzle/migrations/${readdirSync('drizzle/migrations').filter(f=>f.includes('t4h_catalogo_excel_por_conjuntos')).sort().at(-1)}`;
+  return readFileSync(archivo,'utf8');
+}
+const bloque=(sql:string,nombre:string)=>sql.slice(sql.indexOf(`-- t4h:${nombre}:inicio`),sql.indexOf(`-- t4h:${nombre}:fin`));
+const aTemporal=(sql:string)=>sql.replace(/CREATE OR REPLACE FUNCTION public\./,'CREATE FUNCTION pg_temp.')
+  .replace(/\n SECURITY DEFINER\n/,'\n')
+  .replaceAll('public.contexto_org_actual()','pg_temp.contexto_org_actual()')
+  .replaceAll('public.tend_','pg_temp.tend_')
+  .replaceAll('auth.uid()','pg_temp.uid()');
 
 function cuerpoRpc(){
-  const archivo=process.env.T4H_SQL ?? `drizzle/migrations/${readdirSync('drizzle/migrations').filter(f=>f.includes('t4h_catalogo_excel_por_conjuntos')).sort().at(-1)}`;
-  const sql=readFileSync(archivo,'utf8');
-  const rpc=sql.slice(sql.indexOf('-- t4h:rpc:inicio'),sql.indexOf('-- t4h:rpc:fin'));
+  const sql=migracion();
+  const rpc=bloque(sql,'rpc');
   expect(rpc).toContain('ON CONFLICT (id) DO UPDATE');
   expect(rpc).not.toMatch(/EXECUTE\s+format/i);
   expect(rpc).not.toMatch(/FOR\s+UPDATE/i);
-  return rpc.replace('CREATE OR REPLACE FUNCTION public.tend_importar_catalogo_excel','CREATE FUNCTION pg_temp.tend_importar_catalogo_excel')
-    .replace(/\n SECURITY DEFINER\n/,'\n')
-    .replaceAll('public.contexto_org_actual()','pg_temp.contexto_org_actual()')
-    .replaceAll('public.tend_acceso(','pg_temp.tend_acceso(')
-    .replaceAll('auth.uid()','pg_temp.uid()');
+  expect(rpc).not.toMatch(/\bFOR\s+\w+\s+IN\s+SELECT/i);
+  return [bloque(sql,'guard'),bloque(sql,'audit'),rpc].map(aTemporal).join('\n');
 }
 
 function ejecutar(cuerpo:string){
@@ -31,7 +39,10 @@ function ejecutar(cuerpo:string){
     CREATE FUNCTION pg_temp.contexto_org_actual() RETURNS TABLE(org_id uuid) LANGUAGE sql AS $$ select id from public.organizations where es_prueba and id='${ORG}' $$;
     CREATE FUNCTION pg_temp.tend_acceso(uuid,boolean,text[]) RETURNS boolean LANGUAGE sql AS 'select $1 is not null';
     CREATE TEMP TABLE t4h_resultado(clave text, valor numeric);
+    ${TABLAS.map(t=>`CREATE TEMP TABLE ${t} (LIKE public.${t} INCLUDING ALL); INSERT INTO pg_temp.${t} SELECT * FROM public.${t} WHERE org_id='${ORG}';`).join('\n')}
     ${cuerpoRpc()}
+    ${TABLAS.map(t=>`CREATE TRIGGER ${t}_guard BEFORE INSERT OR UPDATE ON pg_temp.${t} FOR EACH ROW EXECUTE FUNCTION pg_temp.tend_guard();
+      CREATE TRIGGER ${t}_audit AFTER INSERT OR UPDATE ON pg_temp.${t} FOR EACH ROW EXECUTE FUNCTION pg_temp.audit_trigger_func();`).join('\n')}
     ${cuerpo}
     SELECT clave||'='||valor FROM t4h_resultado ORDER BY clave;
     ROLLBACK;`;
