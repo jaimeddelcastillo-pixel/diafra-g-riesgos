@@ -65,3 +65,7 @@
 
 ### Tendencias — reporte consolidado y paridad de Cumplimiento
 Implementados reporte independiente, vistas por área/instrumento/avance, consolidación no destructiva, exportadores normativos de seis hojas, PDF consolidado con gráficas originales descargado e inspeccionado en QA, KPIs/cobertura/filtros/agrupación de Cumplimiento. Suite final 118/118 (18 archivos). Motor intacto; faltantes y diferencias exactas en t3b_matriz.md; no equiparar exportador normativo con export-utils original.
+
+### Tendencias — T4h importación del catálogo por conjuntos
+- [x] RPC por conjuntos (un bloqueo por tabla, un upsert por hoja, auditoría masiva); 200 renglones ~0.2 s en prueba con reversión
+- [ ] Confirmar con sesión real de adminqa la importación parte 1 (72 renglones)

@@ -26,7 +26,7 @@ export default function CatalogoExcel({catalogo,empresa,onCambio}:{catalogo:Cata
       const {error}=await supabase.rpc('tend_importar_catalogo_excel',{_paquete:preview.paquete as unknown as Json,_motivo:motivo.trim()});
       if(error)throw error;
       await onCambio();setPreview(null);toast.success('Catálogo aplicado y auditado');
-    }catch(e){toast.error(e instanceof Error?e.message:String(e));}finally{setBusy(false);}
+    }catch(e){const m=(e as {message?:unknown})?.message;toast.error(typeof m==='string'&&m?m:String(e));}finally{setBusy(false);}
   };
   return <><div className="flex flex-wrap items-center gap-2">
     <Button variant="outline" disabled={busy} onClick={()=>void descargar(false)}><FileSpreadsheet className="mr-2 h-4 w-4"/>Plantilla de Excel</Button>
