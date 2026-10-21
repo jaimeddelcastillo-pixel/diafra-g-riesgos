@@ -547,6 +547,13 @@
       "when": 1792611434095,
       "tag": "0077_t5c_firmantes_elegibles_por_at",
       "breakpoints": true
+    },
+    {
+      "idx": 78,
+      "version": "7",
+      "when": 1792611585832,
+      "tag": "0078_t5c_emision_atomica_firmantes",
+      "breakpoints": true
     }
   ]
 }

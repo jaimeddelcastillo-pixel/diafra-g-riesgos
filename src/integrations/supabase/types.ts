@@ -6266,15 +6266,26 @@ export type Database = {
         Args: { _config: Json; _org: string }
         Returns: undefined
       }
-      tend_validar_firmantes_at: {
-        Args: {
-          _elegibles: Json
-          _emitir?: boolean
-          _firmantes: Json
-          _org: string
-        }
-        Returns: Json
-      }
+      tend_validar_firmantes_at:
+        | {
+            Args: {
+              _elegibles: Json
+              _emitir?: boolean
+              _firmantes: Json
+              _org: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              _autor: string
+              _elegibles: Json
+              _emitir: boolean
+              _firmantes: Json
+              _org: string
+            }
+            Returns: Json
+          }
       todos_firmaron: { Args: { p_folio_id: string }; Returns: boolean }
       verificar_diploma: {
         Args: { p_hash: string }
