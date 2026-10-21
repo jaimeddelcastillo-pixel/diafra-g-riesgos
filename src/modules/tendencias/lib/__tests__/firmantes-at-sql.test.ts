@@ -7,7 +7,7 @@ import { describe, expect, it } from 'vitest';
 function ejecutar(cuerpo: string) {
   const nombres = ['tend_firmante_autorizante', 'tend_validar_elegibles', 'tend_validar_firmantes_at', 'tend_at_firmantes_guard', 'tend_at_firmantes_snapshot', 'tend_formato_elegibles_guard'];
   const definiciones = execFileSync('psql', ['-X', '-q', '-At', '-v', 'ON_ERROR_STOP=1'], {
-    input: `SELECT string_agg(pg_get_functiondef(p.oid), E'\n') FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public' AND p.proname=ANY(ARRAY[${nombres.map(n => `'${n}'`).join(',')}]);`, encoding: 'utf8', timeout: 30000,
+    input: `SELECT string_agg(pg_get_functiondef(p.oid)||';', E'\n') FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public' AND p.proname=ANY(ARRAY[${nombres.map(n => `'${n}'`).join(',')}]);`, encoding: 'utf8', timeout: 30000,
   }).replaceAll('public.', 'pg_temp.').replaceAll('auth.uid()', 'pg_temp.uid()').replaceAll('SECURITY DEFINER', '').replaceAll("SET search_path TO 'public'", 'SET search_path TO pg_temp');
   const setup = `BEGIN;
     CREATE TEMP TABLE org_members(org_id uuid,user_id uuid,role text);
