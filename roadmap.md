@@ -1,5 +1,7 @@
 # Roadmap
 
+- [ ] P1-b: menú plegable por usuario y cajón móvil, pendientes arriba de módulos, migas de pan de plataforma, alertas por color y asunto del correo diario; suite sin navegador/IA/dependencias, sin cambios de permisos o lógica.
+
 - [x] P1 Mis pendientes: pendientes_usuario, semáforo por empresa, bloque Inicio, /pendientes con pestañas y filtros, contador en menú, confirmación de perfil (firmantes), aviso de suplencia encimada; pruebas SQL temporales. Sin navegador/IA/dependencias.
 
 - [x] T5c: elegibles/predeterminado por rol, autor del AT por defecto y múltiples Elaboró/Revisó; Autorizó restringido por has_role/suplencia vigente, emisión atómica y ambos snapshots congelados; Word por firmante y compatibilidad histórica. Enlaces Empresas existentes comprobados sin duplicarlos. 208/208 pruebas de Tendencias y build OK; SQL real copiado a fixtures temporales con rollback, no sesión/RLS ni flujo completo de emisión. Sin navegador/dependencias; comprobación funcional de pantalla a cargo de Jaime.
