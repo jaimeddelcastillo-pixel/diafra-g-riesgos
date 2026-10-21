@@ -1,6 +1,6 @@
 # Roadmap
 
-- [ ] Firmantes: conservar user_id opcional, avisar sin bloquear Autorizó sin RS/suplencia vigente y cargo ausente; compatibilidad histórica y suite automática sin navegador/dependencias.
+- [x] Firmantes: user_id opcional persistido, selección manual quita asociación sin alterar textos, aviso no bloqueante Autorizó mediante has_role y suplencia vigente autorizar, aviso de cargo ausente; plantillas históricas intactas. 194/194 pruebas de Tendencias; sin navegador/IA/dependencias ni firma electrónica Fase 5.
 
 - [x] Selector de usuarios activos de la empresa en Firmantes de Plantilla del reporte; copia nombre/cargo conservando rol y versiones anteriores; 184/184 pruebas de Tendencias, build OK; sin navegador ni dependencias.
 
