@@ -1,5 +1,7 @@
 # Roadmap
 
+- [ ] T5c: elegibles y predeterminado por rol en plantilla; firmantes múltiples por AT con autor actual por defecto, Autorizó RS/suplente vigente; congelación al emitir y Word por firmante; compatibilidad histórica, enlaces Empresas y suite sin navegador/dependencias.
+
 - [x] Firmantes: user_id opcional persistido, selección manual quita asociación sin alterar textos, aviso no bloqueante Autorizó mediante has_role y suplencia vigente autorizar, aviso de cargo ausente; plantillas históricas intactas. 194/194 pruebas de Tendencias; sin navegador/IA/dependencias ni firma electrónica Fase 5.
 
 - [x] Selector de usuarios activos de la empresa en Firmantes de Plantilla del reporte; copia nombre/cargo conservando rol y versiones anteriores; 184/184 pruebas de Tendencias, build OK; sin navegador ni dependencias.
