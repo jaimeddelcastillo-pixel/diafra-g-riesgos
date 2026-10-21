@@ -26,7 +26,7 @@ describe('Regresión Word atdiafra con identidad en tend_formato',()=>{
     {rol:'Revisó',user_id:'revisor-dos-qa',nombre:'Revisor Dos QA',cargo:'Revisor Cargo Dos QA'},
     {rol:'Autorizó',user_id:'rs-qa',nombre:'Responsable QA',cargo:'Responsable Sanitario QA'},
    ];
-   const result=await generarWordForVal16({formato:{...FORMATO_DEFAULT,logo,firmantes},codigoAT:'AT-QA-001',version:1,estado:'emitido',emitidoAt:'2025-04-01',sistema:'QA',tituloSistema:'Sistema QA',periodo:'enero–marzo 2025',desde:'2025-01-01',hasta:'2025-03-31',bloques,texto,justificaciones:{},cambios:[],sustituye:'N/A',areas:['QA-01'],png:async()=>[{nombre:'QA',blob:await(await fetch(logo)).blob()}]});
+   const result=await generarWordForVal16({formato:{...FORMATO_DEFAULT,logo,firmantes,identidad:{nombre:'Empresa QA',logoDescripcion:'Logo QA',confidencialidad:'Documento QA'}},codigoAT:'AT-QA-001',version:1,estado:'emitido',emitidoAt:'2025-04-01',sistema:'QA',tituloSistema:'Sistema QA',periodo:'enero–marzo 2025',desde:'2025-01-01',hasta:'2025-03-31',bloques,texto,justificaciones:{},cambios:[],sustituye:'N/A',areas:['QA-01'],png:async()=>[{nombre:'QA',blob:await(await fetch(logo)).blob()}]});
    const zip=await JSZip.loadAsync(await result.blob.arrayBuffer());
    const xml=await zip.file('word/document.xml')?.async('string') ?? '';
    const filas=xml.match(/<w:tr\b[^>]*>[\s\S]*?<\/w:tr>/g) ?? [];
