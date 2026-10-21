@@ -9,6 +9,7 @@ import DiplomaVerificar from "./pages/DiplomaVerificar";
 import Confianza from "./pages/Confianza";
 import Configuracion from "./pages/Configuracion";
 import SuplenciasPlataforma from "./pages/Suplencias";
+import Pendientes from "./pages/Pendientes";
 import ConfiguracionAsistente from "./pages/ConfiguracionAsistente";
 import Admin from "./pages/Admin";
 import AdminOrg from "./pages/AdminOrg";
@@ -84,6 +85,7 @@ const App = () => (
               {/* P1c.1: los diplomas y DC-3 de cada persona no dependen del módulo contratado. */}
               <Route path="/mis-diplomas" element={<MisDiplomas />} />
               <Route path="/configuracion" element={<Configuracion />} />
+              <Route path="/pendientes" element={<Pendientes />} />
             <Route path="/configuracion/suplencias" element={<SuplenciasPlataforma />} />
             <Route path="/tendencias/suplencias" element={<Navigate to="/configuracion/suplencias" replace />} />
               <Route path="/configuracion/asistente" element={<ConfiguracionAsistente />} />

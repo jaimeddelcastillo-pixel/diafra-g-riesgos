@@ -12,7 +12,7 @@ function ejecutar(cuerpo: string) {
   }).replaceAll('public.', 'pg_temp.').replaceAll('auth.uid()', 'pg_temp.uid()').replace(/::(?:pg_temp\.)?app_role/g, '::text').replace(/\bapp_role\b/g, 'text').replaceAll('SECURITY DEFINER', '').replaceAll("SET search_path TO 'public'", 'SET search_path TO pg_temp');
   const setup = `BEGIN;
     CREATE TEMP TABLE org_members(org_id uuid,user_id uuid,role text);
-    CREATE TEMP TABLE profiles(id uuid,nombre text,cargo text,activo boolean);
+    CREATE TEMP TABLE profiles(id uuid,nombre text,cargo text,activo boolean,perfil_confirmado_en timestamptz DEFAULT now());
     CREATE TEMP TABLE org_suplencias(org_id uuid,suplente_user_id uuid,revocada_en timestamptz,fecha_inicio timestamptz,fecha_fin timestamptz,facultades text[],titular_user_id uuid,rs_titular_user_id uuid,rol_sustituido text,estado text,aceptada_en timestamptz);
     CREATE TEMP TABLE tend_formato(org_id uuid,version int,firmantes_elegibles jsonb);
     CREATE TEMP TABLE t5c_at(id int,org_id uuid,estado text,firmantes_at jsonb,elaborado_version_por uuid,formato_snapshot jsonb,datos_snapshot jsonb);

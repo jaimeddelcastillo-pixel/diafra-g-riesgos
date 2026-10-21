@@ -3684,6 +3684,44 @@ export type Database = {
           },
         ]
       }
+      org_pendientes_semaforo: {
+        Row: {
+          gestion_naranja: number
+          gestion_rojo: number
+          operativo_naranja: number
+          operativo_rojo: number
+          org_id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          gestion_naranja?: number
+          gestion_rojo?: number
+          operativo_naranja?: number
+          operativo_rojo?: number
+          org_id: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          gestion_naranja?: number
+          gestion_rojo?: number
+          operativo_naranja?: number
+          operativo_rojo?: number
+          org_id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "org_pendientes_semaforo_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       org_suplencias: {
         Row: {
           aceptada_en: string | null
@@ -4195,6 +4233,7 @@ export type Database = {
           motivo_desactivacion: string | null
           nombre: string
           org_activa_id: string | null
+          perfil_confirmado_en: string | null
           updated_at: string
         }
         Insert: {
@@ -4209,6 +4248,7 @@ export type Database = {
           motivo_desactivacion?: string | null
           nombre: string
           org_activa_id?: string | null
+          perfil_confirmado_en?: string | null
           updated_at?: string
         }
         Update: {
@@ -4223,6 +4263,7 @@ export type Database = {
           motivo_desactivacion?: string | null
           nombre?: string
           org_activa_id?: string | null
+          perfil_confirmado_en?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -6019,6 +6060,10 @@ export type Database = {
         Returns: undefined
       }
       confirmar_catalogo_documentos: { Args: never; Returns: string }
+      confirmar_perfil: {
+        Args: { _cargo: string; _nombre: string }
+        Returns: undefined
+      }
       conocimiento_usado_en: {
         Args: { _id: string }
         Returns: {
@@ -6172,6 +6217,15 @@ export type Database = {
       }
       folios_revision_corte: { Args: { p_ahora?: string }; Returns: string }
       get_user_org_id: { Args: never; Returns: string }
+      guardar_semaforo_pendientes: {
+        Args: {
+          _gestion_naranja: number
+          _gestion_rojo: number
+          _operativo_naranja: number
+          _operativo_rojo: number
+        }
+        Returns: undefined
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -6251,6 +6305,18 @@ export type Database = {
         Returns: boolean
       }
       pendientes_cerebro: { Args: never; Returns: Json }
+      pendientes_color: {
+        Args: {
+          _dias: number
+          _gn: number
+          _gr: number
+          _on: number
+          _or: number
+          _perfil: string
+          _vencida: boolean
+        }
+        Returns: string
+      }
       pendientes_configuracion: {
         Args: never
         Returns: {
@@ -6265,6 +6331,21 @@ export type Database = {
         }[]
       }
       pendientes_riesgos: { Args: never; Returns: Json }
+      pendientes_usuario: {
+        Args: { _alcance?: string }
+        Returns: {
+          color: string
+          dias: number
+          fecha_limite: string
+          modulo: string
+          nace_en: string
+          perfil: string
+          registro: string
+          ruta: string
+          tipo: string
+          titulo: string
+        }[]
+      }
       plan_limite: { Args: { p_clave: string; p_org: string }; Returns: Json }
       publicar_skill: {
         Args: { p_motivo: string; p_prompt_id: string }
@@ -6330,6 +6411,14 @@ export type Database = {
           _usuario: string
         }
         Returns: Json
+      }
+      suplencias_traslape: {
+        Args: {
+          _fin: string
+          _inicio: string
+          _rol: Database["public"]["Enums"]["app_role"]
+        }
+        Returns: number
       }
       tend_acceso: {
         Args: { _escritura?: boolean; _org: string; _roles?: string[] }
