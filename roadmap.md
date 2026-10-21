@@ -82,6 +82,7 @@ Implementados reporte independiente, vistas por área/instrumento/avance, consol
 - [x] Captura: etiqueta del objetivo «Objetivo N Pa»
 
 ### T5d — suplencias de plataforma
+- [ ] Informe final: listar funciones y comprobaciones migradas a rol_efectivo e identificar explícitamente pantallas o funciones sin migrar (solicitado tras aprobación).
 - [ ] Mover Suplencias a Configuración; designación admin/RS, categorías, aceptación, rechazo y terminación motivada; conservar existentes y avisos.
 - [ ] Unificar rol efectivo en servidor y permisos de Riesgos, Cerebro, Tendencias y plataforma sin mezcla de roles ni autoautorización.
 - [ ] Registrar identidad del titular en acciones y auditoría; suite automática con aceptación, vigencia, solapamientos y aislamiento RS/admin (sin navegador, IA ni dependencias).
