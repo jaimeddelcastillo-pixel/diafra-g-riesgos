@@ -1,5 +1,6 @@
-import { execFileSync } from 'node:child_process';
-import { describe, expect, it } from 'vitest';
+import { execFileSync, spawn } from 'node:child_process';
+import { describe, expect, it, vi } from 'vitest';
+vi.setConfig({ testTimeout: 30000 });
 const id = (n: number) => `00000000-0000-0000-0000-${String(n).padStart(12, '0')}`;
 let definitions: string | undefined;
 const tablas = ['organizations','profiles','org_members','user_roles','org_suplencias','audit_trail','puestos','kpi_definiciones','kpi_puesto','kpi_puesto_aporta','org_pendientes_semaforo','tend_registros_at','tend_registros','tend_semanas','riesgos','folios','brain_knowledge_items'];
@@ -27,11 +28,17 @@ CREATE TRIGGER suplencias_guard BEFORE INSERT OR UPDATE OR DELETE ON org_suplenc
 CREATE TRIGGER audit_context BEFORE INSERT ON audit_trail FOR EACH ROW EXECUTE FUNCTION pg_temp.audit_suplencia_contexto();
 DO $$ DECLARE k uuid;s uuid;failed boolean:=false;BEGIN ${body} END $$;
 SELECT 'K1 OK';ROLLBACK;`;
-  return execFileSync('psql',['-XqAt','-v','ON_ERROR_STOP=1'],{input:sql,encoding:'utf8',timeout:30000});
+  return new Promise<string>((resolve, reject) => {
+    const child = spawn('psql',['-XqAt','-v','ON_ERROR_STOP=1']);
+    let out = ''; let err = '';
+    child.stdout.on('data', d => { out += String(d); }); child.stderr.on('data', d => { err += String(d); });
+    child.on('error', reject); child.on('close', code => code === 0 ? resolve(out) : reject(new Error(err)));
+    child.stdin.end(sql);
+  });
 }
 const importar = `PERFORM pg_temp.aplicar_kpis_excel('${paquete}'::jsonb,'QA importación');SELECT id INTO k FROM kpi_definiciones WHERE codigo='1';`;
 const actor = (n: number) => `PERFORM set_config('qa.actor','${id(n)}',true);`;
-function check(body: string) { expect(run(body)).toContain('K1 OK'); }
+async function check(body: string) { expect(await run(body)).toContain('K1 OK'); }
 describe.skipIf(!process.env.PGHOST)('K1 reglas servidor, QA temporal con rollback', () => {
   it('importa puestos, KPI y aporta_a con auditoría motivada', () => check(`${importar}IF (SELECT count(*) FROM puestos)<>1 OR (SELECT count(*) FROM kpi_definiciones)<>1 OR (SELECT count(*) FROM kpi_puesto)<>1 OR (SELECT count(*) FROM kpi_puesto_aporta WHERE activo)<>1 THEN RAISE EXCEPTION 'Importación incompleta';END IF;IF NOT EXISTS(SELECT 1 FROM audit_trail WHERE tabla='kpi_definiciones' AND motivo='QA importación' AND valor_nuevo->>'estado'='borrador') THEN RAISE EXCEPTION 'Auditoría ausente';END IF;`));
   for (const [campo, valor] of [['formula', "'a/c'"], ['meta','90'], ['tendencia',"'negativa'"], ['unidad',"'días'"]]) it(`cambio de ${campo} validado regresa a borrador`, () => check(`${importar}${actor(3)}PERFORM pg_temp.validar_kpi('kpi_definiciones',k,'QA validar');UPDATE kpi_definiciones SET ${campo}=${valor} WHERE id=k;IF NOT EXISTS(SELECT 1 FROM kpi_definiciones WHERE id=k AND estado='borrador' AND validado_por IS NULL AND validado_en IS NULL) THEN RAISE EXCEPTION 'No regresó a borrador';END IF;`));
