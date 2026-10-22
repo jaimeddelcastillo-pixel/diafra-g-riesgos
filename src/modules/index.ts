@@ -18,12 +18,13 @@
 import { riesgosModule } from "./riesgos/module";
 import { cerebroModule } from "./cerebro/module";
 import { tendenciasModule } from "./tendencias/module";
+import { indicadoresModule } from "./indicadores/module";
 import Recursos from "@/pages/Recursos";
 import type { ModuloDef, ModuloRuta } from "./tipos";
 
 export type { ModuloDef } from "./tipos";
 
-const modulosRegistrados: ModuloDef[] = [riesgosModule, cerebroModule, tendenciasModule];
+const modulosRegistrados: ModuloDef[] = [riesgosModule, cerebroModule, tendenciasModule, indicadoresModule];
 
 /** Ordena por modulos.orden; si una clave no tiene fila, usa su orden por defecto. */
 export function ordenarModulos(ordenDb?: Record<string, number> | null): ModuloDef[] {

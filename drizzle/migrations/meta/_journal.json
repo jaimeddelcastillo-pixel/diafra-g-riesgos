@@ -617,6 +617,55 @@
       "when": 1792689747279,
       "tag": "0087_t5d1_firma_dictamen_creador",
       "breakpoints": true
+    },
+    {
+      "idx": 88,
+      "version": "7",
+      "when": 1792709205006,
+      "tag": "0088_k1_rol_aseguramiento_calidad",
+      "breakpoints": true
+    },
+    {
+      "idx": 89,
+      "version": "7",
+      "when": 1792709250927,
+      "tag": "0089_k1_roles_suplencias",
+      "breakpoints": true
+    },
+    {
+      "idx": 90,
+      "version": "7",
+      "when": 1792709292968,
+      "tag": "0090_k1_catalogos_indicadores",
+      "breakpoints": true
+    },
+    {
+      "idx": 91,
+      "version": "7",
+      "when": 1792709346051,
+      "tag": "0091_k1_excel_y_pendientes",
+      "breakpoints": true
+    },
+    {
+      "idx": 92,
+      "version": "7",
+      "when": 1792709460902,
+      "tag": "0092_k1_escritura_manual_controlada",
+      "breakpoints": true
+    },
+    {
+      "idx": 93,
+      "version": "7",
+      "when": 1792709579782,
+      "tag": "0093_k1_auditoria_suplencia_ac",
+      "breakpoints": true
+    },
+    {
+      "idx": 94,
+      "version": "7",
+      "when": 1792709602062,
+      "tag": "0094_k1_preservar_validacion_manual",
+      "breakpoints": true
     }
   ]
 }

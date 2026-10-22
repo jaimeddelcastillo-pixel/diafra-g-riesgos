@@ -15,6 +15,7 @@ export const MODULOS_PANEL = [
   { clave: 'riesgos', nombre: 'Gestión de Riesgos' },
   { clave: 'institutional_brain', nombre: 'Cerebro Institucional' },
   { clave: 'tendencias', nombre: 'Análisis de Tendencias' },
+  { clave: 'indicadores', nombre: 'Indicadores' },
 ] as const;
 
 export const motivoValido = (m: string) => m.trim().length >= 5;

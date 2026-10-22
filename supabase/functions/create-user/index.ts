@@ -10,8 +10,9 @@ const corsHeaders = {
 };
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const ROLES_ORG = ["admin", "responsable_sanitario", "comite_tecnico", "operador", "lectura"];
+const ROLES_ORG = ["admin", "responsable_sanitario", "comite_tecnico", "operador", "lectura", "aseguramiento_calidad"];
 const ROL_LABEL: Record<string, string> = {
+  aseguramiento_calidad: "Aseguramiento de Calidad",
   admin: "Administrador", responsable_sanitario: "Responsable Sanitario",
   comite_tecnico: "Comité Técnico", operador: "Operador", lectura: "Lectura",
 };

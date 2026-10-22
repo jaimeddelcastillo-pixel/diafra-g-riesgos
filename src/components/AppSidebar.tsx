@@ -22,6 +22,7 @@ import {
 export const EVENTO_ABRIR_GRUPO = "tracea:abrir-grupo-menu";
 
 const ROL_LABEL: Record<string, string> = {
+  aseguramiento_calidad: "Aseguramiento de Calidad",
   admin: "Administrador", responsable_sanitario: "Resp. Sanitario", comite_tecnico: "Comité Técnico",
   operador: "Operador", lectura: "Lectura", super_admin: "Super admin",
 };

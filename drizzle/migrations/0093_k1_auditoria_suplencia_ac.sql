@@ -1,0 +1,1 @@
+DO $k1$ DECLARE d text;BEGIN SELECT pg_get_functiondef('public.audit_suplencia_contexto()'::regprocedure) INTO d;d:=replace(d,'ARRAY[''admin'',''responsable_sanitario'']::public.app_role[]','ARRAY[''admin'',''responsable_sanitario'',''aseguramiento_calidad'']::public.app_role[]');EXECUTE d;END $k1$;
