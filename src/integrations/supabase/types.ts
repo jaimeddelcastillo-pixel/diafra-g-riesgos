@@ -3092,6 +3092,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           desviacion_id: string | null
+          dictamen_autoemitido: boolean
           dictamen_por: string | null
           dictamen_suplencia: Json | null
           estado: Database["public"]["Enums"]["estado_folio"]
@@ -3133,6 +3134,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           desviacion_id?: string | null
+          dictamen_autoemitido?: boolean
           dictamen_por?: string | null
           dictamen_suplencia?: Json | null
           estado?: Database["public"]["Enums"]["estado_folio"]
@@ -3174,6 +3176,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           desviacion_id?: string | null
+          dictamen_autoemitido?: boolean
           dictamen_por?: string | null
           dictamen_suplencia?: Json | null
           estado?: Database["public"]["Enums"]["estado_folio"]
@@ -6012,6 +6015,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           desviacion_id: string | null
+          dictamen_autoemitido: boolean
           dictamen_por: string | null
           dictamen_suplencia: Json | null
           estado: Database["public"]["Enums"]["estado_folio"]
