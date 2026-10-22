@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, useRef, useCallback, Re
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { User, Session } from "@supabase/supabase-js";
+import { useLocation } from "react-router-dom";
 
 type AppRole = "admin" | "comite_tecnico" | "operador" | "lectura" | "responsable_sanitario" | "super_admin" | "aseguramiento_calidad";
 
@@ -60,6 +61,7 @@ const ORG_COLS = "id, nombre, slug, plan, activo, max_users, trial_expires_at, l
 const SOPORTE_KEY = "tracea-soporte-log";
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const { pathname } = useLocation();
   const queryClient = useQueryClient();
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
@@ -267,7 +269,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   return (
     <AuthContext.Provider value={{
       user, session, profile, roles, puedeAdministrarUsuarios,
-      orgId, org, orgRole,
+      orgId, org, orgRole: orgRole === 'aseguramiento_calidad' && !pathname.startsWith('/indicadores') && !pathname.startsWith('/configuracion/suplencias') ? 'comite_tecnico' : orgRole,
       loading,
       isImpersonating, impersonatedOrg,
       hasRole, isSuperAdmin,

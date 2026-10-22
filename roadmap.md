@@ -1,6 +1,6 @@
 # Roadmap
 
-- [ ] K1: Indicadores del SGC y por puesto, catálogo de puestos, rol Aseguramiento de Calidad y suplencias aisladas, Excel con vista previa y aplicación atómica auditada, pendiente de validación y suite automática; sin tocar Tendencias/Riesgos, navegador, llamadas IA ni dependencias.
+- [x] K1: Indicadores del SGC y por puesto, catálogo de puestos, rol Aseguramiento de Calidad y suplencias aisladas, Excel con vista previa y aplicación atómica auditada, pendiente de validación; migraciones 0088–0094 y suite 326/326. Sin activar empresas, tocar archivos Tendencias/Riesgos, navegador, llamadas IA ni dependencias; recorrido visual/autenticado no verificado por restricción.
 
 - [x] P1-b: menú plegable por usuario y cajón móvil, pendientes arriba de módulos, migas de pan de plataforma, alertas por color; sin cambios de permisos o lógica, sin navegador/IA/dependencias.
 - [ ] P1-b asunto diario con vencidos: no existe remitente ni correo diario de Mis pendientes en el proyecto; requiere definir/autorizar ese envío antes de modificar un asunto inexistente.
