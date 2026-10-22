@@ -31,8 +31,9 @@ export function SeccionDictamen({ folio, riesgos, locked, onSaved }: Props) {
   const [savingDictamen, setSavingDictamen] = useState(false);
   const [motivoRechazo, setMotivoRechazo] = useState("");
   const [showRechazoForm, setShowRechazoForm] = useState(false);
+  const [conclusionPendiente, setConclusionPendiente] = useState<"Aprobado" | "Rechazado">("Rechazado");
   const { toast } = useToast();
-  const { hasRole } = useAuth();
+  const { hasRole, user } = useAuth();
 
   // Terminología dependiente de la norma del folio (no de la org).
   const normaConfig = getNormaConfig((folio as any).norma_folio);
@@ -48,6 +49,10 @@ export function SeccionDictamen({ folio, riesgos, locked, onSaved }: Props) {
   // corregirla porque el sistema permite reabrir/rectificar.
   const puedeEditarConclusion = (esAdmin || esRS) && folio.estado !== "Cerrado";
   const hasNoAceptables = riesgos.some((r) => r.dictamen === "No Aceptable");
+  // T5d-1: el creador puede dictaminar solo con motivo obligatorio (autoemisión
+  // en empresa pequeña), auditado y visible como «Dictamen emitido por su autor».
+  const esCreador = (folio as any).created_by === user?.id;
+  const autoemitido = !!(folio as any).dictamen_autoemitido;
 
   const [justificacion, setJustificacion] = useState((folio as any).justificacion_tecnica || "");
 
