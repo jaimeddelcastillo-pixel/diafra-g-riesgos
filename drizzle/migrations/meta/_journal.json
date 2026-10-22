@@ -666,6 +666,13 @@
       "when": 1792709602062,
       "tag": "0094_k1_preservar_validacion_manual",
       "breakpoints": true
+    },
+    {
+      "idx": 95,
+      "version": "7",
+      "when": 1792710942409,
+      "tag": "0095_k1_privilegios_solo_lectura_directa",
+      "breakpoints": true
     }
   ]
 }
