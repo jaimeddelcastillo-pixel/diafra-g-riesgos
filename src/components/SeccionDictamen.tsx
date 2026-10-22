@@ -292,23 +292,45 @@ export function SeccionDictamen({ folio, riesgos, locked, onSaved }: Props) {
                 )}
 
                 <div className="flex gap-3">
-                  <Button
-                    className="gap-2 bg-green-700 hover:bg-green-800"
-                    onClick={() => handleDictamen("Aprobado")}
-                    disabled={savingDictamen}
-                  >
-                    <CheckCircle className="h-4 w-4" />
-                    {savingDictamen ? "Procesando..." : "Aprobar folio"}
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    className="gap-2"
-                    onClick={() => handleDictamen("Rechazado")}
-                    disabled={savingDictamen}
-                  >
-                    <XCircle className="h-4 w-4" />
-                    {showRechazoForm ? (savingDictamen ? "Enviando..." : "Confirmar rechazo") : "Rechazar folio"}
-                  </Button>
+                  {showRechazoForm ? (
+                    <Button
+                      className={`gap-2 ${conclusionPendiente === "Aprobado" ? "bg-green-700 hover:bg-green-800" : ""}`}
+                      variant={conclusionPendiente === "Aprobado" ? "default" : "destructive"}
+                      onClick={() => handleDictamen(conclusionPendiente)}
+                      disabled={savingDictamen}
+                    >
+                      {conclusionPendiente === "Aprobado" ? (
+                        <CheckCircle className="h-4 w-4" />
+                      ) : (
+                        <XCircle className="h-4 w-4" />
+                      )}
+                      {savingDictamen
+                        ? "Enviando..."
+                        : conclusionPendiente === "Aprobado"
+                          ? "Confirmar aprobación"
+                          : "Confirmar rechazo"}
+                    </Button>
+                  ) : (
+                    <>
+                      <Button
+                        className="gap-2 bg-green-700 hover:bg-green-800"
+                        onClick={() => handleDictamen("Aprobado")}
+                        disabled={savingDictamen}
+                      >
+                        <CheckCircle className="h-4 w-4" />
+                        Aprobar folio
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        className="gap-2"
+                        onClick={() => handleDictamen("Rechazado")}
+                        disabled={savingDictamen}
+                      >
+                        <XCircle className="h-4 w-4" />
+                        Rechazar folio
+                      </Button>
+                    </>
+                  )}
                   {showRechazoForm && (
                     <Button
                       variant="outline"
@@ -335,7 +357,14 @@ export function SeccionDictamen({ folio, riesgos, locked, onSaved }: Props) {
         {conclusion && folio.estado === "Aprobado" && (
           <div className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-lg p-3">
             <CheckCircle className="h-5 w-5 text-green-700" />
-            <span className="text-sm font-medium text-green-800">Folio aprobado por {t.aprobadorFinal}</span>
+            <span className="text-sm font-medium text-green-800">
+              Folio aprobado por {t.aprobadorFinal}
+              {autoemitido && (
+                <span className="ml-2 rounded border border-amber-300 bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-800">
+                  Dictamen emitido por su autor
+                </span>
+              )}
+            </span>
           </div>
         )}
         {conclusion === "Rechazado" && folio.estado === "Borrador" && (
