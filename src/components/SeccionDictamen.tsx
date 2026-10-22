@@ -274,11 +274,13 @@ export function SeccionDictamen({ folio, riesgos, locked, onSaved }: Props) {
                   <strong>{folio.codigo}</strong>.
                 </p>
 
-                {/* Formulario de rechazo */}
+                {/* Formulario de motivo: rechazo o autoemisión del creador */}
                 {showRechazoForm && (
                   <div className="space-y-2">
                     <label className="text-xs font-semibold text-muted-foreground uppercase">
-                      Motivo de rechazo (se enviará al capturista)
+                      {conclusionPendiente === "Aprobado"
+                        ? "Motivo de la autoemisión (obligatorio — empresa pequeña, queda en la auditoría)"
+                        : "Motivo de rechazo (se enviará al capturista)"}
                     </label>
                     <Textarea
                       value={motivoRechazo}
