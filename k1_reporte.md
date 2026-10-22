@@ -21,6 +21,7 @@
 - 0092_k1_escritura_manual_controlada.sql
 - 0093_k1_auditoria_suplencia_ac.sql
 - 0094_k1_preservar_validacion_manual.sql
+- 0095_k1_privilegios_solo_lectura_directa.sql
 
 ## Archivos principales
 - src/modules/indicadores/Indicadores.tsx, module.ts, lib/catalogo.ts, lib/persistencia.ts y lib/catalogo.test.ts.
