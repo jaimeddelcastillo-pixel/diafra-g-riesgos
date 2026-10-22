@@ -3,7 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { User, Session } from "@supabase/supabase-js";
 
-type AppRole = "admin" | "comite_tecnico" | "operador" | "lectura" | "responsable_sanitario" | "super_admin";
+type AppRole = "admin" | "comite_tecnico" | "operador" | "lectura" | "responsable_sanitario" | "super_admin" | "aseguramiento_calidad";
 
 export interface OrgInfo {
   id: string;

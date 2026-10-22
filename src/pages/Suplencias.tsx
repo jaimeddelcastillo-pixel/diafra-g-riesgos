@@ -12,8 +12,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 
-type Rol = 'admin' | 'responsable_sanitario';
-const nombreRol = (r: string) => r === 'admin' ? 'Administrador' : 'Responsable Sanitario';
+type Rol = 'admin' | 'responsable_sanitario' | 'aseguramiento_calidad';
+const nombreRol = (r: string) => r === 'admin' ? 'Administrador' : r === 'aseguramiento_calidad' ? 'Aseguramiento de Calidad' : 'Responsable Sanitario';
 const fecha = (v: string) => new Date(v).toLocaleString('es-MX', { timeZone: 'America/Mexico_City' });
 
 export async function listarSuplencias() {
@@ -68,7 +68,10 @@ export default function Suplencias() {
       return data ?? 0;
     },
   });
-  const editable = !auth.isSuperAdmin() && (auth.hasRole('admin') || auth.hasRole('responsable_sanitario'));
+  const gestiona = !auth.isSuperAdmin() && (auth.hasRole('admin') || auth.hasRole('responsable_sanitario'));
+  const editable = gestiona || (!auth.isSuperAdmin() && auth.orgRole === 'aseguramiento_calidad');
+  const rolesDisponibles: Rol[] = gestiona ? ['responsable_sanitario','admin','aseguramiento_calidad'] : ['aseguramiento_calidad'];
+  const rolElegido = rolesDisponibles.includes(rol) ? rol : 'aseguramiento_calidad';
   const recargar = async () => {
     await q.refetch();
     await auth.refreshOrg();
@@ -85,17 +88,17 @@ export default function Suplencias() {
     else toast.success(data?.resultados?.length ? 'Avisos enviados' : 'No hay avisos pendientes');
   };
   return <div className="space-y-6">
-    <div className="flex flex-wrap items-center justify-between gap-3"><div><Link className="text-sm text-muted-foreground underline" to="/configuracion">Configuración</Link><h1 className="text-2xl font-bold">Suplencias</h1></div>{editable && <Button variant="outline" disabled={busy} onClick={() => void ejecutar(() => avisar())}><Send className="mr-2 h-4 w-4"/>Reintentar avisos</Button>}</div>
+    <div className="flex flex-wrap items-center justify-between gap-3"><div><Link className="text-sm text-muted-foreground underline" to="/configuracion">Configuración</Link><h1 className="text-2xl font-bold">Suplencias</h1></div>{gestiona && <Button variant="outline" disabled={busy} onClick={() => void ejecutar(() => avisar())}><Send className="mr-2 h-4 w-4"/>Reintentar avisos</Button>}</div>
     {(q.error || members.error) && <p role="alert" className="text-destructive">{q.error?.message ?? members.error?.message}</p>}
     {editable && <form className="grid gap-4 border-b pb-6 sm:grid-cols-2" onSubmit={e => { e.preventDefault(); void ejecutar(async () => {
-      const { data, error } = await supabase.rpc('designar_suplencia', { _rol: rol, _titular: titular, _suplente: suplente, _inicio: new Date(inicio).toISOString(), _fin: new Date(fin).toISOString(), _categoria: categoria, _motivo: motivo });
+      const { data, error } = await supabase.rpc('designar_suplencia', { _rol: rolElegido, _titular: titular, _suplente: suplente, _inicio: new Date(inicio).toISOString(), _fin: new Date(fin).toISOString(), _categoria: categoria, _motivo: motivo });
       if (error) throw error;
       toast.success('Designación pendiente de aceptación'); setMotivo('');
       await q.refetch();
       try { await avisar(data); } catch { toast.warning('Designación guardada; aviso pendiente'); }
     }); }}>
-      <div className="space-y-2"><Label htmlFor="suplencia-rol">Rol sustituido</Label><Select value={rol} onValueChange={v => { setRol(v as Rol); setTitular(''); }}><SelectTrigger id="suplencia-rol"><SelectValue/></SelectTrigger><SelectContent><SelectItem value="responsable_sanitario">Responsable Sanitario</SelectItem><SelectItem value="admin">Administrador</SelectItem></SelectContent></Select></div>
-      <div className="space-y-2"><Label htmlFor="suplencia-titular">Titular</Label><Select value={titular} onValueChange={setTitular}><SelectTrigger id="suplencia-titular"><SelectValue placeholder="Seleccionar titular"/></SelectTrigger><SelectContent>{members.data?.filter(p => p.role === rol).map(p => <SelectItem key={p.id} value={p.id}>{p.nombre} · {p.cargo || 'Sin cargo en el perfil'}</SelectItem>)}</SelectContent></Select></div>
+      <div className="space-y-2"><Label htmlFor="suplencia-rol">Rol sustituido</Label><Select value={rolElegido} onValueChange={v => { setRol(v as Rol); setTitular(''); }}><SelectTrigger id="suplencia-rol"><SelectValue/></SelectTrigger><SelectContent>{rolesDisponibles.map(r => <SelectItem key={r} value={r}>{nombreRol(r)}</SelectItem>)}</SelectContent></Select></div>
+      <div className="space-y-2"><Label htmlFor="suplencia-titular">Titular</Label><Select value={titular} onValueChange={setTitular}><SelectTrigger id="suplencia-titular"><SelectValue placeholder="Seleccionar titular"/></SelectTrigger><SelectContent>{members.data?.filter(p => p.role === rolElegido && (gestiona || p.id === auth.user?.id)).map(p => <SelectItem key={p.id} value={p.id}>{p.nombre} · {p.cargo || 'Sin cargo en el perfil'}</SelectItem>)}</SelectContent></Select></div>
       <div className="space-y-2"><Label htmlFor="suplencia-persona">Suplente</Label><Select value={suplente} onValueChange={setSuplente}><SelectTrigger id="suplencia-persona"><SelectValue placeholder="Seleccionar usuario"/></SelectTrigger><SelectContent>{members.data?.filter(p => p.id !== titular && p.role !== 'super_admin').map(p => <SelectItem key={p.id} value={p.id}>{p.nombre} · {p.cargo || 'Sin cargo en el perfil'}</SelectItem>)}</SelectContent></Select></div>
       <div className="space-y-2"><Label htmlFor="suplencia-categoria">Categoría del motivo</Label><Select value={categoria} onValueChange={setCategoria}><SelectTrigger id="suplencia-categoria"><SelectValue/></SelectTrigger><SelectContent>{['vacaciones','comisión','ausencia','otro'].map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}</SelectContent></Select></div>
       <div className="space-y-2"><Label htmlFor="suplencia-inicio">Inicio</Label><Input id="suplencia-inicio" type="datetime-local" required value={inicio} onChange={e => setInicio(e.target.value)}/></div>
@@ -108,7 +111,7 @@ export default function Suplencias() {
       const vencida = !!s.revocada_en || Date.parse(s.fecha_fin) <= Date.now();
       const estado = vencida && ['activa','pendiente de aceptación'].includes(s.estado) ? 'terminada' : s.estado;
       const propia = s.suplente_user_id === auth.user?.id;
-      const puedeTerminar = !auth.isSuperAdmin() && (propia || (s.titular_user_id ?? s.rs_titular_user_id) === auth.user?.id || auth.hasRole(s.rol_sustituido === 'admin' ? 'responsable_sanitario' : 'admin'));
+      const puedeTerminar = !auth.isSuperAdmin() && (propia || (s.titular_user_id ?? s.rs_titular_user_id) === auth.user?.id || auth.hasRole(s.rol_sustituido === 'admin' ? 'responsable_sanitario' : 'admin') || (s.rol_sustituido === 'aseguramiento_calidad' && auth.hasRole('responsable_sanitario')));
       return <div key={s.id} className="space-y-2 border-b pb-4"><div className="flex flex-wrap justify-between gap-2"><strong>{nombreRol(s.rol_sustituido)} · {s.suplente_nombre}</strong><span className="text-sm text-muted-foreground">{estado}</span></div><p className="text-sm">{s.suplente_cargo} · por suplencia de {s.titular_nombre ?? s.rs_titular_nombre}</p><p className="text-sm">{fecha(s.fecha_inicio)} — {fecha(s.fecha_fin)}</p><p className="text-sm">{s.categoria} · {s.motivo}</p>{s.motivo_terminacion && <p className="text-sm">Terminación: {s.motivo_terminacion}</p>}<p className="text-xs text-muted-foreground">Aviso al titular: {s.aviso_rs_enviado_en ? 'Enviado' : s.aviso_rs_requerido ? 'Pendiente' : 'No requerido'} {s.aviso_rs_error}</p><div className="flex flex-wrap gap-2">{propia && !vencida && estado === 'pendiente de aceptación' && !auth.isSuperAdmin() && <>{[true,false].map(aceptar => <Button key={String(aceptar)} variant={aceptar ? 'default' : 'outline'} disabled={busy} onClick={() => void ejecutar(async () => { const { error } = await supabase.rpc('responder_suplencia', { _id: s.id, _aceptar: aceptar }); if (error) throw error; toast.success(aceptar ? 'Suplencia aceptada' : 'Designación rechazada'); })}>{aceptar ? <Check className="mr-2 h-4 w-4"/> : <X className="mr-2 h-4 w-4"/>}{aceptar ? 'Aceptar' : 'Rechazar'}</Button>)}</>}{puedeTerminar && !vencida && ['activa','pendiente de aceptación'].includes(estado) && <Button variant="outline" disabled={busy} onClick={() => { setTerminar(s.id); setMotivoFin(''); }}><Square className="mr-2 h-4 w-4"/>Terminar anticipadamente</Button>}</div></div>;
     })}</section>
     <Dialog open={!!terminar} onOpenChange={open => { if (!open) setTerminar(null); }}><DialogContent><DialogHeader><DialogTitle>Terminar suplencia</DialogTitle></DialogHeader><Label htmlFor="suplencia-motivo-fin">Motivo obligatorio (sin detalle médico)</Label><Textarea id="suplencia-motivo-fin" value={motivoFin} onChange={e => setMotivoFin(e.target.value)}/><DialogFooter><Button variant="outline" onClick={() => setTerminar(null)}>Cancelar</Button><Button disabled={busy || !motivoFin.trim()} onClick={() => { if (!terminar) return; const id = terminar; void ejecutar(async () => { const { error } = await supabase.rpc('terminar_suplencia', { _id: id, _motivo: motivoFin }); if (error) throw error; setTerminar(null); toast.success('Suplencia terminada'); }); }}>Terminar con motivo</Button></DialogFooter></DialogContent></Dialog>

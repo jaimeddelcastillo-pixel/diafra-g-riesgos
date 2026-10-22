@@ -27,6 +27,7 @@ import type { Database } from "@/integrations/supabase/types";
 type AppRole = Database["public"]["Enums"]["app_role"];
 
 const roleLabels: Record<AppRole, string> = {
+  aseguramiento_calidad: "Aseguramiento de Calidad",
   admin: "Administrador",
   comite_tecnico: "Comité Técnico",
   operador: "Operador",
@@ -36,6 +37,7 @@ const roleLabels: Record<AppRole, string> = {
 };
 
 const rolStyles: Record<AppRole, string> = {
+  aseguramiento_calidad: "bg-accent/10 text-accent",
   admin: "bg-destructive/10 text-destructive",
   operador: "bg-primary/10 text-primary",
   comite_tecnico: "bg-accent/10 text-accent",
@@ -45,7 +47,7 @@ const rolStyles: Record<AppRole, string> = {
 };
 
 // Roles disponibles para usuarios de org (no incluye super_admin)
-const orgRoles: AppRole[] = ["admin", "comite_tecnico", "operador", "lectura", "responsable_sanitario"];
+const orgRoles: AppRole[] = ["admin", "comite_tecnico", "operador", "lectura", "responsable_sanitario", "aseguramiento_calidad"];
 
 interface OrgUser {
   id: string;

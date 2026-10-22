@@ -26,6 +26,7 @@ function UserSidebarProvider({ userId, children }: { userId?: string; children: 
 }
 
 const roleLabels: Record<string, string> = {
+  aseguramiento_calidad: "Aseguramiento de Calidad",
   admin: "Administrador",
   comite_tecnico: "Comité Técnico",
   operador: "Operador",

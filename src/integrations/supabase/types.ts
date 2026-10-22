@@ -3439,6 +3439,247 @@ export type Database = {
           },
         ]
       }
+      kpi_definiciones: {
+        Row: {
+          activo: boolean
+          codigo: string
+          created_at: string
+          created_by: string | null
+          definicion: string
+          estado: string
+          formula: string
+          frecuencia: string
+          fuente: string
+          id: string
+          meta: number
+          nivel: string
+          nombre: string
+          org_id: string
+          peso: number
+          proceso: string
+          puesto_id: string
+          regla_actuacion: string
+          tendencia: string
+          unidad: string
+          updated_at: string
+          updated_by: string | null
+          validado_en: string | null
+          validado_por: string | null
+        }
+        Insert: {
+          activo?: boolean
+          codigo: string
+          created_at?: string
+          created_by?: string | null
+          definicion?: string
+          estado?: string
+          formula?: string
+          frecuencia?: string
+          fuente?: string
+          id?: string
+          meta?: number
+          nivel?: string
+          nombre: string
+          org_id?: string
+          peso?: number
+          proceso?: string
+          puesto_id: string
+          regla_actuacion?: string
+          tendencia?: string
+          unidad?: string
+          updated_at?: string
+          updated_by?: string | null
+          validado_en?: string | null
+          validado_por?: string | null
+        }
+        Update: {
+          activo?: boolean
+          codigo?: string
+          created_at?: string
+          created_by?: string | null
+          definicion?: string
+          estado?: string
+          formula?: string
+          frecuencia?: string
+          fuente?: string
+          id?: string
+          meta?: number
+          nivel?: string
+          nombre?: string
+          org_id?: string
+          peso?: number
+          proceso?: string
+          puesto_id?: string
+          regla_actuacion?: string
+          tendencia?: string
+          unidad?: string
+          updated_at?: string
+          updated_by?: string | null
+          validado_en?: string | null
+          validado_por?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kpi_definiciones_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kpi_definiciones_org_id_puesto_id_fkey"
+            columns: ["org_id", "puesto_id"]
+            isOneToOne: false
+            referencedRelation: "puestos"
+            referencedColumns: ["org_id", "id"]
+          },
+        ]
+      }
+      kpi_puesto: {
+        Row: {
+          activo: boolean
+          codigo: string
+          created_at: string
+          created_by: string | null
+          estado: string
+          formula: string
+          frecuencia: string
+          fuente: string
+          id: string
+          meta: number
+          nombre: string
+          objetivo: string
+          org_id: string
+          peso: number
+          puesto_id: string
+          tendencia: string
+          unidad: string
+          updated_at: string
+          updated_by: string | null
+          validado_en: string | null
+          validado_por: string | null
+        }
+        Insert: {
+          activo?: boolean
+          codigo: string
+          created_at?: string
+          created_by?: string | null
+          estado?: string
+          formula?: string
+          frecuencia?: string
+          fuente?: string
+          id?: string
+          meta?: number
+          nombre: string
+          objetivo?: string
+          org_id?: string
+          peso?: number
+          puesto_id: string
+          tendencia?: string
+          unidad?: string
+          updated_at?: string
+          updated_by?: string | null
+          validado_en?: string | null
+          validado_por?: string | null
+        }
+        Update: {
+          activo?: boolean
+          codigo?: string
+          created_at?: string
+          created_by?: string | null
+          estado?: string
+          formula?: string
+          frecuencia?: string
+          fuente?: string
+          id?: string
+          meta?: number
+          nombre?: string
+          objetivo?: string
+          org_id?: string
+          peso?: number
+          puesto_id?: string
+          tendencia?: string
+          unidad?: string
+          updated_at?: string
+          updated_by?: string | null
+          validado_en?: string | null
+          validado_por?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kpi_puesto_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kpi_puesto_org_id_puesto_id_fkey"
+            columns: ["org_id", "puesto_id"]
+            isOneToOne: false
+            referencedRelation: "puestos"
+            referencedColumns: ["org_id", "id"]
+          },
+        ]
+      }
+      kpi_puesto_aporta: {
+        Row: {
+          activo: boolean
+          created_at: string
+          created_by: string | null
+          id: string
+          kpi_definicion_id: string
+          kpi_puesto_id: string
+          org_id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          activo?: boolean
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          kpi_definicion_id: string
+          kpi_puesto_id: string
+          org_id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          activo?: boolean
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          kpi_definicion_id?: string
+          kpi_puesto_id?: string
+          org_id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kpi_puesto_aporta_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kpi_puesto_aporta_org_id_kpi_definicion_id_fkey"
+            columns: ["org_id", "kpi_definicion_id"]
+            isOneToOne: false
+            referencedRelation: "kpi_definiciones"
+            referencedColumns: ["org_id", "id"]
+          },
+          {
+            foreignKeyName: "kpi_puesto_aporta_org_id_kpi_puesto_id_fkey"
+            columns: ["org_id", "kpi_puesto_id"]
+            isOneToOne: false
+            referencedRelation: "kpi_puesto"
+            referencedColumns: ["org_id", "id"]
+          },
+        ]
+      }
       modulos: {
         Row: {
           activo: boolean
@@ -4273,6 +4514,53 @@ export type Database = {
           {
             foreignKeyName: "profiles_org_activa_id_fkey"
             columns: ["org_activa_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      puestos: {
+        Row: {
+          activo: boolean
+          area: string
+          codigo: string
+          created_at: string
+          created_by: string | null
+          id: string
+          nombre: string
+          org_id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          activo?: boolean
+          area?: string
+          codigo: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          nombre: string
+          org_id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          activo?: boolean
+          area?: string
+          codigo?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          nombre?: string
+          org_id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "puestos_org_id_fkey"
+            columns: ["org_id"]
             isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
@@ -5897,6 +6185,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      aplicar_kpis_excel: {
+        Args: { _borrador?: boolean; _motivo: string; _paquete: Json }
+        Returns: undefined
+      }
       archivar_version_folio: {
         Args: { p_folio_id: string; p_motivo?: string }
         Returns: string
@@ -6221,6 +6513,10 @@ export type Database = {
       }
       folios_revision_corte: { Args: { p_ahora?: string }; Returns: string }
       get_user_org_id: { Args: never; Returns: string }
+      guardar_kpis: {
+        Args: { _motivo: string; _paquete: Json }
+        Returns: undefined
+      }
       guardar_semaforo_pendientes: {
         Args: {
           _gestion_naranja: number
@@ -6242,6 +6538,14 @@ export type Database = {
         Returns: number
       }
       is_super_admin: { Args: never; Returns: boolean }
+      kpi_acceso: {
+        Args: { _escritura?: boolean; _org: string; _validar?: boolean }
+        Returns: boolean
+      }
+      kpi_aplicar_interno: {
+        Args: { _borrador?: boolean; _motivo: string; _paquete: Json }
+        Returns: undefined
+      }
       mi_acceso_curso: { Args: { p_curso_id: string }; Returns: string }
       mi_ia_en_prueba: { Args: never; Returns: boolean }
       mi_org_tiene_modulo: { Args: { _modulo: string }; Returns: boolean }
@@ -6553,6 +6857,10 @@ export type Database = {
         Returns: undefined
       }
       todos_firmaron: { Args: { p_folio_id: string }; Returns: boolean }
+      validar_kpi: {
+        Args: { _id: string; _motivo: string; _tabla: string }
+        Returns: undefined
+      }
       verificar_diploma: {
         Args: { p_hash: string }
         Returns: {
@@ -6573,6 +6881,7 @@ export type Database = {
         | "lectura"
         | "responsable_sanitario"
         | "super_admin"
+        | "aseguramiento_calidad"
       dictamen_tipo: "Aceptable" | "No Aceptable" | "Pendiente"
       estado_folio:
         | "Borrador"
@@ -6735,6 +7044,7 @@ export const Constants = {
         "lectura",
         "responsable_sanitario",
         "super_admin",
+        "aseguramiento_calidad",
       ],
       dictamen_tipo: ["Aceptable", "No Aceptable", "Pendiente"],
       estado_folio: [

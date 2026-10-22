@@ -1,0 +1,63 @@
+CREATE TABLE public.puestos(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),org_id uuid NOT NULL DEFAULT public.get_user_org_id() REFERENCES public.organizations(id),codigo text NOT NULL,nombre text NOT NULL,area text NOT NULL DEFAULT '',activo boolean NOT NULL DEFAULT true,created_at timestamptz NOT NULL DEFAULT now(),updated_at timestamptz NOT NULL DEFAULT now(),created_by uuid,updated_by uuid,UNIQUE(org_id,codigo),UNIQUE(org_id,id));
+GRANT SELECT ON public.puestos TO authenticated; GRANT ALL ON public.puestos TO service_role;
+ALTER TABLE public.puestos ENABLE ROW LEVEL SECURITY;
+CREATE TABLE public.kpi_definiciones(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),org_id uuid NOT NULL DEFAULT public.get_user_org_id() REFERENCES public.organizations(id),codigo text NOT NULL,nombre text NOT NULL,proceso text NOT NULL DEFAULT '',nivel text NOT NULL DEFAULT 'SGC',definicion text NOT NULL DEFAULT '',formula text NOT NULL DEFAULT '',fuente text NOT NULL DEFAULT '',puesto_id uuid NOT NULL,frecuencia text NOT NULL DEFAULT 'mensual',tendencia text NOT NULL DEFAULT 'positiva',meta numeric NOT NULL DEFAULT 0,unidad text NOT NULL DEFAULT '%',peso numeric NOT NULL DEFAULT 0,regla_actuacion text NOT NULL DEFAULT '',estado text NOT NULL DEFAULT 'borrador',validado_por uuid,validado_en timestamptz,activo boolean NOT NULL DEFAULT true,created_at timestamptz NOT NULL DEFAULT now(),updated_at timestamptz NOT NULL DEFAULT now(),created_by uuid,updated_by uuid,UNIQUE(org_id,codigo),UNIQUE(org_id,id),FOREIGN KEY(org_id,puesto_id) REFERENCES public.puestos(org_id,id));
+GRANT SELECT ON public.kpi_definiciones TO authenticated; GRANT ALL ON public.kpi_definiciones TO service_role;
+ALTER TABLE public.kpi_definiciones ENABLE ROW LEVEL SECURITY;
+CREATE TABLE public.kpi_puesto(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),org_id uuid NOT NULL DEFAULT public.get_user_org_id() REFERENCES public.organizations(id),codigo text NOT NULL,puesto_id uuid NOT NULL,objetivo text NOT NULL DEFAULT '',nombre text NOT NULL,formula text NOT NULL DEFAULT '',fuente text NOT NULL DEFAULT '',tendencia text NOT NULL DEFAULT 'positiva',meta numeric NOT NULL DEFAULT 0,unidad text NOT NULL DEFAULT '%',frecuencia text NOT NULL DEFAULT 'mensual',peso numeric NOT NULL DEFAULT 0,estado text NOT NULL DEFAULT 'borrador',validado_por uuid,validado_en timestamptz,activo boolean NOT NULL DEFAULT true,created_at timestamptz NOT NULL DEFAULT now(),updated_at timestamptz NOT NULL DEFAULT now(),created_by uuid,updated_by uuid,UNIQUE(org_id,codigo),UNIQUE(org_id,id),FOREIGN KEY(org_id,puesto_id) REFERENCES public.puestos(org_id,id));
+GRANT SELECT ON public.kpi_puesto TO authenticated; GRANT ALL ON public.kpi_puesto TO service_role;
+ALTER TABLE public.kpi_puesto ENABLE ROW LEVEL SECURITY;
+CREATE TABLE public.kpi_puesto_aporta(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),org_id uuid NOT NULL DEFAULT public.get_user_org_id() REFERENCES public.organizations(id),kpi_puesto_id uuid NOT NULL,kpi_definicion_id uuid NOT NULL,activo boolean NOT NULL DEFAULT true,created_at timestamptz NOT NULL DEFAULT now(),updated_at timestamptz NOT NULL DEFAULT now(),created_by uuid,updated_by uuid,UNIQUE(org_id,kpi_puesto_id,kpi_definicion_id),FOREIGN KEY(org_id,kpi_puesto_id) REFERENCES public.kpi_puesto(org_id,id),FOREIGN KEY(org_id,kpi_definicion_id) REFERENCES public.kpi_definiciones(org_id,id));
+GRANT SELECT ON public.kpi_puesto_aporta TO authenticated; GRANT ALL ON public.kpi_puesto_aporta TO service_role;
+ALTER TABLE public.kpi_puesto_aporta ENABLE ROW LEVEL SECURITY;
+CREATE OR REPLACE FUNCTION public.kpi_acceso(_org uuid,_escritura boolean DEFAULT false,_validar boolean DEFAULT false) RETURNS boolean LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path=public AS $$ DECLARE c record; BEGIN
+IF auth.uid() IS NULL THEN RETURN false;END IF; SELECT * INTO c FROM public.contexto_org_actual();
+IF c.org_id IS DISTINCT FROM _org OR NOT public.org_tiene_modulo(_org,'indicadores') THEN RETURN false;END IF;
+IF c.es_super_admin THEN RETURN NOT _escritura AND c.soporte_log_id IS NOT NULL;END IF;
+IF NOT EXISTS(SELECT 1 FROM public.org_members m JOIN public.profiles p ON p.id=m.user_id AND p.activo WHERE m.org_id=_org AND m.user_id=auth.uid()) THEN RETURN false;END IF;
+RETURN (NOT _escritura OR public.rol_efectivo(auth.uid(),'responsable_sanitario') OR public.rol_efectivo(auth.uid(),'aseguramiento_calidad') OR (NOT _validar AND public.rol_efectivo(auth.uid(),'admin'))); END $$;
+REVOKE ALL ON FUNCTION public.kpi_acceso(uuid,boolean,boolean) FROM PUBLIC; GRANT EXECUTE ON FUNCTION public.kpi_acceso(uuid,boolean,boolean) TO authenticated,service_role;
+CREATE POLICY puestos_lectura ON public.puestos FOR SELECT TO authenticated USING(public.kpi_acceso(org_id));
+CREATE POLICY kpi_definiciones_lectura ON public.kpi_definiciones FOR SELECT TO authenticated USING(public.kpi_acceso(org_id));
+CREATE POLICY kpi_puesto_lectura ON public.kpi_puesto FOR SELECT TO authenticated USING(public.kpi_acceso(org_id));
+CREATE POLICY kpi_aporta_lectura ON public.kpi_puesto_aporta FOR SELECT TO authenticated USING(public.kpi_acceso(org_id));
+CREATE OR REPLACE FUNCTION public.kpi_guard() RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path=public AS $$ DECLARE j jsonb; o jsonb; critical boolean; BEGIN
+IF TG_OP='DELETE' THEN RAISE EXCEPTION 'No se borran registros: retirar con activo = No';END IF;
+IF NOT public.kpi_acceso(NEW.org_id,true) THEN RAISE EXCEPTION 'Sin permiso de edición de Indicadores';END IF;
+IF length(btrim(coalesce(current_setting('tracea.motivo',true),'')))<5 THEN RAISE EXCEPTION 'Motivo obligatorio de al menos 5 caracteres';END IF;
+IF TG_OP='UPDATE' AND (NEW.id IS DISTINCT FROM OLD.id OR NEW.org_id IS DISTINCT FROM OLD.org_id OR NEW.created_at IS DISTINCT FROM OLD.created_at OR NEW.created_by IS DISTINCT FROM OLD.created_by) THEN RAISE EXCEPTION 'Identidad y empresa inmutables';END IF;
+j:=to_jsonb(NEW);o:=CASE WHEN TG_OP='UPDATE' THEN to_jsonb(OLD) ELSE '{}'::jsonb END;
+IF TG_TABLE_NAME<>'kpi_puesto_aporta' THEN
+IF coalesce(btrim(j->>'codigo'),'')='' OR coalesce(btrim(j->>'nombre'),'')='' THEN RAISE EXCEPTION 'Código y nombre obligatorios';END IF;
+IF TG_OP='UPDATE' AND j->>'codigo' IS DISTINCT FROM o->>'codigo' THEN RAISE EXCEPTION 'Código inmutable';END IF;
+END IF;
+IF TG_TABLE_NAME IN ('kpi_definiciones','kpi_puesto') THEN
+IF j->>'tendencia' NOT IN ('positiva','negativa') OR j->>'unidad' NOT IN ('%','días','horas','número') OR j->>'frecuencia' NOT IN ('mensual','trimestral','semestral','anual','por evento') OR j->>'estado' NOT IN ('borrador','validado') OR (j->>'peso')::numeric<0 OR j->>'meta' IN ('NaN','Infinity','-Infinity') OR j->>'peso' IN ('NaN','Infinity','-Infinity') THEN RAISE EXCEPTION 'Tendencia, unidad, frecuencia, estado, meta o peso inválidos';END IF;
+IF TG_TABLE_NAME='kpi_definiciones' AND j->>'nivel' NOT IN ('SGC','Operativo','Gestión') THEN RAISE EXCEPTION 'Nivel inválido';END IF;
+critical:=TG_OP='UPDATE' AND (j->'formula' IS DISTINCT FROM o->'formula' OR j->'meta' IS DISTINCT FROM o->'meta' OR j->'tendencia' IS DISTINCT FROM o->'tendencia' OR j->'unidad' IS DISTINCT FROM o->'unidad');
+IF TG_OP='INSERT' OR critical THEN j:=j||jsonb_build_object('estado','borrador','validado_por',NULL,'validado_en',NULL);
+ELSIF j->>'estado'='validado' AND o->>'estado'<>'validado' THEN
+IF NOT public.kpi_acceso(NEW.org_id,true,true) THEN RAISE EXCEPTION 'Solo RS o AC validan';END IF;
+IF NOT NEW.activo THEN RAISE EXCEPTION 'No se valida un KPI retirado';END IF;
+j:=j||jsonb_build_object('validado_por',auth.uid(),'validado_en',now());
+ELSIF j->>'estado'='validado' THEN j:=j||jsonb_build_object('validado_por',o->'validado_por','validado_en',o->'validado_en');
+ELSE j:=j||jsonb_build_object('validado_por',NULL,'validado_en',NULL);END IF;
+NEW:=jsonb_populate_record(NEW,j);
+END IF;
+IF TG_OP='INSERT' THEN NEW.created_at:=now();NEW.created_by:=auth.uid();END IF;
+NEW.updated_at:=now();NEW.updated_by:=auth.uid();RETURN NEW;END $$;
+CREATE TRIGGER puestos_guard BEFORE INSERT OR UPDATE OR DELETE ON public.puestos FOR EACH ROW EXECUTE FUNCTION public.kpi_guard();
+CREATE TRIGGER puestos_audit AFTER INSERT OR UPDATE ON public.puestos FOR EACH ROW EXECUTE FUNCTION public.audit_trigger_func();
+CREATE TRIGGER kpi_definiciones_guard BEFORE INSERT OR UPDATE OR DELETE ON public.kpi_definiciones FOR EACH ROW EXECUTE FUNCTION public.kpi_guard();
+CREATE TRIGGER kpi_definiciones_audit AFTER INSERT OR UPDATE ON public.kpi_definiciones FOR EACH ROW EXECUTE FUNCTION public.audit_trigger_func();
+CREATE TRIGGER kpi_puesto_guard BEFORE INSERT OR UPDATE OR DELETE ON public.kpi_puesto FOR EACH ROW EXECUTE FUNCTION public.kpi_guard();
+CREATE TRIGGER kpi_puesto_audit AFTER INSERT OR UPDATE ON public.kpi_puesto FOR EACH ROW EXECUTE FUNCTION public.audit_trigger_func();
+CREATE TRIGGER kpi_aporta_guard BEFORE INSERT OR UPDATE OR DELETE ON public.kpi_puesto_aporta FOR EACH ROW EXECUTE FUNCTION public.kpi_guard();
+CREATE TRIGGER kpi_aporta_audit AFTER INSERT OR UPDATE ON public.kpi_puesto_aporta FOR EACH ROW EXECUTE FUNCTION public.audit_trigger_func();
+CREATE INDEX kpi_definiciones_borrador ON public.kpi_definiciones(org_id,estado) WHERE activo;
+CREATE INDEX kpi_puesto_borrador ON public.kpi_puesto(org_id,estado) WHERE activo;
+CREATE OR REPLACE FUNCTION public.kpi_bloquear_truncate() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'Catálogos no se vacían: retirar registros';END $$;
+CREATE TRIGGER puestos_no_truncate BEFORE TRUNCATE ON public.puestos EXECUTE FUNCTION public.kpi_bloquear_truncate();
+CREATE TRIGGER kpi_definiciones_no_truncate BEFORE TRUNCATE ON public.kpi_definiciones EXECUTE FUNCTION public.kpi_bloquear_truncate();
+CREATE TRIGGER kpi_puesto_no_truncate BEFORE TRUNCATE ON public.kpi_puesto EXECUTE FUNCTION public.kpi_bloquear_truncate();
+CREATE TRIGGER kpi_aporta_no_truncate BEFORE TRUNCATE ON public.kpi_puesto_aporta EXECUTE FUNCTION public.kpi_bloquear_truncate();
