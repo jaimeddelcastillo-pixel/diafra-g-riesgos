@@ -75,7 +75,10 @@ export function SeccionDictamen({ folio, riesgos, locked, onSaved }: Props) {
 
   // ── Dictamen del Responsable Sanitario via Edge Function ──
   const handleDictamen = async (conclusion: "Aprobado" | "Rechazado") => {
-    if (conclusion === "Rechazado" && !showRechazoForm) {
+    // Rechazo siempre pide motivo; aprobación del propio creador también (autoemisión).
+    const requiereMotivo = conclusion === "Rechazado" || (conclusion === "Aprobado" && esCreador);
+    if (requiereMotivo && !showRechazoForm) {
+      setConclusionPendiente(conclusion);
       setShowRechazoForm(true);
       return;
     }
@@ -87,7 +90,7 @@ export function SeccionDictamen({ folio, riesgos, locked, onSaved }: Props) {
           accion: "dictamen",
           folio_id: folio.id,
           conclusion,
-          motivo: conclusion === "Rechazado" ? motivoRechazo : "",
+          motivo: showRechazoForm ? motivoRechazo : "",
         },
       });
 
