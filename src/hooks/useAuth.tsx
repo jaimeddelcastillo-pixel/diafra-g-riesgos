@@ -3,6 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { User, Session } from "@supabase/supabase-js";
 import { useLocation } from "react-router-dom";
+import { rolPresentacion } from '@/lib/rol-presentacion';
 
 type AppRole = "admin" | "comite_tecnico" | "operador" | "lectura" | "responsable_sanitario" | "super_admin" | "aseguramiento_calidad";
 
@@ -269,7 +270,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   return (
     <AuthContext.Provider value={{
       user, session, profile, roles, puedeAdministrarUsuarios,
-      orgId, org, orgRole: orgRole === 'aseguramiento_calidad' && !pathname.startsWith('/indicadores') && !pathname.startsWith('/configuracion/suplencias') ? 'comite_tecnico' : orgRole,
+      orgId, org, orgRole: rolPresentacion(orgRole, pathname),
       loading,
       isImpersonating, impersonatedOrg,
       hasRole, isSuperAdmin,

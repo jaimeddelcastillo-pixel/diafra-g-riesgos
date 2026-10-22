@@ -1,6 +1,7 @@
 import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
 import { render, screen, cleanup, fireEvent } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { MemoryRouter } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
 
 const mocks = vi.hoisted(() => ({ rpc: vi.fn(), callback: undefined as undefined | ((event: string, session: any) => void) }));
@@ -23,7 +24,7 @@ function Probe() {
   return <><output>{auth.loading ? "loading" : `${auth.orgId}:${auth.isImpersonating}`}</output><button onClick={auth.stopImpersonation}>Stop</button></>;
 }
 function mount() {
-  render(<QueryClientProvider client={new QueryClient()}><AuthProvider><Probe /></AuthProvider></QueryClientProvider>);
+  render(<QueryClientProvider client={new QueryClient()}><MemoryRouter><AuthProvider><Probe /></AuthProvider></MemoryRouter></QueryClientProvider>);
   mocks.callback?.("INITIAL_SESSION", { user: { id: "qa-sa" } });
 }
 beforeEach(() => {
