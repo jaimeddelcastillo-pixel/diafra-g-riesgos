@@ -31,8 +31,9 @@ export function SeccionDictamen({ folio, riesgos, locked, onSaved }: Props) {
   const [savingDictamen, setSavingDictamen] = useState(false);
   const [motivoRechazo, setMotivoRechazo] = useState("");
   const [showRechazoForm, setShowRechazoForm] = useState(false);
+  const [conclusionPendiente, setConclusionPendiente] = useState<"Aprobado" | "Rechazado">("Rechazado");
   const { toast } = useToast();
-  const { hasRole } = useAuth();
+  const { hasRole, user } = useAuth();
 
   // Terminología dependiente de la norma del folio (no de la org).
   const normaConfig = getNormaConfig((folio as any).norma_folio);
@@ -48,6 +49,10 @@ export function SeccionDictamen({ folio, riesgos, locked, onSaved }: Props) {
   // corregirla porque el sistema permite reabrir/rectificar.
   const puedeEditarConclusion = (esAdmin || esRS) && folio.estado !== "Cerrado";
   const hasNoAceptables = riesgos.some((r) => r.dictamen === "No Aceptable");
+  // T5d-1: el creador puede dictaminar solo con motivo obligatorio (autoemisión
+  // en empresa pequeña), auditado y visible como «Dictamen emitido por su autor».
+  const esCreador = (folio as any).created_by === user?.id;
+  const autoemitido = !!(folio as any).dictamen_autoemitido;
 
   const [justificacion, setJustificacion] = useState((folio as any).justificacion_tecnica || "");
 
@@ -70,7 +75,10 @@ export function SeccionDictamen({ folio, riesgos, locked, onSaved }: Props) {
 
   // ── Dictamen del Responsable Sanitario via Edge Function ──
   const handleDictamen = async (conclusion: "Aprobado" | "Rechazado") => {
-    if (conclusion === "Rechazado" && !showRechazoForm) {
+    // Rechazo siempre pide motivo; aprobación del propio creador también (autoemisión).
+    const requiereMotivo = conclusion === "Rechazado" || (conclusion === "Aprobado" && esCreador);
+    if (requiereMotivo && !showRechazoForm) {
+      setConclusionPendiente(conclusion);
       setShowRechazoForm(true);
       return;
     }
@@ -82,7 +90,7 @@ export function SeccionDictamen({ folio, riesgos, locked, onSaved }: Props) {
           accion: "dictamen",
           folio_id: folio.id,
           conclusion,
-          motivo: conclusion === "Rechazado" ? motivoRechazo : "",
+          motivo: showRechazoForm ? motivoRechazo : "",
         },
       });
 
@@ -266,11 +274,13 @@ export function SeccionDictamen({ folio, riesgos, locked, onSaved }: Props) {
                   <strong>{folio.codigo}</strong>.
                 </p>
 
-                {/* Formulario de rechazo */}
+                {/* Formulario de motivo: rechazo o autoemisión del creador */}
                 {showRechazoForm && (
                   <div className="space-y-2">
                     <label className="text-xs font-semibold text-muted-foreground uppercase">
-                      Motivo de rechazo (se enviará al capturista)
+                      {conclusionPendiente === "Aprobado"
+                        ? "Motivo de la autoemisión (obligatorio — empresa pequeña, queda en la auditoría)"
+                        : "Motivo de rechazo (se enviará al capturista)"}
                     </label>
                     <Textarea
                       value={motivoRechazo}
@@ -282,23 +292,45 @@ export function SeccionDictamen({ folio, riesgos, locked, onSaved }: Props) {
                 )}
 
                 <div className="flex gap-3">
-                  <Button
-                    className="gap-2 bg-green-700 hover:bg-green-800"
-                    onClick={() => handleDictamen("Aprobado")}
-                    disabled={savingDictamen}
-                  >
-                    <CheckCircle className="h-4 w-4" />
-                    {savingDictamen ? "Procesando..." : "Aprobar folio"}
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    className="gap-2"
-                    onClick={() => handleDictamen("Rechazado")}
-                    disabled={savingDictamen}
-                  >
-                    <XCircle className="h-4 w-4" />
-                    {showRechazoForm ? (savingDictamen ? "Enviando..." : "Confirmar rechazo") : "Rechazar folio"}
-                  </Button>
+                  {showRechazoForm ? (
+                    <Button
+                      className={`gap-2 ${conclusionPendiente === "Aprobado" ? "bg-green-700 hover:bg-green-800" : ""}`}
+                      variant={conclusionPendiente === "Aprobado" ? "default" : "destructive"}
+                      onClick={() => handleDictamen(conclusionPendiente)}
+                      disabled={savingDictamen}
+                    >
+                      {conclusionPendiente === "Aprobado" ? (
+                        <CheckCircle className="h-4 w-4" />
+                      ) : (
+                        <XCircle className="h-4 w-4" />
+                      )}
+                      {savingDictamen
+                        ? "Enviando..."
+                        : conclusionPendiente === "Aprobado"
+                          ? "Confirmar aprobación"
+                          : "Confirmar rechazo"}
+                    </Button>
+                  ) : (
+                    <>
+                      <Button
+                        className="gap-2 bg-green-700 hover:bg-green-800"
+                        onClick={() => handleDictamen("Aprobado")}
+                        disabled={savingDictamen}
+                      >
+                        <CheckCircle className="h-4 w-4" />
+                        Aprobar folio
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        className="gap-2"
+                        onClick={() => handleDictamen("Rechazado")}
+                        disabled={savingDictamen}
+                      >
+                        <XCircle className="h-4 w-4" />
+                        Rechazar folio
+                      </Button>
+                    </>
+                  )}
                   {showRechazoForm && (
                     <Button
                       variant="outline"
@@ -325,7 +357,14 @@ export function SeccionDictamen({ folio, riesgos, locked, onSaved }: Props) {
         {conclusion && folio.estado === "Aprobado" && (
           <div className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-lg p-3">
             <CheckCircle className="h-5 w-5 text-green-700" />
-            <span className="text-sm font-medium text-green-800">Folio aprobado por {t.aprobadorFinal}</span>
+            <span className="text-sm font-medium text-green-800">
+              Folio aprobado por {t.aprobadorFinal}
+              {autoemitido && (
+                <span className="ml-2 rounded border border-amber-300 bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-800">
+                  Dictamen emitido por su autor
+                </span>
+              )}
+            </span>
           </div>
         )}
         {conclusion === "Rechazado" && folio.estado === "Borrador" && (
