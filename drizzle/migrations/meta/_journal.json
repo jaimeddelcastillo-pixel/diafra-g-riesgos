@@ -596,6 +596,20 @@
       "when": 1792622150288,
       "tag": "0084_p1_mis_pendientes",
       "breakpoints": true
+    },
+    {
+      "idx": 85,
+      "version": "7",
+      "when": 1792686697514,
+      "tag": "0085_p1a_audit_suplencia_rapida",
+      "breakpoints": true
+    },
+    {
+      "idx": 86,
+      "version": "7",
+      "when": 1792686803227,
+      "tag": "0086_p1a_audit_suplencia_cache_sentencia",
+      "breakpoints": true
     }
   ]
 }
