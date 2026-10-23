@@ -5,7 +5,7 @@ const id = (n: number) => `00000000-0000-0000-0000-${String(n).padStart(12, '0')
 const ORG = id(400);
 let defs: string | undefined;
 const tablas = ['organizations', 'profiles', 'org_members', 'org_suplencias', 'puestos', 'kpi_definiciones', 'kpi_puesto', 'kpi_resultados', 'kpi_reporte_config', 'kpi_reportes', 'kpi_reportes_historial', 'org_formatos', 'org_identidad_documental', 'documentos_generados'];
-const funciones = ['rol_efectivo', 'kpi_acceso', 'kpi_periodo', 'kpi_calcular', 'kpi_semaforo_cumplimiento', 'kpi_acumulado_interno', 'kpi_resumen_periodo', 'kpi_reportes_guard', 'kpi_reporte_autoriza', 'kpi_reporte_preparar', 'guardar_kpi_reporte_config', 'crear_kpi_reporte', 'guardar_kpi_reporte', 'kpi_reporte_faltantes', 'enviar_kpi_reporte', 'revisar_kpi_reporte', 'preparar_emision_kpi_word', 'confirmar_emision_kpi_word', 'emitir_kpi_reporte', 'nueva_version_kpi_reporte', 'anular_kpi_reporte', 'registrar_documento_generado'];
+const funciones = ['rol_efectivo', 'kpi_acceso', 'kpi_periodo', 'kpi_calcular', 'kpi_semaforo_cumplimiento', 'kpi_acumulado_interno', 'kpi_resumen_periodo', 'kpi_reportes_guard', 'kpi_reporte_autoriza', 'kpi_reporte_preparar', 'guardar_kpi_reporte_config', 'crear_kpi_reporte', 'guardar_kpi_reporte', 'kpi_reporte_faltantes', 'enviar_kpi_reporte', 'revisar_kpi_reporte', 'preparar_emision_kpi_word', 'confirmar_emision_kpi_word', 'reclamar_emision_kpi_word', 'cancelar_reserva_emision_kpi_word', 'emitir_kpi_reporte', 'nueva_version_kpi_reporte', 'anular_kpi_reporte', 'registrar_documento_generado'];
 function run(body: string) {
   if (!defs) defs = execFileSync('psql', ['-XqAt', '-v', 'ON_ERROR_STOP=1'], { input: `SELECT string_agg(pg_get_functiondef(oid)||';', E'\n') FROM pg_proc WHERE pronamespace='public'::regnamespace AND proname=ANY(ARRAY[${funciones.map(f => `'${f}'`).join(',')}]);`, encoding: 'utf8', timeout: 30000 })
     .replaceAll('public.', 'pg_temp.').replaceAll('pg_temp.app_role', 'public.app_role').replace(/\b_rol app_role\b/g, '_rol public.app_role').replaceAll('storage.objects', 'pg_temp.objects').replaceAll('auth.uid()', 'pg_temp.uid()').replaceAll('SECURITY DEFINER', '').replaceAll("SET search_path TO 'public'", 'SET search_path TO pg_temp,public');
@@ -53,6 +53,41 @@ PERFORM pg_temp.confirmar_emision_kpi_word(rid,(s->>'token')::uuid,logo,repeat('
 UPDATE organizations SET logo_url='logo-nuevo.png' WHERE id='${ORG}';
 IF (SELECT formato_snapshot->'logo' FROM kpi_reportes WHERE id=rid) IS DISTINCT FROM logo THEN RAISE EXCEPTION 'El logo emitido cambió'; END IF;
 IF NOT EXISTS(SELECT 1 FROM documentos_generados d JOIN kpi_reportes k ON d.folio=k.formato_snapshot->>'folio' WHERE k.id=rid AND d.archivo_path=s->>'path' AND d.archivo_sha256=repeat('a',64)) THEN RAISE EXCEPTION 'No registró original y folio'; END IF;
+END;`));
+  it('K3-b-2 emisión que falla a la mitad: no queda atorada ni con Word a medias; se reintenta o se cancela la reserva', () => check(`${listo()}${actor(3)}
+DECLARE s jsonb; s2 jsonb; BEGIN
+s:=pg_temp.preparar_emision_kpi_word(rid);
+IF NOT pg_temp.reclamar_emision_kpi_word(rid,(s->>'token')::uuid) THEN RAISE EXCEPTION 'No reclamó'; END IF;
+-- falla a la mitad: sin archivo subido, la confirmación se rechaza
+${falla("PERFORM pg_temp.confirmar_emision_kpi_word(rid,(s->>'token')::uuid,NULL,repeat('a',64))", 'Confirmó sin archivo')}
+IF EXISTS(SELECT 1 FROM documentos_generados) OR (SELECT estado FROM kpi_reportes WHERE id=rid)<>'borrador' THEN RAISE EXCEPTION 'Quedó un Word registrado a medias'; END IF;
+${falla("PERFORM pg_temp.cancelar_reserva_emision_kpi_word(rid,'QA reserva vencida')", 'Canceló reserva vigente')}
+PERFORM set_config('tracea.kpi_reportes_rpc','1',true);UPDATE kpi_reportes SET emision_preparada=emision_preparada||jsonb_build_object('lease_hasta',now()-interval '1 minute') WHERE id=rid;
+${actor(4)}${falla("PERFORM pg_temp.cancelar_reserva_emision_kpi_word(rid,'QA reserva vencida')", 'Operador canceló')}
+${actor(2)}${falla("PERFORM pg_temp.cancelar_reserva_emision_kpi_word(rid,'QA')", 'Canceló sin motivo')}
+PERFORM pg_temp.cancelar_reserva_emision_kpi_word(rid,'QA reserva vencida');
+IF current_setting('tracea.motivo',true) NOT LIKE '%QA reserva vencida%' THEN RAISE EXCEPTION 'Motivo no llega a la auditoría'; END IF;
+SELECT * INTO r FROM kpi_reportes WHERE id=rid;
+IF r.emision_preparada IS NOT NULL OR r.estado<>'borrador' OR r.etapa<>'autorizacion' OR EXISTS(SELECT 1 FROM documentos_generados) THEN RAISE EXCEPTION 'No regresó a autorización'; END IF;
+-- reintento tras cancelar: nueva reserva con nuevo token, emisión completa
+${actor(3)}s2:=pg_temp.preparar_emision_kpi_word(rid);
+IF s2->>'token'=s->>'token' THEN RAISE EXCEPTION 'Reutilizó la reserva cancelada'; END IF;
+${falla("PERFORM pg_temp.confirmar_emision_kpi_word(rid,(s->>'token')::uuid,NULL,repeat('a',64))", 'Token cancelado confirmó')}
+INSERT INTO objects VALUES('documentos-generados',s2->>'path');
+PERFORM pg_temp.confirmar_emision_kpi_word(rid,(s2->>'token')::uuid,NULL,repeat('b',64));
+IF (SELECT estado FROM kpi_reportes WHERE id=rid)<>'emitido' OR (SELECT count(*) FROM documentos_generados)<>1 THEN RAISE EXCEPTION 'Reintento no emitió una sola vez'; END IF;
+${falla("PERFORM pg_temp.cancelar_reserva_emision_kpi_word(rid,'QA reserva vencida')", 'Canceló un emitido')}
+END;`));
+  it('K3-b-2 reintento directo del mismo autorizador tras la falla reutiliza la reserva', () => check(`${listo()}${actor(3)}
+DECLARE s jsonb; s2 jsonb; BEGIN
+s:=pg_temp.preparar_emision_kpi_word(rid); PERFORM pg_temp.reclamar_emision_kpi_word(rid,(s->>'token')::uuid);
+IF pg_temp.reclamar_emision_kpi_word(rid,(s->>'token')::uuid) THEN RAISE EXCEPTION 'Doble reclamo con lease vigente'; END IF;
+PERFORM set_config('tracea.kpi_reportes_rpc','1',true);UPDATE kpi_reportes SET emision_preparada=emision_preparada||jsonb_build_object('lease_hasta',now()-interval '1 minute') WHERE id=rid;
+s2:=pg_temp.preparar_emision_kpi_word(rid);
+IF s2->>'token'<>s->>'token' OR NOT pg_temp.reclamar_emision_kpi_word(rid,(s2->>'token')::uuid) THEN RAISE EXCEPTION 'No pudo reintentar'; END IF;
+INSERT INTO objects VALUES('documentos-generados',s2->>'path');
+PERFORM pg_temp.confirmar_emision_kpi_word(rid,(s2->>'token')::uuid,NULL,repeat('a',64));
+IF (SELECT estado FROM kpi_reportes WHERE id=rid)<>'emitido' THEN RAISE EXCEPTION 'Reintento no emitió'; END IF;
 END;`));
   it('flujo completo hasta emitido con firmantes, folio DOC y snapshot congelado', () => check(`${listo()}${actor(3)}PERFORM pg_temp.emitir_kpi_reporte(rid);
 SELECT * INTO r FROM kpi_reportes WHERE id=rid;
