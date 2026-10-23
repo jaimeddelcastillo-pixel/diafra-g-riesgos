@@ -2853,6 +2853,8 @@ export type Database = {
       }
       documentos_generados: {
         Row: {
+          archivo_path: string | null
+          archivo_sha256: string | null
           created_at: string
           folio: string
           formato_id: string | null
@@ -2867,6 +2869,8 @@ export type Database = {
           tipo: string
         }
         Insert: {
+          archivo_path?: string | null
+          archivo_sha256?: string | null
           created_at?: string
           folio: string
           formato_id?: string | null
@@ -2881,6 +2885,8 @@ export type Database = {
           tipo: string
         }
         Update: {
+          archivo_path?: string | null
+          archivo_sha256?: string | null
           created_at?: string
           folio?: string
           formato_id?: string | null
@@ -3864,6 +3870,7 @@ export type Database = {
           created_by: string | null
           datos_snapshot: Json | null
           elaboro_por: string | null
+          emision_preparada: Json | null
           emitido_en: string | null
           emitido_por: string | null
           estado: string
@@ -3897,6 +3904,7 @@ export type Database = {
           created_by?: string | null
           datos_snapshot?: Json | null
           elaboro_por?: string | null
+          emision_preparada?: Json | null
           emitido_en?: string | null
           emitido_por?: string | null
           estado?: string
@@ -3930,6 +3938,7 @@ export type Database = {
           created_by?: string | null
           datos_snapshot?: Json | null
           elaboro_por?: string | null
+          emision_preparada?: Json | null
           emitido_en?: string | null
           emitido_por?: string | null
           estado?: string
@@ -7015,6 +7024,10 @@ export type Database = {
         Returns: undefined
       }
       confirmar_catalogo_documentos: { Args: never; Returns: string }
+      confirmar_emision_kpi_word: {
+        Args: { _id: string; _logo: Json; _sha256: string; _token: string }
+        Returns: Json
+      }
       confirmar_perfil: {
         Args: { _cargo: string; _nombre: string }
         Returns: undefined
@@ -7455,6 +7468,7 @@ export type Database = {
         }[]
       }
       plan_limite: { Args: { p_clave: string; p_org: string }; Returns: Json }
+      preparar_emision_kpi_word: { Args: { _id: string }; Returns: Json }
       previsualizar_resultados_excel: { Args: { _celdas: Json }; Returns: Json }
       publicar_skill: {
         Args: { p_motivo: string; p_prompt_id: string }
