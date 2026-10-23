@@ -3803,6 +3803,217 @@ export type Database = {
           },
         ]
       }
+      kpi_reporte_config: {
+        Row: {
+          alcance: string
+          autorizadores: string[]
+          created_at: string
+          created_by: string | null
+          id: string
+          metodologia: string
+          motivo: string
+          objetivo: string
+          org_id: string
+          version: number
+        }
+        Insert: {
+          alcance?: string
+          autorizadores?: string[]
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          metodologia?: string
+          motivo: string
+          objetivo?: string
+          org_id: string
+          version: number
+        }
+        Update: {
+          alcance?: string
+          autorizadores?: string[]
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          metodologia?: string
+          motivo?: string
+          objetivo?: string
+          org_id?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kpi_reporte_config_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      kpi_reportes: {
+        Row: {
+          alcance: string
+          alcance_procesos: string[]
+          alcance_puestos: string[]
+          analisis: Json
+          anulado_en: string | null
+          anulado_por: string | null
+          codigo: string
+          conclusiones: string
+          created_at: string
+          created_by: string | null
+          datos_snapshot: Json | null
+          elaboro_por: string | null
+          emitido_en: string | null
+          emitido_por: string | null
+          estado: string
+          etapa: string
+          firmantes: Json | null
+          formato_snapshot: Json | null
+          id: string
+          metodologia: string
+          motivo_anulacion: string | null
+          objetivo: string
+          org_id: string
+          periodo_fin: string
+          periodo_inicio: string
+          revisiones: Json
+          revisores: string[]
+          tipo_periodo: string
+          updated_at: string
+          updated_by: string | null
+          version: number
+        }
+        Insert: {
+          alcance?: string
+          alcance_procesos?: string[]
+          alcance_puestos?: string[]
+          analisis?: Json
+          anulado_en?: string | null
+          anulado_por?: string | null
+          codigo: string
+          conclusiones?: string
+          created_at?: string
+          created_by?: string | null
+          datos_snapshot?: Json | null
+          elaboro_por?: string | null
+          emitido_en?: string | null
+          emitido_por?: string | null
+          estado?: string
+          etapa?: string
+          firmantes?: Json | null
+          formato_snapshot?: Json | null
+          id?: string
+          metodologia?: string
+          motivo_anulacion?: string | null
+          objetivo?: string
+          org_id: string
+          periodo_fin: string
+          periodo_inicio: string
+          revisiones?: Json
+          revisores?: string[]
+          tipo_periodo: string
+          updated_at?: string
+          updated_by?: string | null
+          version?: number
+        }
+        Update: {
+          alcance?: string
+          alcance_procesos?: string[]
+          alcance_puestos?: string[]
+          analisis?: Json
+          anulado_en?: string | null
+          anulado_por?: string | null
+          codigo?: string
+          conclusiones?: string
+          created_at?: string
+          created_by?: string | null
+          datos_snapshot?: Json | null
+          elaboro_por?: string | null
+          emitido_en?: string | null
+          emitido_por?: string | null
+          estado?: string
+          etapa?: string
+          firmantes?: Json | null
+          formato_snapshot?: Json | null
+          id?: string
+          metodologia?: string
+          motivo_anulacion?: string | null
+          objetivo?: string
+          org_id?: string
+          periodo_fin?: string
+          periodo_inicio?: string
+          revisiones?: Json
+          revisores?: string[]
+          tipo_periodo?: string
+          updated_at?: string
+          updated_by?: string | null
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kpi_reportes_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      kpi_reportes_historial: {
+        Row: {
+          archivado_en: string
+          archivado_por: string | null
+          codigo: string
+          contenido: Json
+          estado: string
+          id: string
+          motivo: string
+          org_id: string
+          reporte_id: string
+          version: number
+        }
+        Insert: {
+          archivado_en?: string
+          archivado_por?: string | null
+          codigo: string
+          contenido: Json
+          estado: string
+          id?: string
+          motivo: string
+          org_id: string
+          reporte_id: string
+          version: number
+        }
+        Update: {
+          archivado_en?: string
+          archivado_por?: string | null
+          codigo?: string
+          contenido?: Json
+          estado?: string
+          id?: string
+          motivo?: string
+          org_id?: string
+          reporte_id?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kpi_reportes_historial_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kpi_reportes_historial_reporte_id_fkey"
+            columns: ["reporte_id"]
+            isOneToOne: false
+            referencedRelation: "kpi_reportes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       kpi_resultado_evidencia: {
         Row: {
           activo: boolean
@@ -6587,6 +6798,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      anular_kpi_reporte: {
+        Args: { _id: string; _motivo: string }
+        Returns: undefined
+      }
       anular_kpi_resultado: {
         Args: { _id: string; _motivo: string }
         Returns: undefined
@@ -6843,6 +7058,15 @@ export type Database = {
           soporte_log_id: string
         }[]
       }
+      crear_kpi_reporte: {
+        Args: {
+          _inicio: string
+          _procesos?: string[]
+          _puestos?: string[]
+          _tipo: string
+        }
+        Returns: string
+      }
       crear_sesion_entrevista: {
         Args: {
           p_assignment_id?: string
@@ -6931,6 +7155,8 @@ export type Database = {
         Args: { p_doc_id: string }
         Returns: string
       }
+      emitir_kpi_reporte: { Args: { _id: string }; Returns: Json }
+      enviar_kpi_reporte: { Args: { _id: string }; Returns: undefined }
       examen_calificar: {
         Args: {
           p_duracion_seg?: number
@@ -6978,6 +7204,20 @@ export type Database = {
           _motivo: string
           _pie: string
           _razon_social: string
+        }
+        Returns: string
+      }
+      guardar_kpi_reporte: {
+        Args: { _datos: Json; _id: string }
+        Returns: undefined
+      }
+      guardar_kpi_reporte_config: {
+        Args: {
+          _alcance: string
+          _autorizadores: string[]
+          _metodologia: string
+          _motivo: string
+          _objetivo: string
         }
         Returns: string
       }
@@ -7080,6 +7320,15 @@ export type Database = {
         Args: { _capturistas: string[]; _org: string }
         Returns: boolean
       }
+      kpi_reporte_autoriza: {
+        Args: { _org: string; _u: string }
+        Returns: string
+      }
+      kpi_reporte_faltantes: {
+        Args: { _r: Database["public"]["Tables"]["kpi_reportes"]["Row"] }
+        Returns: string
+      }
+      kpi_reporte_preparar: { Args: { _motivo: string }; Returns: string }
       kpi_resumen_periodo: {
         Args: { _filtros?: Json; _inicio: string; _tipo: string }
         Returns: Json
@@ -7144,6 +7393,10 @@ export type Database = {
       }
       normalizar_email_auditor: { Args: { _e: string }; Returns: string }
       normalizar_txt: { Args: { _t: string }; Returns: string }
+      nueva_version_kpi_reporte: {
+        Args: { _id: string; _motivo: string }
+        Returns: undefined
+      }
       org_documento_retencion: { Args: { p_id: string }; Returns: string }
       org_has_curso_access: { Args: { _org_id: string }; Returns: boolean }
       org_suplencia_aviso_resultado: {
@@ -7259,6 +7512,10 @@ export type Database = {
       restaurar_documento_tipos: { Args: never; Returns: number }
       retirar_documento: {
         Args: { p_doc_id: string; p_motivo: string }
+        Returns: undefined
+      }
+      revisar_kpi_reporte: {
+        Args: { _aprobar: boolean; _comentario?: string; _id: string }
         Returns: undefined
       }
       revisar_kpi_resultado: {
