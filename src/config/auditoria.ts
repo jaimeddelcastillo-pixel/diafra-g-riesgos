@@ -22,6 +22,8 @@ export const MODULOS_AUDITADOS: Record<string, string> = {
   riesgos: 'Gestión de Riesgos',
   indicadores: 'Indicadores',
   tendencias: 'Análisis de Tendencias',
+  cerebro: 'Cerebro Institucional',
+  plataforma: 'Plataforma',
 };
 
 const tend = (catalogo: string, ...campos: string[]): TablaAuditada => ({
@@ -35,6 +37,7 @@ export const TABLAS_AUDITADAS: Record<string, TablaAuditada> = {
   folio_comite: { modulo: 'riesgos', catalogo: 'Comité del folio', registro: (r, ref) => [ref[txt(r.folio_id)], txt(r.nombre ?? r.rol)].filter(Boolean).join(' · ') },
   folio_versiones: { modulo: 'riesgos', catalogo: 'Versión de folio', registro: (r, ref) => [ref[txt(r.folio_id)], r.version != null ? `v${r.version}` : ''].filter(Boolean).join(' · ') },
   comite_comentarios: { modulo: 'riesgos', catalogo: 'Comentario de comité', registro: (r, ref) => ref[txt(r.folio_id)] ?? '' },
+  org_folio_tipos: { modulo: 'riesgos', catalogo: 'Tipo de folio', registro: primero('codigo', 'nombre', 'tipo') },
   comite_votos: { modulo: 'riesgos', catalogo: 'Voto de comité', registro: (r, ref) => [ref[txt(r.folio_id)], txt(r.voto)].filter(Boolean).join(' · ') },
   // Indicadores
   puestos: { modulo: 'indicadores', catalogo: 'Puestos', registro: primero('codigo', 'nombre') },
@@ -59,6 +62,49 @@ export const TABLAS_AUDITADAS: Record<string, TablaAuditada> = {
   tend_extracciones: tend('Extracción de bitácora', 'nombre_archivo'),
   tend_norma_especificaciones: tend('Catálogo normativo', 'clase'),
 };
+
+const cer = (catalogo: string, ...campos: string[]): TablaAuditada => ({
+  modulo: 'cerebro', catalogo, registro: primero(...campos, 'codigo', 'titulo', 'nombre', 'nombre_archivo'),
+});
+const plat = (catalogo: string, ...campos: string[]): TablaAuditada => ({
+  modulo: 'plataforma', catalogo, registro: primero(...campos, 'codigo', 'nombre', 'titulo', 'email'),
+});
+
+Object.assign(TABLAS_AUDITADAS, {
+  // Cerebro Institucional (también conserva su pantalla propia)
+  brain_areas: cer('Área'), brain_processes: cer('Proceso'),
+  brain_process_areas: cer('Proceso ↔ Área'), brain_assignment_processes: cer('Asignación ↔ Proceso'),
+  brain_session_processes: cer('Entrevista ↔ Proceso'), brain_contradictions: cer('Contradicción', 'descripcion'),
+  brain_documents: cer('Documento'), brain_enlace_descartes: cer('Enlace descartado'),
+  brain_exports: cer('Exportación', 'formato'), brain_extracciones: cer('Extracción', 'nombre_archivo'),
+  brain_gaps: cer('Brecha', 'descripcion'), brain_import_batches: cer('Importación', 'nombre_archivo'),
+  brain_import_propuestas: cer('Propuesta de importación'), brain_interview_assignments: cer('Asignación de entrevista', 'tema'),
+  brain_interview_sessions: cer('Entrevista', 'tema'), brain_knowledge_items: cer('Conocimiento'),
+  brain_knowledge_sources: cer('Fuente de conocimiento'), brain_memoria_viva: cer('Memoria viva'),
+  brain_vinculos: cer('Vínculo con otro módulo', 'tipo'),
+  // Plataforma (visible siempre)
+  profiles: plat('Perfil de usuario', 'nombre', 'email'),
+  user_roles: plat('Rol de usuario', 'role'),
+  org_members: plat('Miembro de empresa', 'role'),
+  org_suplencias: plat('Suplencia', 'titular_nombre', 'rs_titular_nombre', 'rol_sustituido'),
+  organizations: plat('Empresa', 'nombre'),
+  organization_features: plat('Módulo de la empresa', 'feature_key'),
+  modulos: plat('Catálogo de módulos', 'clave', 'nombre'),
+  org_pendientes_semaforo: plat('Semáforo de pendientes', 'perfil'),
+  documento_tipos: plat('Tipo de documento (Recursos)', 'codigo', 'nombre'),
+  documento_tipos_config: plat('Configuración de tipos de documento'),
+  org_documentos: plat('Documento (Recursos)', 'codigo', 'titulo', 'nombre_archivo'),
+  auditorias_externas: plat('Auditoría externa', 'nombre', 'auditor_nombre', 'auditor_email'),
+  auditoria_items: plat('Elemento de auditoría externa', 'titulo', 'tipo'),
+  agent_prompts: plat('Skill de IA', 'clave', 'nombre', 'version'),
+  ia_skills: plat('Skill de IA (catálogo)', 'clave', 'nombre'),
+  ia_skill_pruebas: plat('Prueba de skill de IA', 'skill_clave', 'version'),
+  ia_config_org: plat('Configuración de IA de la empresa'),
+  cursos: plat('Curso', 'titulo', 'norma'),
+  impersonation_logs: plat('Soporte (entrar como usuario)', 'motivo'),
+  lead_magnet: plat('Registro de guía', 'email'),
+  'auth.users': plat('Cuenta de acceso', 'email'),
+} satisfies Record<string, TablaAuditada>);
 
 export const tablasDeModulo = (modulo: string) =>
   Object.entries(TABLAS_AUDITADAS).filter(([, t]) => t.modulo === modulo).map(([k]) => k);
