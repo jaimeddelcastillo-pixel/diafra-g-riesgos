@@ -38,6 +38,12 @@ export const crearReporte = (tipo: TipoPeriodo, inicio: string) => rpc('crear_kp
 export const guardarReporte = (id: string, datos: Partial<Pick<Reporte, 'objetivo' | 'alcance' | 'metodologia' | 'analisis' | 'conclusiones' | 'revisores'>>) => rpc('guardar_kpi_reporte', { _id: id, _datos: datos });
 export const enviarReporte = (id: string) => rpc('enviar_kpi_reporte', { _id: id });
 export const revisarReporte = (id: string, aprobar: boolean, comentario: string) => rpc('revisar_kpi_reporte', { _id: id, _aprobar: aprobar, _comentario: comentario });
+/** Releases an issuance reservation whose 2-minute lease expired without a stored original; server checks permission and expiry. */
+export const cancelarReserva = (id: string, motivo: string) => rpc('cancelar_reserva_emision_kpi_word', { _id: id, _motivo: motivo });
+export function reservaVencida(r: object): boolean {
+  const e = (r as { emision_preparada?: { lease_hasta?: string } | null }).emision_preparada;
+  return !!e && (!e.lease_hasta || new Date(e.lease_hasta).getTime() <= Date.now());
+}
 export async function emitirReporte(id: string) {
   const { data, error } = await supabase.functions.invoke('emitir-kpi-word', { body: { id } });
   if (error) throw error;

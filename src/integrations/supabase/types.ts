@@ -6989,6 +6989,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      cancelar_reserva_emision_kpi_word: {
+        Args: { _id: string; _motivo: string }
+        Returns: undefined
+      }
       capturar_kpi_resultado: {
         Args: {
           _comentario: string
