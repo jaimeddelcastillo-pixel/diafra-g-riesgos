@@ -97,4 +97,4 @@ Implementados reporte independiente, vistas por área/instrumento/avance, consol
 - [ ] Verificación visual y recorrido autenticado de T5d: a cargo de Jaime; navegador expresamente excluido. Suite 279/279, funciones sobre fixtures temporales QA; no equivale a prueba de sesión/RLS real. Informe completo: t5d_reporte.md.
 - [x] K2 captura de resultados de KPI: kpi_resultados con cálculo en servidor, copia inmutable de meta/tendencia/unidad, evidencia SGC en bucket privado kpi-evidencias, capturistas por KPI, pestaña Captura, pendientes agrupados y exportación Excel; suite con 9 pruebas SQL (sin navegador, IA ni dependencias).
 - [x] K2-b captura corregida para KPI de puesto, referencia de la fuente SGC, evidencias del periodo ligables, vistas Por capturar/Año con último periodo cerrado.
-- [ ] K2-a importación de resultados por Excel: migración rechazada por el usuario; en espera de indicación.
+- [ ] K2-a Excel Año: plantilla protegida y filtros, vista previa servidor por celda, aplicación atómica motivada, semáforo servidor e ícono estado, pruebas completas en una corrida; sin navegador/IA/dependencias ni cambios en Tendencias/Riesgos.
