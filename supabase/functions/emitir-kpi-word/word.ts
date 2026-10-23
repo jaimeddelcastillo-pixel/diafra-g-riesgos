@@ -163,7 +163,13 @@ export function construirWordReporte(e: EntradaWord): Document {
   for (const pr of procesos) {
     const ks = sgc.filter(k => (k.proceso ?? 'Sin proceso') === pr); const ip = res.procesos.find(x => x.proceso === pr);
     cuerpo.push(p(`${pr}${ip ? ` — índice ${pct(ip.indice)} · ${ip.semaforo}` : ''}`, { b: true }), tabla(ENC_KPI, ks.map(filaKpi)));
-    for (const k of ks.filter(k => k.nivel === 'SGC' && e.graficas[k.id])) cuerpo.push(new Paragraph({ alignment: AlignmentType.CENTER, children: [new ImageRun({ type: e.graficasSvg ? 'svg' : 'png', data: e.graficas[k.id], ...(e.graficasSvg ? { fallback: { type: 'png' as const, data: Uint8Array.from(atob('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aN1cAAAAASUVORK5CYII='), ch => ch.charCodeAt(0)) } } : {}), transformation: { width: 605, height: 340 } })] }));
+    for (const k of ks.filter(k => k.nivel === 'SGC' && e.graficas[k.id])) {
+      const transformation = { width: 605, height: 340 };
+      const image = e.graficasSvg
+        ? new ImageRun({ type: 'svg', data: e.graficas[k.id], fallback: { type: 'png', data: Uint8Array.from(atob('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aN1cAAAAASUVORK5CYII='), ch => ch.charCodeAt(0)) }, transformation })
+        : new ImageRun({ type: 'png', data: e.graficas[k.id], transformation });
+      cuerpo.push(new Paragraph({ alignment: AlignmentType.CENTER, children: [image] }));
+    }
   }
   cuerpo.push(h('6. KPI fuera de meta'), fuera.length ? tabla(['Código', 'KPI', 'Semáforo', 'Causa', 'Acción', 'CAPA'], fuera.map(k => { const a = r.analisis[k.id]; return [k.codigo, k.nombre, k.semaforo, a?.causa || '—', a?.accion || '—', a?.capa || '—']; })) : p('Sin KPI fuera de meta.'));
   cuerpo.push(h('7. Resultados por puesto'), tabla(['Puesto', 'Calificación', 'Semáforo', 'KPI con dato'], res.puestos.filter(x => !r.alcance_puestos.length || r.alcance_puestos.includes(x.puesto_id)).map(x => [`${x.codigo} · ${x.nombre}`, pct(x.calificacion), x.semaforo, `${x.con_dato} de ${x.total}`])));
