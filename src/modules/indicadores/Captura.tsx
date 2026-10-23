@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Ban, Check, Link2, Paperclip, Plus, Save, Upload, Pencil } from 'lucide-react';
+import { Ban, Check, Download, Link2, Paperclip, Plus, Save, Upload, Pencil } from 'lucide-react';
+import { prepararDocumento } from '@/lib/documentos';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -19,7 +20,7 @@ import { vacio } from './lib/catalogo';
 import ImportarResultados from './ImportarResultados';
 import { claseSemaforo } from './lib/semaforo';
 import { referenciaPeriodo } from './lib/excel-resultados';
-import { anularResultado, calcular, celdasAnio, etiquetaPeriodo, guardarResultado, hoyMx, ligarEvidencia, listarEvidencias, listarResultados, periodoCerrado, registrarEvidencia, revisarResultado, ultimoCerrado, urlEvidencia, type Resultado } from './lib/resultados';
+import { anularResultado, calcular, celdasAnio, etiquetaPeriodo, guardarResultado, hoyMx, ligarEvidencia, listarEvidencias, listarResultados, periodoCerrado, registrarEvidencia, revisarResultado, ultimoCerrado, urlEvidencia, exportarResultados, type Resultado } from './lib/resultados';
 
 interface Kpi { tabla: 'kpi_definiciones' | 'kpi_puesto'; id: string; codigo: string; nombre: string; grupo: string; nivel: string; frecuencia: string; tendencia: string; meta: number; unidad: string; fuente: string; estado: string; capturistas: string[] }
 interface Abierto { kpi: Kpi; inicio?: string; fin?: string; resultado?: Resultado }
@@ -55,6 +56,16 @@ export default function Captura() {
   const refrescar = async () => { await Promise.all([qc.invalidateQueries({ queryKey: ['k2-resultados'] }), qc.invalidateQueries({ queryKey: ['k2-evidencias'] }), qc.invalidateQueries({ queryKey: ['pendientes'] })]); };
   const ejecutar = async (f: () => Promise<void>) => { setBusy(true); try { await f(); await refrescar(); } catch (e) { toast.error((e as Error).message); } finally { setBusy(false); } };
 
+  const exportar = () => ejecutar(async () => {
+    const nombre = `Resultados-KPI-${anio}.xlsx`;
+    const ctx = await prepararDocumento('indicadores.resultados_excel', nombre, { empresa: auth.org?.nombre ?? '', logoPath: auth.org?.logo_url, generadoPor: auth.profile?.nombre || auth.user?.email || '' });
+    const filas = filtrados.flatMap(k => resultados.filter(r => (r.kpi_definicion_id === k.id || r.kpi_puesto_id === k.id) && r.periodo_inicio.startsWith(String(anio))).map(r => ({
+      Tipo: k.tabla === 'kpi_definiciones' ? 'SGC' : 'Puesto', Código: k.codigo, Nombre: k.nombre, Periodo: etiquetaPeriodo(k.frecuencia, r.periodo_inicio),
+      Numerador: r.numerador, Denominador: r.denominador ?? '', Valor: r.valor ?? '', Meta: r.meta_copia, Unidad: r.unidad_copia, Semáforo: r.semaforo, Estado: r.estado, 'Referencia de la fuente': r.referencia_fuente ?? '',
+    })));
+    const url = URL.createObjectURL(new Blob([exportarResultados(ctx, filas) as BlobPart], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
+    const a = document.createElement('a'); a.href = url; a.download = nombre; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+  });
   const abrir = (kpi: Kpi, inicio?: string, fin?: string) => {
     const r = inicio ? resultadoDe(kpi, inicio) : undefined;
     const etiqueta = inicio ? etiquetaPeriodo(kpi.frecuencia, inicio) : '';
@@ -122,7 +133,7 @@ export default function Captura() {
         </section>
       </TabsContent>
       <TabsContent value="anio">
-        <div className="mb-3 flex flex-wrap items-center gap-3"><Select value={String(anio)} onValueChange={v => setAnio(Number(v))}><SelectTrigger className="w-32" aria-label="Año"><SelectValue /></SelectTrigger><SelectContent>{Array.from({ length: 6 }, (_, i) => Number(hoy.slice(0, 4)) - i).map(y => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}</SelectContent></Select><ImportarResultados kpis={filtrados} resultados={resultados} anio={anio} hoy={hoy} refrescar={refrescar}/></div>
+        <div className="mb-3 flex flex-wrap items-center gap-3"><Select value={String(anio)} onValueChange={v => setAnio(Number(v))}><SelectTrigger className="w-32" aria-label="Año"><SelectValue /></SelectTrigger><SelectContent>{Array.from({ length: 6 }, (_, i) => Number(hoy.slice(0, 4)) - i).map(y => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}</SelectContent></Select><ImportarResultados kpis={filtrados} resultados={resultados} anio={anio} hoy={hoy} refrescar={refrescar}/><Button variant="outline" disabled={busy} onClick={() => void exportar()}><Download className="mr-2 h-4 w-4"/>Exportar resultados</Button></div>
         <div className="overflow-x-auto"><Table><TableHeader><TableRow><TableHead className="min-w-56">KPI</TableHead>{['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'].map(m => <TableHead key={m} className="text-center">{m}</TableHead>)}</TableRow></TableHeader><TableBody>{filtrados.map(k => {
           const borrador = k.estado !== 'validado'; const celdas = celdasAnio(k.frecuencia, anio);
           return <TableRow key={k.id} className={cn(borrador && 'text-muted-foreground opacity-60')}>
