@@ -1,4 +1,4 @@
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawn } from 'node:child_process';
 import { describe, expect, it } from 'vitest';
 // Live server functions run only against isolated temporary QA tables, rolled back.
 const id = (n: number) => `00000000-0000-0000-0000-${String(n).padStart(12, '0')}`;
@@ -31,11 +31,19 @@ CREATE TRIGGER at_guard BEFORE INSERT OR UPDATE ON tend_registros_at FOR EACH RO
 CREATE TRIGGER firma_identidad BEFORE UPDATE ON folio_comite FOR EACH ROW EXECUTE FUNCTION pg_temp.firma_suplencia_identidad();
 ${body}
 SELECT 'T5d OK';ROLLBACK;`;
-  return execFileSync('psql', ['-XqAt','-v','ON_ERROR_STOP=1'], {input:sql,encoding:'utf8',timeout:30000});
+  // Do not block the Vitest worker heartbeat while the remote QA transaction runs.
+  return new Promise<string>((resolve, reject) => {
+    const child = spawn('psql', ['-XqAt','-v','ON_ERROR_STOP=1']); let out = ''; let err = '';
+    const timer = setTimeout(() => { child.kill(); reject(new Error('QA suplencias superó 120 segundos')); }, 120000);
+    child.stdout.on('data', d => { out += String(d); }); child.stderr.on('data', d => { err += String(d); });
+    child.on('error', e => { clearTimeout(timer); reject(e); });
+    child.on('close', code => { clearTimeout(timer); if (code === 0) resolve(out); else reject(new Error(err)); });
+    child.stdin.end(sql);
+  });
 }
 const designation = (role='responsable_sanitario', actor=3) => `pg_temp.designar_suplencia('${role}','${id(role==='admin'?2:1)}','${id(actor)}',now()-interval '1 hour',now()+interval '1 day','vacaciones','QA motivo')`;
 const accept = `PERFORM set_config('qa.actor','${id(3)}',true);PERFORM pg_temp.responder_suplencia(s,true);`;
-function check(body: string) { expect(run(`DO $$ DECLARE s uuid;v uuid;failed boolean:=false;BEGIN ${body} END $$;`)).toContain('T5d OK'); }
+async function check(body: string) { expect(await run(`DO $$ DECLARE s uuid;v uuid;failed boolean:=false;BEGIN ${body} END $$;`)).toContain('T5d OK'); }
 describe.skipIf(!process.env.PGHOST)('T5d server rules, temporary QA only',()=>{
   it('designation requires reason and titular or other role, never arbitrary members',()=>check(`BEGIN PERFORM pg_temp.designar_suplencia('responsable_sanitario','${id(1)}','${id(3)}',now(),now()+interval '1 day','vacaciones','');EXCEPTION WHEN raise_exception THEN failed:=true;END;IF NOT failed THEN RAISE EXCEPTION 'Missing reason accepted';END IF;failed:=false;PERFORM set_config('qa.actor','${id(5)}',true);BEGIN s:=${designation()};EXCEPTION WHEN raise_exception THEN failed:=true;END;IF NOT failed THEN RAISE EXCEPTION 'Arbitrary designation accepted';END IF;PERFORM set_config('qa.actor','${id(2)}',true);s:=${designation()};IF NOT EXISTS(SELECT 1 FROM org_suplencias WHERE id=s AND estado='pendiente de aceptación' AND categoria='vacaciones') THEN RAISE EXCEPTION 'Other role designation failed';END IF;`),30000);
   it('pending gives neither RS nor administrative permissions',()=>check(`s:=${designation()}; IF pg_temp.rol_efectivo('${id(3)}','responsable_sanitario') THEN RAISE EXCEPTION 'Pending grants RS';END IF;PERFORM set_config('qa.actor','${id(3)}',true);IF pg_temp.puede_administrar_usuarios() THEN RAISE EXCEPTION 'Pending grants administration';END IF;`),30000);
