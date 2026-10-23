@@ -18,7 +18,7 @@ import { graficaPNG, ESCALA_PNG, PX_16x9 } from '@/lib/documentos/graficas';
 import { claseSemaforo } from './lib/semaforo';
 import { etiquetaPeriodo, etiquetaSub, fueraDeMeta, num, obtenerResumen, pct, periodosCerrados, type KpiResumen, type Resumen, type TipoPeriodo } from './lib/tablero';
 import {
-  anularReporte, cancelarReserva, configActual, construirWordReporte, descargarOriginal, crearReporte, emitirReporte, enviarReporte, faltanAnalisis, guardarConfig, guardarReporte,
+  anularReporte, cancelarReserva, reservaVencida, configActual, construirWordReporte, descargarOriginal, crearReporte, emitirReporte, enviarReporte, faltanAnalisis, guardarConfig, guardarReporte,
   kpisDelAlcance, listarReportes, nuevaVersion, puedeAutorizar, quienTienePendiente, revisarReporte, wordABlob, type Analisis, type Firmantes, type Reporte,
 } from './lib/reportes';
 
