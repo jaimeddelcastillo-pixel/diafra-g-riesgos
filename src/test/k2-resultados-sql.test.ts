@@ -26,7 +26,7 @@ ${['puestos','kpi_definiciones','kpi_puesto','kpi_puesto_aporta'].map(t => `CREA
 CREATE TRIGGER guard BEFORE INSERT OR UPDATE OR DELETE ON kpi_resultados FOR EACH ROW EXECUTE FUNCTION pg_temp.kpi_resultados_guard();
 CREATE TRIGGER audit AFTER INSERT OR UPDATE ON kpi_resultados FOR EACH ROW EXECUTE FUNCTION pg_temp.audit_trigger_func();
 CREATE TRIGGER audit_context BEFORE INSERT ON audit_trail FOR EACH ROW EXECUTE FUNCTION pg_temp.audit_suplencia_contexto();
-DO $$ DECLARE k uuid;r uuid;c2 record;pi date;pf date;failed boolean:=false;BEGIN pi:=date_trunc('month',now()-interval '1 month')::date;pf:=(date_trunc('month',now())-1)::date; ${body} END $$;
+DO $$ DECLARE k uuid;r uuid;c2 record;pi date;pf date;failed boolean:=false;BEGIN pi:=date_trunc('month',now()-interval '1 month')::date;pf:=date_trunc('month',now())::date-1; ${body} END $$;
 SELECT 'K2 OK';ROLLBACK;`;
   return new Promise<string>((resolve, reject) => {
     const child = spawn('psql',['-XqAt','-v','ON_ERROR_STOP=1']);
