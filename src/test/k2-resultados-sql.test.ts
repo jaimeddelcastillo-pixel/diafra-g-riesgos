@@ -1,5 +1,7 @@
 import { execFileSync, spawn } from 'node:child_process';
 import { describe, expect, it, vi } from 'vitest';
+import { plantillaAnio, leerResultadosExcel, type KpiExcel } from '@/modules/indicadores/lib/excel-resultados';
+import type { Resultado } from '@/modules/indicadores/lib/resultados';
 vi.setConfig({ testTimeout: 120000 });
 const id = (n: number) => `00000000-0000-0000-0000-${String(n).padStart(12, '0')}`;
 let definitions: string | undefined;
@@ -67,12 +69,26 @@ PERFORM pg_temp.aplicar_resultados_excel(${lote([celda('SGC','1','2026-01-01',98
 IF (pg_temp.previsualizar_resultados_excel(${lote([celda('puesto','F1','2026-01-01',97)])})->0->>'estado')<>'cambia' THEN RAISE EXCEPTION 'No detectó cambio';END IF;
 PERFORM pg_temp.aplicar_resultados_excel(${lote([celda('puesto','F1','2026-01-01',97)])},'QA corrección Excel');
 IF NOT EXISTS(SELECT 1 FROM kpi_resultados WHERE id=r AND numerador=97 AND estado='capturado' AND revisado_por IS NULL AND meta_copia=95 AND semaforo='verde') OR NOT EXISTS(SELECT 1 FROM audit_trail WHERE tabla='kpi_resultados' AND motivo='QA corrección Excel' AND valor_anterior->>'estado'='revisado' AND valor_nuevo->>'estado'='capturado') THEN RAISE EXCEPTION 'Corrección incorrecta';END IF;`));
-  it('D1: celda bloqueada sin cambio = «sin cambio»; celda cambiada en periodo abierto = error', () => check(`${puestoValidado}r:=${guardar('kpi_puesto','kp',98,100,"''")};
+  it('D1-a: periodos abiertos con resultado se ignoran incluso con cambios', () => check(`${puestoValidado}r:=${guardar('kpi_puesto','kp',98,100,"''")};
 ALTER TABLE kpi_resultados DISABLE TRIGGER guard;UPDATE kpi_resultados SET periodo_inicio=date_trunc('month',(now() AT TIME ZONE 'America/Mexico_City'))::date,periodo_fin=NULL WHERE id=r;ALTER TABLE kpi_resultados ENABLE TRIGGER guard;
 c2:=NULL;SELECT e INTO c2 FROM jsonb_array_elements(pg_temp.previsualizar_resultados_excel(jsonb_build_array(jsonb_build_object('tipo','puesto','codigo','F1','inicio',date_trunc('month',(now() AT TIME ZONE 'America/Mexico_City'))::date::text,'numerador',98,'denominador',100,'referencia',(SELECT coalesce(referencia_fuente,'') FROM kpi_resultados WHERE id=r))))) e;
-IF c2.e->>'estado'<>'sin cambio' OR c2.e->>'error'<>'' THEN RAISE EXCEPTION 'Sin cambio en abierto marcado %',c2.e;END IF;
+IF c2.e->>'estado'<>'ignorado (periodo abierto)' OR c2.e->>'error'<>'' THEN RAISE EXCEPTION 'Sin cambio en abierto marcado %',c2.e;END IF;
 SELECT e INTO c2 FROM jsonb_array_elements(pg_temp.previsualizar_resultados_excel(jsonb_build_array(jsonb_build_object('tipo','puesto','codigo','F1','inicio',date_trunc('month',(now() AT TIME ZONE 'America/Mexico_City'))::date::text,'numerador',97,'denominador',100,'referencia',(SELECT coalesce(referencia_fuente,'') FROM kpi_resultados WHERE id=r))))) e;
-IF c2.e->>'estado'<>'error' OR c2.e->>'error' NOT LIKE '%Periodo abierto%' THEN RAISE EXCEPTION 'Cambio en abierto aceptado %',c2.e;END IF;`));
+IF c2.e->>'estado'<>'ignorado (periodo abierto)' OR c2.e->>'error'<>'' THEN RAISE EXCEPTION 'Cambio en abierto aceptado %',c2.e;END IF;`));
+  it('D1-a plantilla real KPI 1 octubre lleno sin referencia se ignora y septiembre se aplica', async () => {
+    const qa: KpiExcel = { tabla: 'kpi_definiciones', id: 'qa', codigo: '1', nombre: 'QA', grupo: 'QA', nivel: 'SGC', frecuencia: 'mensual', meta: 95, unidad: '%', fuente: 'QA fuente', estado: 'validado' };
+    const bytes = await plantillaAnio([qa], [{ kpi_definicion_id: 'qa', periodo_inicio: '2026-10-01', numerador: 98, denominador: 100, referencia_fuente: '' }, { kpi_definicion_id: 'qa', periodo_inicio: '2026-09-01', numerador: 97, denominador: 100, referencia_fuente: 'QA fuente' }] as Resultado[], 2026, '2026-10-23');
+    const cells = leerResultadosExcel(bytes.buffer as ArrayBuffer);
+    const october = cells.find(c => c.inicio === '2026-10-01');
+    expect(october?.numerador).toBe(98);
+    // The real legacy template can have no source in its locked October cell.
+    if (!october) throw new Error('Falta octubre'); october.referencia = '';
+    await check(`${base}${actor(2)}r:=${guardar('kpi_definiciones','k',98,100,"'QA fuente'")};
+ALTER TABLE kpi_resultados DISABLE TRIGGER guard;UPDATE kpi_resultados SET periodo_inicio='2026-10-01',referencia_fuente='' WHERE id=r;ALTER TABLE kpi_resultados ENABLE TRIGGER guard;
+IF (pg_temp.previsualizar_resultados_excel('${JSON.stringify(cells)}'::jsonb)->1->>'estado')<>'ignorado (periodo abierto)' THEN RAISE EXCEPTION 'Octubre no ignorado';END IF;
+IF pg_temp.aplicar_resultados_excel('${JSON.stringify(cells)}'::jsonb,'QA plantilla real')<>1 THEN RAISE EXCEPTION 'No aplicó septiembre';END IF;
+IF NOT EXISTS(SELECT 1 FROM kpi_resultados WHERE id=r AND numerador=98 AND referencia_fuente='') THEN RAISE EXCEPTION 'Octubre alterado';END IF;`);
+  });
   it('K2-a bloquea abierto, inexistente, borrador, permiso, denominador y duplicados', () => check(`${puestoValidado}
 IF (SELECT count(*) FROM jsonb_array_elements(pg_temp.previsualizar_resultados_excel(${lote([celda('puesto','NO-EXISTE'),celda('puesto','F1','2099-01-01'),celda('puesto','F1','2026-02-01',98,''),celda('puesto','F1','2026-03-01'),celda('puesto','F1','2026-03-01')])})) e WHERE e->>'estado'='error')<>5 THEN RAISE EXCEPTION 'Validaciones incompletas';END IF;
 ${actor(4)}IF (pg_temp.previsualizar_resultados_excel(${lote([celda()])})->0->>'error') NOT LIKE '%Sin permiso%' THEN RAISE EXCEPTION 'Permiso incompleto';END IF;
