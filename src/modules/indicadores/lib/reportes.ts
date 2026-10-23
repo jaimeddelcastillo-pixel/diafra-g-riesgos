@@ -57,62 +57,6 @@ export function contextoEmitido(r: Reporte, opts: { empresa: string; logo: Logo 
   return construirContexto('indicadores.reporte_word', r.formato_snapshot, { empresa: opts.empresa, generadoPor: r.firmantes.autorizo?.nombre ?? '', logo: opts.logo });
 }
 
-const fecha = (iso: string | null | undefined) => iso ? new Date(iso).toLocaleDateString('es-MX', { timeZone: 'America/Mexico_City', dateStyle: 'medium' }) : '';
-const p = (text: string, o: { b?: boolean; sz?: number; al?: (typeof AlignmentType)[keyof typeof AlignmentType] } = {}) => new Paragraph({ alignment: o.al, spacing: { after: 80 }, children: [new TextRun({ text, bold: o.b, size: o.sz ?? 20, font: 'Calibri' })] });
-const h = (text: string) => new Paragraph({ heading: HeadingLevel.HEADING_2, spacing: { before: 200, after: 100 }, children: [new TextRun({ text, bold: true, size: 24, font: 'Calibri' })] });
-const tabla = (enc: string[], filas: string[][]) => new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, rows: [
-  new TableRow({ tableHeader: true, children: enc.map(t => new TableCell({ shading: { fill: 'DCE6F1' }, children: [p(t, { b: true, sz: 16 })] })) }),
-  ...filas.map(f => new TableRow({ children: f.map(t => new TableCell({ children: [p(t, { sz: 16 })] })) })),
-] });
-const filaKpi = (k: KpiResumen) => [k.codigo, k.nombre, `${k.meta} ${k.unidad}${k.meta_cambio ? ` (cambió: ${k.metas.join(' → ')})` : ''}`, k.subperiodos.map(s => `${etiquetaSub(k.frecuencia, s.inicio)}: ${num(s.valor)}`).join(' · ') || '—', num(k.valor), pct(k.cumplimiento), k.semaforo, `${flecha(k.tendencia_periodo)} ${num(k.valor_anterior)}`];
-const ENC_KPI = ['Código', 'KPI', 'Meta', 'Subperiodos', 'Acumulado', 'Cumplimiento', 'Semáforo', 'Tendencia'];
-
-/** Signature lines: «[Nombre] — [cargo]» plus the AC absence/substitution legend. */
-export function lineaFirma(f: FirmanteSnap | null) {
-  if (!f) return '';
-  const ley = f.leyenda ?? '';
-  return `${f.nombre} — ${f.cargo || 'Sin cargo en el perfil'}${ley.startsWith(',') ? ley : ley ? ` ${ley}` : ''}`;
-}
-
-export interface EntradaWord { ctx: ContextoDocumento; reporte: Reporte; resumen: Resumen; firmantes: Firmantes; graficas: Record<string, Uint8Array>; borrador: boolean; nombresPuesto?: Record<string, string> }
-
-/** Pure Word builder: same input → same document.xml (issued reports pass only their snapshot). */
-export function construirWordReporte(e: EntradaWord): Document {
-  const { reporte: r, resumen: res, ctx } = e;
-  const kpis = kpisDelAlcance(r, res); const i = res.indice_sgc;
-  const sgc = kpis.filter(k => k.tipo === 'SGC'); const puesto = kpis.filter(k => k.tipo === 'Puesto');
-  const procesos = [...new Set(sgc.map(k => k.proceso ?? 'Sin proceso'))];
-  const fuera = fueraDeMeta({ ...res, kpis });
-  const cuerpo: (Paragraph | Table)[] = [
-    p(`${r.codigo} · Versión ${r.version} · Periodo ${etiquetaPeriodo(r.tipo_periodo, r.periodo_inicio)} (${r.periodo_inicio} a ${r.periodo_fin})`, { b: true }),
-    h('1. Objetivo'), p(r.objetivo || '—'), h('2. Alcance'), p(r.alcance || '—'), h('3. Metodología'), p(r.metodologia || '—'),
-    h('4. Resumen ejecutivo'),
-    tabla(['Concepto', 'Valor'], [
-      ['Índice SGC', `${pct(i.indice)} · ${i.semaforo}`],
-      ['Periodo anterior', `${pct(i.indice_anterior)}${i.semaforo_anterior ? ` · ${i.semaforo_anterior}` : ''}`],
-      ['KPI con dato', `${i.con_dato} de ${i.total}`],
-      ['Semáforos', `Verde ${i.verde} · Amarillo ${i.amarillo} · Rojo ${i.rojo} · Sin base ${i.sin_base} · Sin captura ${i.sin_captura}`],
-    ]),
-    h('5. Resultados por proceso'),
-  ];
-  for (const pr of procesos) {
-    const ks = sgc.filter(k => (k.proceso ?? 'Sin proceso') === pr); const ip = res.procesos.find(x => x.proceso === pr);
-    cuerpo.push(p(`${pr}${ip ? ` — índice ${pct(ip.indice)} · ${ip.semaforo}` : ''}`, { b: true }), tabla(ENC_KPI, ks.map(filaKpi)));
-    for (const k of ks.filter(k => k.nivel === 'SGC' && e.graficas[k.id])) cuerpo.push(new Paragraph({ alignment: AlignmentType.CENTER, children: [new ImageRun({ type: 'png', data: e.graficas[k.id], transformation: { width: 605, height: 340 } })] }));
-  }
-  cuerpo.push(h('6. KPI fuera de meta'), fuera.length ? tabla(['Código', 'KPI', 'Semáforo', 'Causa', 'Acción', 'CAPA'], fuera.map(k => { const a = r.analisis[k.id]; return [k.codigo, k.nombre, k.semaforo, a?.causa || '—', a?.accion || '—', a?.capa || '—']; })) : p('Sin KPI fuera de meta.'));
-  cuerpo.push(h('7. Resultados por puesto'), tabla(['Puesto', 'Calificación', 'Semáforo', 'KPI con dato'], res.puestos.filter(x => !r.alcance_puestos.length || r.alcance_puestos.includes(x.puesto_id)).map(x => [`${x.codigo} · ${x.nombre}`, pct(x.calificacion), x.semaforo, `${x.con_dato} de ${x.total}`])));
-  if (puesto.length) cuerpo.push(tabla(['Puesto', ...ENC_KPI], puesto.map(k => [e.nombresPuesto?.[k.puesto_id ?? ''] ?? res.puestos.find(x => x.puesto_id === k.puesto_id)?.codigo ?? '', ...filaKpi(k)])));
-  cuerpo.push(h('8. Conclusiones'), p(r.conclusiones || '—'), h('9. Firmas'));
-  const f = e.firmantes;
-  const celdaFirma = (rol: string, x: FirmanteSnap | null) => new TableCell({ children: [p(rol.toUpperCase(), { b: true, al: AlignmentType.CENTER }), p(''), p(lineaFirma(x) || '—', { al: AlignmentType.CENTER, sz: 18 }), p(fecha(x?.fecha), { al: AlignmentType.CENTER, sz: 16 })] });
-  cuerpo.push(new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, rows: [new TableRow({ children: [
-    celdaFirma('Elaboró', f.elaboro),
-    new TableCell({ children: [p('REVISÓ', { b: true, al: AlignmentType.CENTER }), p(''), ...(f.revisaron.length ? f.revisaron.flatMap(x => [p(lineaFirma(x), { al: AlignmentType.CENTER, sz: 18 }), p(fecha(x.fecha), { al: AlignmentType.CENTER, sz: 16 })]) : [p('—', { al: AlignmentType.CENTER })])] }),
-    celdaFirma('Autorizó', f.autorizo),
-  ] })] }));
-  const header = e.borrador ? new Header({ children: [...encabezadoWordHijos(ctx), new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'BORRADOR — NO VÁLIDO PARA EMISIÓN', bold: true, size: 40, color: 'C00000', font: 'Calibri' })] })] }) : encabezadoWord(ctx);
-  return new Document({ creator: 'TRACEA', title: `${r.codigo} v${r.version}`, styles: { default: { document: { run: { font: 'Calibri' } } } },
-    sections: [{ headers: { default: header }, footers: { default: pieWord(ctx) }, children: cuerpo }] });
-}
+export { construirWordReporte, lineaFirma } from '../../../../supabase/functions/emitir-kpi-word/word';
+export type { EntradaWord } from '../../../../supabase/functions/emitir-kpi-word/word';
 export const wordABlob = (d: Document) => Packer.toBlob(d);
