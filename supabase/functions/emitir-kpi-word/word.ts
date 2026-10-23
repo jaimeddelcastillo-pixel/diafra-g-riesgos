@@ -1,5 +1,5 @@
 import { AlignmentType, Document, Footer, Header, ImageRun, Paragraph, Table, TableCell, TableRow, TextRun, WidthType, HeadingLevel, PageNumber } from 'docx';
-export interface Firma { rol: 'Elaboró' | 'Revisó' | 'Autorizó'; nombre: string; cargo: string }
+export interface Firma { rol: 'Elaboró' | 'Revisó' | 'Autorizó'; nombre?: string; cargo: string; aplica?: boolean }
 export interface Identidad { id?: string; version?: number; razon_social: string; domicilio: string; leyenda_confidencialidad: string; leyenda_copia: string; pie: string }
 export interface Formato { id?: string; version?: number; tipo: string; codigo: string; version_formato: string; titulo: string; firmas: Firma[]; vigente_desde: string | null }
 export interface Logo { dataUrl: string; format: 'PNG' | 'JPEG' }

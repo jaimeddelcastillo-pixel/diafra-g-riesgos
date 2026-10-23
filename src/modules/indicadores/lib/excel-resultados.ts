@@ -5,7 +5,7 @@ import { celdasAnio, etiquetaPeriodo, periodoCerrado, type Resultado } from './r
 
 export interface KpiExcel { tabla: 'kpi_definiciones' | 'kpi_puesto'; id: string; codigo: string; nombre: string; grupo: string; nivel: string; frecuencia: string; meta: number; unidad: string; fuente: string; estado: string }
 export interface CeldaExcel { tipo: string; codigo: string; inicio: string; numerador: string | number; denominador: string | number; referencia: string; hoja: string; posicion: string }
-export interface VistaExcel { celda: CeldaExcel; estado: 'nuevo' | 'cambia' | 'sin cambio' | 'error'; error: string; antes: { numerador: number; denominador: number | null; referencia: string } | null; despues: { numerador: number; denominador: number | null; referencia: string }; valor: number | null; semaforo: string }
+export interface VistaExcel { celda: CeldaExcel; estado: 'nuevo' | 'cambia' | 'sin cambio' | 'ignorado (periodo abierto)' | 'error'; error: string; antes: { numerador: number; denominador: number | null; referencia: string } | null; despues: { numerador: number; denominador: number | null; referencia: string }; valor: number | null; semaforo: string }
 export const referenciaPeriodo = (k: KpiExcel, inicio: string) => [k.fuente, etiquetaPeriodo(k.frecuencia, inicio)].filter(Boolean).join(' · ');
 const clave = (k: KpiExcel, inicio: string) => `${k.tabla}|${k.id}|${inicio}`;
 export function hojasAnio(kpis: KpiExcel[], resultados: Resultado[], anio: number, hoy: string) {
