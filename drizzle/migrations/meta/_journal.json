@@ -771,6 +771,13 @@
       "when": 1792791977175,
       "tag": "0109_k3b1_word_original",
       "breakpoints": true
+    },
+    {
+      "idx": 110,
+      "version": "7",
+      "when": 1792792149941,
+      "tag": "0110_k3b1_emision_lease_logo",
+      "breakpoints": true
     }
   ]
 }
