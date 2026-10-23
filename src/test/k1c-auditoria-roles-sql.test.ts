@@ -52,11 +52,10 @@ SELECT 'FILAS:'||count(*) FROM audit_trail WHERE tabla='puestos';`);
   }, 60000);
 
   it('sin suplencia ni rol permitido no ve nada (mismas reglas que antes)', () => check(`
-SET LOCAL qa.actor = '${OPERADOR}';
+PERFORM set_config('qa.actor','${OPERADOR}',true);
 IF pg_temp.puede_ver_auditoria('${ORG}') THEN RAISE EXCEPTION 'Operador ve auditoría'; END IF;
 PERFORM set_config('qa.actor','${SUPLENTE}',true);
-IF NOT pg_temp.puede_ver_auditoria('${ORG}') THEN RAISE EXCEPTION 'Suplente RS no ve auditoría'; END IF;
-UPDATE org_members SET role='aseguramiento_calidad' WHERE user_id='${OPERADOR}' AND org_id='${ORG}';`.replace(/UPDATE[^;]+;/, '')));
+IF NOT pg_temp.puede_ver_auditoria('${ORG}') THEN RAISE EXCEPTION 'Suplente RS no ve auditoría'; END IF;`));
 
   it('cambio de rol sin motivo se rechaza; con motivo queda con antes → después', () => check(`
 PERFORM set_config('qa.actor','${ADMIN}',true);
