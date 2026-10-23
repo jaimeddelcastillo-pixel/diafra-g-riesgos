@@ -100,3 +100,5 @@ Implementados reporte independiente, vistas por área/instrumento/avance, consol
 - [x] K2-a Excel Año: plantilla protegida y filtros, vista previa servidor por celda, aplicación atómica motivada (0101–0102), semáforo servidor e ícono estado; suite completa 379/379 en una corrida final, archivos serializados y pruebas de suplencias sin bloqueo del ejecutor. Sin navegador/IA/dependencias ni cambios en Tendencias/Riesgos; recorrido visual no verificado por restricción. No hubo semáforos vacíos que recalcular ni cambios en pendientes_usuario.
 
 - [x] D1 Identidad documental: versiones con motivo, formatos por tipo, folio DOC, exportaciones de Indicadores y Auditoría general, «sin cambio» en periodo abierto. Pendiente: aplicar a Riesgos y Tendencias (fase posterior).
+- [x] K3-a cálculo por periodo (kpi_resumen_periodo), pestaña Tablero, gráfica PNG compartida y Excel del tablero con identidad D1.
+- [ ] K3-b reporte periódico de indicadores (siguiente).

@@ -20,6 +20,7 @@ export const ROLES_FIRMA: RolFirma[] = ['Elaboró', 'Revisó', 'Autorizó'];
 
 export const TIPOS_DOCUMENTO: Record<string, TipoDocumento> = {
   'indicadores.resultados_excel': { modulo: 'Indicadores', titulo: 'Resultados de indicadores', formato: 'Excel', aplicado: true },
+  'indicadores.tablero_excel': { modulo: 'Indicadores', titulo: 'Tablero de indicadores', formato: 'Excel', aplicado: true },
   'indicadores.catalogo_excel': { modulo: 'Indicadores', titulo: 'Catálogo de indicadores', formato: 'Excel', aplicado: true },
   'auditoria.bitacora_pdf': { modulo: 'Auditoría general', titulo: 'Bitácora de auditoría', formato: 'PDF', aplicado: true },
   'auditoria.bitacora_excel': { modulo: 'Auditoría general', titulo: 'Bitácora de auditoría', formato: 'Excel', aplicado: true },
