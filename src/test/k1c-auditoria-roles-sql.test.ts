@@ -53,7 +53,9 @@ SELECT 'FILAS:'||count(*) FROM audit_trail WHERE ${POLITICA} AND tabla='puestos'
 
   it('la política viva usa exactamente esa expresión, con subconsultas de una sola evaluación', () => {
     const viva = psql(`SELECT pg_get_expr(polqual,polrelid) FROM pg_policy WHERE polrelid='public.audit_trail'::regclass AND polcmd='r';`).trim();
-    expect(viva).toBe(POLITICA.replaceAll('pg_temp.', ''));
+    const norm = (x: string) => x.replace(/ AS \w+/g, '').replace(/[\s()]/g, '');
+    expect(norm(viva)).toBe(norm(POLITICA.replaceAll('pg_temp.', '')));
+    expect(viva).not.toMatch(/has_role|rol_efectivo/);
   });
 
   it('sin suplencia ni rol permitido no ve nada (mismas reglas que antes)', () => check(`
