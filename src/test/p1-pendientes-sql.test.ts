@@ -6,9 +6,9 @@ const id = (n: number) => `00000000-0000-0000-0000-${String(n).padStart(12, '0')
 let definitions: string | undefined;
 function run(body: string) {
   if (!definitions) definitions = execFileSync('psql', ['-XqAt', '-v', 'ON_ERROR_STOP=1'], {
-    input: `SELECT string_agg(pg_get_functiondef(oid)||';', E'\n') FROM pg_proc WHERE pronamespace='public'::regnamespace AND proname=ANY(ARRAY['rol_efectivo','pendientes_color','pendientes_usuario','tend_usuarios_firmantes','tend_firmante_autorizante']);`, encoding: 'utf8', timeout: 30000,
+    input: `SELECT string_agg(pg_get_functiondef(oid)||';', E'\n') FROM pg_proc WHERE pronamespace='public'::regnamespace AND proname=ANY(ARRAY['rol_efectivo','pendientes_color','pendientes_usuario','kpi_reporte_autoriza','tend_usuarios_firmantes','tend_firmante_autorizante']);`, encoding: 'utf8', timeout: 30000,
   }).replaceAll('public.', 'pg_temp.').replaceAll('pg_temp.app_role', 'public.app_role').replace(/\b_rol app_role\b/g, '_rol public.app_role').replaceAll('auth.uid()', 'pg_temp.uid()').replaceAll('SECURITY DEFINER', '').replaceAll("SET search_path TO 'public'", 'SET search_path TO pg_temp,public');
-  const tables = ['organizations', 'profiles', 'org_members', 'org_suplencias', 'org_pendientes_semaforo', 'tend_registros_at', 'tend_registros', 'tend_semanas', 'riesgos', 'folios', 'brain_knowledge_items', 'kpi_definiciones', 'kpi_puesto', 'kpi_resultados'];
+  const tables = ['organizations', 'profiles', 'org_members', 'org_suplencias', 'org_pendientes_semaforo', 'tend_registros_at', 'tend_registros', 'tend_semanas', 'riesgos', 'folios', 'brain_knowledge_items', 'kpi_definiciones', 'kpi_puesto', 'kpi_resultados','kpi_reportes','kpi_reporte_config'];
   const sql = `BEGIN; SET LOCAL check_function_bodies=off;
 ${tables.map(t => `CREATE TEMP TABLE ${t} (LIKE public.${t} INCLUDING DEFAULTS);`).join('\n')}
 DO $$ DECLARE c record;BEGIN FOR c IN SELECT table_name,column_name FROM information_schema.columns WHERE table_schema LIKE 'pg_temp_%' AND is_nullable='NO' LOOP EXECUTE format('ALTER TABLE pg_temp.%I ALTER COLUMN %I DROP NOT NULL',c.table_name,c.column_name); END LOOP;END $$;
