@@ -6283,6 +6283,14 @@ export type Database = {
         }
         Returns: undefined
       }
+      cambiar_rol_miembro: {
+        Args: {
+          _motivo: string
+          _rol: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: undefined
+      }
       cancelar_folio: {
         Args: {
           p_folio_id: string
@@ -6661,6 +6669,7 @@ export type Database = {
       }
       puede_administrar_usuarios: { Args: never; Returns: boolean }
       puede_editar_catalogo_documentos: { Args: never; Returns: boolean }
+      puede_ver_auditoria: { Args: { _org: string }; Returns: boolean }
       purgar_documentos_eliminados: { Args: never; Returns: number }
       purgar_documentos_expirados: {
         Args: never

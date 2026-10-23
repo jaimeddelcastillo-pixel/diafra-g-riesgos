@@ -15,7 +15,7 @@ export const COLUMNAS_AUDITORIA = 'id, created_at, user_id, tabla, registro_id, 
 const OTRAS: Record<string, string> = {
   DELETE: 'Baja', REGISTRO_RETIRADO: 'Retiro', SEMANA_CORREGIDA: 'Semana corregida',
   CATALOGO_EXCEL: 'Importación de catálogo (Excel)', REORDENAR_IDS: 'Reordenar IDs', RECOMPACTAR_IDS: 'Recompactar IDs',
-  SOLICITUD_VOTACION: 'Solicitud de votación', IMPORTACION_REVERTIDA: 'Importación revertida',
+  SOLICITUD_VOTACION: 'Solicitud de votación', LINEA_BASE_ROLES: 'Línea base de roles', IMPORTACION_REVERTIDA: 'Importación revertida',
 };
 
 /** Alta, Cambio, Retiro (activo pasa a No), Validación (estado pasa a validado), Regreso a borrador. */
@@ -74,7 +74,7 @@ export function aplicarFiltrosAuditoria<Q extends Record<string, any>>(q: Q, org
   if (c) {
     const partes = ['valor_nuevo', 'valor_anterior'].flatMap((col) => [`${col}->>codigo.ilike.*${c}*`, `${col}->>nombre.ilike.*${c}*`]);
     const ids = Object.entries(ref).filter(([, cod]) => cod.toLocaleLowerCase('es').includes(c.toLocaleLowerCase('es'))).map(([id]) => id).slice(0, 40);
-    for (const id of ids) for (const campo of ['kpi_puesto_id', 'kpi_definicion_id', 'folio_id']) partes.push(`valor_nuevo->>${campo}.eq.${id}`, `valor_anterior->>${campo}.eq.${id}`);
+    for (const id of ids) for (const campo of ['kpi_puesto_id', 'kpi_definicion_id', 'folio_id', 'user_id']) partes.push(`valor_nuevo->>${campo}.eq.${id}`, `valor_anterior->>${campo}.eq.${id}`);
     q = q.or(partes.join(','));
   }
   return q.order('created_at', { ascending: false }).order('id', { ascending: false });

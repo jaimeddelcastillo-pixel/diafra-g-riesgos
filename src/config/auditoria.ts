@@ -17,6 +17,8 @@ export interface TablaAuditada {
 
 const txt = (v: unknown) => (v === null || v === undefined || v === '' ? '' : String(v));
 const primero = (...campos: string[]) => (r: Registro) => campos.map((c) => txt(r[c])).find(Boolean) ?? '';
+/** Roles: correo · rol (nunca UUID). */
+const miembro = (r: Registro, ref: Referencias) => [txt(r.email) || ref[txt(r.user_id)] || 'Usuario', txt(r.role)].filter(Boolean).join(' · ');
 
 export const MODULOS_AUDITADOS: Record<string, string> = {
   riesgos: 'Gestión de Riesgos',
@@ -84,8 +86,8 @@ Object.assign(TABLAS_AUDITADAS, {
   brain_vinculos: cer('Vínculo con otro módulo', 'tipo'),
   // Plataforma (visible siempre)
   profiles: plat('Perfil de usuario', 'nombre', 'email'),
-  user_roles: plat('Rol de usuario', 'role'),
-  org_members: plat('Miembro de empresa', 'role'),
+  user_roles: { modulo: 'plataforma', catalogo: 'Rol de usuario', registro: (r, ref) => miembro(r, ref) },
+  org_members: { modulo: 'plataforma', catalogo: 'Miembro de empresa', registro: (r, ref) => miembro(r, ref) },
   org_suplencias: plat('Suplencia', 'titular_nombre', 'rs_titular_nombre', 'rol_sustituido'),
   organizations: plat('Empresa', 'nombre'),
   organization_features: plat('Módulo de la empresa', 'feature_key'),
