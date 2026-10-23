@@ -7026,6 +7026,29 @@ export type Database = {
         Args: { _escritura?: boolean; _org: string; _validar?: boolean }
         Returns: boolean
       }
+      kpi_acumulado_interno: {
+        Args: { _fin: string; _ini: string; _org: string }
+        Returns: {
+          codigo: string
+          cumplimiento: number
+          frecuencia: string
+          kid: string
+          meta: number
+          metas: number[]
+          n_res: number
+          nivel: string
+          nombre: string
+          peso: number
+          proceso: string
+          puesto_id: string
+          semaforo: string
+          subperiodos: Json
+          tabla: string
+          tendencia: string
+          unidad: string
+          valor: number
+        }[]
+      }
       kpi_aplicar_interno: {
         Args: { _borrador?: boolean; _motivo: string; _paquete: Json }
         Returns: undefined
@@ -7057,6 +7080,11 @@ export type Database = {
         Args: { _capturistas: string[]; _org: string }
         Returns: boolean
       }
+      kpi_resumen_periodo: {
+        Args: { _filtros?: Json; _inicio: string; _tipo: string }
+        Returns: Json
+      }
+      kpi_semaforo_cumplimiento: { Args: { _c: number }; Returns: string }
       kpi_ultimo_cerrado: {
         Args: { _frecuencia: string; _hoy: string }
         Returns: Record<string, unknown>
