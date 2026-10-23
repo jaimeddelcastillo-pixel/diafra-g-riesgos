@@ -15,7 +15,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { AYUDA, COLUMNAS, HOJAS, LABELS, OPCIONES, avisosPesos, escribirExcel, pesoAplica, MENSAJE_PESO, leerExcel, normalizar, previsualizar, vacio, type Fila, type Hoja, type Preview } from './lib/catalogo';
-import { aplicarExcel, guardarFila, listarCatalogo, validarFila } from './lib/persistencia';
+import { aplicarExcel, asignarCapturistas, guardarFila, listarCatalogo, validarFila } from './lib/persistencia';
+import { useProfiles } from '@/hooks/useProfiles';
+import Captura from './Captura';
 
 const TITULOS: Record<Hoja, string> = { Puestos: 'Puestos', KPI_SGC: 'Diccionario SGC', KPI_Puesto: 'Por puesto' };
 export default function Indicadores() {
