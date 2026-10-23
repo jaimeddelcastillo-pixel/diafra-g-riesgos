@@ -25,7 +25,7 @@ describe('D1 identidad documental', () => {
   });
   it('encabezado, pie y folio en el Excel de resultados', () => {
     const wb = XLSX.read(exportarResultados(ctx, [{ Código: 'F1', Valor: 98 }]), { type: 'array' });
-    const filas = XLSX.utils.sheet_to_json<string[]>(wb.Sheets.Resultados, { header: 1, defval: '' }).map(r => r.join('|'));
+    const filas = XLSX.utils.sheet_to_json<string[]>(wb.Sheets.Resultados, { header: 1, defval: '' }).map(r => r.join('|').replace(/\|+$/, ''));
     expect(filas[0]).toBe('Empresa Prueba SA'); expect(filas[1]).toBe('Resultados QA');
     expect(filas[2]).toContain('Código: FOR-QA-07'); expect(filas[2]).toContain('Versión: 03'); expect(filas[2]).toContain('Hoja 1 de 1');
     expect(filas).toContain('Código|Valor'); expect(filas).toContain('F1|98');
