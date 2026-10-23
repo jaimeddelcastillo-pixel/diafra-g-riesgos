@@ -103,3 +103,4 @@ Implementados reporte independiente, vistas por área/instrumento/avance, consol
 - [x] K3-a cálculo por periodo (kpi_resumen_periodo), pestaña Tablero, gráfica PNG compartida y Excel del tablero con identidad D1.
 - [x] K3-b reporte periódico de indicadores: tablas, firmas con AC/suplencia/designado, pantalla Reportes, Word con snapshot y pendientes.
 - [x] K3-b ajustes: pendientes_usuario reescrita completa; anulación (emitido: autorizador ≠ elaboró; borrador: elaboró o admin) con pruebas; regla AGENTS sin replace sobre pg_get_functiondef.
+- [ ] K3-b-1: Word único guardado al emitir, logo congelado, descargas del original y prueba de cambio de logo; verificar existencia de D1-a; suite en segundo plano.
