@@ -109,11 +109,12 @@ export function NavGroup({ item, pathname, open, onOpenChange, renderExtra }: Na
     >
       <span
         className={cn(
-          "mr-2 flex h-5 w-5 items-center justify-center rounded",
+          "flex h-5 w-5 items-center justify-center rounded",
+          !collapsed && "mr-2",
           item.highlight && "bg-sidebar-primary/15 text-sidebar-primary",
         )}
       >
-        <item.icon className="h-4 w-4" />
+        <item.icon className={cn(collapsed ? "h-5 w-5" : "h-4 w-4")} />
       </span>
       {!collapsed && (
         <>
