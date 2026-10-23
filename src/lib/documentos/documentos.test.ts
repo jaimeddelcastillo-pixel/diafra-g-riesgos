@@ -35,6 +35,6 @@ describe('D1 identidad documental', () => {
   it('encabezado, pie y folio en el PDF de la auditoría', () => {
     const doc = bitacoraPdf(ctx, 'Filtros QA', [['1', '2', '3', '4', '5', '6', '7', '8', '9']]);
     const pdf = doc.output();
-    for (const t of ['EMPRESA PRUEBA SA', 'Resultados QA', 'C\\363digo: FOR-QA-07', 'Versi\\363n: 03', 'P\\341gina 1 de 1', 'DOC-2026-000042', 'Copia no controlada', 'ELABOR']) expect(pdf).toContain(t);
+    for (const t of ['EMPRESA PRUEBA SA', 'Resultados QA', 'Código: FOR-QA-07', 'Versión: 03', 'Página 1 de 1', 'DOC-2026-000042', 'Copia no controlada', 'ELABOR']) expect(pdf).toContain(t);
   });
 });
