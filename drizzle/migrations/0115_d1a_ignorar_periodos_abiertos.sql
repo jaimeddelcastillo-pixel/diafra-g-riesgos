@@ -1,0 +1,24 @@
+CREATE OR REPLACE FUNCTION public.previsualizar_resultados_excel(_celdas jsonb) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public' AS $function$
+DECLARE org uuid:=public.get_user_org_id(); hoy date:=(now() AT TIME ZONE 'America/Mexico_City')::date; salida jsonb;
+BEGIN
+IF org IS NULL OR auth.uid() IS NULL OR NOT public.org_tiene_modulo(org,'indicadores') THEN RAISE EXCEPTION 'Sin acceso a Indicadores'; END IF;
+IF jsonb_typeof(_celdas) IS DISTINCT FROM 'array' THEN RAISE EXCEPTION 'Archivo de resultados inválido'; END IF;
+IF jsonb_array_length(_celdas)>5000 THEN RAISE EXCEPTION 'Límite de 5 000 celdas'; END IF;
+WITH entrada AS MATERIALIZED (
+ SELECT e.value celda,e.ordinality orden,e.value->>'tipo' tipo,e.value->>'codigo' codigo,public.kpi_excel_fecha(e.value->>'inicio') inicio,public.kpi_excel_numero(e.value->>'numerador') num,public.kpi_excel_numero(e.value->>'denominador') den,btrim(coalesce(e.value->>'referencia','')) referencia FROM jsonb_array_elements(_celdas) WITH ORDINALITY e
+), catalogo AS MATERIALIZED (
+ SELECT d.id,'SGC'::text tipo,'kpi_definiciones'::text tabla,d.codigo,d.activo,d.estado,d.frecuencia,d.unidad,d.meta,d.tendencia,d.nivel='SGC' sgc,d.capturistas FROM public.kpi_definiciones d WHERE d.org_id=org AND EXISTS(SELECT 1 FROM entrada e WHERE e.tipo='SGC' AND e.codigo=d.codigo)
+ UNION ALL SELECT p.id,'puesto','kpi_puesto',p.codigo,p.activo,p.estado,p.frecuencia,p.unidad,p.meta,p.tendencia,false,p.capturistas FROM public.kpi_puesto p WHERE p.org_id=org AND EXISTS(SELECT 1 FROM entrada e WHERE e.tipo='puesto' AND e.codigo=p.codigo)
+), permisos AS MATERIALIZED (SELECT k.*,public.kpi_puede_capturar(org,k.capturistas) permiso FROM catalogo k), filas AS (
+ SELECT e.*,k.id kpi_id,k.tabla,k.unidad,k.meta,k.tendencia,r.id resultado_id,(per.inicio=e.inicio AND per.fin>=hoy AND r.id IS NOT NULL) ignorado,r.numerador anterior_num,r.denominador anterior_den,r.referencia_fuente anterior_ref,r.comentario,coalesce(r.unidad_copia,k.unidad) unidad_calculo,coalesce(r.meta_copia,k.meta) meta_calculo,coalesce(r.tendencia_copia,k.tendencia) tendencia_calculo,
+ concat_ws('; ',CASE WHEN k.id IS NULL THEN 'KPI inexistente' WHEN NOT k.activo OR k.estado<>'validado' THEN 'KPI en borrador o inactivo' END,CASE WHEN k.id IS NOT NULL AND NOT k.permiso THEN 'Sin permiso de captura' END,
+ CASE WHEN e.inicio IS NULL OR per.inicio IS NULL OR e.inicio IS DISTINCT FROM per.inicio THEN 'Periodo inválido para la frecuencia' WHEN per.fin>=hoy THEN 'Periodo abierto' END,
+ CASE WHEN e.num IS NULL THEN 'Numerador inválido' END,
+ CASE WHEN coalesce(r.unidad_copia,k.unidad)<>'número' AND e.den IS NULL THEN 'Denominador faltante o inválido' WHEN btrim(coalesce(e.celda->>'denominador',''))<>'' AND e.den IS NULL THEN 'Denominador inválido' END,
+ CASE WHEN k.sgc AND e.referencia='' THEN 'SGC sin referencia de la fuente' END,
+ CASE WHEN count(*) OVER(PARTITION BY e.tipo,e.codigo,e.celda->>'inicio')>1 THEN 'Celda duplicada' END) error
+ FROM entrada e LEFT JOIN permisos k ON k.tipo=e.tipo AND k.codigo=e.codigo LEFT JOIN LATERAL public.kpi_excel_periodo(k.frecuencia,e.inicio) per ON true LEFT JOIN public.kpi_resultados r ON r.org_id=org AND r.activo AND ((k.tabla='kpi_definiciones' AND r.kpi_definicion_id=k.id) OR (k.tabla='kpi_puesto' AND r.kpi_puesto_id=k.id)) AND r.periodo_inicio=e.inicio
+)
+SELECT coalesce(jsonb_agg(jsonb_build_object('celda',f.celda,'tabla',f.tabla,'kpi_id',f.kpi_id,'resultado_id',f.resultado_id,'estado',CASE WHEN f.ignorado THEN 'ignorado (periodo abierto)' WHEN f.error<>'' THEN 'error' WHEN f.resultado_id IS NOT NULL AND f.num IS NOT DISTINCT FROM f.anterior_num AND f.den IS NOT DISTINCT FROM f.anterior_den AND f.referencia IS NOT DISTINCT FROM f.anterior_ref THEN 'sin cambio' WHEN f.resultado_id IS NULL THEN 'nuevo' ELSE 'cambia' END,'error',CASE WHEN f.ignorado THEN '' ELSE f.error END,'antes',CASE WHEN f.resultado_id IS NOT NULL THEN jsonb_build_object('numerador',f.anterior_num,'denominador',f.anterior_den,'referencia',f.anterior_ref) END,'despues',jsonb_build_object('numerador',f.num,'denominador',f.den,'referencia',f.referencia),'comentario',coalesce(f.comentario,''),'valor',calc.valor,'cumplimiento',calc.cumplimiento,'semaforo',calc.semaforo) ORDER BY f.orden),'[]'::jsonb) INTO salida FROM filas f LEFT JOIN LATERAL public.kpi_calcular(f.unidad_calculo,f.tendencia_calculo,f.meta_calculo,CASE WHEN f.error='' THEN f.num END,CASE WHEN f.error='' THEN f.den END) calc ON f.error='';
+RETURN salida; END $function$;
+CREATE POLICY documento_reserva_reintento ON storage.objects FOR SELECT TO authenticated USING(bucket_id='documentos-generados' AND EXISTS(SELECT 1 FROM public.documento_reservas r WHERE r.org_id=(SELECT public.get_user_org_id()) AND r.actor=(SELECT auth.uid()) AND r.archivo_path=name));
