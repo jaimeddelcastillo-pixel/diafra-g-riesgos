@@ -17,6 +17,8 @@ export interface TablaAuditada {
 
 const txt = (v: unknown) => (v === null || v === undefined || v === '' ? '' : String(v));
 const primero = (...campos: string[]) => (r: Registro) => campos.map((c) => txt(r[c])).find(Boolean) ?? '';
+/** Roles: correo · rol (nunca UUID). */
+const miembro = (r: Registro, ref: Referencias) => [txt(r.email) || ref[txt(r.user_id)] || 'Usuario', txt(r.role)].filter(Boolean).join(' · ');
 
 export const MODULOS_AUDITADOS: Record<string, string> = {
   riesgos: 'Gestión de Riesgos',
