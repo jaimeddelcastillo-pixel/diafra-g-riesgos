@@ -1,6 +1,6 @@
 import {
   Home, Settings, ShieldCheck, LifeBuoy, Ticket, Library, Sparkles, GraduationCap, FileBadge,
-  FileText, ClipboardCheck, Wrench, Scale, type LucideIcon,
+  FileText, ClipboardCheck, Wrench, Scale, Search, type LucideIcon,
 } from "lucide-react";
 import { modulos } from "@/modules";
 
@@ -21,6 +21,8 @@ export interface NavItem {
   feature?: string;
   /** Oculta el ítem si la empresa SÍ tiene este módulo (evita duplicar una página compartida). */
   soloSinModulo?: string;
+  /** Visible solo si la empresa tiene al menos un módulo activo. */
+  requiereAlgunModulo?: boolean;
   /** Cualquiera de estos roles habilita el ítem. */
   roles?: string[];
   /** Planes que habilitan el ítem. */
@@ -51,6 +53,7 @@ const itemPendientes: NavItem = { id: "pendientes", label: "Mis pendientes", ico
 
 /** De la empresa, no de un módulo. */
 const navegacionEmpresa: NavItem[] = [
+  { id: "auditoria", label: "Auditoría", icon: Search, route: "/auditoria", section: "empresa", requiereAlgunModulo: true, roles: ["admin", "responsable_sanitario", "comite_tecnico", "aseguramiento_calidad"] },
   { id: "configuracion", label: "Configuración", icon: Settings, route: "/configuracion", section: "empresa" },
   { id: "soporte", label: "Ayuda", icon: LifeBuoy, route: "/soporte", section: "empresa", roles: ["admin", "responsable_sanitario"], onboarding: "ayuda" },
 ];

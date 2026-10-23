@@ -20,6 +20,7 @@ import { cerebroModule } from "./cerebro/module";
 import { tendenciasModule } from "./tendencias/module";
 import { indicadoresModule } from "./indicadores/module";
 import Recursos from "@/pages/Recursos";
+import Auditoria from "@/pages/Auditoria";
 import type { ModuloDef, ModuloRuta } from "./tipos";
 
 export type { ModuloDef } from "./tipos";
@@ -39,5 +40,9 @@ export const modulos: ModuloDef[] = ordenarModulos();
  * Abren si la empresa tiene al menos un módulo registrado activo.
  * En el menú aparecen como ítems de los módulos que las usan, apuntando a la misma ruta.
  */
-export const rutasPlataforma: ModuloRuta[] = [{ path: "/recursos", Component: Recursos }];
+export const rutasPlataforma: ModuloRuta[] = [
+  { path: "/recursos", Component: Recursos },
+  // K1-a: Auditoría general de la plataforma, disponible con cualquier módulo activo.
+  { path: "/auditoria", Component: Auditoria },
+];
 export const clavesModulos: string[] = modulosRegistrados.map((m) => m.clave);
