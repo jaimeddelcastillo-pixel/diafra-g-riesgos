@@ -46,8 +46,8 @@ describe.skipIf(!process.env.PGHOST)('K2 captura de resultados, QA temporal con 
 SELECT * INTO c2 FROM pg_temp.kpi_calcular('%','positiva',95,96,100);IF c2.valor<>96 OR c2.cumplimiento<>1 OR c2.semaforo<>'verde' THEN RAISE EXCEPTION 'Positivo verde';END IF;
 SELECT * INTO c2 FROM pg_temp.kpi_calcular('%','positiva',95,80,100);IF c2.semaforo<>'amarillo' OR abs(c2.cumplimiento-80.0/95)>0.0001 THEN RAISE EXCEPTION 'Positivo amarillo';END IF;
 SELECT * INTO c2 FROM pg_temp.kpi_calcular('%','positiva',95,70,100);IF c2.semaforo<>'rojo' THEN RAISE EXCEPTION 'Positivo rojo';END IF;
-SELECT * INTO c2 FROM pg_temp.kpi_calcular('%','negativa',5,4,1);IF c2.cumplimiento<>1 OR c2.semaforo<>'verde' THEN RAISE EXCEPTION 'Negativo bajo meta';END IF;
-SELECT * INTO c2 FROM pg_temp.kpi_calcular('%','negativa',5,6,1);IF c2.semaforo<>'amarillo' OR abs(c2.cumplimiento-5.0/6)>0.0001 THEN RAISE EXCEPTION 'Negativo sobre meta';END IF;
+SELECT * INTO c2 FROM pg_temp.kpi_calcular('días','negativa',5,4,1);IF c2.cumplimiento<>1 OR c2.semaforo<>'verde' THEN RAISE EXCEPTION 'Negativo bajo meta';END IF;
+SELECT * INTO c2 FROM pg_temp.kpi_calcular('días','negativa',5,6,1);IF c2.semaforo<>'amarillo' OR abs(c2.cumplimiento-5.0/6)>0.0001 THEN RAISE EXCEPTION 'Negativo sobre meta';END IF;
 SELECT * INTO c2 FROM pg_temp.kpi_calcular('días','positiva',10,30,3);IF c2.valor<>10 OR c2.cumplimiento<>1 THEN RAISE EXCEPTION 'Promedio de días';END IF;
 SELECT * INTO c2 FROM pg_temp.kpi_calcular('número','positiva',10,12,NULL);IF c2.valor<>12 OR c2.semaforo<>'verde' THEN RAISE EXCEPTION 'Número';END IF;
 SELECT * INTO c2 FROM pg_temp.kpi_calcular('%','positiva',95,5,0);IF c2.valor IS NOT NULL OR c2.cumplimiento IS NOT NULL OR c2.semaforo<>'sin base' THEN RAISE EXCEPTION 'Sin base';END IF;`));
