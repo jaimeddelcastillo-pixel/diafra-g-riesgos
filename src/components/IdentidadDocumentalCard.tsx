@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -43,7 +44,7 @@ export function IdentidadDocumentalCard() {
       {area ? <Textarea value={String(ident[k] ?? '')} disabled={!puede} onChange={e => setIdent({ ...ident, [k]: e.target.value })} rows={2} />
         : <Input value={String(ident[k] ?? '')} disabled={!puede} onChange={e => setIdent({ ...ident, [k]: e.target.value })} />}
     </label>);
-  const firmasDe = (f: Formato): Firma[] => ROLES_FIRMA.map(rol => f.firmas.find(x => x.rol === rol) ?? { rol, nombre: '', cargo: '' });
+  const firmasDe = (f: Formato): Firma[] => ROLES_FIRMA.map(rol => { const fi = f.firmas.find(x => x.rol === rol); return { rol, aplica: fi ? fi.aplica !== false : false, cargo: fi?.cargo ?? '' }; });
 
   return (
     <Card>
@@ -84,15 +85,14 @@ export function IdentidadDocumentalCard() {
               <label className="space-y-1 text-xs">Versión<Input value={edit.version_formato} maxLength={10} onChange={e => setEdit({ ...edit, version_formato: e.target.value })} /></label>
               <label className="space-y-1 text-xs">Vigente desde<Input type="date" value={edit.vigente_desde ?? ''} onChange={e => setEdit({ ...edit, vigente_desde: e.target.value || null })} /></label>
             </div>
-            <div className="space-y-2"><p className="text-xs font-medium">Firmas requeridas (deja vacío el nombre si no aplica)</p>
-              {edit.firmas.map((fi, i) => <div key={fi.rol} className="grid grid-cols-[90px_1fr_1fr] items-center gap-2 text-xs"><span className="font-semibold">{fi.rol}</span>
-                <Input placeholder="Nombre" value={fi.nombre} onChange={e => setEdit({ ...edit, firmas: edit.firmas.map((x, j) => j === i ? { ...x, nombre: e.target.value } : x) })} />
-                <Input placeholder="Cargo" value={fi.cargo} onChange={e => setEdit({ ...edit, firmas: edit.firmas.map((x, j) => j === i ? { ...x, cargo: e.target.value } : x) })} /></div>)}
+            <div className="space-y-2"><p className="text-xs font-medium">Puestos de firma</p>
+              {edit.firmas.map((fi, i) => <div key={fi.rol} className="grid grid-cols-[120px_1fr] items-center gap-2 text-xs"><label className="flex items-center gap-2 font-semibold"><Checkbox checked={fi.aplica !== false} onCheckedChange={v => setEdit({ ...edit, firmas: edit.firmas.map((x, j) => j === i ? { ...x, aplica: v === true } : x) })} />{fi.rol}</label>
+                <Input aria-label={`Cargo sugerido ${fi.rol}`} placeholder="Cargo sugerido" disabled={fi.aplica === false} value={fi.cargo} onChange={e => setEdit({ ...edit, firmas: edit.firmas.map((x, j) => j === i ? { ...x, cargo: e.target.value } : x) })} /></div>)}
             </div>
             <label className="space-y-1 text-xs">Motivo del cambio<Input value={motivoF} onChange={e => setMotivoF(e.target.value)} placeholder="Mínimo 5 caracteres" /></label>
           </div>}
           <DialogFooter><Button variant="outline" onClick={() => setEdit(null)}>Cancelar</Button>
-            <Button disabled={busy || motivoF.trim().length < 5} onClick={() => edit && void ejecutar(async () => { await guardarFormato({ ...edit, firmas: edit.firmas.filter(x => x.nombre.trim() || x.cargo.trim()) }, motivoF); setEdit(null); toast.success('Nueva versión del formato guardada'); })}>Guardar versión</Button></DialogFooter>
+            <Button disabled={busy || motivoF.trim().length < 5} onClick={() => edit && void ejecutar(async () => { await guardarFormato(edit, motivoF); setEdit(null); toast.success('Nueva versión del formato guardada'); })}>Guardar versión</Button></DialogFooter>
         </DialogContent>
       </Dialog>
     </Card>

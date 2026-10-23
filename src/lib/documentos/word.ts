@@ -30,7 +30,7 @@ export function firmasWord(c: ContextoDocumento): Table | null {
   return new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, rows: [new TableRow({ children: c.firmas.map(f => new TableCell({ children: [
     new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: f.rol.toUpperCase(), bold: true })] }),
     new Paragraph({ text: '' }), new Paragraph({ text: '' }),
-    new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: f.nombre })] }),
+    new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: f.nombre ?? '' })] }),
     new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: f.cargo, size: 16 })] }),
   ] })) })] });
 }

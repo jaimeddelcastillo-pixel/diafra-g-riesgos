@@ -3,16 +3,16 @@ import { fetchOrgLogoDataUrl } from '@/lib/orgLogo';
 import { TIPOS_DOCUMENTO, type RolFirma } from '@/config/documentos';
 
 /** D1: identidad documental compartida (encabezado, pie, firmas y folio TRACEA). */
-export interface Firma { rol: RolFirma; nombre: string; cargo: string }
+export interface Firma { rol: RolFirma; nombre?: string; cargo: string; aplica?: boolean }
 export interface Identidad { id?: string; version?: number; razon_social: string; domicilio: string; leyenda_confidencialidad: string; leyenda_copia: string; pie: string }
 export interface Formato { id?: string; version?: number; tipo: string; codigo: string; version_formato: string; titulo: string; firmas: Firma[]; vigente_desde: string | null }
 export interface Logo { dataUrl: string; format: 'PNG' | 'JPEG' }
-export interface RegistroDocumento { folio: string; generado_en: string; formato: Formato | null; identidad: Identidad | null }
+export interface RegistroDocumento { folio: string; generado_en: string; formato: Formato | null; identidad: Identidad | null; archivo_path?: string; generador?: { nombre: string; cargo: string }; empresa?: string; logo_path?: string | null }
 
 export interface ContextoDocumento {
   tipo: string; titulo: string; codigo: string; version: string; vigencia: string;
   razonSocial: string; domicilio: string; logo: Logo | null;
-  leyendas: string[]; generadoPor: string; generadoEn: string; folio: string; firmas: Firma[];
+  leyendas: string[]; generadoPor: string; generadoEn: string; folio: string; firmas: Firma[]; archivoPath?: string;
 }
 
 export const fechaHoraMexico = (iso: string) =>
@@ -21,7 +21,7 @@ const fechaMexico = (d: string | null) =>
   d ? new Date(`${d.slice(0, 10)}T12:00:00`).toLocaleDateString('es-MX', { dateStyle: 'medium' }) : '';
 
 /** Pure: builds the context from the server registration. Logo only comes from the company itself. */
-export function construirContexto(tipo: string, reg: RegistroDocumento, opts: { empresa: string; generadoPor: string; logo: Logo | null }): ContextoDocumento {
+export function construirContexto(tipo: string, reg: RegistroDocumento, opts: { empresa: string; generadoPor: string; cargo?: string; logo: Logo | null }): ContextoDocumento {
   const f = reg.formato; const i = reg.identidad;
   return {
     tipo,
@@ -30,8 +30,8 @@ export function construirContexto(tipo: string, reg: RegistroDocumento, opts: { 
     razonSocial: i?.razon_social || opts.empresa, domicilio: i?.domicilio || '',
     logo: opts.logo,
     leyendas: [i?.leyenda_copia, i?.leyenda_confidencialidad, i?.pie].filter((x): x is string => !!x && !!x.trim()),
-    generadoPor: opts.generadoPor, generadoEn: reg.generado_en, folio: reg.folio,
-    firmas: (f?.firmas ?? []).filter(x => x?.rol),
+    generadoPor: reg.generador?.nombre ?? opts.generadoPor, generadoEn: reg.generado_en, folio: reg.folio, archivoPath: reg.archivo_path,
+    firmas: (f?.firmas ?? []).filter(x => x?.rol && x.aplica !== false).map(x => ({ rol: x.rol, cargo: x.rol === 'Elaboró' ? reg.generador?.cargo ?? opts.cargo ?? '' : x.cargo, nombre: x.rol === 'Elaboró' ? reg.generador?.nombre ?? opts.generadoPor : 'Nombre, firma y fecha' })),
   };
 }
 
@@ -42,12 +42,11 @@ export const datosFormato = (c: ContextoDocumento) =>
 /** Registers the document (folio, versions used) and loads the company logo. */
 export async function prepararDocumento(tipo: string, nombreArchivo: string, opts: { empresa: string; logoPath: string | null | undefined; generadoPor: string }): Promise<ContextoDocumento> {
   if (!TIPOS_DOCUMENTO[tipo]) throw new Error(`Tipo de documento no registrado: ${tipo}`);
-  const [{ data, error }, logo] = await Promise.all([
-    supabase.rpc('registrar_documento_generado', { _tipo: tipo, _nombre_archivo: nombreArchivo }),
-    fetchOrgLogoDataUrl(opts.logoPath),
-  ]);
+  const { data, error } = await supabase.rpc('preparar_documento_archivo', { _tipo: tipo, _nombre_archivo: nombreArchivo });
   if (error) throw error;
-  return construirContexto(tipo, data as unknown as RegistroDocumento, { empresa: opts.empresa, generadoPor: opts.generadoPor, logo });
+  const reg = data as unknown as RegistroDocumento;
+  const logo = TIPOS_DOCUMENTO[tipo].formato === 'Excel' ? null : await fetchOrgLogoDataUrl(reg.logo_path);
+  return construirContexto(tipo, reg, { empresa: reg.empresa ?? opts.empresa, generadoPor: opts.generadoPor, logo });
 }
 
 export async function guardarIdentidad(i: Identidad, motivo: string) {
