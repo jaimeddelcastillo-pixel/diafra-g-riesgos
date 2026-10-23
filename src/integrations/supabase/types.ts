@@ -2851,6 +2851,73 @@ export type Database = {
           },
         ]
       }
+      documentos_generados: {
+        Row: {
+          created_at: string
+          folio: string
+          formato_id: string | null
+          formato_version: number | null
+          generado_en: string
+          generado_por: string | null
+          id: string
+          identidad_id: string | null
+          identidad_version: number | null
+          nombre_archivo: string
+          org_id: string
+          tipo: string
+        }
+        Insert: {
+          created_at?: string
+          folio: string
+          formato_id?: string | null
+          formato_version?: number | null
+          generado_en?: string
+          generado_por?: string | null
+          id?: string
+          identidad_id?: string | null
+          identidad_version?: number | null
+          nombre_archivo?: string
+          org_id: string
+          tipo: string
+        }
+        Update: {
+          created_at?: string
+          folio?: string
+          formato_id?: string | null
+          formato_version?: number | null
+          generado_en?: string
+          generado_por?: string | null
+          id?: string
+          identidad_id?: string | null
+          identidad_version?: number | null
+          nombre_archivo?: string
+          org_id?: string
+          tipo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "documentos_generados_formato_id_fkey"
+            columns: ["formato_id"]
+            isOneToOne: false
+            referencedRelation: "org_formatos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documentos_generados_identidad_id_fkey"
+            columns: ["identidad_id"]
+            isOneToOne: false
+            referencedRelation: "org_identidad_documental"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documentos_generados_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       email_send_log: {
         Row: {
           created_at: string
@@ -4121,6 +4188,109 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "org_folio_tipos_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      org_formatos: {
+        Row: {
+          codigo: string
+          created_at: string
+          created_by: string | null
+          firmas: Json
+          id: string
+          motivo: string
+          org_id: string
+          tipo: string
+          titulo: string
+          version: number
+          version_formato: string
+          vigente_desde: string | null
+        }
+        Insert: {
+          codigo?: string
+          created_at?: string
+          created_by?: string | null
+          firmas?: Json
+          id?: string
+          motivo: string
+          org_id: string
+          tipo: string
+          titulo?: string
+          version: number
+          version_formato?: string
+          vigente_desde?: string | null
+        }
+        Update: {
+          codigo?: string
+          created_at?: string
+          created_by?: string | null
+          firmas?: Json
+          id?: string
+          motivo?: string
+          org_id?: string
+          tipo?: string
+          titulo?: string
+          version?: number
+          version_formato?: string
+          vigente_desde?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "org_formatos_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      org_identidad_documental: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          domicilio: string
+          id: string
+          leyenda_confidencialidad: string
+          leyenda_copia: string
+          motivo: string
+          org_id: string
+          pie: string
+          razon_social: string
+          version: number
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          domicilio?: string
+          id?: string
+          leyenda_confidencialidad?: string
+          leyenda_copia?: string
+          motivo: string
+          org_id: string
+          pie?: string
+          razon_social?: string
+          version: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          domicilio?: string
+          id?: string
+          leyenda_confidencialidad?: string
+          leyenda_copia?: string
+          motivo?: string
+          org_id?: string
+          pie?: string
+          razon_social?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "org_identidad_documental_org_id_fkey"
             columns: ["org_id"]
             isOneToOne: false
             referencedRelation: "organizations"
@@ -6728,6 +6898,7 @@ export type Database = {
         Args: { _conclusion: string; _folio: string; _motivo?: string }
         Returns: undefined
       }
+      documental_puede_editar: { Args: never; Returns: boolean }
       documento_tipos_uso: {
         Args: never
         Returns: {
@@ -6787,6 +6958,29 @@ export type Database = {
       }
       folios_revision_corte: { Args: { p_ahora?: string }; Returns: string }
       get_user_org_id: { Args: never; Returns: string }
+      guardar_formato_documento: {
+        Args: {
+          _codigo: string
+          _firmas: Json
+          _motivo: string
+          _tipo: string
+          _titulo: string
+          _version: string
+          _vigente_desde: string
+        }
+        Returns: string
+      }
+      guardar_identidad_documental: {
+        Args: {
+          _confidencialidad: string
+          _copia: string
+          _domicilio: string
+          _motivo: string
+          _pie: string
+          _razon_social: string
+        }
+        Returns: string
+      }
       guardar_kpi_resultado: {
         Args: {
           _comentario: string
@@ -7011,6 +7205,10 @@ export type Database = {
       registrar_cambio_contrasena: {
         Args: { _origen: string }
         Returns: undefined
+      }
+      registrar_documento_generado: {
+        Args: { _nombre_archivo: string; _tipo: string }
+        Returns: Json
       }
       registrar_kpi_evidencia: {
         Args: {
