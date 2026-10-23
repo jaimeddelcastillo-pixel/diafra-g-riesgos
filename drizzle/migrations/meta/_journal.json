@@ -757,6 +757,13 @@
       "when": 1792787383199,
       "tag": "0107_k3b_reportes_indicadores",
       "breakpoints": true
+    },
+    {
+      "idx": 108,
+      "version": "7",
+      "when": 1792787612546,
+      "tag": "0108_k3b_guard_campos",
+      "breakpoints": true
     }
   ]
 }
