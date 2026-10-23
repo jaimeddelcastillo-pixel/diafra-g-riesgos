@@ -5,6 +5,8 @@ import path from "path";
 export default defineConfig({
   plugins: [react()],
   test: {
+    // Database fixtures use isolated transactions; serialize files to avoid shared PostgreSQL resource contention.
+    fileParallelism: false,
     environment: "jsdom",
     globals: true,
     setupFiles: ["./src/test/setup.ts"],
