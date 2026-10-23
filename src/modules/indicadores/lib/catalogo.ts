@@ -1,4 +1,6 @@
 import * as XLSX from 'xlsx';
+import type { ContextoDocumento } from '@/lib/documentos';
+import { XLSX as XLSXS, escribirLibro, hojaConIdentidad } from '@/lib/documentos/excel';
 
 export const HOJAS = ['Puestos', 'KPI_SGC', 'KPI_Puesto'] as const;
 export type Hoja = typeof HOJAS[number];

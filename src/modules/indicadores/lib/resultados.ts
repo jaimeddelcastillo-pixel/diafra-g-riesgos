@@ -1,4 +1,5 @@
-import * as XLSX from 'xlsx';
+import type { ContextoDocumento } from '@/lib/documentos';
+import { XLSX as XLSXS, escribirLibro, hojaConIdentidad } from '@/lib/documentos/excel';
 import { supabase } from '@/integrations/supabase/client';
 
 export interface Resultado {
