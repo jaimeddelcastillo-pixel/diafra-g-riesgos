@@ -15,6 +15,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { OrgLogoCard } from "@/components/OrgLogoCard";
 import { OrgFormatoCard } from "@/components/OrgFormatoCard";
+import { IdentidadDocumentalCard } from "@/components/IdentidadDocumentalCard";
 import { OrgFolioCodigoCard } from "@/components/OrgFolioCodigoCard";
 import { OrgTiposFolioCard } from "@/components/OrgTiposFolioCard";
 import { DocumentoTiposCard } from "@/components/DocumentoTiposCard";
@@ -524,6 +525,8 @@ export default function Configuracion() {
       <div id="datos-fiscales" className="scroll-mt-20"><DatosFiscalesCard /></div>
 
       <div id="logo" className="scroll-mt-20"><OrgLogoCard /></div>
+
+      <div id="identidad-documental" className="scroll-mt-20"><IdentidadDocumentalCard /></div>
 
       <div id="formato" className="scroll-mt-20"><OrgFormatoCard /></div>
 
