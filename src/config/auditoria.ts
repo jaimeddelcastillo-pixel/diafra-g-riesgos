@@ -118,6 +118,9 @@ Object.assign(TABLAS_AUDITADAS, {
   impersonation_logs: plat('Soporte (entrar como usuario)', 'motivo'),
   lead_magnet: plat('Registro de guía', 'email'),
   'auth.users': plat('Cuenta de acceso', 'email'),
+  org_identidad_documental: { modulo: 'plataforma', catalogo: 'Identidad documental', registro: (r) => [txt(r.razon_social) || 'Identidad', r.version != null ? `v${r.version}` : ''].filter(Boolean).join(' · ') },
+  org_formatos: { modulo: 'plataforma', catalogo: 'Formato de documento', registro: (r) => [txt(r.codigo) || txt(r.tipo), r.version != null ? `v${r.version}` : ''].filter(Boolean).join(' · ') },
+  documentos_generados: plat('Documento generado', 'folio'),
 } satisfies Record<string, TablaAuditada>);
 
 export const tablasDeModulo = (modulo: string) =>
