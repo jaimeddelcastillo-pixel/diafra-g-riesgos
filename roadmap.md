@@ -102,3 +102,4 @@ Implementados reporte independiente, vistas por área/instrumento/avance, consol
 - [x] D1 Identidad documental: versiones con motivo, formatos por tipo, folio DOC, exportaciones de Indicadores y Auditoría general, «sin cambio» en periodo abierto. Pendiente: aplicar a Riesgos y Tendencias (fase posterior).
 - [x] K3-a cálculo por periodo (kpi_resumen_periodo), pestaña Tablero, gráfica PNG compartida y Excel del tablero con identidad D1.
 - [ ] K3-b reporte periódico de indicadores (siguiente).
+- [ ] K3-b ajustes: pendientes_usuario reescrita completa; anulación (emitido: autorizador ≠ elaboró; borrador: elaboró o admin) con pruebas; regla AGENTS sin replace sobre pg_get_functiondef.
