@@ -28,6 +28,8 @@ DELETE FROM audit_trail WHERE true;
 ${body}
 SELECT 'K1-c OK';ROLLBACK;`);
 }
+// Expresión de la política «Org admin read audit» (el rol de pruebas omite RLS, por eso se aplica explícita y se compara con la viva).
+const POLITICA = "((org_id = (SELECT pg_temp.get_user_org_id()) AND (SELECT pg_temp.puede_ver_auditoria((SELECT pg_temp.get_user_org_id())))) OR (SELECT pg_temp.is_super_admin()))";
 const check = (body: string) => expect(entorno(`DO $$ DECLARE failed boolean:=false;BEGIN ${body} END $$;`)).toContain('K1-c OK');
 
 describe.skipIf(!process.env.PGHOST)('K1-c auditoría rápida y trazabilidad de roles (QA temporal)', () => {
@@ -37,12 +39,10 @@ INSERT INTO audit_trail(org_id,tabla,registro_id,accion,valor_nuevo,created_at)
   SELECT '${ORG}',(ARRAY['puestos','kpi_definiciones','kpi_puesto','folios','riesgos'])[1+i%5],i::text,'INSERT',jsonb_build_object('codigo','K'||i),
          timestamptz '2026-10-01' + (i||' minutes')::interval FROM generate_series(1,5000) i;
 ANALYZE audit_trail;
-ALTER TABLE audit_trail ENABLE ROW LEVEL SECURITY; ALTER TABLE audit_trail FORCE ROW LEVEL SECURITY;
-CREATE POLICY lectura ON audit_trail FOR SELECT USING ((org_id = (SELECT pg_temp.get_user_org_id()) AND (SELECT pg_temp.puede_ver_auditoria((SELECT pg_temp.get_user_org_id())))) OR (SELECT pg_temp.is_super_admin()));
 SELECT set_config('qa.actor','${SUPLENTE}',true);
-EXPLAIN (ANALYZE, FORMAT JSON) SELECT * FROM audit_trail WHERE org_id='${ORG}' AND tabla IN ('puestos','kpi_definiciones','kpi_puesto','kpi_puesto_aporta')
+EXPLAIN (ANALYZE, FORMAT JSON) SELECT * FROM audit_trail WHERE ${POLITICA} AND org_id='${ORG}' AND tabla IN ('puestos','kpi_definiciones','kpi_puesto','kpi_puesto_aporta')
   AND created_at >= '2026-10-02' AND created_at <= '2026-10-05' ORDER BY created_at DESC, id DESC LIMIT 51;
-SELECT 'FILAS:'||count(*) FROM audit_trail WHERE tabla='puestos';`);
+SELECT 'FILAS:'||count(*) FROM audit_trail WHERE ${POLITICA} AND tabla='puestos';`);
     const plan = JSON.parse(out.slice(out.indexOf('['), out.lastIndexOf(']') + 1));
     expect(plan[0]['Execution Time']).toBeLessThan(2000);
     const texto = JSON.stringify(plan);
@@ -50,6 +50,11 @@ SELECT 'FILAS:'||count(*) FROM audit_trail WHERE tabla='puestos';`);
     expect(texto).not.toMatch(/"Filter":"[^"]*(has_role|rol_efectivo|puede_ver_auditoria)\(/);
     expect(out).toContain('FILAS:1000'); // el suplente de RS sí ve los eventos
   }, 60000);
+
+  it('la política viva usa exactamente esa expresión, con subconsultas de una sola evaluación', () => {
+    const viva = psql(`SELECT pg_get_expr(polqual,polrelid) FROM pg_policy WHERE polrelid='public.audit_trail'::regclass AND polcmd='r';`).trim();
+    expect(viva).toBe(POLITICA.replaceAll('pg_temp.', ''));
+  });
 
   it('sin suplencia ni rol permitido no ve nada (mismas reglas que antes)', () => check(`
 PERFORM set_config('qa.actor','${OPERADOR}',true);
