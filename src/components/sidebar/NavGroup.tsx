@@ -56,7 +56,7 @@ export function NavLeaf({
       activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
       data-onboarding={item.onboarding}
     >
-      <item.icon className="mr-2 h-4 w-4" />
+      <item.icon className={cn(collapsed ? "h-5 w-5" : "mr-2 h-4 w-4")} />
       {!collapsed && (
         <span className="flex items-center gap-2">
           {item.label}
