@@ -687,6 +687,13 @@
       "when": 1792765255597,
       "tag": "0097_k1c_auditoria_rapida_roles",
       "breakpoints": true
+    },
+    {
+      "idx": 98,
+      "version": "7",
+      "when": 1792767075160,
+      "tag": "0098_k2_resultados_kpi",
+      "breakpoints": true
     }
   ]
 }
