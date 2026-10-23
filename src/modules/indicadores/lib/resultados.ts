@@ -1,4 +1,5 @@
-import * as XLSX from 'xlsx';
+import type { ContextoDocumento } from '@/lib/documentos';
+import { XLSX as XLSXS, escribirLibro, hojaConIdentidad } from '@/lib/documentos/excel';
 import { supabase } from '@/integrations/supabase/client';
 
 export interface Resultado {
@@ -79,12 +80,13 @@ export async function urlEvidencia(path: string): Promise<string> {
   if (error) throw error;
   return data.signedUrl;
 }
-export function exportarResultados(filas: Record<string, unknown>[]): Uint8Array {
-  const wb = XLSX.utils.book_new();
-  const ws = XLSX.utils.json_to_sheet(filas);
-  ws['!cols'] = Object.keys(filas[0] ?? { a: 1 }).map(() => ({ wch: 22 }));
-  XLSX.utils.book_append_sheet(wb, ws, 'Resultados');
-  return new Uint8Array(XLSX.write(wb, { type: 'array', bookType: 'xlsx' }));
+/** D1: results export with the company document identity (header rows, footer and TRACEA folio). */
+export function exportarResultados(ctx: ContextoDocumento, filas: Record<string, unknown>[]): Uint8Array {
+  const encabezados = Object.keys(filas[0] ?? { Sin_resultados: '' });
+  const ws = hojaConIdentidad(ctx, encabezados, filas.map(f => encabezados.map(k => (f[k] ?? '') as string | number)));
+  ws['!cols'] = encabezados.map(() => ({ wch: 22 }));
+  const wb = XLSXS.utils.book_new(); XLSXS.utils.book_append_sheet(wb, ws, 'Resultados');
+  return escribirLibro(wb);
 }
 
 /** Fecha de hoy en America/Mexico_City (YYYY-MM-DD). */

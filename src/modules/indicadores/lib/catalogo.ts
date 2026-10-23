@@ -1,4 +1,6 @@
 import * as XLSX from 'xlsx';
+import type { ContextoDocumento } from '@/lib/documentos';
+import { XLSX as XLSXS, escribirLibro, hojaConIdentidad } from '@/lib/documentos/excel';
 
 export const HOJAS = ['Puestos', 'KPI_SGC', 'KPI_Puesto'] as const;
 export type Hoja = typeof HOJAS[number];
@@ -79,15 +81,21 @@ export function previsualizar(entrada: Catalogo, actual: Catalogo): Preview {
   }
   return { paquete, filas, errores: filas.flatMap(f => f.errores.map(e => `${f.hoja} · ${f.renglon}: ${e}`)), avisos: avisosPesos(combinado) };
 }
-export function escribirExcel(c = vacio()): Uint8Array {
-  const wb = XLSX.utils.book_new();
+/** With a document context, a leading «Documento» sheet carries the identity; data sheets keep row 1 headers so the file re-imports. */
+export function escribirExcel(c = vacio(), ctx?: ContextoDocumento): Uint8Array {
+  const wb = XLSXS.utils.book_new();
+  if (ctx) {
+    const resumen = HOJAS.map(h => [h, c[h].length]);
+    const ws = hojaConIdentidad(ctx, ['Hoja', 'Registros'], resumen, 1, HOJAS.length + 1); ws['!cols'] = [{ wch: 50 }, { wch: 14 }];
+    XLSXS.utils.book_append_sheet(wb, ws, 'Documento');
+  }
   for (const h of HOJAS) {
     const rows = c[h].map(f => Object.fromEntries(COLUMNAS[h].map(k => [k, k === 'activo' ? f[k] === false ? 'No' : 'Sí' : f[k] ?? ''])));
     const ws = XLSX.utils.json_to_sheet(rows, { header: COLUMNAS[h] });
     ws['!cols'] = COLUMNAS[h].map(k => ({ wch: ['definicion', 'formula', 'fuente', 'regla_actuacion', 'nombre'].includes(k) ? 35 : 20 }));
-    XLSX.utils.book_append_sheet(wb, ws, h);
+    XLSXS.utils.book_append_sheet(wb, ws, h);
   }
-  return new Uint8Array(XLSX.write(wb, { type: 'array', bookType: 'xlsx' }));
+  return escribirLibro(wb);
 }
 export function leerExcel(bytes: ArrayBuffer): Catalogo {
   const wb = XLSX.read(bytes, { type: 'array' }); const c = vacio();
