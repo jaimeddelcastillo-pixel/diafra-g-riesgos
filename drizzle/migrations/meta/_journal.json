@@ -813,6 +813,13 @@
       "when": 1792795008058,
       "tag": "0115_d1a_ignorar_periodos_abiertos",
       "breakpoints": true
+    },
+    {
+      "idx": 116,
+      "version": "7",
+      "when": 1792795761536,
+      "tag": "0116_d1a_formato_variable",
+      "breakpoints": true
     }
   ]
 }
