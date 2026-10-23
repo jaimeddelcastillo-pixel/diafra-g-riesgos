@@ -81,8 +81,7 @@ IF c2.e->>'estado'<>'ignorado (periodo abierto)' OR c2.e->>'error'<>'' THEN RAIS
     const cells = leerResultadosExcel(bytes.buffer as ArrayBuffer);
     const october = cells.find(c => c.inicio === '2026-10-01');
     expect(october?.numerador).toBe(98);
-    // The real legacy template can have no source in its locked October cell.
-    if (!october) throw new Error('Falta octubre'); october.referencia = '';
+    expect(october?.referencia).toBe('');
     await check(`${base}${actor(2)}r:=${guardar('kpi_definiciones','k',98,100,"'QA fuente'")};
 ALTER TABLE kpi_resultados DISABLE TRIGGER guard;UPDATE kpi_resultados SET periodo_inicio='2026-10-01',referencia_fuente='' WHERE id=r;ALTER TABLE kpi_resultados ENABLE TRIGGER guard;
 IF (pg_temp.previsualizar_resultados_excel('${JSON.stringify(cells)}'::jsonb)->1->>'estado')<>'ignorado (periodo abierto)' THEN RAISE EXCEPTION 'Octubre no ignorado';END IF;
