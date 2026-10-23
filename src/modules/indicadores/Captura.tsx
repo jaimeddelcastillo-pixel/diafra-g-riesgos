@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Ban, Check, Download, Link2, Paperclip, Plus, Save, Upload, Pencil } from 'lucide-react';
 import { prepararDocumento } from '@/lib/documentos';
+import { conservarYDescargar } from '@/lib/documentos/originales';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -63,8 +64,7 @@ export default function Captura() {
       Tipo: k.tabla === 'kpi_definiciones' ? 'SGC' : 'Puesto', Código: k.codigo, Nombre: k.nombre, Periodo: etiquetaPeriodo(k.frecuencia, r.periodo_inicio),
       Numerador: r.numerador, Denominador: r.denominador ?? '', Valor: r.valor ?? '', Meta: r.meta_copia, Unidad: r.unidad_copia, Semáforo: r.semaforo, Estado: r.estado, 'Referencia de la fuente': r.referencia_fuente ?? '',
     })));
-    const url = URL.createObjectURL(new Blob([exportarResultados(ctx, filas) as BlobPart], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
-    const a = document.createElement('a'); a.href = url; a.download = nombre; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+    await conservarYDescargar(ctx, new Blob([exportarResultados(ctx, filas) as BlobPart], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), nombre);
   });
   const abrir = (kpi: Kpi, inicio?: string, fin?: string) => {
     const r = inicio ? resultadoDe(kpi, inicio) : undefined;

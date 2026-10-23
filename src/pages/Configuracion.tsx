@@ -16,6 +16,7 @@ import { toast } from "sonner";
 import { OrgLogoCard } from "@/components/OrgLogoCard";
 import { OrgFormatoCard } from "@/components/OrgFormatoCard";
 import { IdentidadDocumentalCard } from "@/components/IdentidadDocumentalCard";
+import { DocumentosGenerados } from "@/components/DocumentosGenerados";
 import { OrgFolioCodigoCard } from "@/components/OrgFolioCodigoCard";
 import { OrgTiposFolioCard } from "@/components/OrgTiposFolioCard";
 import { DocumentoTiposCard } from "@/components/DocumentoTiposCard";
@@ -527,6 +528,7 @@ export default function Configuracion() {
       <div id="logo" className="scroll-mt-20"><OrgLogoCard /></div>
 
       <div id="identidad-documental" className="scroll-mt-20"><IdentidadDocumentalCard /></div>
+      <DocumentosGenerados />
 
       <div id="formato" className="scroll-mt-20"><OrgFormatoCard /></div>
 

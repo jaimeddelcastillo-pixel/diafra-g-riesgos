@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { prepararDocumento } from '@/lib/documentos';
+import { conservarYDescargar } from '@/lib/documentos/originales';
 import { claseSemaforo } from './lib/semaforo';
 import { etiquetaPeriodo, etiquetaSub, exportarTablero, flecha, fueraDeMeta, num, obtenerResumen, pct, periodosCerrados, type KpiResumen, type TipoPeriodo } from './lib/tablero';
 
@@ -52,8 +53,7 @@ export default function Tablero() {
     const nombre = `Tablero-indicadores-${etiquetaPeriodo(r.tipo, r.inicio).replace(' ', '-')}.xlsx`;
     const ctx = await prepararDocumento('indicadores.tablero_excel', nombre, { empresa: auth.org?.nombre ?? '', logoPath: auth.org?.logo_url, generadoPor: auth.profile?.nombre || auth.user?.email || '' });
     const nombres = Object.fromEntries(r.puestos.map(p => [p.puesto_id, `${p.codigo} · ${p.nombre}`]));
-    const url = URL.createObjectURL(new Blob([exportarTablero(ctx, r, nombres) as BlobPart], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
-    const a = document.createElement('a'); a.href = url; a.download = nombre; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+    await conservarYDescargar(ctx, new Blob([exportarTablero(ctx, r, nombres) as BlobPart], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), nombre);
   } catch (e) { toast.error((e as Error).message ?? String(e)); } };
   const i = r?.indice_sgc;
   const procesos = r ? [...new Set(r.kpis.filter(k => k.tipo === 'SGC').map(k => k.proceso ?? 'Sin proceso'))] : [];
