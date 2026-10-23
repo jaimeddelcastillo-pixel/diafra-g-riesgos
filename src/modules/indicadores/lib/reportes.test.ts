@@ -18,7 +18,7 @@ const reporte = { id: 'r1', codigo: 'IND-2026-001', version: 1, estado: 'emitido
 const ctx = construirContexto('indicadores.reporte_word', reporte.formato_snapshot!, { empresa: 'QA Empresa', generadoPor: 'QA Designado', logo: null });
 const xml = async (borrador: boolean) => {
   const zip = await JSZip.loadAsync(await Packer.toBuffer(construirWordReporte({ ctx, reporte, resumen, firmantes, graficas: { k1: new Uint8Array([137, 80, 78, 71, 1, 2, 3]) }, borrador })));
-  const header = Object.keys(zip.files).filter(f => /word\/header\d*\.xml/.test(f)).sort();
+  const header = Object.keys(zip.files).filter(f => /word\/(header|footer)\d*\.xml/.test(f)).sort();
   // docx numbers drawing ids (docPr) with a process-wide counter; they are internal ids, not content.
   return [await zip.file('word/document.xml')!.async('string'), ...(await Promise.all(header.map(f => zip.file(f)!.async('string'))))].join('\n').replace(/docPr id="\d+"/g, 'docPr id="N"');
 };
