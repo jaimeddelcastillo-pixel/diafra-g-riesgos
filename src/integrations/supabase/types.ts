@@ -6425,6 +6425,10 @@ export type Database = {
         Args: { _borrador?: boolean; _motivo: string; _paquete: Json }
         Returns: undefined
       }
+      aplicar_resultados_excel: {
+        Args: { _celdas: Json; _motivo: string }
+        Returns: number
+      }
       archivar_version_folio: {
         Args: { p_folio_id: string; p_motivo?: string }
         Returns: string
@@ -6842,6 +6846,15 @@ export type Database = {
         }
         Returns: Record<string, unknown>
       }
+      kpi_excel_fecha: { Args: { _valor: string }; Returns: string }
+      kpi_excel_numero: { Args: { _valor: string }; Returns: number }
+      kpi_excel_periodo: {
+        Args: { _fecha: string; _frecuencia: string }
+        Returns: {
+          fin: string
+          inicio: string
+        }[]
+      }
       kpi_periodo: {
         Args: { _fecha: string; _frecuencia: string }
         Returns: Record<string, unknown>
@@ -6967,6 +6980,7 @@ export type Database = {
         }[]
       }
       plan_limite: { Args: { p_clave: string; p_org: string }; Returns: Json }
+      previsualizar_resultados_excel: { Args: { _celdas: Json }; Returns: Json }
       publicar_skill: {
         Args: { p_motivo: string; p_prompt_id: string }
         Returns: undefined

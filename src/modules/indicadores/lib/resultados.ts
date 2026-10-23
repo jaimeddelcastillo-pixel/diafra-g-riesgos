@@ -118,7 +118,7 @@ export function etiquetaPeriodo(frecuencia: string, inicio: string): string {
 export function celdasAnio(frecuencia: string, anio: number): { inicio: string; fin: string; meses: number }[] {
   const paso = frecuencia === 'mensual' ? 1 : frecuencia === 'trimestral' ? 3 : frecuencia === 'semestral' ? 6 : frecuencia === 'anual' ? 12 : 0;
   if (!paso) return [];
-  return Array.from({ length: 12 / paso }, (_, i) => ({ ...periodoDe(frecuencia, ymd(anio, i * paso, 1))!, meses: paso }));
+  return Array.from({ length: 12 / paso }, (_, i) => { const periodo = periodoDe(frecuencia, ymd(anio, i * paso, 1)); return periodo ? { ...periodo, meses: paso } : null; }).filter((p): p is { inicio: string; fin: string; meses: number } => p !== null);
 }
 export const periodoCerrado = (fin: string, hoy: string) => fin < hoy;
 export interface GuardarArgs { tabla: 'kpi_definiciones' | 'kpi_puesto'; kpiId: string; periodoInicio?: string; fechaEvento?: string; descripcionEvento?: string; numerador: number; denominador: number | null; referencia: string; comentario: string; motivo?: string; resultadoId?: string }

@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Ban, Check, Link2, Paperclip, Plus, Save, Upload } from 'lucide-react';
+import { Ban, Check, Link2, Paperclip, Plus, Save, Upload, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -16,12 +16,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { cn } from '@/lib/utils';
 import { listarCatalogo } from './lib/persistencia';
 import { vacio } from './lib/catalogo';
+import ImportarResultados from './ImportarResultados';
+import { claseSemaforo } from './lib/semaforo';
+import { referenciaPeriodo } from './lib/excel-resultados';
 import { anularResultado, calcular, celdasAnio, etiquetaPeriodo, guardarResultado, hoyMx, ligarEvidencia, listarEvidencias, listarResultados, periodoCerrado, registrarEvidencia, revisarResultado, ultimoCerrado, urlEvidencia, type Resultado } from './lib/resultados';
 
 interface Kpi { tabla: 'kpi_definiciones' | 'kpi_puesto'; id: string; codigo: string; nombre: string; grupo: string; nivel: string; frecuencia: string; tendencia: string; meta: number; unidad: string; fuente: string; estado: string; capturistas: string[] }
 interface Abierto { kpi: Kpi; inicio?: string; fin?: string; resultado?: Resultado }
 const fmt = (v: number | null | undefined) => v === null || v === undefined ? '—' : Number(Number(v).toFixed(2)).toLocaleString('es-MX');
-const colorSemaforo: Record<string, string> = { verde: 'bg-primary/15 text-primary border-primary/40', amarillo: 'bg-accent text-accent-foreground border-accent-foreground/30', rojo: 'bg-destructive/15 text-destructive border-destructive/40' };
 /** Solo se exige denominador cuando la unidad no es «número». */
 export const faltaDenominador = (unidad: string, den: string) => unidad !== 'número' && den.trim() === '';
 
@@ -56,7 +58,7 @@ export default function Captura() {
   const abrir = (kpi: Kpi, inicio?: string, fin?: string) => {
     const r = inicio ? resultadoDe(kpi, inicio) : undefined;
     const etiqueta = inicio ? etiquetaPeriodo(kpi.frecuencia, inicio) : '';
-    setForm({ num: r ? String(r.numerador) : '', den: r?.denominador != null ? String(r.denominador) : '', referencia: r?.referencia_fuente || (kpi.fuente ? `${kpi.fuente}${etiqueta ? ` · ${etiqueta}` : ''}` : etiqueta), comentario: r?.comentario ?? '', motivo: '', fecha: '', descripcion: '' });
+    setForm({ num: r ? String(r.numerador) : '', den: r?.denominador != null ? String(r.denominador) : '', referencia: r?.referencia_fuente || (inicio ? referenciaPeriodo(kpi, inicio) : kpi.fuente || etiqueta), comentario: r?.comentario ?? '', motivo: '', fecha: '', descripcion: '' });
     setIntento(false); setAbierto({ kpi, inicio, fin, resultado: r });
   };
   const unidadAbierta = abierto ? abierto.resultado?.unidad_copia ?? abierto.kpi.unidad : '';
@@ -104,7 +106,7 @@ export default function Captura() {
             <TableCell className="min-w-56"><span className="font-medium">{k.codigo}</span> · {k.nombre}<div className="text-xs text-muted-foreground">{k.grupo} · {k.nivel} · meta {fmt(k.meta)} {k.unidad} · {k.frecuencia}</div></TableCell>
             <TableCell className="whitespace-nowrap">{per ? etiquetaPeriodo(k.frecuencia, per.inicio) : 'por evento'}</TableCell>
             <TableCell className="whitespace-nowrap">{r ? <>{fmt(r.valor)} {r.unidad_copia}<div className="text-xs text-muted-foreground">{r.cumplimiento != null ? `${Math.round(r.cumplimiento * 100)}%` : 'sin cumplimiento'}</div></> : '—'}</TableCell>
-            <TableCell>{r ? <Badge variant="outline" className={colorSemaforo[r.semaforo]}>{r.semaforo}</Badge> : '—'}</TableCell>
+            <TableCell>{r ? <Badge variant="outline" className={claseSemaforo(r.semaforo)}>{r.semaforo}</Badge> : '—'}</TableCell>
             <TableCell>{estadoBadge(k, r)}</TableCell>
             <TableCell>{borrador ? null : !puedeCapturar(k) ? <span className="text-xs text-muted-foreground">Sin asignación de captura</span> : per ? <Button size="sm" variant={r ? 'outline' : 'default'} disabled={busy} onClick={() => abrir(k, per.inicio, per.fin)}>{r ? 'Abrir' : 'Capturar'}</Button> : <Button size="sm" disabled={busy} onClick={() => abrir(k)}><Plus className="mr-1 h-4 w-4" />Registrar evento</Button>}</TableCell>
           </TableRow>;
@@ -120,14 +122,14 @@ export default function Captura() {
         </section>
       </TabsContent>
       <TabsContent value="anio">
-        <div className="mb-3"><Select value={String(anio)} onValueChange={v => setAnio(Number(v))}><SelectTrigger className="w-32" aria-label="Año"><SelectValue /></SelectTrigger><SelectContent>{Array.from({ length: 6 }, (_, i) => Number(hoy.slice(0, 4)) - i).map(y => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}</SelectContent></Select></div>
+        <div className="mb-3 flex flex-wrap items-center gap-3"><Select value={String(anio)} onValueChange={v => setAnio(Number(v))}><SelectTrigger className="w-32" aria-label="Año"><SelectValue /></SelectTrigger><SelectContent>{Array.from({ length: 6 }, (_, i) => Number(hoy.slice(0, 4)) - i).map(y => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}</SelectContent></Select><ImportarResultados kpis={filtrados} resultados={resultados} anio={anio} hoy={hoy} refrescar={refrescar}/></div>
         <div className="overflow-x-auto"><Table><TableHeader><TableRow><TableHead className="min-w-56">KPI</TableHead>{['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'].map(m => <TableHead key={m} className="text-center">{m}</TableHead>)}</TableRow></TableHeader><TableBody>{filtrados.map(k => {
           const borrador = k.estado !== 'validado'; const celdas = celdasAnio(k.frecuencia, anio);
           return <TableRow key={k.id} className={cn(borrador && 'text-muted-foreground opacity-60')}>
             <TableCell><span className="font-medium">{k.codigo}</span> · {k.nombre}<div className="text-xs text-muted-foreground">{k.frecuencia} · meta {fmt(k.meta)} {k.unidad}</div></TableCell>
             {borrador ? <TableCell colSpan={12} className="text-center"><Badge variant="outline">Por validar</Badge></TableCell> : !celdas.length ? <TableCell colSpan={12} className="text-center text-xs text-muted-foreground">por evento · usa «Registrar evento» en Por capturar</TableCell> : celdas.map(p => {
               const r = resultadoDe(k, p.inicio); const cerrado = periodoCerrado(p.fin, hoy); const habil = cerrado && puedeCapturar(k);
-              return <TableCell key={p.inicio} colSpan={p.meses} className="p-1 text-center"><button type="button" disabled={!habil || busy} aria-label={`${k.codigo} ${etiquetaPeriodo(k.frecuencia, p.inicio)}`} title={cerrado ? etiquetaPeriodo(k.frecuencia, p.inicio) : 'El periodo aún no cierra'} onClick={() => abrir(k, p.inicio, p.fin)} className={cn('h-9 w-full min-w-12 rounded border text-xs disabled:cursor-not-allowed disabled:opacity-40', r ? colorSemaforo[r.semaforo] ?? 'bg-muted' : 'border-dashed hover:bg-muted')}>{r ? fmt(r.valor) : cerrado ? '+' : ''}</button></TableCell>;
+              return <TableCell key={p.inicio} colSpan={p.meses} className="p-1 text-center"><Button variant="outline" type="button" disabled={!habil || busy} aria-label={`${k.codigo} ${etiquetaPeriodo(k.frecuencia, p.inicio)}`} title={cerrado ? `${etiquetaPeriodo(k.frecuencia, p.inicio)} · ${r?.semaforo ?? 'sin captura'} · ${r?.estado ?? ''}` : 'El periodo aún no cierra'} onClick={() => abrir(k, p.inicio, p.fin)} className={cn('h-9 w-full min-w-12 gap-1 rounded border p-1 text-xs disabled:cursor-not-allowed disabled:opacity-100', r ? claseSemaforo(r.semaforo) : 'border-dashed hover:bg-muted')}>{r ? <>{fmt(r.valor)}{r.estado === 'revisado' ? <Check className="h-3 w-3 shrink-0" aria-label="Revisado"/> : <Pencil className="h-3 w-3 shrink-0" aria-label="Capturado"/>}</> : cerrado ? '+' : ''}</Button></TableCell>;
             })}
           </TableRow>;
         })}</TableBody></Table></div>
@@ -143,7 +145,7 @@ export default function Captura() {
           <div><Label htmlFor="k2-num">Numerador</Label><Input id="k2-num" type="number" step="any" value={form.num} onChange={e => setForm({ ...form, num: e.target.value })} aria-invalid={intento && !!errores.num} />{intento && errores.num && <p className="mt-1 text-xs text-destructive">{errores.num}</p>}</div>
           <div><Label htmlFor="k2-den">Denominador{unidadAbierta === 'número' ? ' (no aplica)' : ''}</Label><Input id="k2-den" type="number" step="any" disabled={unidadAbierta === 'número'} value={form.den} onChange={e => setForm({ ...form, den: e.target.value })} aria-invalid={!!errores.den && (intento || form.num !== '')} />{errores.den && (intento || form.num !== '') && <p className="mt-1 text-xs text-destructive">{errores.den}</p>}</div>
         </div>
-        {calc && <p className="text-sm">Valor {fmt(calc.valor)} {unidadAbierta} · {calc.cumplimiento != null ? `${Math.round(calc.cumplimiento * 100)}%` : 'sin cumplimiento'} · <Badge variant="outline" className={colorSemaforo[calc.semaforo]}>{calc.semaforo}</Badge></p>}
+        {calc && <p className="text-sm">Valor {fmt(calc.valor)} {unidadAbierta} · {calc.cumplimiento != null ? `${Math.round(calc.cumplimiento * 100)}%` : 'sin cumplimiento'} · <Badge variant="outline" className={claseSemaforo(calc.semaforo)}>{calc.semaforo}</Badge></p>}
         <div><Label htmlFor="k2-ref">Referencia de la fuente{esSgc ? ' (obligatoria en SGC)' : ' (opcional)'}</Label><Input id="k2-ref" value={form.referencia} onChange={e => setForm({ ...form, referencia: e.target.value })} aria-invalid={intento && !!errores.referencia} />{intento && errores.referencia && <p className="mt-1 text-xs text-destructive">{errores.referencia}</p>}</div>
         <div><Label htmlFor="k2-com">Comentario</Label><Textarea id="k2-com" value={form.comentario} onChange={e => setForm({ ...form, comentario: e.target.value })} /></div>
         {abierto.resultado && <div><Label htmlFor="k2-mot">Motivo de la corrección</Label><Textarea id="k2-mot" value={form.motivo} onChange={e => setForm({ ...form, motivo: e.target.value })} />{intento && errores.motivo && <p className="mt-1 text-xs text-destructive">{errores.motivo}</p>}</div>}
