@@ -44,6 +44,16 @@ const listo = (autor = 2) => `${actor(autor)}rid:=pg_temp.crear_kpi_reporte('tri
 const falla = (stmt: string, msg: string) => `failed:=false;BEGIN ${stmt};EXCEPTION WHEN raise_exception THEN failed:=true;END;IF NOT failed THEN RAISE EXCEPTION '${msg}';END IF;`;
 async function check(body: string) { expect(await run(body)).toContain('K3B OK'); }
 describe.skipIf(!process.env.PGHOST)('K3-b reporte periódico de indicadores, QA temporal con rollback', () => {
+  it('K3-b-1 no emite sin el original guardado y congela logo y ruta con folio', () => check(`${listo()}${actor(3)}
+DECLARE s jsonb; logo jsonb:='{"format":"PNG","dataUrl":"data:image/png;base64,QUFB"}'; BEGIN
+s:=pg_temp.preparar_emision_kpi_word(rid);
+${falla("PERFORM pg_temp.confirmar_emision_kpi_word(rid,(s->>'token')::uuid,logo,repeat('a',64))", 'Emitió sin archivo')}
+INSERT INTO objects VALUES('documentos-generados',s->>'path');
+PERFORM pg_temp.confirmar_emision_kpi_word(rid,(s->>'token')::uuid,logo,repeat('a',64));
+UPDATE organizations SET logo_url='logo-nuevo.png' WHERE id='${ORG}';
+IF (SELECT formato_snapshot->'logo' FROM kpi_reportes WHERE id=rid) IS DISTINCT FROM logo THEN RAISE EXCEPTION 'El logo emitido cambió'; END IF;
+IF NOT EXISTS(SELECT 1 FROM documentos_generados d JOIN kpi_reportes k ON d.folio=k.formato_snapshot->>'folio' WHERE k.id=rid AND d.archivo_path=s->>'path' AND d.archivo_sha256=repeat('a',64)) THEN RAISE EXCEPTION 'No registró original y folio'; END IF;
+END;`));
   it('flujo completo hasta emitido con firmantes, folio DOC y snapshot congelado', () => check(`${listo()}${actor(3)}PERFORM pg_temp.emitir_kpi_reporte(rid);
 SELECT * INTO r FROM kpi_reportes WHERE id=rid;
 IF r.estado<>'emitido' OR r.codigo<>'IND-2026-001' OR r.firmantes->'autorizo'->>'leyenda'<>'' OR r.firmantes->'elaboro'->>'nombre'<>'QA persona 2' OR jsonb_array_length(r.firmantes->'revisaron')<>1
