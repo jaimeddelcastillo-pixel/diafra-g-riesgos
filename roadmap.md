@@ -95,3 +95,4 @@ Implementados reporte independiente, vistas por área/instrumento/avance, consol
 - [x] Registrar identidad del titular en acciones y auditoría; suite automática con aceptación, vigencia, solapamientos y aislamiento RS/admin (sin navegador, IA ni dependencias).
 
 - [ ] Verificación visual y recorrido autenticado de T5d: a cargo de Jaime; navegador expresamente excluido. Suite 279/279, funciones sobre fixtures temporales QA; no equivale a prueba de sesión/RLS real. Informe completo: t5d_reporte.md.
+- [x] K2 captura de resultados de KPI: kpi_resultados con cálculo en servidor, copia inmutable de meta/tendencia/unidad, evidencia SGC en bucket privado kpi-evidencias, capturistas por KPI, pestaña Captura, pendientes agrupados y exportación Excel; suite con 9 pruebas SQL (sin navegador, IA ni dependencias).
