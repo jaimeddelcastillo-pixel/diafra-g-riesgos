@@ -750,6 +750,13 @@
       "when": 1792786035151,
       "tag": "0106_k3a_resumen_stable",
       "breakpoints": true
+    },
+    {
+      "idx": 107,
+      "version": "7",
+      "when": 1792787383199,
+      "tag": "0107_k3b_reportes_indicadores",
+      "breakpoints": true
     }
   ]
 }
