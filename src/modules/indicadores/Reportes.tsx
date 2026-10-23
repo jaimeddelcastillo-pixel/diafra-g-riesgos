@@ -18,7 +18,7 @@ import { graficaPNG, ESCALA_PNG, PX_16x9 } from '@/lib/documentos/graficas';
 import { claseSemaforo } from './lib/semaforo';
 import { etiquetaPeriodo, etiquetaSub, fueraDeMeta, num, obtenerResumen, pct, periodosCerrados, type KpiResumen, type Resumen, type TipoPeriodo } from './lib/tablero';
 import {
-  anularReporte, configActual, construirWordReporte, descargarOriginal, crearReporte, emitirReporte, enviarReporte, faltanAnalisis, guardarConfig, guardarReporte,
+  anularReporte, cancelarReserva, configActual, construirWordReporte, descargarOriginal, crearReporte, emitirReporte, enviarReporte, faltanAnalisis, guardarConfig, guardarReporte,
   kpisDelAlcance, listarReportes, nuevaVersion, puedeAutorizar, quienTienePendiente, revisarReporte, wordABlob, type Analisis, type Firmantes, type Reporte,
 } from './lib/reportes';
 
@@ -43,7 +43,7 @@ export default function Reportes() {
   const autoriza = useQuery({ queryKey: ['k3b-autoriza', auth.orgId, auth.user?.id], queryFn: () => puedeAutorizar(auth.orgId!, auth.user!.id), enabled: !!auth.orgId && !!auth.user });
   const [selId, setSelId] = useState<string | null>(null); const [borrador, setBorrador] = useState<Reporte | null>(null);
   const [nuevo, setNuevo] = useState<{ tipo: TipoPeriodo; inicio: string } | null>(null);
-  const [motivoDlg, setMotivoDlg] = useState<{ accion: 'anular' | 'nueva' | 'devolver' | 'config'; motivo: string } | null>(null);
+  const [motivoDlg, setMotivoDlg] = useState<{ accion: 'anular' | 'nueva' | 'devolver' | 'config' | 'reserva'; motivo: string } | null>(null);
   const [cfgEd, setCfgEd] = useState<{ objetivo: string; alcance: string; metodologia: string; autorizadores: string[] } | null>(null);
   const [busy, setBusy] = useState(false);
   const sel = lista.data?.find(r => r.id === selId) ?? null; const r = borrador && borrador.id === selId ? borrador : sel;
@@ -103,6 +103,7 @@ export default function Reportes() {
           {editable && <Button disabled={busy || !r.conclusiones.trim() || faltan.length > 0 || !r.revisores.length} onClick={() => ejecutar(async () => { await guardarReporte(r.id, { objetivo: r.objetivo, alcance: r.alcance, metodologia: r.metodologia, analisis: r.analisis, conclusiones: r.conclusiones, revisores: r.revisores }); await enviarReporte(r.id); }, 'Enviado a revisión')}><Send className="mr-2 h-4 w-4"/>Enviar a revisión</Button>}
           {r.estado === 'borrador' && r.etapa === 'revision' && uid && r.revisores.includes(uid) && !r.revisiones.some(v => v.user_id === uid) && <><Button disabled={busy} onClick={() => ejecutar(() => revisarReporte(r.id, true, ''), 'Revisión registrada')}><Check className="mr-2 h-4 w-4"/>Aprobar revisión</Button><Button variant="outline" disabled={busy} onClick={() => setMotivoDlg({ accion: 'devolver', motivo: '' })}><Undo2 className="mr-2 h-4 w-4"/>Devolver</Button></>}
           {r.estado === 'borrador' && r.etapa === 'autorizacion' && autoriza.data != null && uid !== r.elaboro_por && !r.revisores.includes(uid ?? '') && <Button disabled={busy} onClick={() => ejecutar(() => emitirReporte(r.id), 'Reporte autorizado y emitido')}><Check className="mr-2 h-4 w-4"/>Autorizar y emitir</Button>}
+          {r.estado === 'borrador' && reservaVencida(r) && (autoriza.data != null || auth.roles.includes('admin' as typeof auth.roles[number])) && <Button variant="outline" disabled={busy} onClick={() => setMotivoDlg({ accion: 'reserva', motivo: '' })}><Undo2 className="mr-2 h-4 w-4"/>Cancelar reserva vencida</Button>}
           {r.estado !== 'anulado' && <Button variant="outline" disabled={busy || !resumen} onClick={word}><Download className="mr-2 h-4 w-4"/>Word</Button>}
           {r.estado === 'emitido' && elabora && <Button variant="outline" disabled={busy} onClick={() => setMotivoDlg({ accion: 'nueva', motivo: '' })}><GitBranch className="mr-2 h-4 w-4"/>Nueva versión</Button>}
           {r.estado !== 'anulado' && (r.estado === 'emitido' ? autoriza.data != null && uid !== r.elaboro_por : uid === r.elaboro_por || auth.roles.includes('admin' as typeof auth.roles[number])) && <Button variant="outline" disabled={busy} onClick={() => setMotivoDlg({ accion: 'anular', motivo: '' })}><Ban className="mr-2 h-4 w-4"/>Anular</Button>}
@@ -138,10 +139,10 @@ export default function Reportes() {
       <div className="space-y-1"><Label>Autorizan en ausencia de Aseguramiento de Calidad (solo admin)</Label>{(perfiles.data ?? []).map(p => <label key={p.id} className="flex items-center gap-2 text-sm"><input type="checkbox" disabled={!auth.roles.includes('admin' as typeof auth.roles[number])} checked={cfgEd.autorizadores.includes(p.id)} onChange={e => setCfgEd({ ...cfgEd, autorizadores: e.target.checked ? [...cfgEd.autorizadores, p.id] : cfgEd.autorizadores.filter(x => x !== p.id) })}/>{p.nombre ?? p.id}</label>)}</div>
     </div>}<DialogFooter><Button variant="outline" onClick={() => setCfgEd(null)}>Cancelar</Button><Button onClick={() => setMotivoDlg({ accion: 'config', motivo: '' })}>Guardar…</Button></DialogFooter></DialogContent></Dialog>
 
-    <Dialog open={!!motivoDlg} onOpenChange={v => { if (!v && !busy) setMotivoDlg(null); }}><DialogContent><DialogHeader><DialogTitle>{motivoDlg?.accion === 'anular' ? 'Anular reporte' : motivoDlg?.accion === 'nueva' ? 'Nueva versión' : motivoDlg?.accion === 'devolver' ? 'Devolver a edición' : 'Guardar configuración'}</DialogTitle></DialogHeader>
+    <Dialog open={!!motivoDlg} onOpenChange={v => { if (!v && !busy) setMotivoDlg(null); }}><DialogContent><DialogHeader><DialogTitle>{motivoDlg?.accion === 'anular' ? 'Anular reporte' : motivoDlg?.accion === 'nueva' ? 'Nueva versión' : motivoDlg?.accion === 'devolver' ? 'Devolver a edición' : motivoDlg?.accion === 'reserva' ? 'Cancelar reserva de emisión vencida' : 'Guardar configuración'}</DialogTitle></DialogHeader>
       <Label htmlFor="k3b-motivo">Motivo obligatorio (mínimo 5 caracteres)</Label><Textarea id="k3b-motivo" value={motivoDlg?.motivo ?? ''} onChange={e => motivoDlg && setMotivoDlg({ ...motivoDlg, motivo: e.target.value })}/>
       <DialogFooter><Button variant="outline" disabled={busy} onClick={() => setMotivoDlg(null)}>Cancelar</Button><Button disabled={busy || (motivoDlg?.motivo.trim().length ?? 0) < 5} onClick={() => { if (!motivoDlg) return; const m = motivoDlg.motivo;
-        const f = motivoDlg.accion === 'anular' ? () => anularReporte(r!.id, m) : motivoDlg.accion === 'nueva' ? () => nuevaVersion(r!.id, m) : motivoDlg.accion === 'devolver' ? () => revisarReporte(r!.id, false, m) : async () => { await guardarConfig(cfgEd!, m); setCfgEd(null); await qc.invalidateQueries({ queryKey: ['k3b-config'] }); };
+        const f = motivoDlg.accion === 'anular' ? () => anularReporte(r!.id, m) : motivoDlg.accion === 'nueva' ? () => nuevaVersion(r!.id, m) : motivoDlg.accion === 'devolver' ? () => revisarReporte(r!.id, false, m) : motivoDlg.accion === 'reserva' ? () => cancelarReserva(r!.id, m) : async () => { await guardarConfig(cfgEd!, m); setCfgEd(null); await qc.invalidateQueries({ queryKey: ['k3b-config'] }); };
         void ejecutar(async () => { await f(); setMotivoDlg(null); }, 'Cambio guardado y auditado'); }}>Confirmar</Button></DialogFooter></DialogContent></Dialog>
   </div>;
 }
