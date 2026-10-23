@@ -73,13 +73,12 @@ IF NOT EXISTS(SELECT 1 FROM kpi_reportes WHERE id=rid AND version=2 AND estado='
 ${falla(`PERFORM pg_temp.anular_kpi_reporte(rid,'')`, 'Anuló sin motivo')}
 PERFORM pg_temp.anular_kpi_reporte(rid,'QA anulación');IF NOT EXISTS(SELECT 1 FROM kpi_reportes WHERE id=rid AND estado='anulado' AND motivo_anulacion='QA anulación') THEN RAISE EXCEPTION 'No anuló';END IF;
 ${falla(`DELETE FROM kpi_reportes WHERE id=rid`, 'Borró')}`));
-  it('anular emitido: nunca quien lo elaboró ni quien no puede autorizar; sí quien autoriza', () => check(`${listo(3)}PERFORM set_config('qa.actor','${id(3)}',true);
-UPDATE org_members SET role='operador' WHERE user_id='${id(3)}';INSERT INTO org_members(org_id,user_id,role) VALUES('${ORG}','${id(4)}','aseguramiento_calidad');DELETE FROM org_members WHERE user_id='${id(4)}' AND role='operador';
-${actor(4)}PERFORM pg_temp.emitir_kpi_reporte(rid);
-UPDATE org_members SET role='aseguramiento_calidad' WHERE user_id='${id(3)}';
+  it('anular emitido: nunca quien lo elaboró ni quien no puede autorizar; sí quien autoriza', () => check(`INSERT INTO org_suplencias(id,org_id,suplente_user_id,titular_user_id,titular_nombre,rol_sustituido,facultades,estado,aceptada_en,fecha_inicio,fecha_fin)
+ VALUES(gen_random_uuid(),'${ORG}','${id(5)}','${id(3)}','QA persona 3','aseguramiento_calidad',ARRAY['autorizar'],'activa',now(),now()-interval '1 day',now()+interval '5 day');
+${listo(3)}${actor(5)}PERFORM pg_temp.emitir_kpi_reporte(rid);
 ${actor(3)}${falla(`PERFORM pg_temp.anular_kpi_reporte(rid,'QA autor anula')`, 'El autor anuló el emitido')}
 ${actor(2)}${falla(`PERFORM pg_temp.anular_kpi_reporte(rid,'QA admin anula')`, 'Admin sin facultad anuló el emitido')}
-${actor(4)}PERFORM pg_temp.anular_kpi_reporte(rid,'QA autorizador anula');IF NOT EXISTS(SELECT 1 FROM kpi_reportes WHERE id=rid AND estado='anulado') THEN RAISE EXCEPTION 'Autorizador no anuló';END IF;`));
+${actor(5)}PERFORM pg_temp.anular_kpi_reporte(rid,'QA autorizador anula');IF NOT EXISTS(SELECT 1 FROM kpi_reportes WHERE id=rid AND estado='anulado' AND anulado_por='${id(5)}') THEN RAISE EXCEPTION 'Autorizador no anuló';END IF;`));
   it('anular borrador: quien lo elabora o un admin; nadie más', () => check(`${actor(3)}rid:=pg_temp.crear_kpi_reporte('trimestre','2026-01-01');
 ${actor(4)}${falla(`PERFORM pg_temp.anular_kpi_reporte(rid,'QA operador anula')`, 'Operador anuló borrador')}
 ${actor(1)}${falla(`PERFORM pg_temp.anular_kpi_reporte(rid,'QA RS anula')`, 'RS no autor anuló borrador')}
