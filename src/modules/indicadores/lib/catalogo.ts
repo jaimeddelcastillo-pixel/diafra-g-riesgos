@@ -28,6 +28,9 @@ export function normalizar(f: Fila): Fila {
   if ('aporta_a' in r) r.aporta_a = codigos(r.aporta_a).sort().join(', ');
   return r;
 }
+/** K1-a: el peso solo aplica a KPI del Diccionario con nivel SGC. */
+export const pesoAplica = (h: Hoja, f: Fila) => h !== 'KPI_SGC' || f.nivel === 'SGC';
+export const MENSAJE_PESO = 'El peso solo aplica a KPI de nivel SGC; en Operativo y Gestión debe ser 0.';
 export const codigos = (s: unknown): string[] => String(s ?? '').split(',').map(x => x.trim()).filter(Boolean);
 export function avisosPesos(c: Catalogo): string[] {
   const avisos: string[] = [];
@@ -62,6 +65,7 @@ export function previsualizar(entrada: Catalogo, actual: Catalogo): Preview {
         for (const k of ['tendencia', 'unidad', 'frecuencia', ...(h === 'KPI_SGC' ? ['nivel'] : [])]) if (!OPCIONES[k]?.includes(String(f[k]))) errores.push(`${LABELS[k]} inválida`);
         if (String(f.meta ?? '').trim() === '' || !Number.isFinite(Number(f.meta))) errores.push('Meta no numérica');
         if (!Number.isFinite(Number(f.peso ?? 0)) || Number(f.peso ?? 0) < 0) errores.push('Peso inválido');
+        else if (!pesoAplica(h, f) && Number(f.peso || 0) !== 0) errores.push(MENSAJE_PESO);
         if (h === 'KPI_Puesto') {
           const aporta = codigos(f.aporta_a);
           if (new Set(aporta).size !== aporta.length) errores.push('Código aporta_a duplicado');

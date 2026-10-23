@@ -1,5 +1,5 @@
 import {
-  LayoutDashboard, FolderOpen, BookOpen, FileBadge, BarChart3, Search, Library, ShieldAlert,
+  LayoutDashboard, FolderOpen, BookOpen, FileBadge, BarChart3, Library, ShieldAlert,
   GraduationCap, Award,
 } from "lucide-react";
 import Index from "@/pages/Index";
@@ -8,7 +8,6 @@ import FolioDetail from "@/pages/FolioDetail";
 import Catalogos from "@/pages/Catalogos";
 import MisProtocolos from "@/pages/MisProtocolos";
 import Cumplimiento from "@/pages/Cumplimiento";
-import Auditoria from "@/pages/Auditoria";
 import Capacitacion from "@/pages/Capacitacion";
 import ExamenFinal from "@/pages/ExamenFinal";
 import { TourRiesgos } from "@/components/onboarding/TourRiesgos";
@@ -45,7 +44,6 @@ export const riesgosModule: ModuloDef = {
       { id: "mis-protocolos", label: "Mis Protocolos", icon: FileBadge, route: "/mis-protocolos", section: "modulos" },
       { id: "cumplimiento", label: "Cumplimiento", icon: BarChart3, route: "/cumplimiento", section: "modulos", roles: ["admin", "responsable_sanitario"] },
       { id: "recursos", label: "Recursos", icon: Library, route: "/recursos", section: "modulos", onboarding: "recursos" },
-      { id: "auditoria", label: "Auditoría de Riesgos", icon: Search, route: "/auditoria", section: "modulos" },
       { id: "capacitacion", label: "Capacitación", icon: GraduationCap, route: "/capacitacion", section: "modulos", onboarding: "capacitacion" },
       { id: "mis-diplomas", label: "Mis Diplomas", icon: Award, route: "/mis-diplomas", section: "modulos", onboarding: "mis-diplomas" },
     ],
@@ -57,7 +55,6 @@ export const riesgosModule: ModuloDef = {
     { path: "/catalogos", Component: Catalogos },
     { path: "/mis-protocolos", Component: MisProtocolos },
     { path: "/cumplimiento", Component: Cumplimiento },
-    { path: "/auditoria", Component: Auditoria },
     { path: "/capacitacion", Component: Capacitacion },
     { path: "/capacitacion/:cursoId/examen", Component: ExamenFinal },
   ],
@@ -65,7 +62,7 @@ export const riesgosModule: ModuloDef = {
     {
       clave: "modulo:riesgos",
       titulo: "Gestión de Riesgos",
-      rutas: ["/riesgos", "/folios", "/folios/:id", "/catalogos", "/mis-protocolos", "/cumplimiento", "/auditoria"],
+      rutas: ["/riesgos", "/folios", "/folios/:id", "/catalogos", "/mis-protocolos", "/cumplimiento"],
       rutaInicio: "/riesgos",
       Componente: TourRiesgos,
     },

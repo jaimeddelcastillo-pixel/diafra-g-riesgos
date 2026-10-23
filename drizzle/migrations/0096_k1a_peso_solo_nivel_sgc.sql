@@ -1,0 +1,2 @@
+ALTER TABLE public.kpi_definiciones ADD CONSTRAINT kpi_peso_solo_sgc CHECK (nivel = 'SGC' OR peso = 0);
+COMMENT ON CONSTRAINT kpi_peso_solo_sgc ON public.kpi_definiciones IS 'K1-a: el peso solo aplica a KPI de nivel SGC; Operativo y Gestión guardan 0.';

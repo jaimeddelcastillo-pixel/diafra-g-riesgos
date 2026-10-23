@@ -27,6 +27,7 @@ export function isItemVisible(item: NavItem, ctx: NavContext): boolean {
   // Página compartida: no duplicarla si la empresa ya la ve desde otro módulo.
   if (item.soloSinModulo && ctx.features[item.soloSinModulo]) return false;
   if (ctx.isSuperAdmin) return true;
+  if (item.requiereAlgunModulo && !Object.values(ctx.features).some(Boolean)) return false;
   if (item.feature && !ctx.features[item.feature]) return false;
   if (item.roles && !item.roles.some((r) => ctx.roles.includes(r))) return false;
   if (item.plans && !item.plans.includes(ctx.plan ?? "")) return false;

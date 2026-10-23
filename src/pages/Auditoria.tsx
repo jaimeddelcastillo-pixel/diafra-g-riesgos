@@ -6,7 +6,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuditTrail, useFolios, useAllRiesgos, getNPRLevel } from "@/hooks/useFolios";
 import { useProfiles } from "@/hooks/useProfiles";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
+import { useMisModulos } from "@/hooks/useMisModulos";
+import { AuditoriaGeneral } from "@/components/auditoria/AuditoriaGeneral";
+import { ROLES_AUDITORIA } from "@/lib/auditoria";
 import {
   ShieldCheck,
   AlertTriangle,
@@ -285,8 +289,8 @@ function TabRiesgosCriticos() {
   );
 }
 
-// ─── Tab 3: Log de actividad (lo que antes era "Auditoría") ──────────────────
-function TabLog() {
+// ─── Log anterior (reemplazado por la Bitácora general K1-a; se conserva sin uso) ─
+export function TabLog() {
   const { data: entries = [], isLoading } = useAuditTrail();
   const { data: profiles = [] } = useProfiles();
 
@@ -367,75 +371,81 @@ function TabLog() {
   );
 }
 
-// ─── Página principal ─────────────────────────────────────────────────────────
+// ─── Página principal: Auditoría general de la plataforma (K1-a) ─────────────
 export default function Auditoria() {
+  const [params] = useSearchParams();
+  const { roles, isSuperAdmin, isImpersonating } = useAuth();
+  const { data: modulos = [] } = useMisModulos();
+  const conRiesgos = modulos.some((m) => m.clave === "riesgos" && m.tiene_acceso && ["activo", "beta"].includes(m.estado));
+  const permitido = isSuperAdmin() || isImpersonating || ROLES_AUDITORIA.some((r) => (roles as string[]).includes(r));
+
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold">Auditoría</h1>
-        <p className="text-sm text-muted-foreground">
-          Cumplimiento · Trazabilidad
-        </p>
+        <p className="text-sm text-muted-foreground">Bitácora inalterable de la plataforma · solo lectura</p>
       </div>
 
-      <Tabs defaultValue="cumplimiento">
-        <TabsList className="grid grid-cols-3 w-full max-w-lg">
-          <TabsTrigger value="cumplimiento" className="gap-1.5 text-xs">
-            <ShieldCheck className="h-3.5 w-3.5" />
-            Cumplimiento
-          </TabsTrigger>
-          <TabsTrigger value="criticos" className="gap-1.5 text-xs">
-            <AlertTriangle className="h-3.5 w-3.5" />
-            Riesgos críticos
-          </TabsTrigger>
+      {!permitido ? (
+        <Card><CardContent className="p-6 text-sm text-muted-foreground">La auditoría está disponible para administración, Responsable Sanitario, Comité Técnico y Aseguramiento de Calidad.</CardContent></Card>
+      ) : (
+      <Tabs defaultValue="log">
+        <TabsList>
           <TabsTrigger value="log" className="gap-1.5 text-xs">
             <Activity className="h-3.5 w-3.5" />
-            Log de actividad
+            Bitácora general
           </TabsTrigger>
+          {conRiesgos && (
+            <TabsTrigger value="cumplimiento" className="gap-1.5 text-xs">
+              <ShieldCheck className="h-3.5 w-3.5" />
+              Cumplimiento (Riesgos)
+            </TabsTrigger>
+          )}
+          {conRiesgos && (
+            <TabsTrigger value="criticos" className="gap-1.5 text-xs">
+              <AlertTriangle className="h-3.5 w-3.5" />
+              Riesgos críticos
+            </TabsTrigger>
+          )}
         </TabsList>
 
-        <TabsContent value="cumplimiento">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base flex items-center gap-2">
-                <ShieldCheck className="h-4 w-4" />
-                Lista de verificación
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <TabCumplimiento />
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="criticos">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base flex items-center gap-2">
-                <AlertTriangle className="h-4 w-4 text-destructive" />
-                Vista completa de riesgos críticos — Para auditor
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
-              <TabRiesgosCriticos />
-            </CardContent>
-          </Card>
-        </TabsContent>
-
         <TabsContent value="log">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base flex items-center gap-2">
-                <Activity className="h-4 w-4" />
-                Log de actividad del sistema
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
-              <TabLog />
-            </CardContent>
-          </Card>
+          <AuditoriaGeneral moduloInicial={params.get("modulo") ?? ""} />
         </TabsContent>
+
+        {conRiesgos && (
+          <TabsContent value="cumplimiento">
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <ShieldCheck className="h-4 w-4" />
+                  Lista de verificación
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <TabCumplimiento />
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
+
+        {conRiesgos && (
+          <TabsContent value="criticos">
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4 text-destructive" />
+                  Vista completa de riesgos críticos — Para auditor
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                <TabRiesgosCriticos />
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
       </Tabs>
+      )}
     </div>
   );
 }
