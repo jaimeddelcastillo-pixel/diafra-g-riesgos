@@ -23,7 +23,7 @@ export default function Indicadores() {
   const q = useQuery({ queryKey: ['k1-catalogo', auth.orgId, auth.user?.id], queryFn: listarCatalogo, enabled: !!auth.orgId });
   const c = q.data ?? vacio(); const editable = !auth.isSuperAdmin() && !auth.isImpersonating && ['admin', 'responsable_sanitario', 'aseguramiento_calidad'].some(r => auth.roles.includes(r as typeof auth.roles[number]));
   const valida = editable && (auth.hasRole('responsable_sanitario') || auth.hasRole('aseguramiento_calidad'));
-  const [hoja, setHoja] = useState<Hoja>('KPI_SGC'); const [proceso, setProceso] = useState('todos'); const [nivel, setNivel] = useState('todos');
+  const [hoja, setHoja] = useState<Hoja>(() => { const h = new URLSearchParams(window.location.search).get('hoja'); return h === 'KPI_Puesto' || h === 'Puestos' ? h : 'KPI_SGC'; }); const [proceso, setProceso] = useState('todos'); const [nivel, setNivel] = useState('todos');
   const [edicion, setEdicion] = useState<{ hoja: Hoja; fila: Fila } | null>(null); const [validacion, setValidacion] = useState<{ hoja: Hoja; fila: Fila } | null>(null);
   const [preview, setPreview] = useState<Preview | null>(null); const [motivo, setMotivo] = useState(''); const [busy, setBusy] = useState(false);
   const refrescar = async () => { await qc.invalidateQueries({ queryKey: ['k1-catalogo'] }); await qc.invalidateQueries({ queryKey: ['pendientes'] }); };

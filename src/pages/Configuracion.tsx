@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Users, Bell, Pencil, UserPlus, Upload, X, KeyRound, Lock, Mail } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 import { DesactivarUsuarioDialog } from "@/components/DesactivarUsuarioDialog";
 import { UsuariosDesactivadosCard } from "@/components/UsuariosDesactivadosCard";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -204,6 +205,8 @@ export default function Configuracion() {
 
   const [editUser, setEditUser] = useState<OrgUser | null>(null);
   const [editForm, setEditForm] = useState({ nombre: "", cargo: "", role: "" as AppRole });
+  const [motivoRol, setMotivoRol] = useState("");
+  const cambiaRol = !!editUser && editForm.role !== editUser.role;
   const [editFirmaFile, setEditFirmaFile] = useState<File | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
 
@@ -259,8 +262,8 @@ export default function Configuracion() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: async ({ id, nombre, cargo, role, firmaFile }: {
-      id: string; nombre: string; cargo: string; role: AppRole; firmaFile: File | null;
+    mutationFn: async ({ id, nombre, cargo, role, firmaFile, rolAnterior, motivo }: {
+      id: string; nombre: string; cargo: string; role: AppRole; firmaFile: File | null; rolAnterior: AppRole; motivo: string;
     }) => {
       let firma_url: string | undefined;
       if (firmaFile) firma_url = await uploadFirma(firmaFile, id);
@@ -271,18 +274,18 @@ export default function Configuracion() {
       const { error: pErr } = await supabase.from("profiles").update(updateData).eq("id", id);
       if (pErr) throw pErr;
 
-      const { error: rErr } = await supabase
-        .from("org_members")
-        .update({ role })
-        .eq("user_id", id)
-        .eq("org_id", orgId!);
-      if (rErr) throw rErr;
+      // K1-c: el cambio de rol exige motivo y queda en la auditoría (antes → después).
+      if (role !== rolAnterior) {
+        const { error: rErr } = await supabase.rpc("cambiar_rol_miembro", { _user_id: id, _rol: role, _motivo: motivo.trim() });
+        if (rErr) throw rErr;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["org-users", orgId] });
       toast.success("Usuario actualizado");
       setDialogOpen(false);
       setEditFirmaFile(null);
+      setMotivoRol("");
     },
     onError: (e: any) => toast.error(e.message),
   });
@@ -313,7 +316,8 @@ export default function Configuracion() {
 
   const handleSave = () => {
     if (!editUser) return;
-    updateMutation.mutate({ id: editUser.id, nombre: editForm.nombre, cargo: editForm.cargo, role: editForm.role, firmaFile: editFirmaFile });
+    if (cambiaRol && motivoRol.trim().length < 5) { toast.error("Escribe el motivo del cambio de rol (mínimo 5 caracteres)"); return; }
+    updateMutation.mutate({ id: editUser.id, nombre: editForm.nombre, cargo: editForm.cargo, role: editForm.role, firmaFile: editFirmaFile, rolAnterior: editUser.role, motivo: motivoRol });
   };
 
   const handleCreate = () => {
@@ -452,7 +456,7 @@ export default function Configuracion() {
                     {isAdmin && (
                       <td className="py-2">
                         <div className="flex gap-1">
-                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { setEditUser(u); setEditForm({ nombre: u.nombre, cargo: u.cargo || "", role: u.role }); setEditFirmaFile(null); setDialogOpen(true); }}>
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { setEditUser(u); setEditForm({ nombre: u.nombre, cargo: u.cargo || "", role: u.role }); setMotivoRol(""); setEditFirmaFile(null); setDialogOpen(true); }}>
                             <Pencil className="h-3.5 w-3.5" />
                           </Button>
                           <Button variant="ghost" size="icon" className="h-7 w-7" title="Resetear contraseña" onClick={() => { setResetPwUser(u); setResetPwValue(""); setResetPwDialogOpen(true); }}>
@@ -550,12 +554,18 @@ export default function Configuracion() {
                 </SelectContent>
               </Select>
             </div>
+            {cambiaRol && (
+              <div>
+                <label htmlFor="motivo-rol" className="text-sm font-medium">Motivo del cambio de rol * (mínimo 5 caracteres)</label>
+                <Textarea id="motivo-rol" value={motivoRol} onChange={(e) => setMotivoRol(e.target.value)} maxLength={1000} placeholder="Ej. Reasignación de funciones" />
+              </div>
+            )}
             <FirmaUpload currentUrl={editUser?.firma_url || null} onFileSelect={setEditFirmaFile} previewFile={editFirmaFile} />
             <p className="text-xs text-muted-foreground">Correo: {editUser?.email}</p>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
-            <Button onClick={handleSave} disabled={updateMutation.isPending}>{updateMutation.isPending ? "Guardando…" : "Guardar"}</Button>
+            <Button onClick={handleSave} disabled={updateMutation.isPending || (cambiaRol && motivoRol.trim().length < 5)}>{updateMutation.isPending ? "Guardando…" : "Guardar"}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

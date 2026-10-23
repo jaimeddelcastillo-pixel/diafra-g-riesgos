@@ -13,7 +13,7 @@ export const MODULO_LABEL: Record<string, string> = {
   plataforma: "Plataforma", tendencias: "Análisis de Tendencias", riesgos: "Gestión de Riesgos", institutional_brain: "Cerebro Institucional",
 };
 export const TIPO_LABEL: Record<string, string> = {
-  kpi_por_validar: "KPI en borrador por validar",
+  kpi_por_validar: "KPI por validar",
   perfil_sin_confirmar: "Perfil sin confirmar", suplencia_por_aceptar: "Suplencia por aceptar", at_borrador: "AT en borrador",
   semana_sin_captura: "Semana sin captura", accion_abierta: "Acción abierta", folio_en_firma: "Folio en firma",
   conocimiento_por_validar: "Conocimiento por validar",

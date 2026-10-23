@@ -44,7 +44,7 @@ export function DesactivarUsuarioDialog({ open, onOpenChange, target, onDone }: 
             La persona ya no podrá entrar. Su nombre se conserva en todos los registros que creó, firmó o validó.
           </p>
           <div className="space-y-1">
-            <Label htmlFor="motivo-desactivar">Motivo *</Label>
+            <Label htmlFor="motivo-desactivar">Motivo * (mínimo 5 caracteres)</Label>
             <Textarea id="motivo-desactivar" value={motivo} onChange={(e) => setMotivo(e.target.value)} maxLength={1000} placeholder="Ej. Baja de la empresa" />
           </div>
         </div>
@@ -53,7 +53,7 @@ export function DesactivarUsuarioDialog({ open, onOpenChange, target, onDone }: 
           <Button
             variant="destructive"
             onClick={() => target && m.mutate({ user_id: target.id, motivo: motivo.trim() })}
-            disabled={m.isPending || !motivo.trim()}
+            disabled={m.isPending || motivo.trim().length < 5}
           >
             {m.isPending ? "Desactivando…" : "Desactivar usuario"}
           </Button>
