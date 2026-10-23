@@ -39,6 +39,7 @@ describe('D1 identidad documental', () => {
     expect(filas[2]).toContain('Código: FOR-QA-07'); expect(filas[2]).toContain('Versión: 03'); expect(filas[2]).toContain('Hoja 1 de 1');
     expect(filas).toContain('Código|Valor'); expect(filas).toContain('F1|98');
     expect(filas).toContain('Copia no controlada'); expect(filas).toContain('Confidencial QA');
+    expect(Object.keys(wb.Sheets.Resultados).some(k => /image|logo/i.test(k))).toBe(false);
     expect(filas.at(-1)).toMatch(/^Generado por Ana QA el .+ · DOC-2026-000042$/);
   });
   it('encabezado, pie y folio en el PDF de la auditoría', () => {
