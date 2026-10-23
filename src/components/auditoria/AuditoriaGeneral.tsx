@@ -1,6 +1,7 @@
 import { Fragment, useMemo, useState } from 'react';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { prepararDocumento } from '@/lib/documentos';
+import { conservarYDescargar } from '@/lib/documentos/originales';
 import { bitacoraExcel, bitacoraPdf } from '@/lib/documentos/bitacora';
 import { Bot, ChevronDown, ChevronRight, Download } from 'lucide-react';
 import { toast } from 'sonner';
@@ -111,12 +112,8 @@ export function AuditoriaGeneral({ moduloInicial = '' }: { moduloInicial?: strin
       ]);
       const nombre = `auditoria_${new Date().toISOString().slice(0, 10)}.${formato === 'pdf' ? 'pdf' : 'xlsx'}`;
       const ctx = await prepararDocumento(formato === 'pdf' ? 'auditoria.bitacora_pdf' : 'auditoria.bitacora_excel', nombre, { empresa: org?.nombre ?? '', logoPath: org?.logo_url, generadoPor: profile?.nombre || user?.email || '' });
-      if (formato === 'pdf') bitacoraPdf(ctx, filtros, datos).save(nombre);
-      else {
-        const url = URL.createObjectURL(new Blob([bitacoraExcel(ctx, filtros, datos) as BlobPart], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
-        const a = document.createElement('a'); a.href = url; a.download = nombre; a.click();
-        setTimeout(() => URL.revokeObjectURL(url), 1000);
-      }
+      const blob = formato === 'pdf' ? bitacoraPdf(ctx, filtros, datos).output('blob') : new Blob([bitacoraExcel(ctx, filtros, datos) as BlobPart], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      await conservarYDescargar(ctx, blob, nombre);
       if (tope) toast.warning(`Se exportaron los primeros ${MAX_EXPORT.toLocaleString('es-MX')} eventos (tope). Acota el filtro para exportar el resto.`);
     } catch (e) {
       toast.error((e as Error)?.message ?? 'No se pudo exportar');

@@ -2757,6 +2757,50 @@ export type Database = {
         }
         Relationships: []
       }
+      documento_reservas: {
+        Row: {
+          actor: string
+          archivo_path: string
+          creado_en: string
+          folio: string
+          id: string
+          nombre_archivo: string
+          org_id: string
+          registro: Json
+          tipo: string
+        }
+        Insert: {
+          actor: string
+          archivo_path: string
+          creado_en?: string
+          folio: string
+          id?: string
+          nombre_archivo: string
+          org_id: string
+          registro: Json
+          tipo: string
+        }
+        Update: {
+          actor?: string
+          archivo_path?: string
+          creado_en?: string
+          folio?: string
+          id?: string
+          nombre_archivo?: string
+          org_id?: string
+          registro?: Json
+          tipo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "documento_reservas_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       documento_tipos: {
         Row: {
           activo: boolean
@@ -7028,6 +7072,10 @@ export type Database = {
         Returns: undefined
       }
       confirmar_catalogo_documentos: { Args: never; Returns: string }
+      confirmar_documento_archivo: {
+        Args: { _folio: string; _sha256: string }
+        Returns: undefined
+      }
       confirmar_emision_kpi_word: {
         Args: { _id: string; _logo: Json; _sha256: string; _token: string }
         Returns: Json
@@ -7363,6 +7411,17 @@ export type Database = {
         Args: { _evidencia_id: string; _resultados: string[] }
         Returns: number
       }
+      listar_documentos_archivados: {
+        Args: {
+          _desde?: string
+          _folio?: string
+          _hasta?: string
+          _pagina?: number
+          _tipo?: string
+          _usuario?: string
+        }
+        Returns: Json
+      }
       mi_acceso_curso: { Args: { p_curso_id: string }; Returns: string }
       mi_ia_en_prueba: { Args: never; Returns: boolean }
       mi_org_tiene_modulo: { Args: { _modulo: string }; Returns: boolean }
@@ -7476,6 +7535,10 @@ export type Database = {
         }[]
       }
       plan_limite: { Args: { p_clave: string; p_org: string }; Returns: Json }
+      preparar_documento_archivo: {
+        Args: { _nombre_archivo: string; _tipo: string }
+        Returns: Json
+      }
       preparar_emision_kpi_word: { Args: { _id: string }; Returns: Json }
       previsualizar_resultados_excel: { Args: { _celdas: Json }; Returns: Json }
       publicar_skill: {

@@ -1,5 +1,7 @@
 # Roadmap
 
+- [x] D1-a: firmas por puesto/perfil, originales y búsqueda en Configuración, periodos abiertos ignorados; migraciones 0114–0116. Suite única: 411/413, dos fallos por variable SQL ambigua corregidos y 3/3 en verificación focalizada; no se repitió la suite completa. Sin Tendencias/Riesgos, navegador, IA ni dependencias.
+
 - [x] K1: Indicadores del SGC y por puesto, catálogo de puestos, rol Aseguramiento de Calidad y suplencias aisladas, Excel con vista previa y aplicación atómica auditada, pendiente de validación; migraciones 0088–0095 y suite 329/329. Sin activar empresas, tocar archivos Tendencias/Riesgos, navegador, llamadas IA ni dependencias; recorrido visual/autenticado no verificado por restricción.
 
 - [x] P1-b: menú plegable por usuario y cajón móvil, pendientes arriba de módulos, migas de pan de plataforma, alertas por color; sin cambios de permisos o lógica, sin navegador/IA/dependencias.

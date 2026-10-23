@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { prepararDocumento } from '@/lib/documentos';
+import { conservarYDescargar } from '@/lib/documentos/originales';
 import { graficaPNG, ESCALA_PNG, PX_16x9 } from '@/lib/documentos/graficas';
 import { claseSemaforo } from './lib/semaforo';
 import { etiquetaPeriodo, etiquetaSub, fueraDeMeta, num, obtenerResumen, pct, periodosCerrados, type KpiResumen, type Resumen, type TipoPeriodo } from './lib/tablero';
@@ -76,7 +77,7 @@ export default function Reportes() {
       if (svg) graficas[k.id] = await bytes(await graficaPNG(svg, [`${k.codigo} · ${k.nombre}`], [{ nombre: `Meta ${k.meta} ${k.unidad}`, color: '#1f3a5f', linea: 'dash' }], PX_16x9));
     }
     const doc = construirWordReporte({ ctx, reporte: r, resumen, firmantes: emitido && r.firmantes ? r.firmantes : firmantesVivos(r), graficas, borrador: !emitido });
-    descargar(await wordABlob(doc), nombreArchivo);
+    await conservarYDescargar(ctx, await wordABlob(doc), nombreArchivo);
   } catch (e) { toast.error((e as Error).message ?? String(e)); } finally { setBusy(false); } };
   const opciones = useMemo(() => nuevo ? periodosCerrados(nuevo.tipo) : [], [nuevo]);
   const elegibles = (perfiles.data ?? []).filter(p => p.id !== r?.elaboro_por);

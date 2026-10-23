@@ -5,7 +5,7 @@ import { celdasAnio, etiquetaPeriodo, periodoCerrado, type Resultado } from './r
 
 export interface KpiExcel { tabla: 'kpi_definiciones' | 'kpi_puesto'; id: string; codigo: string; nombre: string; grupo: string; nivel: string; frecuencia: string; meta: number; unidad: string; fuente: string; estado: string }
 export interface CeldaExcel { tipo: string; codigo: string; inicio: string; numerador: string | number; denominador: string | number; referencia: string; hoja: string; posicion: string }
-export interface VistaExcel { celda: CeldaExcel; estado: 'nuevo' | 'cambia' | 'sin cambio' | 'error'; error: string; antes: { numerador: number; denominador: number | null; referencia: string } | null; despues: { numerador: number; denominador: number | null; referencia: string }; valor: number | null; semaforo: string }
+export interface VistaExcel { celda: CeldaExcel; estado: 'nuevo' | 'cambia' | 'sin cambio' | 'ignorado (periodo abierto)' | 'error'; error: string; antes: { numerador: number; denominador: number | null; referencia: string } | null; despues: { numerador: number; denominador: number | null; referencia: string }; valor: number | null; semaforo: string }
 export const referenciaPeriodo = (k: KpiExcel, inicio: string) => [k.fuente, etiquetaPeriodo(k.frecuencia, inicio)].filter(Boolean).join(' · ');
 const clave = (k: KpiExcel, inicio: string) => `${k.tabla}|${k.id}|${inicio}`;
 export function hojasAnio(kpis: KpiExcel[], resultados: Resultado[], anio: number, hoy: string) {
@@ -33,7 +33,7 @@ export function hojasAnio(kpis: KpiExcel[], resultados: Resultado[], anio: numbe
         const editable = aplica && periodoCerrado(p.fin, hoy); const col = fila.length;
         fila.push(r?.numerador ?? '', r?.denominador ?? '');
         if (editable) { desbloqueadas.push(XLSX.utils.encode_cell({ r: idx + 1, c: col })); if (k.unidad !== 'número') desbloqueadas.push(XLSX.utils.encode_cell({ r: idx + 1, c: col + 1 })); }
-        if (ks.some(x => x.nivel === 'SGC')) { fila.push(aplica && k.nivel === 'SGC' ? r?.referencia_fuente || referenciaPeriodo(k, p.inicio) : ''); if (editable && k.nivel === 'SGC') desbloqueadas.push(XLSX.utils.encode_cell({ r: idx + 1, c: col + 2 })); }
+        if (ks.some(x => x.nivel === 'SGC')) { fila.push(aplica && k.nivel === 'SGC' ? r && !editable ? r.referencia_fuente ?? '' : r?.referencia_fuente || referenciaPeriodo(k, p.inicio) : ''); if (editable && k.nivel === 'SGC') desbloqueadas.push(XLSX.utils.encode_cell({ r: idx + 1, c: col + 2 })); }
       }
       filas.push(fila);
     });
