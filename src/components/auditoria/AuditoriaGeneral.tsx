@@ -1,6 +1,7 @@
 import { Fragment, useMemo, useState } from 'react';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import * as XLSX from 'xlsx-js-style';
+import { prepararDocumento } from '@/lib/documentos';
+import { bitacoraExcel, bitacoraPdf } from '@/lib/documentos/bitacora';
 import { Bot, ChevronDown, ChevronRight, Download } from 'lucide-react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
@@ -83,7 +84,7 @@ export function AuditoriaGeneral({ moduloInicial = '' }: { moduloInicial?: strin
     return { texto: n[e.user_id] ?? 'Persona', sistema: false };
   };
 
-  const exportar = async () => {
+  const exportar = async (formato: 'excel' | 'pdf' = 'excel') => {
     if (!orgId) return;
     setExportando(true);
     try {
@@ -102,25 +103,20 @@ export function AuditoriaGeneral({ moduloInicial = '' }: { moduloInicial?: strin
       }
       const n = await nombresPersonas([...new Set(todas.flatMap((e) => [e.user_id, e.solicitado_por, e.autorizado_por]).filter((x): x is string => !!x))]);
       const nombrePersona = f.persona ? personas.find((p) => p.id === f.persona)?.nombre ?? '—' : 'Todas';
-      const ws = XLSX.utils.aoa_to_sheet([
-        ['Auditoría general de la plataforma'],
-        [`Organización: ${org?.nombre ?? ''}`],
-        [`Filtros — Módulo: ${MODULOS_AUDITADOS[f.modulo] ?? 'Todos'}; Catálogo: ${f.catalogo ? catalogoEvento(f.catalogo) : 'Todos'}; Código: ${f.codigo || '—'}; Usuario: ${nombrePersona}; Desde: ${f.desde || '—'}; Hasta: ${f.hasta || '—'}`],
-        [`Exportado: ${new Date().toLocaleString('es-MX')} por ${profile?.nombre ?? user?.email ?? ''} · Total: ${todas.length}`],
-        [],
-        ['Fecha/hora', 'Usuario', 'A nombre de (suplencia)', 'Módulo', 'Catálogo', 'Registro', 'Acción', 'Antes → después', 'Motivo'],
-        ...todas.map((e) => [
-          new Date(e.created_at).toLocaleString('es-MX'), persona(e, n).texto, titularesSuplencia(e).join(', '),
-          moduloEvento(e.tabla), catalogoEvento(e.tabla), registroEvento(e, ref), accionLegible(e),
-          cambiosEvento(e, ref).map((c) => `${c.campo}: ${c.antes} → ${c.despues}`).join('; '), e.motivo ?? '',
-        ]),
+      const filtros = `Filtros — Módulo: ${MODULOS_AUDITADOS[f.modulo] ?? 'Todos'}; Catálogo: ${f.catalogo ? catalogoEvento(f.catalogo) : 'Todos'}; Código: ${f.codigo || '—'}; Usuario: ${nombrePersona}; Desde: ${f.desde || '—'}; Hasta: ${f.hasta || '—'}`;
+      const datos = todas.map((e) => [
+        new Date(e.created_at).toLocaleString('es-MX', { timeZone: 'America/Mexico_City' }), persona(e, n).texto, titularesSuplencia(e).join(', '),
+        moduloEvento(e.tabla), catalogoEvento(e.tabla), registroEvento(e, ref), accionLegible(e),
+        cambiosEvento(e, ref).map((c) => `${c.campo}: ${c.antes} → ${c.despues}`).join('; '), e.motivo ?? '',
       ]);
-      ws['!cols'] = [{ wch: 18 }, { wch: 24 }, { wch: 22 }, { wch: 20 }, { wch: 20 }, { wch: 26 }, { wch: 16 }, { wch: 60 }, { wch: 34 }];
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, 'Auditoría');
-      const url = URL.createObjectURL(new Blob([XLSX.write(wb, { type: 'array', bookType: 'xlsx' })], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
-      const a = document.createElement('a'); a.href = url; a.download = `auditoria_${new Date().toISOString().slice(0, 10)}.xlsx`; a.click();
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      const nombre = `auditoria_${new Date().toISOString().slice(0, 10)}.${formato === 'pdf' ? 'pdf' : 'xlsx'}`;
+      const ctx = await prepararDocumento(formato === 'pdf' ? 'auditoria.bitacora_pdf' : 'auditoria.bitacora_excel', nombre, { empresa: org?.nombre ?? '', logoPath: org?.logo_url, generadoPor: profile?.nombre || user?.email || '' });
+      if (formato === 'pdf') bitacoraPdf(ctx, filtros, datos).save(nombre);
+      else {
+        const url = URL.createObjectURL(new Blob([bitacoraExcel(ctx, filtros, datos) as BlobPart], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
+        const a = document.createElement('a'); a.href = url; a.download = nombre; a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      }
       if (tope) toast.warning(`Se exportaron los primeros ${MAX_EXPORT.toLocaleString('es-MX')} eventos (tope). Acota el filtro para exportar el resto.`);
     } catch (e) {
       toast.error((e as Error)?.message ?? 'No se pudo exportar');
@@ -157,8 +153,11 @@ export function AuditoriaGeneral({ moduloInicial = '' }: { moduloInicial?: strin
           </label>
           <label className="text-xs space-y-1">Desde<Input type="date" value={f.desde} onChange={(e) => cambiar({ desde: e.target.value })} /></label>
           <label className="text-xs space-y-1">Hasta<Input type="date" value={f.hasta} onChange={(e) => cambiar({ hasta: e.target.value })} /></label>
-          <Button variant="outline" size="sm" className="ml-auto" onClick={exportar} disabled={filas.length === 0 || exportando}>
+          <Button variant="outline" size="sm" className="ml-auto" onClick={() => void exportar('excel')} disabled={filas.length === 0 || exportando}>
             <Download className="h-4 w-4 mr-1" /> {exportando ? 'Exportando…' : 'Exportar Excel'}
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => void exportar('pdf')} disabled={filas.length === 0 || exportando}>
+            <Download className="h-4 w-4 mr-1" /> Exportar PDF
           </Button>
         </CardContent>
       </Card>
