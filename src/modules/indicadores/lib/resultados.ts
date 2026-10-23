@@ -6,7 +6,7 @@ export interface Resultado {
   periodo_inicio: string; periodo_fin: string | null; fecha_evento: string | null; descripcion_evento: string;
   numerador: number; denominador: number | null; valor: number | null; cumplimiento: number | null; semaforo: string;
   meta_copia: number; tendencia_copia: string; unidad_copia: string;
-  evidencia_path: string | null; comentario: string; estado: string;
+  evidencia_path: string | null; referencia_fuente: string; comentario: string; estado: string;
   capturado_por: string; capturado_en: string; revisado_por: string | null; revisado_en: string | null; activo: boolean;
 }
 export interface Calculo { valor: number | null; cumplimiento: number | null; semaforo: string }
@@ -85,4 +85,65 @@ export function exportarResultados(filas: Record<string, unknown>[]): Uint8Array
   ws['!cols'] = Object.keys(filas[0] ?? { a: 1 }).map(() => ({ wch: 22 }));
   XLSX.utils.book_append_sheet(wb, ws, 'Resultados');
   return new Uint8Array(XLSX.write(wb, { type: 'array', bookType: 'xlsx' }));
+}
+
+/** Fecha de hoy en America/Mexico_City (YYYY-MM-DD). */
+export function hoyMx(d = new Date()): string { return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Mexico_City', year: 'numeric', month: '2-digit', day: '2-digit' }).format(d); }
+const ymd = (y: number, m: number, d: number) => iso(new Date(y, m, d));
+/** Misma regla que public.kpi_periodo. */
+export function periodoDe(frecuencia: string, fecha: string): { inicio: string; fin: string } | null {
+  const [y, m] = fecha.split('-').map(Number); const mi = m - 1;
+  if (frecuencia === 'mensual') return { inicio: ymd(y, mi, 1), fin: ymd(y, mi + 1, 0) };
+  if (frecuencia === 'trimestral') { const q = Math.floor(mi / 3) * 3; return { inicio: ymd(y, q, 1), fin: ymd(y, q + 3, 0) }; }
+  if (frecuencia === 'semestral') { const s = mi >= 6 ? 6 : 0; return { inicio: ymd(y, s, 1), fin: ymd(y, s + 6, 0) }; }
+  if (frecuencia === 'anual') return { inicio: ymd(y, 0, 1), fin: ymd(y, 11, 31) };
+  return null;
+}
+/** Misma regla que public.kpi_ultimo_cerrado: el periodo anterior al que contiene hoy. */
+export function ultimoCerrado(frecuencia: string, hoy: string): { inicio: string; fin: string } | null {
+  const actual = periodoDe(frecuencia, hoy); if (!actual) return null;
+  const [y, m, d] = actual.inicio.split('-').map(Number);
+  return periodoDe(frecuencia, iso(new Date(y, m - 1, d - 1)));
+}
+const MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+export function etiquetaPeriodo(frecuencia: string, inicio: string): string {
+  const [y, m] = inicio.split('-').map(Number);
+  if (frecuencia === 'mensual') return `${MESES[m - 1]} ${y}`;
+  if (frecuencia === 'trimestral') return `T${Math.floor((m - 1) / 3) + 1} ${y}`;
+  if (frecuencia === 'semestral') return `S${m >= 7 ? 2 : 1} ${y}`;
+  if (frecuencia === 'anual') return String(y);
+  return inicio;
+}
+/** Celdas del año (enero a diciembre) según la frecuencia; cada una con su periodo y ancho en meses. */
+export function celdasAnio(frecuencia: string, anio: number): { inicio: string; fin: string; meses: number }[] {
+  const paso = frecuencia === 'mensual' ? 1 : frecuencia === 'trimestral' ? 3 : frecuencia === 'semestral' ? 6 : frecuencia === 'anual' ? 12 : 0;
+  if (!paso) return [];
+  return Array.from({ length: 12 / paso }, (_, i) => ({ ...periodoDe(frecuencia, ymd(anio, i * paso, 1))!, meses: paso }));
+}
+export const periodoCerrado = (fin: string, hoy: string) => fin < hoy;
+export interface GuardarArgs { tabla: 'kpi_definiciones' | 'kpi_puesto'; kpiId: string; periodoInicio?: string; fechaEvento?: string; descripcionEvento?: string; numerador: number; denominador: number | null; referencia: string; comentario: string; motivo?: string; resultadoId?: string }
+export async function guardarResultado(a: GuardarArgs): Promise<string> {
+  const { data, error } = await supabase.rpc('guardar_kpi_resultado', { _tabla: a.tabla, _kpi_id: a.kpiId, _periodo_inicio: a.periodoInicio ?? null, _fecha_evento: a.fechaEvento ?? null, _descripcion_evento: a.descripcionEvento ?? '', _numerador: a.numerador, _denominador: a.denominador, _referencia: a.referencia, _comentario: a.comentario, _motivo: a.motivo ?? '', _resultado_id: a.resultadoId ?? null } as never);
+  if (error) throw error; return data as unknown as string;
+}
+export interface Evidencia { id: string; periodo_inicio: string; periodo_fin: string; nombre: string; path: string }
+export interface Liga { resultado_id: string; evidencia_id: string }
+export async function listarEvidencias(): Promise<{ evidencias: Evidencia[]; ligas: Liga[] }> {
+  const [e, l] = await Promise.all([
+    supabase.from('kpi_evidencias').select('id,periodo_inicio,periodo_fin,nombre,path').eq('activo', true).order('periodo_inicio', { ascending: false }),
+    supabase.from('kpi_resultado_evidencia').select('resultado_id,evidencia_id').eq('activo', true),
+  ]);
+  if (e.error) throw e.error; if (l.error) throw l.error;
+  return { evidencias: (e.data ?? []) as Evidencia[], ligas: (l.data ?? []) as Liga[] };
+}
+export async function registrarEvidencia(orgId: string, inicio: string, fin: string, archivo: File): Promise<string> {
+  if (archivo.size > 10 * 1024 * 1024) throw new Error('El archivo supera 10 MB');
+  const path = `${orgId}/periodo/${inicio}/${Date.now()}-${archivo.name.replace(/[^\w.-]/g, '_')}`;
+  const up = await supabase.storage.from('kpi-evidencias').upload(path, archivo); if (up.error) throw up.error;
+  const { data, error } = await supabase.rpc('registrar_kpi_evidencia', { _periodo_inicio: inicio, _periodo_fin: fin, _nombre: archivo.name, _path: path } as never);
+  if (error) throw error; return data as unknown as string;
+}
+export async function ligarEvidencia(evidenciaId: string, resultados: string[]): Promise<number> {
+  const { data, error } = await supabase.rpc('ligar_kpi_evidencia', { _evidencia_id: evidenciaId, _resultados: resultados } as never);
+  if (error) throw error; return Number(data);
 }
