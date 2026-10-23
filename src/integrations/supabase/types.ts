@@ -3538,6 +3538,56 @@ export type Database = {
           },
         ]
       }
+      kpi_evidencias: {
+        Row: {
+          activo: boolean
+          created_at: string
+          created_by: string | null
+          id: string
+          nombre: string
+          org_id: string
+          path: string
+          periodo_fin: string
+          periodo_inicio: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          activo?: boolean
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          nombre: string
+          org_id?: string
+          path: string
+          periodo_fin: string
+          periodo_inicio: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          activo?: boolean
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          nombre?: string
+          org_id?: string
+          path?: string
+          periodo_fin?: string
+          periodo_inicio?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kpi_evidencias_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       kpi_puesto: {
         Row: {
           activo: boolean
@@ -3686,6 +3736,64 @@ export type Database = {
           },
         ]
       }
+      kpi_resultado_evidencia: {
+        Row: {
+          activo: boolean
+          created_at: string
+          created_by: string | null
+          evidencia_id: string
+          id: string
+          org_id: string
+          resultado_id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          activo?: boolean
+          created_at?: string
+          created_by?: string | null
+          evidencia_id: string
+          id?: string
+          org_id?: string
+          resultado_id: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          activo?: boolean
+          created_at?: string
+          created_by?: string | null
+          evidencia_id?: string
+          id?: string
+          org_id?: string
+          resultado_id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kpi_resultado_evidencia_org_id_evidencia_id_fkey"
+            columns: ["org_id", "evidencia_id"]
+            isOneToOne: false
+            referencedRelation: "kpi_evidencias"
+            referencedColumns: ["org_id", "id"]
+          },
+          {
+            foreignKeyName: "kpi_resultado_evidencia_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kpi_resultado_evidencia_resultado_id_fkey"
+            columns: ["resultado_id"]
+            isOneToOne: false
+            referencedRelation: "kpi_resultados"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       kpi_resultados: {
         Row: {
           activo: boolean
@@ -3708,6 +3816,7 @@ export type Database = {
           org_id: string
           periodo_fin: string | null
           periodo_inicio: string
+          referencia_fuente: string
           revisado_en: string | null
           revisado_por: string | null
           semaforo: string
@@ -3738,6 +3847,7 @@ export type Database = {
           org_id?: string
           periodo_fin?: string | null
           periodo_inicio: string
+          referencia_fuente?: string
           revisado_en?: string | null
           revisado_por?: string | null
           semaforo?: string
@@ -3768,6 +3878,7 @@ export type Database = {
           org_id?: string
           periodo_fin?: string | null
           periodo_inicio?: string
+          referencia_fuente?: string
           revisado_en?: string | null
           revisado_por?: string | null
           semaforo?: string
@@ -6672,6 +6783,22 @@ export type Database = {
       }
       folios_revision_corte: { Args: { p_ahora?: string }; Returns: string }
       get_user_org_id: { Args: never; Returns: string }
+      guardar_kpi_resultado: {
+        Args: {
+          _comentario: string
+          _denominador: number
+          _descripcion_evento: string
+          _fecha_evento: string
+          _kpi_id: string
+          _motivo: string
+          _numerador: number
+          _periodo_inicio: string
+          _referencia: string
+          _resultado_id?: string
+          _tabla: string
+        }
+        Returns: string
+      }
       guardar_kpis: {
         Args: { _motivo: string; _paquete: Json }
         Returns: undefined
@@ -6722,6 +6849,14 @@ export type Database = {
       kpi_puede_capturar: {
         Args: { _capturistas: string[]; _org: string }
         Returns: boolean
+      }
+      kpi_ultimo_cerrado: {
+        Args: { _frecuencia: string; _hoy: string }
+        Returns: Record<string, unknown>
+      }
+      ligar_kpi_evidencia: {
+        Args: { _evidencia_id: string; _resultados: string[] }
+        Returns: number
       }
       mi_acceso_curso: { Args: { p_curso_id: string }; Returns: string }
       mi_ia_en_prueba: { Args: never; Returns: boolean }
@@ -6862,6 +6997,15 @@ export type Database = {
       registrar_cambio_contrasena: {
         Args: { _origen: string }
         Returns: undefined
+      }
+      registrar_kpi_evidencia: {
+        Args: {
+          _nombre: string
+          _path: string
+          _periodo_fin: string
+          _periodo_inicio: string
+        }
+        Returns: string
       }
       reordenar_riesgos: {
         Args: { p_folio_id: string; p_orden: string[] }

@@ -694,6 +694,20 @@
       "when": 1792767075160,
       "tag": "0098_k2_resultados_kpi",
       "breakpoints": true
+    },
+    {
+      "idx": 99,
+      "version": "7",
+      "when": 1792772631493,
+      "tag": "0099_k2b_captura_puesto_evidencias_periodo",
+      "breakpoints": true
+    },
+    {
+      "idx": 100,
+      "version": "7",
+      "when": 1792773010139,
+      "tag": "0100_k2b_guardar_resultado_variables",
+      "breakpoints": true
     }
   ]
 }
