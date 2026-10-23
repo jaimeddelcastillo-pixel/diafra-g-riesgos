@@ -680,6 +680,13 @@
       "when": 1792763149837,
       "tag": "0096_k1a_peso_solo_nivel_sgc",
       "breakpoints": true
+    },
+    {
+      "idx": 97,
+      "version": "7",
+      "when": 1792765255597,
+      "tag": "0097_k1c_auditoria_rapida_roles",
+      "breakpoints": true
     }
   ]
 }
