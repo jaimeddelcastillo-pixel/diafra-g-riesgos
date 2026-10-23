@@ -13,7 +13,7 @@ export interface Reporte {
   tipo_periodo: TipoPeriodo; periodo_inicio: string; periodo_fin: string; alcance_procesos: string[]; alcance_puestos: string[];
   objetivo: string; alcance: string; metodologia: string; analisis: Record<string, Analisis>; conclusiones: string;
   elaboro_por: string | null; revisores: string[]; revisiones: { user_id: string; fecha: string; comentario: string }[];
-  firmantes: Firmantes | null; formato_snapshot: (RegistroDocumento & { tipo: string }) | null; datos_snapshot: Resumen | null;
+  firmantes: Firmantes | null; formato_snapshot: (RegistroDocumento & { tipo: string; logo?: Logo | null; empresa?: string; archivo_path?: string; archivo_sha256?: string }) | null; datos_snapshot: Resumen | null;
   emitido_en: string | null; anulado_en: string | null; motivo_anulacion: string | null; updated_at: string;
 }
 export interface ConfigReporte { version: number; objetivo: string; alcance: string; metodologia: string; autorizadores: string[] }
@@ -38,7 +38,19 @@ export const crearReporte = (tipo: TipoPeriodo, inicio: string) => rpc('crear_kp
 export const guardarReporte = (id: string, datos: Partial<Pick<Reporte, 'objetivo' | 'alcance' | 'metodologia' | 'analisis' | 'conclusiones' | 'revisores'>>) => rpc('guardar_kpi_reporte', { _id: id, _datos: datos });
 export const enviarReporte = (id: string) => rpc('enviar_kpi_reporte', { _id: id });
 export const revisarReporte = (id: string, aprobar: boolean, comentario: string) => rpc('revisar_kpi_reporte', { _id: id, _aprobar: aprobar, _comentario: comentario });
-export const emitirReporte = (id: string) => rpc('emitir_kpi_reporte', { _id: id });
+export async function emitirReporte(id: string) {
+  const { data, error } = await supabase.functions.invoke('emitir-kpi-word', { body: { id } });
+  if (error) throw error;
+  if (data?.error) throw new Error(data.error);
+  return data;
+}
+export async function descargarOriginal(r: Reporte): Promise<Blob> {
+  const path = r.formato_snapshot?.archivo_path;
+  if (!path) throw new Error('Este reporte no tiene un Word original conservado; no se regenerará');
+  const { data, error } = await supabase.storage.from('documentos-generados').download(path);
+  if (error || !data) throw error ?? new Error('No se pudo descargar el original');
+  return data;
+}
 export const nuevaVersion = (id: string, motivo: string) => rpc('nueva_version_kpi_reporte', { _id: id, _motivo: motivo });
 export const anularReporte = (id: string, motivo: string) => rpc('anular_kpi_reporte', { _id: id, _motivo: motivo });
 export const puedeAutorizar = async (orgId: string, userId: string) => (await rpc('kpi_reporte_autoriza', { _org: orgId, _u: userId })) as string | null;
@@ -54,7 +66,7 @@ export const quienTienePendiente = (r: Reporte) => r.estado !== 'borrador' ? '�
 /** Identity of an issued report comes only from its frozen snapshot (same folio and date on every regeneration). */
 export function contextoEmitido(r: Reporte, opts: { empresa: string; logo: Logo | null }): ContextoDocumento {
   if (!r.formato_snapshot || !r.firmantes) throw new Error('El reporte no tiene snapshot de emisión');
-  return construirContexto('indicadores.reporte_word', r.formato_snapshot, { empresa: opts.empresa, generadoPor: r.firmantes.autorizo?.nombre ?? '', logo: opts.logo });
+  return construirContexto('indicadores.reporte_word', r.formato_snapshot, { empresa: r.formato_snapshot.empresa ?? opts.empresa, generadoPor: r.firmantes.autorizo?.nombre ?? '', logo: r.formato_snapshot.logo ?? null });
 }
 
 export { construirWordReporte, lineaFirma } from '../../../../supabase/functions/emitir-kpi-word/word';

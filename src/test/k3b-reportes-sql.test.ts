@@ -4,21 +4,24 @@ vi.setConfig({ testTimeout: 120000 });
 const id = (n: number) => `00000000-0000-0000-0000-${String(n).padStart(12, '0')}`;
 const ORG = id(400);
 let defs: string | undefined;
-const tablas = ['profiles', 'org_members', 'org_suplencias', 'puestos', 'kpi_definiciones', 'kpi_puesto', 'kpi_resultados', 'kpi_reporte_config', 'kpi_reportes', 'kpi_reportes_historial', 'org_formatos', 'org_identidad_documental', 'documentos_generados'];
-const funciones = ['rol_efectivo', 'kpi_acceso', 'kpi_periodo', 'kpi_calcular', 'kpi_semaforo_cumplimiento', 'kpi_acumulado_interno', 'kpi_resumen_periodo', 'kpi_reportes_guard', 'kpi_reporte_autoriza', 'kpi_reporte_preparar', 'guardar_kpi_reporte_config', 'crear_kpi_reporte', 'guardar_kpi_reporte', 'kpi_reporte_faltantes', 'enviar_kpi_reporte', 'revisar_kpi_reporte', 'emitir_kpi_reporte', 'nueva_version_kpi_reporte', 'anular_kpi_reporte', 'registrar_documento_generado'];
+const tablas = ['organizations', 'profiles', 'org_members', 'org_suplencias', 'puestos', 'kpi_definiciones', 'kpi_puesto', 'kpi_resultados', 'kpi_reporte_config', 'kpi_reportes', 'kpi_reportes_historial', 'org_formatos', 'org_identidad_documental', 'documentos_generados'];
+const funciones = ['rol_efectivo', 'kpi_acceso', 'kpi_periodo', 'kpi_calcular', 'kpi_semaforo_cumplimiento', 'kpi_acumulado_interno', 'kpi_resumen_periodo', 'kpi_reportes_guard', 'kpi_reporte_autoriza', 'kpi_reporte_preparar', 'guardar_kpi_reporte_config', 'crear_kpi_reporte', 'guardar_kpi_reporte', 'kpi_reporte_faltantes', 'enviar_kpi_reporte', 'revisar_kpi_reporte', 'preparar_emision_kpi_word', 'confirmar_emision_kpi_word', 'emitir_kpi_reporte', 'nueva_version_kpi_reporte', 'anular_kpi_reporte', 'registrar_documento_generado'];
 function run(body: string) {
   if (!defs) defs = execFileSync('psql', ['-XqAt', '-v', 'ON_ERROR_STOP=1'], { input: `SELECT string_agg(pg_get_functiondef(oid)||';', E'\n') FROM pg_proc WHERE pronamespace='public'::regnamespace AND proname=ANY(ARRAY[${funciones.map(f => `'${f}'`).join(',')}]);`, encoding: 'utf8', timeout: 30000 })
-    .replaceAll('public.', 'pg_temp.').replaceAll('pg_temp.app_role', 'public.app_role').replace(/\b_rol app_role\b/g, '_rol public.app_role').replaceAll('auth.uid()', 'pg_temp.uid()').replaceAll('SECURITY DEFINER', '').replaceAll("SET search_path TO 'public'", 'SET search_path TO pg_temp,public');
+    .replaceAll('public.', 'pg_temp.').replaceAll('pg_temp.app_role', 'public.app_role').replace(/\b_rol app_role\b/g, '_rol public.app_role').replaceAll('storage.objects', 'pg_temp.objects').replaceAll('auth.uid()', 'pg_temp.uid()').replaceAll('SECURITY DEFINER', '').replaceAll("SET search_path TO 'public'", 'SET search_path TO pg_temp,public');
   const sql = `BEGIN;SET LOCAL check_function_bodies=off;
 ${tablas.map(t => `CREATE TEMP TABLE ${t}(LIKE public.${t} INCLUDING DEFAULTS);`).join('\n')}
 DO $$ DECLARE c record;BEGIN FOR c IN SELECT table_name,column_name FROM information_schema.columns WHERE table_schema LIKE 'pg_temp_%' AND is_nullable='NO' AND column_name<>'id' AND column_default IS NULL LOOP EXECUTE format('ALTER TABLE pg_temp.%I ALTER COLUMN %I DROP NOT NULL',c.table_name,c.column_name);END LOOP;END $$;
+CREATE TEMP TABLE objects(bucket_id text,name text);
 CREATE TEMP SEQUENCE documentos_generados_folio_seq;
 CREATE FUNCTION pg_temp.uid() RETURNS uuid LANGUAGE sql AS $$SELECT nullif(current_setting('qa.actor',true),'')::uuid$$;
 CREATE FUNCTION pg_temp.get_user_org_id() RETURNS uuid LANGUAGE sql AS $$SELECT '${ORG}'::uuid$$;
 CREATE FUNCTION pg_temp.contexto_org_actual() RETURNS TABLE(org_id uuid,rol_en_org text,es_super_admin boolean,soporte_log_id uuid) LANGUAGE sql AS $$SELECT '${ORG}'::uuid,NULL::text,false,NULL::uuid$$;
 CREATE FUNCTION pg_temp.org_tiene_modulo(uuid,text) RETURNS boolean LANGUAGE sql AS $$SELECT true$$;
 ${defs}
+CREATE OR REPLACE FUNCTION pg_temp.emitir_kpi_reporte(_id uuid) RETURNS jsonb LANGUAGE plpgsql AS $$DECLARE s jsonb;BEGIN s:=pg_temp.preparar_emision_kpi_word(_id);INSERT INTO objects VALUES('documentos-generados',s->>'path');RETURN pg_temp.confirmar_emision_kpi_word(_id,(s->>'token')::uuid,NULL,repeat('a',64));END$$;
 ${['kpi_reportes', 'kpi_reportes_historial', 'kpi_reporte_config'].map(t => `CREATE TRIGGER guard BEFORE INSERT OR UPDATE OR DELETE ON ${t} FOR EACH ROW EXECUTE FUNCTION pg_temp.kpi_reportes_guard();`).join('\n')}
+INSERT INTO organizations(id,nombre,es_prueba) VALUES('${ORG}','QA reportes',true);
 INSERT INTO profiles(id,nombre,cargo,activo,perfil_confirmado_en) SELECT ('00000000-0000-0000-0000-'||lpad(i::text,12,'0'))::uuid,'QA persona '||i,'QA cargo '||i,true,now() FROM generate_series(1,5) i;
 INSERT INTO org_members(org_id,user_id,role) VALUES('${ORG}','${id(1)}','responsable_sanitario'),('${ORG}','${id(2)}','admin'),('${ORG}','${id(3)}','aseguramiento_calidad'),('${ORG}','${id(4)}','operador'),('${ORG}','${id(5)}','operador');
 INSERT INTO kpi_definiciones(id,org_id,codigo,nombre,proceso,nivel,frecuencia,tendencia,meta,unidad,peso,estado,activo) VALUES('${id(10)}','${ORG}','A','QA rojo','Calidad','SGC','mensual','positiva',95,'%',100,'validado',true);
@@ -41,6 +44,16 @@ const listo = (autor = 2) => `${actor(autor)}rid:=pg_temp.crear_kpi_reporte('tri
 const falla = (stmt: string, msg: string) => `failed:=false;BEGIN ${stmt};EXCEPTION WHEN raise_exception THEN failed:=true;END;IF NOT failed THEN RAISE EXCEPTION '${msg}';END IF;`;
 async function check(body: string) { expect(await run(body)).toContain('K3B OK'); }
 describe.skipIf(!process.env.PGHOST)('K3-b reporte periódico de indicadores, QA temporal con rollback', () => {
+  it('K3-b-1 no emite sin el original guardado y congela logo y ruta con folio', () => check(`${listo()}${actor(3)}
+DECLARE s jsonb; logo jsonb:='{"format":"PNG","dataUrl":"data:image/png;base64,QUFB"}'; BEGIN
+s:=pg_temp.preparar_emision_kpi_word(rid);
+${falla("PERFORM pg_temp.confirmar_emision_kpi_word(rid,(s->>'token')::uuid,logo,repeat('a',64))", 'Emitió sin archivo')}
+INSERT INTO objects VALUES('documentos-generados',s->>'path');
+PERFORM pg_temp.confirmar_emision_kpi_word(rid,(s->>'token')::uuid,logo,repeat('a',64));
+UPDATE organizations SET logo_url='logo-nuevo.png' WHERE id='${ORG}';
+IF (SELECT formato_snapshot->'logo' FROM kpi_reportes WHERE id=rid) IS DISTINCT FROM logo THEN RAISE EXCEPTION 'El logo emitido cambió'; END IF;
+IF NOT EXISTS(SELECT 1 FROM documentos_generados d JOIN kpi_reportes k ON d.folio=k.formato_snapshot->>'folio' WHERE k.id=rid AND d.archivo_path=s->>'path' AND d.archivo_sha256=repeat('a',64)) THEN RAISE EXCEPTION 'No registró original y folio'; END IF;
+END;`));
   it('flujo completo hasta emitido con firmantes, folio DOC y snapshot congelado', () => check(`${listo()}${actor(3)}PERFORM pg_temp.emitir_kpi_reporte(rid);
 SELECT * INTO r FROM kpi_reportes WHERE id=rid;
 IF r.estado<>'emitido' OR r.codigo<>'IND-2026-001' OR r.firmantes->'autorizo'->>'leyenda'<>'' OR r.firmantes->'elaboro'->>'nombre'<>'QA persona 2' OR jsonb_array_length(r.firmantes->'revisaron')<>1

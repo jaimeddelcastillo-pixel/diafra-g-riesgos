@@ -7032,6 +7032,10 @@ export type Database = {
         Args: { _cargo: string; _nombre: string }
         Returns: undefined
       }
+      congelar_logo_kpi_word: {
+        Args: { _id: string; _logo: Json; _token: string }
+        Returns: undefined
+      }
       conocimiento_usado_en: {
         Args: { _id: string }
         Returns: {
@@ -7486,6 +7490,10 @@ export type Database = {
         }[]
       }
       quitar_documento_tipo: { Args: { p_id: string }; Returns: string }
+      reclamar_emision_kpi_word: {
+        Args: { _id: string; _token: string }
+        Returns: boolean
+      }
       reclasificar_documentos: { Args: never; Returns: Json }
       recompactar_riesgos: { Args: { p_folio_id: string }; Returns: Json }
       reeditar_codigos_folios: {

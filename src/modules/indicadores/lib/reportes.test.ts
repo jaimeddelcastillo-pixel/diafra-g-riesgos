@@ -1,8 +1,9 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import JSZip from 'jszip';
 import { Packer } from 'docx';
 import { construirContexto } from '@/lib/documentos';
-import { construirWordReporte, lineaFirma, type Reporte } from './reportes';
+import { construirWordReporte, contextoEmitido, descargarOriginal, lineaFirma, type Reporte } from './reportes';
+import { supabase } from '@/integrations/supabase/client';
 import type { Resumen } from './tablero';
 
 const kpi = { id: 'k1', tabla: 'kpi_definiciones' as const, tipo: 'SGC' as const, codigo: 'A', nombre: 'QA rojo', proceso: 'Calidad', nivel: 'SGC', puesto_id: null, frecuencia: 'mensual', unidad: '%', tendencia: 'positiva', peso: 100, meta: 95, meta_cambio: false, metas: [95],
@@ -24,6 +25,21 @@ const xml = async (borrador: boolean) => {
 };
 
 describe('K3-b Word del reporte', () => {
+  it('cambiar el logo actual no altera los bytes descargados del Word emitido ni el logo congelado', async () => {
+    const logoOriginal = { format: 'PNG' as const, dataUrl: 'data:image/png;base64,ORIGINAL' };
+    const issued: Reporte = { ...reporte, formato_snapshot: { ...reporte.formato_snapshot, tipo: 'indicadores.reporte_word', folio: 'DOC-2026-000123', generado_en: '2026-04-04T18:00:00Z', formato: null, identidad: null, logo: logoOriginal, archivo_path: 'qa/DOC-2026-000123.docx' } };
+    const original = new Blob(['Word original con logo A']);
+    const download = vi.fn().mockResolvedValue({ data: original, error: null });
+    const storage = vi.spyOn(supabase.storage, 'from').mockReturnValue({ download } as unknown as ReturnType<typeof supabase.storage.from>);
+    try {
+      const before = await descargarOriginal(issued);
+      const changedLogo = { format: 'PNG' as const, dataUrl: 'data:image/png;base64,NUEVO' };
+      expect(contextoEmitido(issued, { empresa: 'QA Empresa', logo: changedLogo }).logo).toEqual(logoOriginal);
+      const after = await descargarOriginal(issued);
+      expect(after).toBe(before);
+      expect(download.mock.calls).toEqual([['qa/DOC-2026-000123.docx'], ['qa/DOC-2026-000123.docx']]);
+    } finally { storage.mockRestore(); }
+  });
   it('el Word de un emitido es idéntico al regenerarlo', async () => {
     const a = await xml(false); const b = await xml(false);
     expect(a).toBe(b);
