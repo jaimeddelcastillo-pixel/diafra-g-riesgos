@@ -84,8 +84,8 @@ Object.assign(TABLAS_AUDITADAS, {
   brain_vinculos: cer('Vínculo con otro módulo', 'tipo'),
   // Plataforma (visible siempre)
   profiles: plat('Perfil de usuario', 'nombre', 'email'),
-  user_roles: plat('Rol de usuario', 'role'),
-  org_members: plat('Miembro de empresa', 'role'),
+  user_roles: { modulo: 'plataforma', catalogo: 'Rol de usuario', registro: (r, ref) => miembro(r, ref) },
+  org_members: { modulo: 'plataforma', catalogo: 'Miembro de empresa', registro: (r, ref) => miembro(r, ref) },
   org_suplencias: plat('Suplencia', 'titular_nombre', 'rs_titular_nombre', 'rol_sustituido'),
   organizations: plat('Empresa', 'nombre'),
   organization_features: plat('Módulo de la empresa', 'feature_key'),

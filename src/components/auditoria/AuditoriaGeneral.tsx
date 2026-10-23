@@ -19,7 +19,8 @@ import {
 
 /** Auditoría general de la plataforma (K1-a): solo lectura, paginación en servidor y exportación a Excel. */
 const PAGINA = 50;
-const MAX_EXPORT = 50000;
+const MAX_EXPORT = 20000;
+const LOTE_EXPORT = 500;
 
 async function cargarReferencias(): Promise<Referencias> {
   const ref: Referencias = {};
@@ -28,8 +29,9 @@ async function cargarReferencias(): Promise<Referencias> {
     supabase.from('kpi_definiciones').select('id, codigo').limit(5000),
     supabase.from('kpi_puesto').select('id, codigo').limit(5000),
     supabase.from('folios').select('id, codigo').limit(5000),
+    supabase.from('profiles').select('id, email').limit(5000),
   ]);
-  for (const c of consultas) for (const r of (c.data ?? []) as { id: string; codigo: string | null }[]) if (r.codigo) ref[r.id] = r.codigo;
+  for (const c of consultas) for (const r of (c.data ?? []) as { id: string; codigo?: string | null; email?: string | null }[]) { const t = r.codigo ?? r.email; if (t) ref[r.id] = t; }
   return ref;
 }
 
@@ -58,16 +60,17 @@ export function AuditoriaGeneral({ moduloInicial = '' }: { moduloInicial?: strin
     enabled: !!orgId,
     placeholderData: keepPreviousData,
     queryFn: async () => {
-      const { data, error, count } = await aplicarFiltrosAuditoria(
-        supabase.from('audit_trail').select(COLUMNAS_AUDITORIA, { count: 'exact' }), orgId!, f, ref,
-      ).range(pagina * PAGINA, pagina * PAGINA + PAGINA - 1);
+      // Sin conteo exacto: se piden PAGINA + 1 renglones para saber si hay página siguiente.
+      const { data, error } = await aplicarFiltrosAuditoria(
+        supabase.from('audit_trail').select(COLUMNAS_AUDITORIA), orgId!, f, ref,
+      ).range(pagina * PAGINA, pagina * PAGINA + PAGINA);
       if (error) throw error;
-      return { filas: (data ?? []) as unknown as EventoAuditoria[], total: count ?? 0 };
+      const todas = (data ?? []) as unknown as EventoAuditoria[];
+      return { filas: todas.slice(0, PAGINA), hayMas: todas.length > PAGINA };
     },
   });
   const filas = q.data?.filas ?? [];
-  const total = q.data?.total ?? 0;
-  const paginas = Math.max(1, Math.ceil(total / PAGINA));
+  const hayMas = q.data?.hayMas ?? false;
 
   const ids = useMemo(() => [...new Set(filas.flatMap((e) => [e.user_id, e.solicitado_por, e.autorizado_por]).filter((x): x is string => !!x))], [filas]);
   const { data: nombres = {} } = useQuery({ queryKey: ['auditoria-nombres', ids], enabled: ids.length > 0, queryFn: () => nombresPersonas(ids) });
@@ -82,15 +85,20 @@ export function AuditoriaGeneral({ moduloInicial = '' }: { moduloInicial?: strin
 
   const exportar = async () => {
     if (!orgId) return;
-    if (total > MAX_EXPORT) { toast.error(`El filtro devuelve ${total.toLocaleString('es-MX')} eventos; el máximo es ${MAX_EXPORT.toLocaleString('es-MX')}. Acota el filtro.`); return; }
     setExportando(true);
     try {
       const todas: EventoAuditoria[] = [];
-      for (let desde = 0; desde < MAX_EXPORT; desde += 1000) {
-        const { data, error } = await aplicarFiltrosAuditoria(supabase.from('audit_trail').select(COLUMNAS_AUDITORIA), orgId, f, ref).range(desde, desde + 999);
+      let tope = false;
+      for (let desde = 0; ; desde += LOTE_EXPORT) {
+        if (desde >= MAX_EXPORT) { tope = true; break; }
+        const { data, error } = await aplicarFiltrosAuditoria(supabase.from('audit_trail').select(COLUMNAS_AUDITORIA), orgId, f, ref).range(desde, desde + LOTE_EXPORT - 1);
         if (error) throw error;
         todas.push(...((data ?? []) as unknown as EventoAuditoria[]));
-        if (!data || data.length < 1000) break;
+        if (!data || data.length < LOTE_EXPORT) break;
+      }
+      if (tope) {
+        const { data: extra } = await aplicarFiltrosAuditoria(supabase.from('audit_trail').select('id'), orgId, f, ref).range(MAX_EXPORT, MAX_EXPORT);
+        tope = !!extra?.length;
       }
       const n = await nombresPersonas([...new Set(todas.flatMap((e) => [e.user_id, e.solicitado_por, e.autorizado_por]).filter((x): x is string => !!x))]);
       const nombrePersona = f.persona ? personas.find((p) => p.id === f.persona)?.nombre ?? '—' : 'Todas';
@@ -113,6 +121,7 @@ export function AuditoriaGeneral({ moduloInicial = '' }: { moduloInicial?: strin
       const url = URL.createObjectURL(new Blob([XLSX.write(wb, { type: 'array', bookType: 'xlsx' })], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
       const a = document.createElement('a'); a.href = url; a.download = `auditoria_${new Date().toISOString().slice(0, 10)}.xlsx`; a.click();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
+      if (tope) toast.warning(`Se exportaron los primeros ${MAX_EXPORT.toLocaleString('es-MX')} eventos (tope). Acota el filtro para exportar el resto.`);
     } catch (e) {
       toast.error((e as Error)?.message ?? 'No se pudo exportar');
     } finally {
@@ -148,7 +157,7 @@ export function AuditoriaGeneral({ moduloInicial = '' }: { moduloInicial?: strin
           </label>
           <label className="text-xs space-y-1">Desde<Input type="date" value={f.desde} onChange={(e) => cambiar({ desde: e.target.value })} /></label>
           <label className="text-xs space-y-1">Hasta<Input type="date" value={f.hasta} onChange={(e) => cambiar({ hasta: e.target.value })} /></label>
-          <Button variant="outline" size="sm" className="ml-auto" onClick={exportar} disabled={total === 0 || exportando}>
+          <Button variant="outline" size="sm" className="ml-auto" onClick={exportar} disabled={filas.length === 0 || exportando}>
             <Download className="h-4 w-4 mr-1" /> {exportando ? 'Exportando…' : 'Exportar Excel'}
           </Button>
         </CardContent>
@@ -159,7 +168,7 @@ export function AuditoriaGeneral({ moduloInicial = '' }: { moduloInicial?: strin
         <p className="text-sm text-muted-foreground p-4">No hay eventos con estos filtros.</p>
       ) : (
         <>
-          <p className="text-xs text-muted-foreground">{total.toLocaleString('es-MX')} eventos · página {pagina + 1} de {paginas}</p>
+          <p className="text-xs text-muted-foreground">Página {pagina + 1} · {filas.length} eventos</p>
           <Card>
             <CardContent className="p-0 overflow-x-auto">
               <table className="w-full text-sm">
@@ -211,8 +220,8 @@ export function AuditoriaGeneral({ moduloInicial = '' }: { moduloInicial?: strin
           </Card>
           <div className="flex items-center justify-center gap-2">
             <Button variant="outline" size="sm" disabled={pagina === 0 || q.isFetching} onClick={() => setPagina((x) => x - 1)}>Anterior</Button>
-            <span className="text-xs text-muted-foreground">{pagina + 1} / {paginas}</span>
-            <Button variant="outline" size="sm" disabled={pagina + 1 >= paginas || q.isFetching} onClick={() => setPagina((x) => x + 1)}>Siguiente</Button>
+            <span className="text-xs text-muted-foreground">Página {pagina + 1}</span>
+            <Button variant="outline" size="sm" disabled={!hayMas || q.isFetching} onClick={() => setPagina((x) => x + 1)}>Siguiente</Button>
           </div>
         </>
       )}
