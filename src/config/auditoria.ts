@@ -61,6 +61,15 @@ export const TABLAS_AUDITADAS: Record<string, TablaAuditada> = {
     modulo: 'indicadores', catalogo: 'Evidencia ligada a resultado',
     registro: (r, ref) => [ref[txt(r.evidencia_id)] ?? 'Evidencia', ref[txt(r.resultado_id)] ?? 'resultado'].join(' → '),
   },
+  kpi_reportes: {
+    modulo: 'indicadores', catalogo: 'Reporte de indicadores',
+    registro: (r) => [txt(r.codigo), r.version ? `v${txt(r.version)}` : ''].filter(Boolean).join(' · '),
+  },
+  kpi_reportes_historial: {
+    modulo: 'indicadores', catalogo: 'Versión archivada de reporte',
+    registro: (r) => [txt(r.codigo), r.version ? `v${txt(r.version)}` : ''].filter(Boolean).join(' · '),
+  },
+  kpi_reporte_config: { modulo: 'indicadores', catalogo: 'Configuración de reportes', registro: (r) => `Versión ${txt(r.version)}` },
   // Análisis de Tendencias (su pantalla propia no cambia)
   tend_sistemas_hvac: tend('Sistema HVAC'),
   tend_areas: tend('Área'),
