@@ -18,6 +18,7 @@ import { AYUDA, COLUMNAS, HOJAS, LABELS, OPCIONES, avisosPesos, escribirExcel, p
 import { aplicarExcel, asignarCapturistas, guardarFila, listarCatalogo, validarFila } from './lib/persistencia';
 import { useProfiles } from '@/hooks/useProfiles';
 import Captura from './Captura';
+import { prepararDocumento } from '@/lib/documentos';
 
 const TITULOS: Record<Hoja, string> = { Puestos: 'Puestos', KPI_SGC: 'Diccionario SGC', KPI_Puesto: 'Por puesto' };
 export default function Indicadores() {
@@ -36,10 +37,12 @@ export default function Indicadores() {
     setCapturistas(((f as Record<string, unknown> | undefined)?.capturistas as string[] | undefined) ?? []);
     setMotivo(''); setEdicion({ hoja: h, fila });
   };
-  const descargar = (actual: boolean) => { try {
-    const url = URL.createObjectURL(new Blob([new Uint8Array(escribirExcel(actual ? c : undefined))], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
-    const a = document.createElement('a'); a.href = url; a.download = actual ? 'Indicadores-catalogo-K1.xlsx' : 'Indicadores-plantilla-K1.xlsx'; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
-  } catch (e) { toast.error(String(e)); } };
+  const descargar = async (actual: boolean) => { try {
+    const nombre = actual ? 'Indicadores-catalogo-K1.xlsx' : 'Indicadores-plantilla-K1.xlsx';
+    const ctx = actual ? await prepararDocumento('indicadores.catalogo_excel', nombre, { empresa: auth.org?.nombre ?? '', logoPath: auth.org?.logo_url, generadoPor: auth.profile?.nombre || auth.user?.email || '' }) : undefined;
+    const url = URL.createObjectURL(new Blob([new Uint8Array(escribirExcel(actual ? c : undefined, ctx))], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
+    const a = document.createElement('a'); a.href = url; a.download = nombre; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+  } catch (e) { toast.error((e as Error).message ?? String(e)); } };
   const filas = (h: Hoja, f: Fila[]) => <div className="overflow-x-auto"><Table><TableHeader><TableRow><TableHead>Código</TableHead><TableHead>Nombre</TableHead>{h === 'Puestos' ? <TableHead>Área</TableHead> : <><TableHead>{h === 'KPI_SGC' ? 'Proceso / nivel' : 'Objetivo'}</TableHead><TableHead>Meta / tendencia</TableHead><TableHead>Frecuencia</TableHead><TableHead>Peso</TableHead>{h === 'KPI_Puesto' && <TableHead>Aporta a</TableHead>}<TableHead>Estado / validación</TableHead></>}<TableHead>Activo</TableHead><TableHead><span className="sr-only">Acciones</span></TableHead></TableRow></TableHeader><TableBody>{f.map(x => <TableRow key={String(x.id ?? x.codigo)} className={x.activo === false ? 'text-muted-foreground bg-muted/40' : ''}>
     <TableCell className="font-medium whitespace-nowrap">{String(x.codigo)}</TableCell><TableCell className="min-w-48 max-w-sm break-words">{String(x.nombre)}</TableCell>
     {h === 'Puestos' ? <TableCell>{String(x.area)}</TableCell> : <><TableCell>{h === 'KPI_SGC' ? <>{String(x.proceso)}<div className="text-xs text-muted-foreground">{String(x.nivel)} · {String(x.puesto)}</div></> : String(x.objetivo)}</TableCell><TableCell className="whitespace-nowrap">{String(x.meta)} {String(x.unidad)}<div className="text-xs text-muted-foreground">{String(x.tendencia)}</div></TableCell><TableCell>{String(x.frecuencia)}</TableCell><TableCell>{pesoAplica(h, x) ? `${String(x.peso)}%` : '—'}</TableCell>{h === 'KPI_Puesto' && <TableCell>{String(x.aporta_a || '—')}</TableCell>}<TableCell><Badge variant={x.estado === 'validado' ? 'default' : 'outline'}>{String(x.estado)}</Badge>{x.validado_en && <div className="mt-1 text-xs text-muted-foreground">{new Date(String(x.validado_en)).toLocaleDateString('es-MX')}<div title={String(x.validado_por)}>Por: {String(x.validador_nombre ?? x.validado_por)}</div></div>}</TableCell></>}
