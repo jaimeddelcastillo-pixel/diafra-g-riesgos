@@ -1,0 +1,5 @@
+# Documentos (D1)
+- Every export registers its type in src/config/documentos.ts and builds header/footer/signatures through this library after `prepararDocumento` (RPC registrar_documento_generado returns the folio DOC-AAAA-NNNNNN and the current format/identity versions); why: one controlled document identity per company with a traceable folio.
+- org_identidad_documental and org_formatos are insert-only versions written only via guardar_identidad_documental / guardar_formato_documento (admin/RS/AC, reason ≥5, audited); documentos_generados keeps the version ids used; why: new versions never alter documents already issued.
+- The logo comes only from the company (org-logos / organizations.logo_url); without it the header shows the company name, never another company's or a default logo; why: no cross-company branding.
+- Re-importable Excel files keep data headers on row 1; identity goes in a separate «Documento» sheet or is omitted (import templates); why: imports keep working.
