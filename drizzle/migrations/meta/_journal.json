@@ -708,6 +708,13 @@
       "when": 1792773010139,
       "tag": "0100_k2b_guardar_resultado_variables",
       "breakpoints": true
+    },
+    {
+      "idx": 101,
+      "version": "7",
+      "when": 1792776189305,
+      "tag": "0101_k2a_excel_resultados_anio",
+      "breakpoints": true
     }
   ]
 }
