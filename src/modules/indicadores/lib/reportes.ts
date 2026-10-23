@@ -1,7 +1,7 @@
 import { AlignmentType, Document, Header, ImageRun, Packer, Paragraph, Table, TableCell, TableRow, TextRun, WidthType, HeadingLevel } from 'docx';
 import { supabase } from '@/integrations/supabase/client';
 import { construirContexto, type ContextoDocumento, type Logo, type RegistroDocumento } from '@/lib/documentos';
-import { encabezadoWord, pieWord } from '@/lib/documentos/word';
+import { encabezadoWord, encabezadoWordHijos, pieWord } from '@/lib/documentos/word';
 import { etiquetaPeriodo, etiquetaSub, flecha, fueraDeMeta, num, pct, type KpiResumen, type Resumen, type TipoPeriodo } from './tablero';
 
 /** K3-b: periodic report. All writes go through server RPCs; snapshots are frozen by the server at issuance. */
@@ -111,8 +111,7 @@ export function construirWordReporte(e: EntradaWord): Document {
     new TableCell({ children: [p('REVISÓ', { b: true, al: AlignmentType.CENTER }), p(''), ...(f.revisaron.length ? f.revisaron.flatMap(x => [p(lineaFirma(x), { al: AlignmentType.CENTER, sz: 18 }), p(fecha(x.fecha), { al: AlignmentType.CENTER, sz: 16 })]) : [p('—', { al: AlignmentType.CENTER })])] }),
     celdaFirma('Autorizó', f.autorizo),
   ] })] }));
-  const encabezado = encabezadoWord(ctx);
-  const header = e.borrador ? new Header({ children: [...(encabezado.options.children as (Paragraph | Table)[]), new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'BORRADOR — NO VÁLIDO PARA EMISIÓN', bold: true, size: 40, color: 'C00000', font: 'Calibri' })] })] }) : encabezado;
+  const header = e.borrador ? new Header({ children: [...encabezadoWordHijos(ctx), new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'BORRADOR — NO VÁLIDO PARA EMISIÓN', bold: true, size: 40, color: 'C00000', font: 'Calibri' })] })] }) : encabezadoWord(ctx);
   return new Document({ creator: 'TRACEA', title: `${r.codigo} v${r.version}`, styles: { default: { document: { run: { font: 'Calibri' } } } },
     sections: [{ headers: { default: header }, footers: { default: pieWord(ctx) }, children: cuerpo }] });
 }
