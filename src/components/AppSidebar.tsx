@@ -187,7 +187,7 @@ export function AppSidebar() {
                     className="hover:bg-sidebar-accent/50 text-amber-400 hover:text-amber-300 cursor-pointer"
                     onClick={() => { stopImpersonation(); navigate("/admin"); }}
                   >
-                    <LogOut className="mr-2 h-4 w-4" />
+                    <LogOut className={cn(collapsed ? "h-5 w-5" : "mr-2 h-4 w-4")} />
                     {!collapsed && <span>Salir de empresa</span>}
                   </SidebarMenuButton>
                 </SidebarMenuItem>
