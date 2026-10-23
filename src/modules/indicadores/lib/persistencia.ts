@@ -33,3 +33,6 @@ export async function guardarFila(hoja: Hoja, fila: Fila, motivo: string) {
 export async function validarFila(hoja: Hoja, id: string, motivo: string) {
   const { error } = await supabase.rpc('validar_kpi', { _tabla: TABLAS[hoja], _id: id, _motivo: motivo }); if (error) throw error;
 }
+export async function asignarCapturistas(hoja: Hoja, codigo: string, capturistas: string[], motivo: string) {
+  const { error } = await supabase.rpc('asignar_capturistas', { _tabla: TABLAS[hoja], _codigo: codigo, _capturistas: capturistas, _motivo: motivo }); if (error) throw error;
+}

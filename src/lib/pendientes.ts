@@ -17,6 +17,7 @@ export const TIPO_LABEL: Record<string, string> = {
   perfil_sin_confirmar: "Perfil sin confirmar", suplencia_por_aceptar: "Suplencia por aceptar", at_borrador: "AT en borrador",
   semana_sin_captura: "Semana sin captura", accion_abierta: "Acción abierta", folio_en_firma: "Folio en firma",
   conocimiento_por_validar: "Conocimiento por validar",
+  kpi_por_capturar: "KPI por capturar", kpi_por_revisar: "Resultados por revisar",
 };
 
 const RANGO: Record<ColorPendiente, number> = { rojo: 0, naranja: 1, verde: 2 };

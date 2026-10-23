@@ -3442,6 +3442,7 @@ export type Database = {
       kpi_definiciones: {
         Row: {
           activo: boolean
+          capturistas: string[]
           codigo: string
           created_at: string
           created_by: string | null
@@ -3468,6 +3469,7 @@ export type Database = {
         }
         Insert: {
           activo?: boolean
+          capturistas?: string[]
           codigo: string
           created_at?: string
           created_by?: string | null
@@ -3494,6 +3496,7 @@ export type Database = {
         }
         Update: {
           activo?: boolean
+          capturistas?: string[]
           codigo?: string
           created_at?: string
           created_by?: string | null
@@ -3538,6 +3541,7 @@ export type Database = {
       kpi_puesto: {
         Row: {
           activo: boolean
+          capturistas: string[]
           codigo: string
           created_at: string
           created_by: string | null
@@ -3561,6 +3565,7 @@ export type Database = {
         }
         Insert: {
           activo?: boolean
+          capturistas?: string[]
           codigo: string
           created_at?: string
           created_by?: string | null
@@ -3584,6 +3589,7 @@ export type Database = {
         }
         Update: {
           activo?: boolean
+          capturistas?: string[]
           codigo?: string
           created_at?: string
           created_by?: string | null
@@ -3673,6 +3679,121 @@ export type Database = {
           },
           {
             foreignKeyName: "kpi_puesto_aporta_org_id_kpi_puesto_id_fkey"
+            columns: ["org_id", "kpi_puesto_id"]
+            isOneToOne: false
+            referencedRelation: "kpi_puesto"
+            referencedColumns: ["org_id", "id"]
+          },
+        ]
+      }
+      kpi_resultados: {
+        Row: {
+          activo: boolean
+          capturado_en: string
+          capturado_por: string
+          comentario: string
+          created_at: string
+          created_by: string | null
+          cumplimiento: number | null
+          denominador: number | null
+          descripcion_evento: string
+          estado: string
+          evidencia_path: string | null
+          fecha_evento: string | null
+          id: string
+          kpi_definicion_id: string | null
+          kpi_puesto_id: string | null
+          meta_copia: number
+          numerador: number
+          org_id: string
+          periodo_fin: string | null
+          periodo_inicio: string
+          revisado_en: string | null
+          revisado_por: string | null
+          semaforo: string
+          tendencia_copia: string
+          unidad_copia: string
+          updated_at: string
+          updated_by: string | null
+          valor: number | null
+        }
+        Insert: {
+          activo?: boolean
+          capturado_en?: string
+          capturado_por: string
+          comentario?: string
+          created_at?: string
+          created_by?: string | null
+          cumplimiento?: number | null
+          denominador?: number | null
+          descripcion_evento?: string
+          estado?: string
+          evidencia_path?: string | null
+          fecha_evento?: string | null
+          id?: string
+          kpi_definicion_id?: string | null
+          kpi_puesto_id?: string | null
+          meta_copia: number
+          numerador?: number
+          org_id?: string
+          periodo_fin?: string | null
+          periodo_inicio: string
+          revisado_en?: string | null
+          revisado_por?: string | null
+          semaforo?: string
+          tendencia_copia: string
+          unidad_copia: string
+          updated_at?: string
+          updated_by?: string | null
+          valor?: number | null
+        }
+        Update: {
+          activo?: boolean
+          capturado_en?: string
+          capturado_por?: string
+          comentario?: string
+          created_at?: string
+          created_by?: string | null
+          cumplimiento?: number | null
+          denominador?: number | null
+          descripcion_evento?: string
+          estado?: string
+          evidencia_path?: string | null
+          fecha_evento?: string | null
+          id?: string
+          kpi_definicion_id?: string | null
+          kpi_puesto_id?: string | null
+          meta_copia?: number
+          numerador?: number
+          org_id?: string
+          periodo_fin?: string | null
+          periodo_inicio?: string
+          revisado_en?: string | null
+          revisado_por?: string | null
+          semaforo?: string
+          tendencia_copia?: string
+          unidad_copia?: string
+          updated_at?: string
+          updated_by?: string | null
+          valor?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kpi_resultados_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kpi_resultados_org_id_kpi_definicion_id_fkey"
+            columns: ["org_id", "kpi_definicion_id"]
+            isOneToOne: false
+            referencedRelation: "kpi_definiciones"
+            referencedColumns: ["org_id", "id"]
+          },
+          {
+            foreignKeyName: "kpi_resultados_org_id_kpi_puesto_id_fkey"
             columns: ["org_id", "kpi_puesto_id"]
             isOneToOne: false
             referencedRelation: "kpi_puesto"
@@ -6185,6 +6306,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      anular_kpi_resultado: {
+        Args: { _id: string; _motivo: string }
+        Returns: undefined
+      }
       aplicar_kpis_excel: {
         Args: { _borrador?: boolean; _motivo: string; _paquete: Json }
         Returns: undefined
@@ -6192,6 +6317,15 @@ export type Database = {
       archivar_version_folio: {
         Args: { p_folio_id: string; p_motivo?: string }
         Returns: string
+      }
+      asignar_capturistas: {
+        Args: {
+          _capturistas: string[]
+          _codigo: string
+          _motivo: string
+          _tabla: string
+        }
+        Returns: undefined
       }
       auditor_caratula: {
         Args: { p_auditoria_id: string; p_descargar?: boolean }
@@ -6345,6 +6479,23 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      capturar_kpi_resultado: {
+        Args: {
+          _comentario: string
+          _denominador: number
+          _descripcion_evento: string
+          _evidencia_path: string
+          _fecha_evento: string
+          _kpi_id: string
+          _motivo: string
+          _numerador: number
+          _periodo_fin: string
+          _periodo_inicio: string
+          _resultado_id?: string
+          _tabla: string
+        }
+        Returns: string
       }
       cerrar_mis_soportes: {
         Args: { _log_id?: string; _tipo: string }
@@ -6554,6 +6705,24 @@ export type Database = {
         Args: { _borrador?: boolean; _motivo: string; _paquete: Json }
         Returns: undefined
       }
+      kpi_calcular: {
+        Args: {
+          _den: number
+          _meta: number
+          _num: number
+          _tendencia: string
+          _unidad: string
+        }
+        Returns: Record<string, unknown>
+      }
+      kpi_periodo: {
+        Args: { _fecha: string; _frecuencia: string }
+        Returns: Record<string, unknown>
+      }
+      kpi_puede_capturar: {
+        Args: { _capturistas: string[]; _org: string }
+        Returns: boolean
+      }
       mi_acceso_curso: { Args: { p_curso_id: string }; Returns: string }
       mi_ia_en_prueba: { Args: never; Returns: boolean }
       mi_org_tiene_modulo: { Args: { _modulo: string }; Returns: boolean }
@@ -6706,6 +6875,10 @@ export type Database = {
       restaurar_documento_tipos: { Args: never; Returns: number }
       retirar_documento: {
         Args: { p_doc_id: string; p_motivo: string }
+        Returns: undefined
+      }
+      revisar_kpi_resultado: {
+        Args: { _id: string; _motivo?: string }
         Returns: undefined
       }
       rol_efectivo: {
