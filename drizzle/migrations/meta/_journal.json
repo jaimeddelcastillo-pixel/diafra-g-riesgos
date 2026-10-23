@@ -743,6 +743,13 @@
       "when": 1792785995303,
       "tag": "0105_k3a_kpi_resumen_periodo",
       "breakpoints": true
+    },
+    {
+      "idx": 106,
+      "version": "7",
+      "when": 1792786035151,
+      "tag": "0106_k3a_resumen_stable",
+      "breakpoints": true
     }
   ]
 }
