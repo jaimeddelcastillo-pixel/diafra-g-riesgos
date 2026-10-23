@@ -14,12 +14,11 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { prepararDocumento } from '@/lib/documentos';
-import { fetchOrgLogoDataUrl } from '@/lib/orgLogo';
 import { graficaPNG, ESCALA_PNG, PX_16x9 } from '@/lib/documentos/graficas';
 import { claseSemaforo } from './lib/semaforo';
 import { etiquetaPeriodo, etiquetaSub, fueraDeMeta, num, obtenerResumen, pct, periodosCerrados, type KpiResumen, type Resumen, type TipoPeriodo } from './lib/tablero';
 import {
-  anularReporte, configActual, construirWordReporte, contextoEmitido, crearReporte, emitirReporte, enviarReporte, faltanAnalisis, guardarConfig, guardarReporte,
+  anularReporte, configActual, construirWordReporte, descargarOriginal, crearReporte, emitirReporte, enviarReporte, faltanAnalisis, guardarConfig, guardarReporte,
   kpisDelAlcance, listarReportes, nuevaVersion, puedeAutorizar, quienTienePendiente, revisarReporte, wordABlob, type Analisis, type Firmantes, type Reporte,
 } from './lib/reportes';
 
@@ -65,11 +64,12 @@ export default function Reportes() {
     revisaron: x.revisores.map(id => ({ user_id: id, nombre: nombre(id), cargo: perfiles.data?.find(p => p.id === id)?.cargo ?? '', fecha: x.revisiones.find(v => v.user_id === id)?.fecha ?? '' })),
     autorizo: null,
   });
-  const word = async () => { if (!r || !resumen) return; setBusy(true); try {
+  const word = async () => { if (!r) return; setBusy(true); try {
     const nombreArchivo = `${r.codigo}-v${r.version}${r.estado === 'emitido' ? '' : '-BORRADOR'}.docx`;
     const emitido = r.estado === 'emitido';
-    const ctx = emitido ? contextoEmitido(r, { empresa: auth.org?.nombre ?? '', logo: await fetchOrgLogoDataUrl(auth.org?.logo_url) })
-      : await prepararDocumento('indicadores.reporte_word', nombreArchivo, { empresa: auth.org?.nombre ?? '', logoPath: auth.org?.logo_url, generadoPor: auth.profile?.nombre || auth.user?.email || '' });
+    if (emitido) { descargar(await descargarOriginal(r), nombreArchivo); return; }
+    if (!resumen) return;
+    const ctx = await prepararDocumento('indicadores.reporte_word', nombreArchivo, { empresa: auth.org?.nombre ?? '', logoPath: auth.org?.logo_url, generadoPor: auth.profile?.nombre || auth.user?.email || '' });
     const graficas: Record<string, Uint8Array> = {};
     for (const k of kpis.filter(k => k.tipo === 'SGC' && k.nivel === 'SGC' && k.subperiodos.length)) {
       const svg = graficasRef.current?.querySelector(`[data-kpi="${k.id}"] svg`) as SVGSVGElement | null;
