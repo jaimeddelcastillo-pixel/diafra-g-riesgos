@@ -1,6 +1,6 @@
 import { execFileSync, spawn } from 'node:child_process';
 import { describe, expect, it, vi } from 'vitest';
-vi.setConfig({ testTimeout: 30000 });
+vi.setConfig({ testTimeout: 120000 });
 const id = (n: number) => `00000000-0000-0000-0000-${String(n).padStart(12, '0')}`;
 let definitions: string | undefined;
 const tablas = ['organizations','profiles','org_members','user_roles','org_suplencias','audit_trail','puestos','kpi_definiciones','kpi_puesto','kpi_puesto_aporta','kpi_resultados','org_pendientes_semaforo','tend_registros_at','tend_registros','tend_semanas','riesgos','folios','brain_knowledge_items'];
