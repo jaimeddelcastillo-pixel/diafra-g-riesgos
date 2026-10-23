@@ -715,6 +715,13 @@
       "when": 1792776189305,
       "tag": "0101_k2a_excel_resultados_anio",
       "breakpoints": true
+    },
+    {
+      "idx": 102,
+      "version": "7",
+      "when": 1792776517164,
+      "tag": "0102_k2a_preview_periodos_invalidos",
+      "breakpoints": true
     }
   ]
 }

@@ -6848,6 +6848,13 @@ export type Database = {
       }
       kpi_excel_fecha: { Args: { _valor: string }; Returns: string }
       kpi_excel_numero: { Args: { _valor: string }; Returns: number }
+      kpi_excel_periodo: {
+        Args: { _fecha: string; _frecuencia: string }
+        Returns: {
+          fin: string
+          inicio: string
+        }[]
+      }
       kpi_periodo: {
         Args: { _fecha: string; _frecuencia: string }
         Returns: Record<string, unknown>
