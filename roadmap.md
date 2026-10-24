@@ -1,6 +1,7 @@
 # Roadmap
 
-- [ ] UX-1: desplazamiento compartido en ventanas/tablas/documentos; retirar PNG en altas/edición y documentos nuevos conservando originales; requisitos de contraseña desde política alojada si es accesible, confirmación y errores españoles; suite completa sin navegador/IA/dependencias.
+- [x] UX-1: Dialog/Sheet/Drawer/AlertDialog con límites y desplazamiento central compartidos; Table/ScrollFrames para tablas nativas/compartidas y marcos de Indicadores/AT/folio/pendientes; PNG retirado del alta/edición y diplomas nuevos, originales preservados y función desplegada. Suite única 437/437, 55 archivos, 748.19 s; sin navegador/IA/dependencias. Verificación visual excluida por petición.
+- [ ] UX-1 política alojada: no expuesta por herramientas de lectura disponibles; faltan longitud/tipos/HIBP exactos para conectar lista dinámica. No inferir de mínimos HTML ni modificar política. Generar no puede certificar aceptación HIBP antes del alta; la autenticación decide. Requiere valores de Auth settings → Email.
 
 - [x] UX-1a: DialogContent 90dvh/acciones sticky, PasswordInput/PasswordFields para campos existentes y futuros, requisitos y errores españoles, generación criptográfica temporal y reglas scoped AGENTS. Suite 431/431 en 54 archivos (732.80 s); sin navegador/IA/dependencias ni pantallas editadas. No se encontró obligación de cambio temporal al primer acceso; política alojada exacta no verificada ni modificada.
 
