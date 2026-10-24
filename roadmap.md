@@ -1,5 +1,7 @@
 # Roadmap
 
+- [ ] UX-1: desplazamiento compartido en ventanas/tablas/documentos; retirar PNG en altas/edición y documentos nuevos conservando originales; requisitos de contraseña desde política alojada si es accesible, confirmación y errores españoles; suite completa sin navegador/IA/dependencias.
+
 - [x] UX-1a: DialogContent 90dvh/acciones sticky, PasswordInput/PasswordFields para campos existentes y futuros, requisitos y errores españoles, generación criptográfica temporal y reglas scoped AGENTS. Suite 431/431 en 54 archivos (732.80 s); sin navegador/IA/dependencias ni pantallas editadas. No se encontró obligación de cambio temporal al primer acceso; política alojada exacta no verificada ni modificada.
 
 - [x] K3-b-2: textos fijos versionados y congelados al emitir, borradores sin folio, identidad/periodos/tablas/gráficas/vigilancia/firmas Word; migraciones 0117–0119 y emitir-kpi-word desplegada. Suite completa final 426/426 en 52 archivos (799.29 s); sin navegador/IA/dependencias ni edición de Tendencias/Riesgos. Verificación visual/autenticada excluida por petición.
