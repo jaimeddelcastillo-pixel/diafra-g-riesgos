@@ -3,6 +3,7 @@ import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { ModalLayout } from './modal-layout';
 
 const Dialog = DialogPrimitive.Root;
 
@@ -41,7 +42,7 @@ const DialogContent = React.forwardRef<
       )}
       {...props}
     >
-      {children}
+      <ModalLayout>{children}</ModalLayout>
       <DialogPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity data-[state=open]:bg-accent data-[state=open]:text-muted-foreground hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none">
         <X className="h-4 w-4" />
         <span className="sr-only">Cerrar</span>
@@ -52,12 +53,12 @@ const DialogContent = React.forwardRef<
 DialogContent.displayName = DialogPrimitive.Content.displayName;
 
 const DialogHeader = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
-  <div className={cn("flex flex-col space-y-1.5 text-center sm:text-left", className)} {...props} />
+  <div className={cn("modal-header flex flex-col space-y-1.5 text-center sm:text-left", className)} {...props} />
 );
 DialogHeader.displayName = "DialogHeader";
 
 const DialogFooter = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
-  <div className={cn("sticky -bottom-6 z-10 -mx-6 flex flex-col-reverse gap-2 border-t bg-background px-6 py-4 sm:flex-row sm:justify-end sm:space-x-2", className)} {...props} />
+  <div className={cn("modal-footer flex flex-col-reverse gap-2 border-t bg-background py-4 sm:flex-row sm:justify-end sm:space-x-2", className)} {...props} />
 );
 DialogFooter.displayName = "DialogFooter";
 

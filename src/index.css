@@ -65,3 +65,30 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Shared modal boundaries override historical per-screen size/overflow classes. */
+[role="dialog"], [role="alertdialog"], .modal-shell {
+  display: flex !important;
+  flex-direction: column;
+  max-height: 90dvh !important;
+  overflow: hidden !important;
+  width: min(calc(100% - 32px), 100%) !important;
+}
+.modal-header, .modal-footer { flex: 0 0 auto; position: relative; z-index: 20; background: hsl(var(--background)); }
+.modal-layout-branch { display: flex; flex-direction: column; min-height: 0; overflow: hidden; flex: 1 1 auto; }
+.modal-scroll-body { min-height: 0; flex: 1 1 auto; overflow: auto; overscroll-behavior: contain; scrollbar-gutter: stable; }
+.table-scroll-frame { min-width: 0; max-width: 100%; max-height: min(65dvh, calc(100dvh - 12rem)) !important; overflow: scroll !important; scrollbar-gutter: stable; position: relative; }
+.table-scroll-frame > table { border-collapse: separate; border-spacing: 0; }
+.table-scroll-frame > table > thead { position: sticky; top: 0; z-index: 3; background: hsl(var(--background)); }
+.table-scroll-frame > table > :is(thead, tbody, tfoot) > tr > :first-child { position: sticky; left: 0; z-index: 2; background: hsl(var(--background)); }
+.table-scroll-frame > table > thead > tr > :first-child { z-index: 4; }
+.document-scroll-frame { max-width: 100%; max-height: 75dvh; min-height: 0; overflow: scroll; scrollbar-gutter: stable; }
+@media (max-width: 639px) {
+  .modal-scroll-body .grid:has(input, textarea, [role="combobox"]) { grid-template-columns: minmax(0, 1fr) !important; }
+  .modal-scroll-body [class*="col-span-"] { grid-column: auto !important; }
+  .modal-shell { left: 16px !important; right: 16px !important; }
+}
+@media print {
+  .table-scroll-frame, .document-scroll-frame { max-height: none !important; overflow: visible !important; }
+  .table-scroll-frame > table > thead, .table-scroll-frame > table > :is(thead, tbody, tfoot) > tr > :first-child { position: static; }
+}

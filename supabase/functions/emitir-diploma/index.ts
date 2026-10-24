@@ -9,7 +9,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { jsPDF } from "https://esm.sh/jspdf@2.5.2";
 import QRCode from "https://esm.sh/qrcode@1.5.4";
-import { FIRMA_JDC_PNG_BASE64, FIRMA_JDC_WIDTH_MM, FIRMA_JDC_HEIGHT_MM } from "./firma.ts";
+import { conservarDiplomaOriginal } from "./original.ts";
 import { LOGO_TRACEA_PNG_BASE64, LOGO_W, LOGO_H } from "./logo.ts";
 import { resolverContextoOrg, ContextoOrgError } from "../_shared/contexto-org.ts";
 import { enviarYRegistrar } from "../_shared/transactional-email-templates/enviar-y-registrar.ts";
@@ -209,19 +209,9 @@ async function generarDiplomaPDF(opts: {
   doc.setTextColor(80, 80, 80);
   doc.text("Escanea para verificar", W - 36, H - 30, { align: "center" });
 
-  // Firma del instructor — imagen manuscrita centrada sobre la línea de firma,
-  // entre el cuerpo del diploma y el nombre/título del instructor.
+  // Firma autógrafa en papel: no estampar imágenes en documentos nuevos.
   const firmaCx = 72.5;
   const lineY = H - 34;
-  try {
-    const firmaW = FIRMA_JDC_WIDTH_MM;
-    const firmaH = FIRMA_JDC_HEIGHT_MM;
-    const firmaX = firmaCx - firmaW / 2;
-    // Firma manuscrita con proporción original de lienzo 70x50mm; se coloca
-    // amplia y proporcionada sobre la línea sin aplastarla ni estirarla.
-    const firmaY = lineY - firmaH + 2;
-    doc.addImage(FIRMA_JDC_PNG_BASE64, "PNG", firmaX, firmaY, firmaW, firmaH);
-  } catch (_) { /* fallback silencioso */ }
   doc.setDrawColor(40, 40, 40);
   doc.setLineWidth(0.3);
   doc.line(firmaCx - 38, lineY, firmaCx + 38, lineY);
@@ -328,7 +318,7 @@ Deno.serve(async (req) => {
       }
       yaExiste = data ?? null;
     }
-    if (yaExiste && !force_regenerate) {
+    if (conservarDiplomaOriginal(yaExiste, force_regenerate)) {
       return json({
         already_existed: true,
         folio: yaExiste.folio,
@@ -370,25 +360,12 @@ Deno.serve(async (req) => {
     try { orgIdAlumno = (await resolverContextoOrg(req)).orgId; }
     catch (e) { if (!(e instanceof ContextoOrgError)) throw e; }
 
-    // Folio + hash: si es regeneración, conservamos folio/hash existentes para que
-    // QR y verificación previa sigan siendo válidos. Si no, generamos nuevos.
-    let folio: string;
-    let hash: string;
-    if (yaExiste && force_regenerate) {
-      folio = yaExiste.folio as string;
-      hash = yaExiste.hash_verificacion as string;
-    } else {
-      if (!orgIdAlumno) {
-        return json({ error: "El alumno no pertenece a ninguna organización; no se puede emitir el folio." }, 400);
-      }
-      const { data: folioData, error: folioErr } = await admin.rpc("next_diploma_folio", { p_org_id: orgIdAlumno });
-      if (folioErr) {
-        console.error("[emitir-diploma] folio error", folioErr);
-        return json({ error: `Folio: ${folioErr.message}` }, 500);
-      }
-      folio = folioData as unknown as string;
-      hash = (await sha256Hex(`${folio}|${user.id}|${curso.id}|${Date.now()}`)).slice(0, 40);
-    }
+    // New documents only; previous emissions have already returned their original.
+    if (!orgIdAlumno) return json({ error: "El alumno no pertenece a ninguna organización; no se puede emitir el folio." }, 400);
+    const { data: folioData, error: folioErr } = await admin.rpc("next_diploma_folio", { p_org_id: orgIdAlumno });
+    if (folioErr) return json({ error: `Folio: ${folioErr.message}` }, 500);
+    const folio = folioData as unknown as string;
+    const hash = (await sha256Hex(`${folio}|${user.id}|${curso.id}|${Date.now()}`)).slice(0, 40);
     const verificacionUrl = `${APP_URL}/diploma/verificar/${hash}`;
 
     const fecha = new Date();
@@ -415,34 +392,16 @@ Deno.serve(async (req) => {
     const pdfPath = `${user.id}/${folio}.pdf`;
     const { error: upErr } = await admin.storage
       .from("diplomas")
-      .upload(pdfPath, pdfBytes, { contentType: "application/pdf", upsert: true });
+      .upload(pdfPath, pdfBytes, { contentType: "application/pdf", upsert: false });
     if (upErr) {
       console.error("[emitir-diploma] storage error", upErr);
       return json({ error: `Storage: ${upErr.message}` }, 500);
     }
 
-    if (yaExiste && force_regenerate) {
-      const { error: updErr } = await admin
-        .from("curso_diplomas")
-        .update({
-          pdf_path: pdfPath,
-          alumno_nombre: alumnoNombre,
-          alumno_email: alumnoEmail,
-          curso_titulo: curso.titulo,
-          curso_norma: (curso as any).norma,
-          duracion_horas: (curso as any).duracion_horas ?? null,
-          modulos_aprobados: (modulos ?? []).map((m: any) => m.titulo),
-        })
-        .eq("id", yaExiste.id);
-      if (updErr) {
-        console.error("[emitir-diploma] update error", updErr);
-        return json({ error: `Update: ${updErr.message}` }, 500);
-      }
-    } else {
       const { error: insErr } = await admin.from("curso_diplomas").insert({
         folio,
         user_id: user.id,
-        org_id: orgMember?.org_id ?? null,
+        org_id: orgIdAlumno,
         curso_id: curso.id,
         intento_id,
         fecha_emision: fecha.toISOString(),
@@ -460,7 +419,6 @@ Deno.serve(async (req) => {
         console.error("[emitir-diploma] insert error", insErr);
         return json({ error: `Insert: ${insErr.message}` }, 500);
       }
-    }
 
     // Email con PDF adjunto
     try {
@@ -488,7 +446,7 @@ Deno.serve(async (req) => {
       folio,
       hash,
       verificacion_url: verificacionUrl,
-      regenerated: !!(yaExiste && force_regenerate),
+      regenerated: false,
     });
   } catch (err) {
     console.error("emitir-diploma error", err);

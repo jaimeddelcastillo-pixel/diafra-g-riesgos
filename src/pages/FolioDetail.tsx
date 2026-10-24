@@ -2114,7 +2114,7 @@ export default function FolioDetail() {
         </div>
       </div>
 
-      <div className="bg-card rounded-lg shadow-sm border p-6 space-y-5 print:shadow-none print:border-none">
+      <div className="document-scroll-frame bg-card rounded-lg shadow-sm border p-6 space-y-5 print:shadow-none print:border-none">
         <div className="text-center border-b pb-4">
           <h2 className="text-base font-bold tracking-wide">{org?.nombre || "—"}</h2>
           <p className="text-xs text-muted-foreground italic">FORMATO — DEPARTAMENTO: SISTEMA DE GESTIÓN DE CALIDAD</p>

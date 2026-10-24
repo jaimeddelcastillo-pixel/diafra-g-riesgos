@@ -1,19 +1,34 @@
 import * as React from 'react';
 import { createPortal } from 'react-dom';
-import { Eye, EyeOff, WandSparkles } from 'lucide-react';
+import { Check, Eye, EyeOff, WandSparkles } from 'lucide-react';
 import { Button } from './button';
-import { generarPassword, errorAutenticacionEs } from './password-utils';
+import { generarPassword, errorAutenticacionEs, requisitosPassword, passwordsCoinciden, type PasswordPolicy } from './password-utils';
 
 /** Preserve the native field and its existing handlers/validation. */
-export function PasswordInput({ input }: { input: HTMLInputElement }) {
+export function PasswordInput({ input, policy }: { input: HTMLInputElement; policy?: PasswordPolicy }) {
   const [visible, setVisible] = React.useState(input.type === 'text');
+  const [value, setValue] = React.useState(input.value);
+  const [mismatch, setMismatch] = React.useState(false);
   const label = input.labels?.[0]?.textContent ?? input.parentElement?.querySelector('label')?.textContent ?? '';
   const temporal = /temporal|contraseña.*administrador/i.test(label);
-  const minimo = input.minLength > 0 ? input.minLength : null;
+  React.useEffect(() => {
+    const scope = input.closest('form, [role="dialog"], [role="alertdialog"]') ?? input.parentElement?.parentElement;
+    const update = () => {
+      setValue(input.value);
+      const confirmation = /confirm|repite/i.test(`${input.id} ${label} ${input.placeholder}`);
+      const original = Array.from(scope?.querySelectorAll<HTMLInputElement>('input') ?? []).find(other => other !== input &&
+        (other.type === 'password' || /password/i.test(other.id)) && !/actual|current|confirm/i.test(`${other.id} ${other.labels?.[0]?.textContent ?? other.parentElement?.querySelector('label')?.textContent ?? ''}`));
+      const unequal = !!(confirmation && original && input.value && !passwordsCoinciden(original.value, input.value));
+      setMismatch(unequal);
+      input.setCustomValidity(unequal ? 'Las contraseñas no coinciden' : '');
+    };
+    scope?.addEventListener('input', update); update();
+    return () => { scope?.removeEventListener('input', update); input.setCustomValidity(''); };
+  }, [input, label]);
   const cambiar = () => {
     const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set;
     if (!setter) return;
-    setter.call(input, generarPassword());
+    setter.call(input, generarPassword(policy));
     input.dispatchEvent(new Event('input', { bubbles: true }));
     input.dispatchEvent(new Event('change', { bubbles: true }));
     input.focus();
@@ -25,11 +40,11 @@ export function PasswordInput({ input }: { input: HTMLInputElement }) {
       </Button>
       {temporal && <Button type="button" size="sm" variant="outline" disabled={input.disabled || input.readOnly} onClick={cambiar}><WandSparkles/>Generar</Button>}
     </div>
-    <ul className="list-disc space-y-1 pl-4 text-xs text-muted-foreground">
-      {minimo && <li>Al menos {minimo} caracteres.</li>}
-      <li>Cumplir la longitud y los tipos de caracteres exigidos por la política vigente.</li>
+    <ul className="space-y-1 text-xs text-muted-foreground">
+      {policy ? requisitosPassword(value, policy).map(rule => <li key={rule.label} className={rule.met ? 'flex items-center gap-1 text-success' : 'flex items-center gap-1'}><Check className={rule.met ? 'h-3 w-3' : 'h-3 w-3 invisible'}/>{rule.label}</li>) : <li>Longitud y caracteres: sujetos a la política vigente de autenticación.</li>}
       <li>No debe aparecer en filtraciones conocidas.</li>
     </ul>
+    {mismatch && <p role="alert" className="text-xs text-destructive">Las contraseñas no coinciden.</p>}
   </div>;
 }
 /** Single adapter for all native/Input fields, including dialogs mounted later. */

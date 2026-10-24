@@ -95,7 +95,7 @@ export default function Reportes() {
       {!lista.data?.length && <TableRow><TableCell colSpan={5} className="text-muted-foreground">Sin reportes</TableCell></TableRow>}
     </TableBody></Table></div>
 
-    {r && <section className="space-y-5 rounded-md border p-4">
+    {r && <section className="document-scroll-frame space-y-5 rounded-md border p-4">
       <header className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-lg font-semibold">{r.codigo} · v{r.version} · {periodoLegible(r.tipo_periodo, r.periodo_inicio, r.periodo_fin)}</h2>
         <p className="text-sm text-muted-foreground">{r.estado === 'borrador' ? 'Borrador: datos vivos (se actualizan cada minuto)' : r.estado === 'emitido' ? `Emitido el ${new Date(r.emitido_en ?? '').toLocaleString('es-MX', { timeZone: 'America/Mexico_City' })} · solo su snapshot` : `Anulado: ${r.motivo_anulacion ?? ''}`}</p></div>
         <div className="flex flex-wrap gap-2">

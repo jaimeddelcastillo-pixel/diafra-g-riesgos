@@ -26,4 +26,16 @@ describe('UX-1a adaptación compartida de campos', () => {
     await waitFor(() => expect(screen.getByRole('alert').textContent).toBe('Correo o contraseña incorrectos.'));
     expect((screen.getByLabelText('Contraseña') as HTMLInputElement).minLength).toBe(12);
   });
+  it('una confirmación distinta es inválida y se libera al coincidir', async () => {
+    render(<form><label htmlFor="password">Nueva contraseña</label><input id="password" type="password"/>
+      <label htmlFor="confirm">Confirmar contraseña</label><input id="confirm" type="password"/><PasswordFields/></form>);
+    await screen.findAllByRole('button', { name: 'Mostrar contraseña' });
+    const original = screen.getByLabelText('Nueva contraseña') as HTMLInputElement;
+    const confirm = screen.getByLabelText('Confirmar contraseña') as HTMLInputElement;
+    fireEvent.input(original, { target: { value: 'A1!abc' } });
+    fireEvent.input(confirm, { target: { value: 'A1!ab' } });
+    expect(confirm.validity.customError).toBe(true);
+    fireEvent.input(confirm, { target: { value: 'A1!abc' } });
+    expect(confirm.validity.customError).toBe(false);
+  });
 });

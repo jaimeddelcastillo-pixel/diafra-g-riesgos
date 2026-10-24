@@ -197,7 +197,7 @@ export default function Reporte() {
 
   return (
     <Marco titulo="Reporte consolidado" propio>
-      <main>
+      <main className="document-scroll-frame">
         <div className="flex items-center justify-between mb-3">
           <Link to="/tendencias" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-primary">
             <ChevronLeft className="h-4 w-4" /> Tablero
