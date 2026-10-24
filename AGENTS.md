@@ -25,7 +25,7 @@ Technical rules — one line each; full text and "why" in docs/reglas-detalle.md
 - R15 External auditors are never org_members; access via SECURITY DEFINER functions.
 - R16 All AI prompts are versioned skills in agent_prompts read via _shared/skills.ts; no hardcoded fallback.
 - R17 Riesgos block composition is per-company (ia_config_org) and block pieces publish only with all test cases passed.
-- R18 AI date context uses the shared Mexico City server-date formatter, outside fixed risk blocks; why: consistent dates without invalidating fixed-block caching.
+- R18 AI dates use the shared Mexico City server formatter outside fixed blocks; why: consistent dates/cache.
 - R19 Response provenance renders through one super-admin-only control; skill presentation helpers preserve restored text and count configured composition by norm (MULTI counts in both); why: consistent inspection and exact hashes.
 - R20 Riesgos reads validated Cerebro knowledge only through contexto_cerebro (explicit codes, Spanish OR/rank, bounded process fallback); response metadata preserves context diagnostics; insert triggers derive atomic citations from the owned assistant message; why: module isolation and audited attribution.
 - R21 Tendencias writes and substitutions use active-company guards; server-only issuance snapshots retain week IDs and substitution identity, week corrections require audited reasons, origin/date/photo are server guarded; why: tenant isolation, immutable issuance and independent approval.
@@ -44,4 +44,5 @@ Technical rules — one line each; full text and "why" in docs/reglas-detalle.md
 - Read scoped rules: src/modules/indicadores/AGENTS.md (K1–K3); src/lib/documentos/AGENTS.md (identity/originals).
 - Automated test files run serially in Vitest while PostgreSQL fixtures remain temporary and rolled back; why: prevent shared database contention and obtain a complete single-run result.
 - DB functions use complete CREATE OR REPLACE; never replace pg_get_functiondef text.
-- UX rules (popups/tables/passwords): src/components/ui/AGENTS.md; why: shared UX.
+- UX rules: src/components/ui/AGENTS.md; why: shared UX.
+- S-1 platform authority is versioned/admin-audited and frozen at KPI issuance; temporary access is server-gated; diploma-only image rules: src/lib/documentos/AGENTS.md. Why: segregated authority and immutable originals.
