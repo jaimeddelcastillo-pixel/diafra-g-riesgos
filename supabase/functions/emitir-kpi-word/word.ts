@@ -1,4 +1,4 @@
-import { AlignmentType, Document, Footer, Header, ImageRun, Paragraph, Table, TableCell, TableRow, TextRun, WidthType, HeadingLevel, PageNumber } from 'docx';
+import { AlignmentType, Document, Footer, Header, ImageRun, Paragraph, Table, TableCell, TableRow, TextRun, WidthType, HeadingLevel, PageNumber, PageOrientation } from 'docx';
 export interface Firma { rol: 'Elaboró' | 'Revisó' | 'Autorizó'; nombre?: string; cargo: string; aplica?: boolean }
 export interface Identidad { id?: string; version?: number; razon_social: string; domicilio: string; leyenda_confidencialidad: string; leyenda_copia: string; pie: string }
 export interface Formato { id?: string; version?: number; tipo: string; codigo: string; version_formato: string; titulo: string; firmas: Firma[]; vigente_desde: string | null }
@@ -105,7 +105,7 @@ export function encabezadoWordHijos(c: ContextoDocumento): Table[] {
   return [new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, rows: [new TableRow({ children: [
     celda([logo], 25),
     celda([new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: c.razonSocial.toUpperCase(), bold: true, size: 18 })] }), new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: c.titulo, bold: true, size: 20 })] })], 50),
-    celda([...datosFormato(c).map(t => new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: t, size: 14 })] })), new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ children: ['Página ', PageNumber.CURRENT, ' de ', PageNumber.TOTAL_PAGES], bold: true, size: 14 })] })], 25),
+    celda([...(c.codigo && c.version ? [] : [new Paragraph({ children: [new TextRun({ text: 'Formato sin configurar', color: 'C00000', size: 14 })] })]), ...datosFormato(c).map(t => new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: t, size: 14 })] })), new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ children: ['Página ', PageNumber.CURRENT, ' de ', PageNumber.TOTAL_PAGES], bold: true, size: 14 })] })], 25),
   ] })] })];
 }
 
@@ -126,11 +126,28 @@ const fecha = (iso: string | null | undefined) => iso ? new Date(iso).toLocaleDa
 const p = (text: string, o: { b?: boolean; sz?: number; al?: (typeof AlignmentType)[keyof typeof AlignmentType] } = {}) => new Paragraph({ alignment: o.al, spacing: { after: 80 }, children: [new TextRun({ text, bold: o.b, size: o.sz ?? 20, font: 'Calibri' })] });
 const h = (text: string) => new Paragraph({ heading: HeadingLevel.HEADING_2, spacing: { before: 200, after: 100 }, children: [new TextRun({ text, bold: true, size: 24, font: 'Calibri' })] });
 const tabla = (enc: string[], filas: string[][]) => new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, rows: [
-  new TableRow({ tableHeader: true, children: enc.map(t => new TableCell({ shading: { fill: 'DCE6F1' }, children: [p(t, { b: true, sz: 16 })] })) }),
-  ...filas.map(f => new TableRow({ children: f.map(t => new TableCell({ children: [p(t, { sz: 16 })] })) })),
+  new TableRow({ tableHeader: true, cantSplit: true, children: enc.map(t => new TableCell({ shading: { fill: 'DCE6F1' }, children: [p(t, { b: true, sz: 16 })] })) }),
+  ...filas.map(f => new TableRow({ cantSplit: true, children: f.map(t => new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: t, size: 16, color: t.endsWith('· empeoró') ? 'C00000' : t.endsWith('· mejoró') ? '008000' : undefined })] })] })) })),
 ] });
-const filaKpi = (k: KpiResumen) => [k.codigo, k.nombre, `${k.meta} ${k.unidad}${k.meta_cambio ? ` (cambió: ${k.metas.join(' → ')})` : ''}`, k.subperiodos.map(s => `${etiquetaSub(k.frecuencia, s.inicio)}: ${num(s.valor)}`).join(' · ') || '—', num(k.valor), pct(k.cumplimiento), k.semaforo, `${flecha(k.tendencia_periodo)} ${num(k.valor_anterior)}`];
-const ENC_KPI = ['Código', 'KPI', 'Meta', 'Subperiodos', 'Acumulado', 'Cumplimiento', 'Semáforo', 'Tendencia'];
+const filaKpi = (k: KpiResumen) => [k.codigo, k.nombre, `${k.meta} ${k.unidad}${k.meta_cambio ? ` (cambió: ${k.metas.join(' → ')})` : ''}`, k.subperiodos.map(s => `${etiquetaSub(k.frecuencia, s.inicio)}: ${num(s.valor)}`).join(' · ') || '—', num(k.valor), pct(k.cumplimiento), k.semaforo, textoTendencia(k)];
+const ENC_KPI = ['Código', 'KPI', 'Meta', 'Subper.', 'Acum.', 'Cumpl.', 'Semáforo', 'Tendencia'];
+
+export function textoTendencia(k: KpiResumen): string {
+  if (k.valor == null || k.valor_anterior == null) return '—';
+  const delta = k.valor - k.valor_anterior;
+  const mejora = k.tendencia === 'negativa' ? delta < 0 : delta > 0;
+  return `${num(k.valor_anterior)} → ${num(k.valor)} · ${delta === 0 ? 'sin cambio' : mejora ? 'mejoró' : 'empeoró'}`;
+}
+export function notaVigilancia(k: KpiResumen): string {
+  if (k.semaforo !== 'verde') return '';
+  const rojos = k.subperiodos.filter(s => s.semaforo === 'rojo').map(s => `${etiquetaSub(k.frecuencia, s.inicio).replace(/^./, c => c.toUpperCase())} en rojo (${num(s.valor)} ${k.unidad})`);
+  return rojos.length ? `${rojos.join('; ')}; acumulado en meta` : '';
+}
+export function periodoLegible(tipo: TipoPeriodo, inicio: string, fin: string): string {
+  const a = inicio.split('-').map(Number); const b = fin.split('-').map(Number);
+  return `${etiquetaPeriodo(tipo, inicio)} (${a[2]} ${MESES[a[1] - 1]} – ${b[2]} ${MESES[b[1] - 1]} ${b[0]})`;
+}
+const parrafosTexto = (texto: string) => (texto || '—').split(/\r?\n/).map(linea => p(linea));
 
 /** Signature lines: «[Nombre] — [cargo]» plus the AC absence/substitution legend. */
 export function lineaFirma(f: FirmanteSnap | null) {
@@ -149,8 +166,8 @@ export function construirWordReporte(e: EntradaWord): Document {
   const procesos = [...new Set(sgc.map(k => k.proceso ?? 'Sin proceso'))];
   const fuera = fueraDeMeta({ ...res, kpis });
   const cuerpo: (Paragraph | Table)[] = [
-    p(`${r.codigo} · Versión ${r.version} · Periodo ${etiquetaPeriodo(r.tipo_periodo, r.periodo_inicio)} (${r.periodo_inicio} a ${r.periodo_fin})`, { b: true }),
-    h('1. Objetivo'), p(r.objetivo || '—'), h('2. Alcance'), p(r.alcance || '—'), h('3. Metodología'), p(r.metodologia || '—'),
+    p(`${r.codigo} · Versión ${r.version} · Periodo ${periodoLegible(r.tipo_periodo, r.periodo_inicio, r.periodo_fin)}`, { b: true }),
+    h('1. Objetivo'), ...parrafosTexto(r.objetivo), h('2. Alcance'), ...parrafosTexto(r.alcance), h('3. Metodología'), ...parrafosTexto(r.metodologia),
     h('4. Resumen ejecutivo'),
     tabla(['Concepto', 'Valor'], [
       ['Índice SGC', `${pct(i.indice)} · ${i.semaforo}`],
@@ -162,7 +179,7 @@ export function construirWordReporte(e: EntradaWord): Document {
   ];
   for (const pr of procesos) {
     const ks = sgc.filter(k => (k.proceso ?? 'Sin proceso') === pr); const ip = res.procesos.find(x => x.proceso === pr);
-    cuerpo.push(p(`${pr}${ip ? ` — índice ${pct(ip.indice)} · ${ip.semaforo}` : ''}`, { b: true }), tabla(ENC_KPI, ks.map(filaKpi)));
+    cuerpo.push(p(`${pr}${ip ? ` — índice ${pct(ip.indice)} · ${ip.semaforo}` : ''}`, { b: true }), ...ks.flatMap(k => [tabla(ENC_KPI, [filaKpi(k)]), ...(notaVigilancia(k) ? [p(notaVigilancia(k), { sz: 18 })] : [])]));
     for (const k of ks.filter(k => k.nivel === 'SGC' && e.graficas[k.id])) {
       const transformation = { width: 605, height: 340 };
       const image = e.graficasSvg
@@ -173,17 +190,23 @@ export function construirWordReporte(e: EntradaWord): Document {
   }
   cuerpo.push(h('6. KPI fuera de meta'), fuera.length ? tabla(['Código', 'KPI', 'Semáforo', 'Causa', 'Acción', 'CAPA'], fuera.map(k => { const a = r.analisis[k.id]; return [k.codigo, k.nombre, k.semaforo, a?.causa || '—', a?.accion || '—', a?.capa || '—']; })) : p('Sin KPI fuera de meta.'));
   cuerpo.push(h('7. Resultados por puesto'), tabla(['Puesto', 'Calificación', 'Semáforo', 'KPI con dato'], res.puestos.filter(x => !r.alcance_puestos.length || r.alcance_puestos.includes(x.puesto_id)).map(x => [`${x.codigo} · ${x.nombre}`, pct(x.calificacion), x.semaforo, `${x.con_dato} de ${x.total}`])));
-  if (puesto.length) cuerpo.push(tabla(['Puesto', ...ENC_KPI], puesto.map(k => [e.nombresPuesto?.[k.puesto_id ?? ''] ?? res.puestos.find(x => x.puesto_id === k.puesto_id)?.codigo ?? '', ...filaKpi(k)])));
+  if (puesto.length) for (const k of puesto) cuerpo.push(tabla(['Puesto', ...ENC_KPI], [[e.nombresPuesto?.[k.puesto_id ?? ''] ?? res.puestos.find(x => x.puesto_id === k.puesto_id)?.codigo ?? '', ...filaKpi(k)]]), ...(notaVigilancia(k) ? [p(notaVigilancia(k))] : []));
   cuerpo.push(h('8. Conclusiones'), p(r.conclusiones || '—'), h('9. Firmas'));
   const f = e.firmantes;
-  const celdaFirma = (rol: string, x: FirmanteSnap | null) => new TableCell({ children: [p(rol.toUpperCase(), { b: true, al: AlignmentType.CENTER }), p(''), p(lineaFirma(x) || '—', { al: AlignmentType.CENTER, sz: 18 }), p(fecha(x?.fecha), { al: AlignmentType.CENTER, sz: 16 })] });
-  cuerpo.push(new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, rows: [new TableRow({ children: [
-    celdaFirma('Elaboró', f.elaboro),
-    new TableCell({ children: [p('REVISÓ', { b: true, al: AlignmentType.CENTER }), p(''), ...(f.revisaron.length ? f.revisaron.flatMap(x => [p(lineaFirma(x), { al: AlignmentType.CENTER, sz: 18 }), p(fecha(x.fecha), { al: AlignmentType.CENTER, sz: 16 })]) : [p('—', { al: AlignmentType.CENTER })])] }),
-    celdaFirma('Autorizó', f.autorizo),
+  const bloqueFirma = (rol: string, x: FirmanteSnap | null) => [
+    p(rol.toUpperCase(), { b: true, al: AlignmentType.CENTER }),
+    p(`${x?.nombre ?? '—'}${e.borrador && rol === 'Revisó' ? ' (asignado)' : ''}`, { al: AlignmentType.CENTER, sz: 18 }),
+    p(`${x?.cargo || 'Sin cargo en el perfil'}${x?.leyenda ?? ''}`, { al: AlignmentType.CENTER, sz: 16 }),
+    p(''), p('Firma: ________________________', { sz: 16 }), p(''), p('Fecha: ________________________', { sz: 16 }),
+    ...(!e.borrador && x?.fecha ? [p(`Firma electrónica: ${fecha(x.fecha)}`, { sz: 16 })] : []),
+  ];
+  cuerpo.push(new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, rows: [new TableRow({ cantSplit: true, children: [
+    new TableCell({ children: bloqueFirma('Elaboró', f.elaboro) }),
+    new TableCell({ children: f.revisaron.length ? f.revisaron.flatMap(x => bloqueFirma('Revisó', x)) : bloqueFirma('Revisó', null) }),
+    new TableCell({ children: bloqueFirma('Autorizó', f.autorizo) }),
   ] })] }));
   const header = e.borrador ? new Header({ children: [...encabezadoWordHijos(ctx), new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'BORRADOR — NO VÁLIDO PARA EMISIÓN', bold: true, size: 40, color: 'C00000', font: 'Calibri' })] })] }) : encabezadoWord(ctx);
   return new Document({ creator: 'TRACEA', title: `${r.codigo} v${r.version}`, styles: { default: { document: { run: { font: 'Calibri' } } } },
-    sections: [{ headers: { default: header }, footers: { default: pieWord(ctx) }, children: cuerpo }] });
+    sections: [{ properties: { page: { size: { orientation: PageOrientation.LANDSCAPE }, margin: { top: 720, bottom: 720, left: 720, right: 720 } } }, headers: { default: header }, footers: { default: pieWord(e.borrador ? { ...ctx, folio: 'BORRADOR · sin folio' } : ctx) }, children: cuerpo }] });
 }
 
