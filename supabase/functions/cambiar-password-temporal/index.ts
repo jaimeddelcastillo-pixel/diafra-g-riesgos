@@ -10,7 +10,11 @@ Deno.serve(async req => {
   const { data: { user }, error: ue } = await client.auth.getUser(); if (ue || !user) return response({ error: 'Inicia sesión de nuevo' }, 401);
   const body = await req.json().catch(() => null);
   if (typeof body?.password !== 'string' || typeof body?.current_password !== 'string' || !body.password || body.password === body.current_password) return response({ error: 'La nueva contraseña debe ser diferente a la actual' }, 400);
-  const { error } = await client.auth.updateUser({ password: body.password, current_password: body.current_password });
+  if (!user.email) return response({ error: 'La cuenta requiere un correo electrónico' }, 400);
+  const passwordClient = createClient(url, anon, { auth: { persistSession: false, autoRefreshToken: false } });
+  const { data: login, error: loginError } = await passwordClient.auth.signInWithPassword({ email: user.email, password: body.current_password });
+  if (loginError || login.user?.id !== user.id) return response({ error: 'Contraseña actual incorrecta. Revísala y vuelve a intentarlo.' }, 400);
+  const { error } = await passwordClient.auth.updateUser({ password: body.password, current_password: body.current_password });
   if (error) return response({ error: error.message }, 400);
   const admin = createClient(url, key, { auth: { persistSession: false } });
   const { error: ae } = await admin.rpc('confirmar_password_temporal', { _usuario: user.id });

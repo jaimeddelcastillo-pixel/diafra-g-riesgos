@@ -31,6 +31,8 @@ export async function resolverContextoOrg(req: Request): Promise<ContextoOrg> {
   );
   const { data: { user }, error: uErr } = await userClient.auth.getUser();
   if (uErr || !user) throw new ContextoOrgError("No autorizado", 401);
+  const { data: temporal, error: temporalError } = await userClient.rpc('requiere_cambio_temporal');
+  if (temporalError || temporal) throw new ContextoOrgError('Debes cambiar tu contraseña temporal antes de usar la plataforma', 403);
 
   const { data, error } = await userClient.rpc("contexto_org_actual");
   if (error) throw new ContextoOrgError("No se pudo resolver la organización", 500);
