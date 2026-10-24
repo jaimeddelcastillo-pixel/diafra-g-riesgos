@@ -44,4 +44,4 @@ Technical rules — one line each; full text and "why" in docs/reglas-detalle.md
 - Read scoped rules: src/modules/indicadores/AGENTS.md (K1–K3); src/lib/documentos/AGENTS.md (identity/originals).
 - Automated test files run serially in Vitest while PostgreSQL fixtures remain temporary and rolled back; why: prevent shared database contention and obtain a complete single-run result.
 - DB functions use complete CREATE OR REPLACE; never replace pg_get_functiondef text.
-- Read src/components/ui/AGENTS.md before changing shared UI; why: centralized UX rules.
+- Read src/components/ui/AGENTS.md before editing shared UI; why: centralized UX rules.
