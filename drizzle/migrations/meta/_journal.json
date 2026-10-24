@@ -841,6 +841,13 @@
       "when": 1792809776928,
       "tag": "0119_k3b2_confirmar_textos_congelados",
       "breakpoints": true
+    },
+    {
+      "idx": 120,
+      "version": "7",
+      "when": 1792814694249,
+      "tag": "0120_s1_autoridad_calidad",
+      "breakpoints": true
     }
   ]
 }

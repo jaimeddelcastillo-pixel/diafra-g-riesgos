@@ -4311,6 +4311,47 @@ export type Database = {
           },
         ]
       }
+      org_autoridad_calidad: {
+        Row: {
+          autorizadores: string[]
+          created_at: string
+          created_by: string
+          id: string
+          modo: string
+          motivo: string
+          org_id: string
+          version: number
+        }
+        Insert: {
+          autorizadores?: string[]
+          created_at?: string
+          created_by: string
+          id?: string
+          modo: string
+          motivo: string
+          org_id: string
+          version: number
+        }
+        Update: {
+          autorizadores?: string[]
+          created_at?: string
+          created_by?: string
+          id?: string
+          modo?: string
+          motivo?: string
+          org_id?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "org_autoridad_calidad_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       org_documentos: {
         Row: {
           clasificacion: string
@@ -7257,6 +7298,10 @@ export type Database = {
       }
       folios_revision_corte: { Args: { p_ahora?: string }; Returns: string }
       get_user_org_id: { Args: never; Returns: string }
+      guardar_autoridad_calidad: {
+        Args: { _autorizadores: string[]; _modo: string; _motivo: string }
+        Returns: string
+      }
       guardar_formato_documento: {
         Args: {
           _codigo: string
@@ -7438,6 +7483,7 @@ export type Database = {
         Returns: Json
       }
       mi_acceso_curso: { Args: { p_curso_id: string }; Returns: string }
+      mi_autoridad_calidad: { Args: never; Returns: Json }
       mi_ia_en_prueba: { Args: never; Returns: boolean }
       mi_org_tiene_modulo: { Args: { _modulo: string }; Returns: boolean }
       mi_plan_limite: { Args: { p_clave: string }; Returns: Json }
