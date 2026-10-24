@@ -7102,6 +7102,7 @@ export type Database = {
           riesgo_id: string
         }[]
       }
+      contexto_borrador_kpi_word: { Args: { _id: string }; Returns: Json }
       contexto_cerebro: {
         Args: {
           _folio_id: string
