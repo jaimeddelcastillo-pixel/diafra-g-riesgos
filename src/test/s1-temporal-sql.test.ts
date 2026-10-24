@@ -6,7 +6,7 @@ describe('S-1 bloqueo temporal del servidor, tablas QA con rollback', () => {
     const defs = exec("SELECT string_agg(pg_get_functiondef(oid)||';',E'\\n') FROM pg_proc WHERE pronamespace='public'::regnamespace AND proname IN ('requiere_cambio_temporal','s1_acceso_previo','marcar_password_temporal','confirmar_password_temporal')")
       .replaceAll('public.', 'pg_temp.').replaceAll('auth.uid()', 'pg_temp.uid()').replaceAll('auth.role()', 'pg_temp.role()').replaceAll('SECURITY DEFINER', '').replaceAll('SET search_path TO public', 'SET search_path TO pg_temp,public');
     const output = exec(`BEGIN; SET LOCAL check_function_bodies=off;
-CREATE TEMP TABLE usuario_acceso_temporal (LIKE public.usuario_acceso_temporal INCLUDING DEFAULTS);
+CREATE TEMP TABLE usuario_acceso_temporal (LIKE public.usuario_acceso_temporal INCLUDING DEFAULTS INCLUDING INDEXES);
 CREATE TEMP TABLE audit_trail (LIKE public.audit_trail INCLUDING DEFAULTS);
 CREATE FUNCTION pg_temp.uid() RETURNS uuid LANGUAGE sql AS $$SELECT '00000000-0000-0000-0000-000000000001'::uuid$$;
 CREATE FUNCTION pg_temp.role() RETURNS text LANGUAGE sql AS $$SELECT current_setting('qa.role')$$;
