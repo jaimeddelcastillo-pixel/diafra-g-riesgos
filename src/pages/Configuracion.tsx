@@ -1,11 +1,11 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Users, Bell, Pencil, UserPlus, Upload, X, KeyRound, Lock, Mail } from "lucide-react";
+import { Users, Bell, Pencil, UserPlus, KeyRound, Lock, Mail } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { DesactivarUsuarioDialog } from "@/components/DesactivarUsuarioDialog";
 import { UsuariosDesactivadosCard } from "@/components/UsuariosDesactivadosCard";
@@ -61,9 +61,6 @@ interface OrgUser {
   role: AppRole;
 }
 
-const FIRMA_WIDTH = 200;
-const FIRMA_HEIGHT = 80;
-
 async function getFirmaSignedUrl(path: string): Promise<string> {
   const { data } = await supabase.storage.from("firmas").createSignedUrl(path, 3600);
   return data?.signedUrl ?? "";
@@ -84,113 +81,6 @@ function FirmaThumb({ path }: { path: string }) {
   return <img src={url} alt="Firma" className="h-8 w-auto object-contain" />;
 }
 
-async function uploadFirma(file: File, userId: string): Promise<string> {
-  const ext = file.name.split(".").pop() || "png";
-  const path = `${userId}/firma.${ext}`;
-  const resizedBlob = await resizeImage(file, FIRMA_WIDTH, FIRMA_HEIGHT);
-  const { error } = await supabase.storage
-    .from("firmas")
-    .upload(path, resizedBlob, { upsert: true, contentType: "image/png" });
-  if (error) throw error;
-  return path;
-}
-
-function resizeImage(file: File, maxW: number, maxH: number): Promise<Blob> {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.onload = () => {
-      const canvas = document.createElement("canvas");
-      canvas.width = maxW;
-      canvas.height = maxH;
-      const ctx = canvas.getContext("2d")!;
-      ctx.clearRect(0, 0, maxW, maxH);
-      const scale = Math.min(maxW / img.width, maxH / img.height);
-      const w = img.width * scale;
-      const h = img.height * scale;
-      ctx.drawImage(img, (maxW - w) / 2, (maxH - h) / 2, w, h);
-      canvas.toBlob((blob) => {
-        if (blob) resolve(blob);
-        else reject(new Error("Failed to resize image"));
-      }, "image/png");
-    };
-    img.onerror = () => reject(new Error("Failed to load image"));
-    img.src = URL.createObjectURL(file);
-  });
-}
-
-function FirmaUpload({
-  currentUrl,
-  onFileSelect,
-  previewFile,
-}: {
-  currentUrl: string | null;
-  onFileSelect: (file: File | null) => void;
-  previewFile: File | null;
-}) {
-  const inputRef = useRef<HTMLInputElement>(null);
-  const [previewSrc, setPreviewSrc] = useState<string | null>(null);
-  const [signedUrl, setSignedUrl] = useState<string | null>(null);
-
-  useEffect(() => {
-    let active = true;
-    if (currentUrl && !previewSrc) {
-      getFirmaSignedUrl(currentUrl).then((url) => {
-        if (active) setSignedUrl(url);
-      });
-    } else {
-      setSignedUrl(null);
-    }
-    return () => {
-      active = false;
-    };
-  }, [currentUrl, previewSrc]);
-
-  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (!file.type.startsWith("image/")) {
-      toast.error("Solo se permiten archivos de imagen (PNG, JPG)");
-      return;
-    }
-    onFileSelect(file);
-    const reader = new FileReader();
-    reader.onload = () => setPreviewSrc(reader.result as string);
-    reader.readAsDataURL(file);
-  };
-
-  const displayUrl = previewSrc || signedUrl;
-
-  return (
-    <div className="space-y-2">
-      <label className="text-sm font-medium">Firma (PNG transparente)</label>
-      <div className="flex items-center gap-3">
-        <div
-          className="w-[200px] h-[80px] border-2 border-dashed rounded flex items-center justify-center bg-muted/30 cursor-pointer overflow-hidden"
-          onClick={() => inputRef.current?.click()}
-        >
-          {displayUrl ? (
-            <img src={displayUrl} alt="Firma" className="max-w-full max-h-full object-contain" />
-          ) : (
-            <div className="text-center text-muted-foreground text-xs">
-              <Upload className="h-5 w-5 mx-auto mb-1" />
-              Subir firma
-            </div>
-          )}
-        </div>
-        {(previewSrc || currentUrl) && (
-          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { onFileSelect(null); setPreviewSrc(null); }}>
-            <X className="h-3.5 w-3.5" />
-          </Button>
-        )}
-      </div>
-      <input ref={inputRef} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={handleFile} />
-      <p className="text-[10px] text-muted-foreground">
-        Se redimensionará a {FIRMA_WIDTH}×{FIRMA_HEIGHT}px con fondo transparente.
-      </p>
-    </div>
-  );
-}
-
 export default function Configuracion() {
   const { hasRole, orgId, isSuperAdmin, user, orgRole } = useAuth();
   const { puedeAdministrarUsuarios } = useAuth();
@@ -209,12 +99,10 @@ export default function Configuracion() {
   const [editForm, setEditForm] = useState({ nombre: "", cargo: "", role: "" as AppRole });
   const [motivoRol, setMotivoRol] = useState("");
   const cambiaRol = !!editUser && editForm.role !== editUser.role;
-  const [editFirmaFile, setEditFirmaFile] = useState<File | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
 
   const [newDialogOpen, setNewDialogOpen] = useState(false);
   const [newForm, setNewForm] = useState({ email: "", password: "", nombre: "", cargo: "", role: "operador" as AppRole });
-  const [newFirmaFile, setNewFirmaFile] = useState<File | null>(null);
 
   const [pwDialogOpen, setPwDialogOpen] = useState(false);
   const [pwForm, setPwForm] = useState({ newPw: "", confirm: "" });
@@ -264,14 +152,10 @@ export default function Configuracion() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: async ({ id, nombre, cargo, role, firmaFile, rolAnterior, motivo }: {
-      id: string; nombre: string; cargo: string; role: AppRole; firmaFile: File | null; rolAnterior: AppRole; motivo: string;
+    mutationFn: async ({ id, nombre, cargo, role, rolAnterior, motivo }: {
+      id: string; nombre: string; cargo: string; role: AppRole; rolAnterior: AppRole; motivo: string;
     }) => {
-      let firma_url: string | undefined;
-      if (firmaFile) firma_url = await uploadFirma(firmaFile, id);
-
       const updateData: any = { nombre, cargo };
-      if (firma_url) updateData.firma_url = firma_url;
 
       const { error: pErr } = await supabase.from("profiles").update(updateData).eq("id", id);
       if (pErr) throw pErr;
@@ -286,24 +170,19 @@ export default function Configuracion() {
       queryClient.invalidateQueries({ queryKey: ["org-users", orgId] });
       toast.success("Usuario actualizado");
       setDialogOpen(false);
-      setEditFirmaFile(null);
       setMotivoRol("");
     },
     onError: (e: any) => toast.error(e.message),
   });
 
   const createMutation = useMutation({
-    mutationFn: async (form: typeof newForm & { firmaFile: File | null }) => {
+    mutationFn: async (form: typeof newForm) => {
       const { data, error } = await supabase.functions.invoke("create-user", {
         body: { email: form.email, password: form.password, nombre: form.nombre, cargo: form.cargo, role: form.role, org_id: orgId },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
 
-      if (form.firmaFile && data?.user?.id) {
-        const firmaPath = await uploadFirma(form.firmaFile, data.user.id);
-        await supabase.from("profiles").update({ firma_url: firmaPath } as any).eq("id", data.user.id);
-      }
       return data;
     },
     onSuccess: () => {
@@ -311,7 +190,6 @@ export default function Configuracion() {
       toast.success("Usuario creado exitosamente.");
       setNewDialogOpen(false);
       setNewForm({ email: "", password: "", nombre: "", cargo: "", role: "operador" });
-      setNewFirmaFile(null);
     },
     onError: (e: any) => toast.error(e.message || "Error al crear usuario"),
   });
@@ -319,7 +197,7 @@ export default function Configuracion() {
   const handleSave = () => {
     if (!editUser) return;
     if (cambiaRol && motivoRol.trim().length < 5) { toast.error("Escribe el motivo del cambio de rol (mínimo 5 caracteres)"); return; }
-    updateMutation.mutate({ id: editUser.id, nombre: editForm.nombre, cargo: editForm.cargo, role: editForm.role, firmaFile: editFirmaFile, rolAnterior: editUser.role, motivo: motivoRol });
+    updateMutation.mutate({ id: editUser.id, nombre: editForm.nombre, cargo: editForm.cargo, role: editForm.role, rolAnterior: editUser.role, motivo: motivoRol });
   };
 
   const handleCreate = () => {
@@ -328,7 +206,7 @@ export default function Configuracion() {
       return;
     }
     if (newForm.password.length < 6) { toast.error("La contraseña debe tener al menos 6 caracteres"); return; }
-    createMutation.mutate({ ...newForm, firmaFile: newFirmaFile });
+    createMutation.mutate(newForm);
   };
 
   const handleChangePassword = async () => {
@@ -458,7 +336,7 @@ export default function Configuracion() {
                     {isAdmin && (
                       <td className="py-2">
                         <div className="flex gap-1">
-                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { setEditUser(u); setEditForm({ nombre: u.nombre, cargo: u.cargo || "", role: u.role }); setMotivoRol(""); setEditFirmaFile(null); setDialogOpen(true); }}>
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { setEditUser(u); setEditForm({ nombre: u.nombre, cargo: u.cargo || "", role: u.role }); setMotivoRol(""); setDialogOpen(true); }}>
                             <Pencil className="h-3.5 w-3.5" />
                           </Button>
                           <Button variant="ghost" size="icon" className="h-7 w-7" title="Resetear contraseña" onClick={() => { setResetPwUser(u); setResetPwValue(""); setResetPwDialogOpen(true); }}>
@@ -565,7 +443,6 @@ export default function Configuracion() {
                 <Textarea id="motivo-rol" value={motivoRol} onChange={(e) => setMotivoRol(e.target.value)} maxLength={1000} placeholder="Ej. Reasignación de funciones" />
               </div>
             )}
-            <FirmaUpload currentUrl={editUser?.firma_url || null} onFileSelect={setEditFirmaFile} previewFile={editFirmaFile} />
             <p className="text-xs text-muted-foreground">Correo: {editUser?.email}</p>
           </div>
           <DialogFooter>
@@ -605,7 +482,6 @@ export default function Configuracion() {
                 </SelectContent>
               </Select>
             </div>
-            <FirmaUpload currentUrl={null} onFileSelect={setNewFirmaFile} previewFile={newFirmaFile} />
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setNewDialogOpen(false)}>Cancelar</Button>

@@ -9,7 +9,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { jsPDF } from "https://esm.sh/jspdf@2.5.2";
 import QRCode from "https://esm.sh/qrcode@1.5.4";
-import { FIRMA_JDC_PNG_BASE64, FIRMA_JDC_WIDTH_MM, FIRMA_JDC_HEIGHT_MM } from "./firma.ts";
 import { LOGO_TRACEA_PNG_BASE64, LOGO_W, LOGO_H } from "./logo.ts";
 import { resolverContextoOrg, ContextoOrgError } from "../_shared/contexto-org.ts";
 import { enviarYRegistrar } from "../_shared/transactional-email-templates/enviar-y-registrar.ts";
@@ -209,19 +208,9 @@ async function generarDiplomaPDF(opts: {
   doc.setTextColor(80, 80, 80);
   doc.text("Escanea para verificar", W - 36, H - 30, { align: "center" });
 
-  // Firma del instructor — imagen manuscrita centrada sobre la línea de firma,
-  // entre el cuerpo del diploma y el nombre/título del instructor.
+  // Firma autógrafa en papel: no estampar imágenes en documentos nuevos.
   const firmaCx = 72.5;
   const lineY = H - 34;
-  try {
-    const firmaW = FIRMA_JDC_WIDTH_MM;
-    const firmaH = FIRMA_JDC_HEIGHT_MM;
-    const firmaX = firmaCx - firmaW / 2;
-    // Firma manuscrita con proporción original de lienzo 70x50mm; se coloca
-    // amplia y proporcionada sobre la línea sin aplastarla ni estirarla.
-    const firmaY = lineY - firmaH + 2;
-    doc.addImage(FIRMA_JDC_PNG_BASE64, "PNG", firmaX, firmaY, firmaW, firmaH);
-  } catch (_) { /* fallback silencioso */ }
   doc.setDrawColor(40, 40, 40);
   doc.setLineWidth(0.3);
   doc.line(firmaCx - 38, lineY, firmaCx + 38, lineY);
@@ -328,7 +317,7 @@ Deno.serve(async (req) => {
       }
       yaExiste = data ?? null;
     }
-    if (yaExiste && !force_regenerate) {
+    if (yaExiste) {
       return json({
         already_existed: true,
         folio: yaExiste.folio,
@@ -442,7 +431,7 @@ Deno.serve(async (req) => {
       const { error: insErr } = await admin.from("curso_diplomas").insert({
         folio,
         user_id: user.id,
-        org_id: orgMember?.org_id ?? null,
+        org_id: orgIdAlumno,
         curso_id: curso.id,
         intento_id,
         fecha_emision: fecha.toISOString(),
