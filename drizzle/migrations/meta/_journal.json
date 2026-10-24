@@ -834,6 +834,13 @@
       "when": 1792809559956,
       "tag": "0118_k3b2_borrador_sin_folio",
       "breakpoints": true
+    },
+    {
+      "idx": 119,
+      "version": "7",
+      "when": 1792809776928,
+      "tag": "0119_k3b2_confirmar_textos_congelados",
+      "breakpoints": true
     }
   ]
 }
