@@ -855,6 +855,13 @@
       "when": 1792814770203,
       "tag": "0121_s1_temporal_firma_cursos",
       "breakpoints": true
+    },
+    {
+      "idx": 122,
+      "version": "7",
+      "when": 1792814948921,
+      "tag": "0122_s1_firma_precarga_segura",
+      "breakpoints": true
     }
   ]
 }

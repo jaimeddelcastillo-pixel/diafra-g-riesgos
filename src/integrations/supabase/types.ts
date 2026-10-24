@@ -7487,6 +7487,10 @@ export type Database = {
         Args: { p_prompt_id: string }
         Returns: number
       }
+      inicializar_firma_diploma: {
+        Args: { _curso: string; _firma: string; _instructor: string }
+        Returns: string
+      }
       is_super_admin: { Args: never; Returns: boolean }
       kpi_acceso: {
         Args: { _escritura?: boolean; _org: string; _validar?: boolean }
