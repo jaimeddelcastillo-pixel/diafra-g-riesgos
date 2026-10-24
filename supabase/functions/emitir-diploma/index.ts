@@ -11,6 +11,7 @@ import { jsPDF } from "https://esm.sh/jspdf@2.5.2";
 import QRCode from "https://esm.sh/qrcode@1.5.4";
 import { conservarDiplomaOriginal } from "./original.ts";
 import { FIRMA_JDC_PNG_BASE64 } from './firma.ts';
+import { estamparFirmaDiploma } from './signature.ts';
 import { LOGO_TRACEA_PNG_BASE64, LOGO_W, LOGO_H } from "./logo.ts";
 import { resolverContextoOrg, ContextoOrgError } from "../_shared/contexto-org.ts";
 import { enviarYRegistrar } from "../_shared/transactional-email-templates/enviar-y-registrar.ts";
@@ -214,7 +215,7 @@ async function generarDiplomaPDF(opts: {
   // Authorized course asset, never a company-profile signature.
   const firmaCx = 72.5;
   const lineY = H - 34;
-  doc.addImage(opts.firma.firma_png, 'PNG', firmaCx - 26, lineY - 26.01 + 2, 52, 26.01);
+  estamparFirmaDiploma(doc, opts.firma, firmaCx, lineY);
   doc.setDrawColor(40, 40, 40);
   doc.setLineWidth(0.3);
   doc.line(firmaCx - 38, lineY, firmaCx + 38, lineY);
