@@ -6,9 +6,9 @@ const id = (n: number) => `00000000-0000-0000-0000-${String(n).padStart(12, '0')
 let definitions: string | undefined;
 function run(body: string) {
   if (!definitions) definitions = execFileSync('psql', ['-XqAt', '-v', 'ON_ERROR_STOP=1'], {
-    input: `SELECT string_agg(pg_get_functiondef(oid)||';', E'\n') FROM pg_proc WHERE pronamespace='public'::regnamespace AND proname=ANY(ARRAY['rol_efectivo','pendientes_color','pendientes_usuario','kpi_reporte_autoriza','tend_usuarios_firmantes','tend_firmante_autorizante']);`, encoding: 'utf8', timeout: 30000,
+    input: `SELECT string_agg(pg_get_functiondef(oid)||';', E'\n') FROM pg_proc WHERE pronamespace='public'::regnamespace AND proname=ANY(ARRAY['rol_efectivo','pendientes_color','pendientes_usuario','mi_autoridad_calidad','kpi_reporte_autoriza','tend_usuarios_firmantes','tend_firmante_autorizante']);`, encoding: 'utf8', timeout: 30000,
   }).replaceAll('public.', 'pg_temp.').replaceAll('pg_temp.app_role', 'public.app_role').replace(/\b_rol app_role\b/g, '_rol public.app_role').replaceAll('auth.uid()', 'pg_temp.uid()').replaceAll('SECURITY DEFINER', '').replaceAll("SET search_path TO 'public'", 'SET search_path TO pg_temp,public');
-  const tables = ['organizations', 'profiles', 'org_members', 'org_suplencias', 'org_pendientes_semaforo', 'tend_registros_at', 'tend_registros', 'tend_semanas', 'riesgos', 'folios', 'brain_knowledge_items', 'kpi_definiciones', 'kpi_puesto', 'kpi_resultados','kpi_reportes','kpi_reporte_config'];
+  const tables = ['org_autoridad_calidad', 'organizations', 'profiles', 'org_members', 'org_suplencias', 'org_pendientes_semaforo', 'tend_registros_at', 'tend_registros', 'tend_semanas', 'riesgos', 'folios', 'brain_knowledge_items', 'kpi_definiciones', 'kpi_puesto', 'kpi_resultados','kpi_reportes','kpi_reporte_config'];
   const sql = `BEGIN; SET LOCAL check_function_bodies=off;
 ${tables.map(t => `CREATE TEMP TABLE ${t} (LIKE public.${t} INCLUDING DEFAULTS);`).join('\n')}
 DO $$ DECLARE c record;BEGIN FOR c IN SELECT table_name,column_name FROM information_schema.columns WHERE table_schema LIKE 'pg_temp_%' AND is_nullable='NO' LOOP EXECUTE format('ALTER TABLE pg_temp.%I ALTER COLUMN %I DROP NOT NULL',c.table_name,c.column_name); END LOOP;END $$;
@@ -16,6 +16,7 @@ CREATE FUNCTION pg_temp.uid() RETURNS uuid LANGUAGE sql AS $$SELECT nullif(curre
 CREATE FUNCTION pg_temp.get_user_org_id() RETURNS uuid LANGUAGE sql AS $$SELECT '${id(100)}'::uuid$$;
 CREATE FUNCTION pg_temp.org_tiene_modulo(uuid,text) RETURNS boolean LANGUAGE sql AS $$SELECT coalesce(current_setting('qa.sin_'||$2,true),'')<>'1'$$;
 CREATE FUNCTION pg_temp.tend_acceso(uuid,boolean DEFAULT false,text[] DEFAULT NULL) RETURNS boolean LANGUAGE sql AS $$SELECT $1=pg_temp.get_user_org_id()$$;
+CREATE FUNCTION pg_temp.has_role(uuid,public.app_role) RETURNS boolean LANGUAGE sql AS $$SELECT pg_temp.rol_efectivo($1,$2)$$;
 ${definitions}
 INSERT INTO organizations(id,nombre,es_prueba) VALUES('${id(100)}','QA temporal P1',true);
 INSERT INTO profiles(id,nombre,cargo,activo,email,perfil_confirmado_en) SELECT ('00000000-0000-0000-0000-'||lpad(i::text,12,'0'))::uuid,'QA persona '||i,'QA cargo',true,'qa'||i||'@example.invalid',CASE WHEN i=4 THEN NULL ELSE now() END FROM generate_series(1,4) i;
