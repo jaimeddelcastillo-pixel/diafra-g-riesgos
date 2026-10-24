@@ -1,5 +1,5 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
-import { FIRMA_JDC_PNG_BASE64 } from '../emitir-diploma/firma.ts';
+import { FIRMA_JDC_PNG_BASE64 } from '../_shared/firma-instructor.ts';
 const cors = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type', 'Access-Control-Allow-Methods': 'POST, OPTIONS' };
 Deno.serve(async req => {
   const json = (d: unknown, status = 200) => new Response(JSON.stringify(d), { status, headers: { ...cors, 'Content-Type': 'application/json' } });
