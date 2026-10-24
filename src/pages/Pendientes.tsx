@@ -46,7 +46,7 @@ function Lista({ datos, cargando, error }: { datos?: Pendiente[]; cargando: bool
           <SelectContent><SelectItem value="todos">Todos los colores</SelectItem><SelectItem value="rojo">Rojo</SelectItem><SelectItem value="naranja">Naranja</SelectItem><SelectItem value="verde">Verde</SelectItem></SelectContent></Select>
       </div>
       {!visibles.length ? <p className="text-sm text-muted-foreground">Sin pendientes.</p> : (
-        <ul className="divide-y rounded-md border">
+        <ul className="table-scroll-frame divide-y rounded-md border">
           {visibles.map((p) => (
             <li key={`${p.tipo}-${p.registro}-${p.titulo}`}>
               <PendienteEnlace pendiente={p} semaforo={semaforo.data} />
