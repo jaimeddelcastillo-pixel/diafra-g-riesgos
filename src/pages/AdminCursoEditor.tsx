@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Plus, Trash2, Save, ChevronUp, ChevronDown, Upload } from "lucide-react";
 import { toast } from "sonner";
+import { FirmaDiplomaCard } from '@/components/FirmaDiplomaCard';
 
 type Curso = { id: string; norma: string; titulo: string; descripcion: string; activo: boolean };
 type Modulo = { id: string; curso_id: string; titulo: string; descripcion: string; orden: number; activo: boolean };
@@ -31,7 +32,8 @@ type Leccion = {
 export default function AdminCursoEditor() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { isSuperAdmin, loading } = useAuth();
+  const { isSuperAdmin, loading, user } = useAuth();
+  const [esInstructor, setEsInstructor] = useState(false);
   const [curso, setCurso] = useState<Curso | null>(null);
   const [modulos, setModulos] = useState<Modulo[]>([]);
   const [lecciones, setLecciones] = useState<Record<string, Leccion[]>>({});
@@ -43,6 +45,8 @@ export default function AdminCursoEditor() {
     if (!id) return;
     const { data: c } = await (supabase as any).from("cursos").select("*").eq("id", id).maybeSingle();
     setCurso(c);
+    const { data: firma } = await supabase.from('curso_diploma_config').select('instructor_user_id').eq('curso_id', id).order('version', { ascending: false }).limit(1).maybeSingle();
+    setEsInstructor(!!user && firma?.instructor_user_id === user.id);
     const { data: m } = await (supabase as any)
       .from("curso_modulos")
       .select("*")
@@ -63,7 +67,7 @@ export default function AdminCursoEditor() {
       setLecciones(grouped);
     }
     setLoad(false);
-  }, [id]);
+  }, [id, user]);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
@@ -121,9 +125,10 @@ export default function AdminCursoEditor() {
   };
 
   if (loading) return null;
-  if (!isSuperAdmin()) return <Navigate to="/" replace />;
+  if (!isSuperAdmin() && !load && !esInstructor) return <Navigate to="/" replace />;
   if (load) return <div className="p-6 text-sm text-muted-foreground">Cargando...</div>;
   if (!curso) return <div className="p-6">Curso no encontrado.</div>;
+  if (!isSuperAdmin()) return <div className="container p-6"><FirmaDiplomaCard cursoId={curso.id}/></div>;
 
   const guardarCurso = async () => {
     const { error } = await (supabase as any)
@@ -227,6 +232,7 @@ export default function AdminCursoEditor() {
           <Button onClick={guardarCurso}><Save className="h-4 w-4 mr-2" /> Guardar curso</Button>
         </CardContent>
       </Card>
+      <FirmaDiplomaCard cursoId={curso.id}/>
 
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold">Módulos</h2>

@@ -1,0 +1,1 @@
+ALTER POLICY leer ON public.curso_diploma_config TO authenticated USING ((SELECT public.is_super_admin()) OR instructor_user_id=(SELECT auth.uid())); COMMENT ON POLICY leer ON public.curso_diploma_config IS 'Solo super administrador o instructor accede al activo de firma; emisión lee mediante servidor.';

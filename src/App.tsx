@@ -4,6 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/hooks/useAuth";
+import { AccesoTemporalGuard } from '@/components/AccesoTemporalGuard';
 import { AppLayout } from "@/components/AppLayout";
 import DiplomaVerificar from "./pages/DiplomaVerificar";
 import Confianza from "./pages/Confianza";
@@ -53,7 +54,7 @@ const App = () => (
         <AuthProvider>
           <Toaster />
           <Sonner />
-          <Routes>
+          <AccesoTemporalGuard><Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/recuperar" element={<Recuperar />} />
@@ -109,7 +110,7 @@ const App = () => (
               <Route path="/soporte/:id" element={<Soporte />} />
             </Route>
             <Route path="*" element={<NotFound />} />
-          </Routes>
+          </Routes></AccesoTemporalGuard>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>

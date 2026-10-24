@@ -841,6 +841,34 @@
       "when": 1792809776928,
       "tag": "0119_k3b2_confirmar_textos_congelados",
       "breakpoints": true
+    },
+    {
+      "idx": 120,
+      "version": "7",
+      "when": 1792814694249,
+      "tag": "0120_s1_autoridad_calidad",
+      "breakpoints": true
+    },
+    {
+      "idx": 121,
+      "version": "7",
+      "when": 1792814770203,
+      "tag": "0121_s1_temporal_firma_cursos",
+      "breakpoints": true
+    },
+    {
+      "idx": 122,
+      "version": "7",
+      "when": 1792814948921,
+      "tag": "0122_s1_firma_precarga_segura",
+      "breakpoints": true
+    },
+    {
+      "idx": 123,
+      "version": "7",
+      "when": 1792815782324,
+      "tag": "0123_s1_firma_lectura_restringida",
+      "breakpoints": true
     }
   ]
 }

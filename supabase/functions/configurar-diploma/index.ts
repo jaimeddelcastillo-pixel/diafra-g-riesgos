@@ -1,0 +1,20 @@
+import { createClient } from 'npm:@supabase/supabase-js@2';
+import { FIRMA_JDC_PNG_BASE64 } from '../_shared/firma-instructor.ts';
+const cors = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type', 'Access-Control-Allow-Methods': 'POST, OPTIONS' };
+Deno.serve(async req => {
+  const json = (d: unknown, status = 200) => new Response(JSON.stringify(d), { status, headers: { ...cors, 'Content-Type': 'application/json' } });
+  if (req.method === 'OPTIONS') return new Response(null, { headers: cors });
+  if (req.method !== 'POST') return json({ error: 'Método no permitido' }, 405);
+  const url = Deno.env.get('SUPABASE_URL'); const anon = Deno.env.get('SUPABASE_ANON_KEY'); const key = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+  if (!url || !anon || !key) return json({ error: 'Servicio no disponible' }, 503);
+  const client = createClient(url, anon, { global: { headers: { Authorization: req.headers.get('Authorization') ?? '' } }, auth: { persistSession: false } });
+  const { data: { user } } = await client.auth.getUser(); if (!user) return json({ error: 'Sin sesión' }, 401);
+  const { data: temporal, error: te } = await client.rpc('requiere_cambio_temporal'); if (te || temporal) return json({ error: 'Cambia tu contraseña temporal' }, 403);
+  const body = await req.json().catch(() => null); if (typeof body?.curso_id !== 'string' || !/^[0-9a-f-]{36}$/i.test(body.curso_id)) return json({ error: 'Curso no válido' }, 400);
+  const admin = createClient(url, key, { auth: { persistSession: false } });
+  const { data: sa } = await admin.from('user_roles').select('id').eq('user_id', user.id).eq('role','super_admin').maybeSingle();
+  const { data: config } = await admin.from('curso_diploma_config').select('instructor_user_id').eq('curso_id', body.curso_id).order('version', { ascending: false }).limit(1).maybeSingle();
+  if (!sa && config?.instructor_user_id !== user.id) return json({ error: 'Solo el super administrador o el instructor configura el diploma' }, 403);
+  const { error } = await admin.rpc('inicializar_firma_diploma', { _curso: body.curso_id, _instructor: '28104b5b-dd9e-430d-9c19-9e62bfeab5cd', _firma: FIRMA_JDC_PNG_BASE64 });
+  return error ? json({ error: 'No se pudo cargar la firma conservada' }, 500) : json({ success: true });
+});

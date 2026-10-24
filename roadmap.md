@@ -1,5 +1,8 @@
 # Roadmap
 
+- [x] S-1: facultades AC y errores traducidos; autoridad plataforma versionada/admin auditada y snapshot KPI; cambio temporal obligatorio auditado; firma instructor configurable solo diplomas; funciones desplegadas. Suite completa final: 448/448, 58 archivos, 790.41 s; sin navegador/IA/dependencias.
+- [ ] S-1 precarga persistida: el activo conservado se precarga al abrir el curso como super_admin o al emitir; la sesión disponible recibió 403 al intentar precargar los dos cursos. Falta abrir la configuración como super_admin; no se amplían permisos para eludirlo. Verificación autenticada completa de alta/cambio/emisión no realizada; pruebas de pantalla simuladas y SQL temporal pasan.
+
 - [x] UX-1: Dialog/Sheet/Drawer/AlertDialog con límites y desplazamiento central compartidos; Table/ScrollFrames para tablas nativas/compartidas y marcos de Indicadores/AT/folio/pendientes; PNG retirado del alta/edición y diplomas nuevos, originales preservados y función desplegada. Suite única 437/437, 55 archivos, 748.19 s; sin navegador/IA/dependencias. Verificación visual excluida por petición.
 - [ ] UX-1 política alojada: no expuesta por herramientas de lectura disponibles; faltan longitud/tipos/HIBP exactos para conectar lista dinámica. No inferir de mínimos HTML ni modificar política. Generar no puede certificar aceptación HIBP antes del alta; la autenticación decide. Requiere valores de Auth settings → Email.
 

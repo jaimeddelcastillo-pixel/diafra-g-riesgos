@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { designarSuplencia, facultadesSuplencia, errorSuplencia } from '@/lib/suplencias';
 
 type Rol = 'admin' | 'responsable_sanitario' | 'aseguramiento_calidad';
 const nombreRol = (r: string) => r === 'admin' ? 'Administrador' : r === 'aseguramiento_calidad' ? 'Aseguramiento de Calidad' : 'Responsable Sanitario';
@@ -79,7 +80,7 @@ export default function Suplencias() {
   };
   const ejecutar = async (accion: () => Promise<void>) => {
     setBusy(true);
-    try { await accion(); await recargar(); } catch (e) { toast.error(e instanceof Error ? e.message : (e as { message?: string })?.message ?? String(e)); } finally { setBusy(false); }
+    try { await accion(); await recargar(); } catch (e) { toast.error(errorSuplencia(e)); } finally { setBusy(false); }
   };
   const avisar = async (id?: string) => {
     const { data, error } = await supabase.functions.invoke('tend-aviso-suplencia', { body: id ? { id } : {} });
@@ -89,17 +90,16 @@ export default function Suplencias() {
   };
   return <div className="space-y-6">
     <div className="flex flex-wrap items-center justify-between gap-3"><div><Link className="text-sm text-muted-foreground underline" to="/configuracion">Configuración</Link><h1 className="text-2xl font-bold">Suplencias</h1></div>{gestiona && <Button variant="outline" disabled={busy} onClick={() => void ejecutar(() => avisar())}><Send className="mr-2 h-4 w-4"/>Reintentar avisos</Button>}</div>
-    {(q.error || members.error) && <p role="alert" className="text-destructive">{q.error?.message ?? members.error?.message}</p>}
+    {(q.error || members.error) && <p role="alert" className="text-destructive">{errorSuplencia(q.error ?? members.error)}</p>}
     {editable && <form className="grid gap-4 border-b pb-6 sm:grid-cols-2" onSubmit={e => { e.preventDefault(); void ejecutar(async () => {
-      const { data, error } = await supabase.rpc('designar_suplencia', { _rol: rolElegido, _titular: titular, _suplente: suplente, _inicio: new Date(inicio).toISOString(), _fin: new Date(fin).toISOString(), _categoria: categoria, _motivo: motivo });
-      if (error) throw error;
+      const data = await designarSuplencia({ rol: rolElegido, titular, suplente, inicio, fin, categoria, motivo });
       toast.success('Designación pendiente de aceptación'); setMotivo('');
       await q.refetch();
       try { await avisar(data); } catch { toast.warning('Designación guardada; aviso pendiente'); }
     }); }}>
-      <div className="space-y-2"><Label htmlFor="suplencia-rol">Rol sustituido</Label><Select value={rolElegido} onValueChange={v => { setRol(v as Rol); setTitular(''); }}><SelectTrigger id="suplencia-rol"><SelectValue/></SelectTrigger><SelectContent>{rolesDisponibles.map(r => <SelectItem key={r} value={r}>{nombreRol(r)}</SelectItem>)}</SelectContent></Select></div>
+      <div className="space-y-2"><Label htmlFor="suplencia-rol">Rol sustituido</Label><Select value={rolElegido} onValueChange={v => { setRol(v as Rol); setTitular(''); setSuplente(''); }}><SelectTrigger id="suplencia-rol"><SelectValue/></SelectTrigger><SelectContent>{rolesDisponibles.map(r => <SelectItem key={r} value={r}>{nombreRol(r)}</SelectItem>)}</SelectContent></Select><p className="text-xs text-muted-foreground">Facultades: {facultadesSuplencia(rolElegido).map(f => f === 'validar_kpi' ? 'validar KPI' : f).join(', ')}</p></div>
       <div className="space-y-2"><Label htmlFor="suplencia-titular">Titular</Label><Select value={titular} onValueChange={setTitular}><SelectTrigger id="suplencia-titular"><SelectValue placeholder="Seleccionar titular"/></SelectTrigger><SelectContent>{members.data?.filter(p => p.role === rolElegido && (gestiona || p.id === auth.user?.id)).map(p => <SelectItem key={p.id} value={p.id}>{p.nombre} · {p.cargo || 'Sin cargo en el perfil'}</SelectItem>)}</SelectContent></Select></div>
-      <div className="space-y-2"><Label htmlFor="suplencia-persona">Suplente</Label><Select value={suplente} onValueChange={setSuplente}><SelectTrigger id="suplencia-persona"><SelectValue placeholder="Seleccionar usuario"/></SelectTrigger><SelectContent>{members.data?.filter(p => p.id !== titular && p.role !== 'super_admin').map(p => <SelectItem key={p.id} value={p.id}>{p.nombre} · {p.cargo || 'Sin cargo en el perfil'}</SelectItem>)}</SelectContent></Select></div>
+      <div className="space-y-2"><Label htmlFor="suplencia-persona">Suplente</Label><Select value={suplente} onValueChange={setSuplente}><SelectTrigger id="suplencia-persona"><SelectValue placeholder="Seleccionar usuario"/></SelectTrigger><SelectContent>{members.data?.filter(p => p.id !== titular && p.role !== 'super_admin' && !(rolElegido === 'aseguramiento_calidad' && p.role === 'responsable_sanitario')).map(p => <SelectItem key={p.id} value={p.id}>{p.nombre} · {p.cargo || 'Sin cargo en el perfil'}</SelectItem>)}</SelectContent></Select></div>
       <div className="space-y-2"><Label htmlFor="suplencia-categoria">Categoría del motivo</Label><Select value={categoria} onValueChange={setCategoria}><SelectTrigger id="suplencia-categoria"><SelectValue/></SelectTrigger><SelectContent>{['vacaciones','comisión','ausencia','otro'].map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}</SelectContent></Select></div>
       <div className="space-y-2"><Label htmlFor="suplencia-inicio">Inicio</Label><Input id="suplencia-inicio" type="datetime-local" required value={inicio} onChange={e => setInicio(e.target.value)}/></div>
       <div className="space-y-2"><Label htmlFor="suplencia-fin">Fin</Label><Input id="suplencia-fin" type="datetime-local" required value={fin} onChange={e => setFin(e.target.value)}/></div>

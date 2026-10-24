@@ -3,6 +3,7 @@ import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import MisDiplomas from "@/pages/MisDiplomas";
 import { Button } from "@/components/ui/button";
 import { useAuditorExpedientes } from "@/hooks/useAuditorExpedientes";
+import { CambioTemporal } from './CambioTemporal';
 
 function BlockScreen({ title, message, verDiplomas }: { title: string; message: string; verDiplomas?: boolean }) {
   const { signOut } = useAuth();
@@ -44,10 +45,10 @@ function BlockScreen({ title, message, verDiplomas }: { title: string; message: 
 }
 
 export function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { user, loading, org, isSuperAdmin } = useAuth();
+  const { user, loading, org, isSuperAdmin, requiereCambioTemporal } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
-  const sinEmpresa = !!user && !loading && !org && !isSuperAdmin();
+  const sinEmpresa = !!user && !loading && !requiereCambioTemporal && !org && !isSuperAdmin();
   const { data: expedientes, isLoading: cargandoExp } = useAuditorExpedientes(sinEmpresa);
 
   if (loading || (sinEmpresa && cargandoExp)) {
@@ -61,6 +62,7 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
   if (!user) {
     return <Navigate to="/login" replace />;
   }
+  if (requiereCambioTemporal) return <CambioTemporal/>;
 
   // C6c: sin membresías → portal de auditoría externa si tiene expedientes vigentes.
   if (sinEmpresa) {

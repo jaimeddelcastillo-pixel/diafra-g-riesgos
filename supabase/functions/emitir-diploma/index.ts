@@ -10,6 +10,8 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { jsPDF } from "https://esm.sh/jspdf@2.5.2";
 import QRCode from "https://esm.sh/qrcode@1.5.4";
 import { conservarDiplomaOriginal } from "./original.ts";
+import { FIRMA_JDC_PNG_BASE64 } from './firma.ts';
+import { estamparFirmaDiploma } from './signature.ts';
 import { LOGO_TRACEA_PNG_BASE64, LOGO_W, LOGO_H } from "./logo.ts";
 import { resolverContextoOrg, ContextoOrgError } from "../_shared/contexto-org.ts";
 import { enviarYRegistrar } from "../_shared/transactional-email-templates/enviar-y-registrar.ts";
@@ -64,6 +66,7 @@ async function generarDiplomaPDF(opts: {
   duracionHoras?: number | null;
   modulosAprobados: string[];
   verificacionUrl: string;
+  firma: { firma_png: string; instructor_nombre: string; instructor_cargo: string };
 }): Promise<Uint8Array> {
   const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
   const W = 297;
@@ -209,27 +212,28 @@ async function generarDiplomaPDF(opts: {
   doc.setTextColor(80, 80, 80);
   doc.text("Escanea para verificar", W - 36, H - 30, { align: "center" });
 
-  // Firma autógrafa en papel: no estampar imágenes en documentos nuevos.
+  // Authorized course asset, never a company-profile signature.
   const firmaCx = 72.5;
   const lineY = H - 34;
+  estamparFirmaDiploma(doc, opts.firma, firmaCx, lineY);
   doc.setDrawColor(40, 40, 40);
   doc.setLineWidth(0.3);
   doc.line(firmaCx - 38, lineY, firmaCx + 38, lineY);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(10);
   doc.setTextColor(nr, ng, nb);
-  doc.text("Ing. Jaime David Del Castillo Couret", firmaCx, lineY + 5, { align: "center" });
+  doc.text(opts.firma.instructor_nombre, firmaCx, lineY + 5, { align: "center" });
   doc.setFont("helvetica", "italic");
   doc.setFontSize(8);
   doc.setTextColor(80, 80, 80);
-  doc.text("Instructor — TRACEA Academy", firmaCx, lineY + 10, { align: "center" });
+  doc.text(opts.firma.instructor_cargo, firmaCx, lineY + 10, { align: "center" });
 
   // Pie legal (banda inferior). La URL de verificación NO se imprime: el
   // QR de arriba es el mecanismo de validación.
   doc.setFont("helvetica", "normal");
   doc.setFontSize(7);
   doc.setTextColor(90, 90, 90);
-  const pie = doc.splitTextToSize(PIE_LEGAL, W - 60);
+  const pie = doc.splitTextToSize(PIE_LEGAL.replace('Ing. Jaime David Del Castillo Couret', opts.firma.instructor_nombre), W - 60);
   doc.text(pie, W / 2, H - 16, { align: "center" });
 
   const out = doc.output("arraybuffer");
@@ -252,6 +256,8 @@ Deno.serve(async (req) => {
     });
     const { data: { user } } = await userClient.auth.getUser();
     if (!user) return json({ error: "No autorizado" }, 401);
+    const { data: temporal, error: temporalError } = await userClient.rpc('requiere_cambio_temporal');
+    if (temporalError || temporal) return json({ error: 'Debes cambiar tu contraseña temporal antes de usar la plataforma' }, 403);
 
     const admin = createClient(supabaseUrl, serviceKey);
     const body = await req.json();
@@ -338,6 +344,9 @@ Deno.serve(async (req) => {
       return json({ error: `Curso: ${cursoErr.message}` }, 500);
     }
     if (!curso) return json({ error: "Curso no encontrado" }, 404);
+    await admin.rpc('inicializar_firma_diploma', { _curso: curso.id, _instructor: '28104b5b-dd9e-430d-9c19-9e62bfeab5cd', _firma: FIRMA_JDC_PNG_BASE64 });
+    const { data: firma, error: firmaError } = await admin.from('curso_diploma_config').select('firma_png,instructor_nombre,instructor_cargo').eq('curso_id', curso.id).order('version', { ascending: false }).limit(1).maybeSingle();
+    if (firmaError || !firma) return json({ error: 'Configura la firma del instructor antes de emitir el diploma' }, 400);
 
     // Módulos
     const { data: modulos } = await admin
@@ -383,6 +392,7 @@ Deno.serve(async (req) => {
         duracionHoras: (curso as any).duracion_horas ?? null,
         modulosAprobados: (modulos ?? []).map((m: any) => m.titulo),
         verificacionUrl,
+        firma,
       });
     } catch (pdfErr) {
       console.error("[emitir-diploma] PDF render error", pdfErr);

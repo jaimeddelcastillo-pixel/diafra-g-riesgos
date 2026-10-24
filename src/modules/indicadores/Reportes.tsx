@@ -14,6 +14,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { MODOS_CALIDAD, type AutoridadCalidad } from '@/components/AutoridadCalidadCard';
+import { supabase } from '@/integrations/supabase/client';
 import { graficaPNG, ESCALA_PNG, PX_16x9 } from '@/lib/documentos/graficas';
 import { claseSemaforo } from './lib/semaforo';
 import { etiquetaPeriodo, etiquetaSub, fueraDeMeta, num, obtenerResumen, pct, periodosCerrados, type KpiResumen, type Resumen, type TipoPeriodo } from './lib/tablero';
@@ -40,6 +42,7 @@ export default function Reportes() {
   const elabora = !auth.isSuperAdmin() && !auth.isImpersonating && ['admin', 'responsable_sanitario', 'aseguramiento_calidad'].some(r => auth.roles.includes(r as typeof auth.roles[number]));
   const lista = useQuery({ queryKey: ['k3b-reportes', auth.orgId], queryFn: listarReportes, enabled: !!auth.orgId });
   const cfg = useQuery({ queryKey: ['k3b-config', auth.orgId], queryFn: configActual, enabled: !!auth.orgId });
+  const autoridad = useQuery({ queryKey: ['autoridad-calidad', auth.orgId], enabled: !!auth.orgId, queryFn: async () => { const { data, error } = await supabase.rpc('mi_autoridad_calidad'); if (error) throw error; return data as unknown as AutoridadCalidad; } });
   const autoriza = useQuery({ queryKey: ['k3b-autoriza', auth.orgId, auth.user?.id], queryFn: () => puedeAutorizar(auth.orgId ?? '', auth.user?.id ?? ''), enabled: !!auth.orgId && !!auth.user });
   const [selId, setSelId] = useState<string | null>(null); const [borrador, setBorrador] = useState<Reporte | null>(null);
   const [nuevo, setNuevo] = useState<{ tipo: TipoPeriodo; inicio: string } | null>(null);
@@ -125,7 +128,7 @@ export default function Reportes() {
         <div><p className="font-semibold">Elaboró</p><p>{r.firmantes?.elaboro?.nombre ?? nombre(r.elaboro_por)}</p></div>
         <div><p className="font-semibold">Revisó</p>{editable ? <div className="space-y-1">{elegibles.map(p => <label key={p.id} className="flex items-center gap-2"><input type="checkbox" checked={r.revisores.includes(p.id)} onChange={e => editar({ revisores: e.target.checked ? [...r.revisores, p.id] : r.revisores.filter(x => x !== p.id) })}/>{p.nombre ?? p.id}{p.cargo ? ` · ${p.cargo}` : ''}</label>)}</div>
           : (r.firmantes?.revisaron ?? r.revisores.map(id => ({ user_id: id, nombre: nombre(id) }))).map(x => <p key={x.user_id}>{x.nombre}{r.revisiones.some(v => v.user_id === x.user_id) ? ' ✓' : ''}</p>)}</div>
-        <div><p className="font-semibold">Autorizó</p><p>{r.firmantes?.autorizo ? `${r.firmantes.autorizo.nombre}${r.firmantes.autorizo.leyenda ?? ''}` : 'Aseguramiento de Calidad'}</p></div>
+        <div><p className="font-semibold">Autorizó</p><p>{r.firmantes?.autorizo ? `${r.firmantes.autorizo.nombre}${r.firmantes.autorizo.leyenda ?? ''}` : MODOS_CALIDAD[autoridad.data?.modo ?? 'con_ac']}</p></div>
       </div>
     </section>}
 
@@ -136,7 +139,7 @@ export default function Reportes() {
 
     <Dialog open={!!cfgEd} onOpenChange={v => { if (!v) setCfgEd(null); }}><DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto"><DialogHeader><DialogTitle>Configurar textos (versión {(cfg.data?.version ?? 0) + 1})</DialogTitle></DialogHeader>{cfgEd && <div className="space-y-3"><div className="flex items-center gap-3"><Switch id="k3b-textos-fijos" checked={cfgEd.textos_fijos} onCheckedChange={textos_fijos => setCfgEd({ ...cfgEd, textos_fijos })}/><Label htmlFor="k3b-textos-fijos">Textos fijos para todos los reportes</Label></div>
       {(['objetivo', 'alcance', 'metodologia'] as const).map(k => <div key={k} className="space-y-1"><Label htmlFor={`k3b-cfg-${k}`}>{k === 'metodologia' ? 'Metodología' : k[0].toUpperCase() + k.slice(1)}</Label><Textarea id={`k3b-cfg-${k}`} value={cfgEd[k]} onChange={e => setCfgEd({ ...cfgEd, [k]: e.target.value })}/></div>)}
-      <div className="space-y-1"><Label>Autorizan en ausencia de Aseguramiento de Calidad (solo admin)</Label>{(perfiles.data ?? []).map(p => <label key={p.id} className="flex items-center gap-2 text-sm"><input type="checkbox" disabled={!auth.roles.includes('admin' as typeof auth.roles[number])} checked={cfgEd.autorizadores.includes(p.id)} onChange={e => setCfgEd({ ...cfgEd, autorizadores: e.target.checked ? [...cfgEd.autorizadores, p.id] : cfgEd.autorizadores.filter(x => x !== p.id) })}/>{p.nombre ?? p.id}</label>)}</div>
+      <p className="text-sm text-muted-foreground">Autoridad de calidad: {MODOS_CALIDAD[autoridad.data?.modo ?? 'con_ac']}</p>
     </div>}<DialogFooter><Button variant="outline" onClick={() => setCfgEd(null)}>Cancelar</Button><Button onClick={() => setMotivoDlg({ accion: 'config', motivo: '' })}>Guardar…</Button></DialogFooter></DialogContent></Dialog>
 
     <Dialog open={!!motivoDlg} onOpenChange={v => { if (!v && !busy) setMotivoDlg(null); }}><DialogContent><DialogHeader><DialogTitle>{motivoDlg?.accion === 'anular' ? 'Anular reporte' : motivoDlg?.accion === 'nueva' ? 'Nueva versión' : motivoDlg?.accion === 'devolver' ? 'Devolver a edición' : motivoDlg?.accion === 'reserva' ? 'Cancelar reserva de emisión vencida' : 'Guardar configuración'}</DialogTitle></DialogHeader>

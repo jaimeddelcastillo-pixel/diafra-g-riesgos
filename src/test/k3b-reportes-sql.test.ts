@@ -4,8 +4,8 @@ vi.setConfig({ testTimeout: 120000 });
 const id = (n: number) => `00000000-0000-0000-0000-${String(n).padStart(12, '0')}`;
 const ORG = id(400);
 let defs: string | undefined;
-const tablas = ['organizations', 'profiles', 'org_members', 'org_suplencias', 'puestos', 'kpi_definiciones', 'kpi_puesto', 'kpi_resultados', 'kpi_reporte_config', 'kpi_reportes', 'kpi_reportes_historial', 'org_formatos', 'org_identidad_documental', 'documentos_generados'];
-const funciones = ['rol_efectivo', 'kpi_acceso', 'kpi_periodo', 'kpi_calcular', 'kpi_semaforo_cumplimiento', 'kpi_acumulado_interno', 'kpi_resumen_periodo', 'kpi_reportes_guard', 'kpi_reporte_autoriza', 'kpi_reporte_preparar', 'guardar_kpi_reporte_textos', 'contexto_borrador_kpi_word', 'guardar_kpi_reporte_config', 'crear_kpi_reporte', 'guardar_kpi_reporte', 'kpi_reporte_faltantes', 'enviar_kpi_reporte', 'revisar_kpi_reporte', 'preparar_emision_kpi_word', 'confirmar_emision_kpi_word', 'reclamar_emision_kpi_word', 'cancelar_reserva_emision_kpi_word', 'emitir_kpi_reporte', 'nueva_version_kpi_reporte', 'anular_kpi_reporte', 'registrar_documento_generado'];
+const tablas = ['audit_trail', 'org_autoridad_calidad', 'organizations', 'profiles', 'org_members', 'org_suplencias', 'puestos', 'kpi_definiciones', 'kpi_puesto', 'kpi_resultados', 'kpi_reporte_config', 'kpi_reportes', 'kpi_reportes_historial', 'org_formatos', 'org_identidad_documental', 'documentos_generados'];
+const funciones = ['guardar_autoridad_calidad', 'congelar_autoridad_kpi', 'mi_autoridad_calidad', 'rol_efectivo', 'kpi_acceso', 'kpi_periodo', 'kpi_calcular', 'kpi_semaforo_cumplimiento', 'kpi_acumulado_interno', 'kpi_resumen_periodo', 'kpi_reportes_guard', 'kpi_reporte_autoriza', 'kpi_reporte_preparar', 'guardar_kpi_reporte_textos', 'contexto_borrador_kpi_word', 'guardar_kpi_reporte_config', 'crear_kpi_reporte', 'guardar_kpi_reporte', 'kpi_reporte_faltantes', 'enviar_kpi_reporte', 'revisar_kpi_reporte', 'preparar_emision_kpi_word', 'confirmar_emision_kpi_word', 'reclamar_emision_kpi_word', 'cancelar_reserva_emision_kpi_word', 'emitir_kpi_reporte', 'nueva_version_kpi_reporte', 'anular_kpi_reporte', 'registrar_documento_generado'];
 function run(body: string) {
   if (!defs) defs = execFileSync('psql', ['-XqAt', '-v', 'ON_ERROR_STOP=1'], { input: `SELECT string_agg(pg_get_functiondef(oid)||';', E'\n') FROM pg_proc WHERE pronamespace='public'::regnamespace AND proname=ANY(ARRAY[${funciones.map(f => `'${f}'`).join(',')}]);`, encoding: 'utf8', timeout: 30000 })
     .replaceAll('public.', 'pg_temp.').replaceAll('pg_temp.app_role', 'public.app_role').replace(/\b_rol app_role\b/g, '_rol public.app_role').replaceAll('storage.objects', 'pg_temp.objects').replaceAll('auth.uid()', 'pg_temp.uid()').replaceAll('SECURITY DEFINER', '').replaceAll("SET search_path TO 'public'", 'SET search_path TO pg_temp,public');
@@ -18,9 +18,12 @@ CREATE FUNCTION pg_temp.uid() RETURNS uuid LANGUAGE sql AS $$SELECT nullif(curre
 CREATE FUNCTION pg_temp.get_user_org_id() RETURNS uuid LANGUAGE sql AS $$SELECT '${ORG}'::uuid$$;
 CREATE FUNCTION pg_temp.contexto_org_actual() RETURNS TABLE(org_id uuid,rol_en_org text,es_super_admin boolean,soporte_log_id uuid) LANGUAGE sql AS $$SELECT '${ORG}'::uuid,NULL::text,false,NULL::uuid$$;
 CREATE FUNCTION pg_temp.org_tiene_modulo(uuid,text) RETURNS boolean LANGUAGE sql AS $$SELECT true$$;
+CREATE FUNCTION pg_temp.is_super_admin() RETURNS boolean LANGUAGE sql AS $$SELECT false$$;
+CREATE FUNCTION pg_temp.has_role(uuid,public.app_role) RETURNS boolean LANGUAGE sql AS $$SELECT pg_temp.rol_efectivo($1,$2)$$;
 ${defs}
 CREATE OR REPLACE FUNCTION pg_temp.emitir_kpi_reporte(_id uuid) RETURNS jsonb LANGUAGE plpgsql AS $$DECLARE s jsonb;BEGIN s:=pg_temp.preparar_emision_kpi_word(_id);INSERT INTO objects VALUES('documentos-generados',s->>'path');RETURN pg_temp.confirmar_emision_kpi_word(_id,(s->>'token')::uuid,NULL,repeat('a',64));END$$;
 ${['kpi_reportes', 'kpi_reportes_historial', 'kpi_reporte_config'].map(t => `CREATE TRIGGER guard BEFORE INSERT OR UPDATE OR DELETE ON ${t} FOR EACH ROW EXECUTE FUNCTION pg_temp.kpi_reportes_guard();`).join('\n')}
+CREATE TRIGGER zz_autoridad_snapshot BEFORE INSERT OR UPDATE ON kpi_reportes FOR EACH ROW EXECUTE FUNCTION pg_temp.congelar_autoridad_kpi();
 INSERT INTO organizations(id,nombre,es_prueba) VALUES('${ORG}','QA reportes',true);
 INSERT INTO profiles(id,nombre,cargo,activo,perfil_confirmado_en) SELECT ('00000000-0000-0000-0000-'||lpad(i::text,12,'0'))::uuid,'QA persona '||i,'QA cargo '||i,true,now() FROM generate_series(1,5) i;
 INSERT INTO org_members(org_id,user_id,role) VALUES('${ORG}','${id(1)}','responsable_sanitario'),('${ORG}','${id(2)}','admin'),('${ORG}','${id(3)}','aseguramiento_calidad'),('${ORG}','${id(4)}','operador'),('${ORG}','${id(5)}','operador');
@@ -40,7 +43,7 @@ SELECT 'K3B OK';ROLLBACK;`;
 const actor = (n: number) => `PERFORM set_config('qa.actor','${id(n)}',true);`;
 const analisis = `'{"analisis":{"${id(10)}":{"causa":"QA causa","accion":"QA acción","capa":"CAPA-QA-1"}},"conclusiones":"QA conclusiones"}'::jsonb`;
 /** Draft created by `autor`, completed and sent; RS (1) reviews → ready to authorize. */
-const listo = (autor = 2) => `${actor(autor)}rid:=pg_temp.crear_kpi_reporte('trimestre','2026-01-01');PERFORM pg_temp.guardar_kpi_reporte(rid,${analisis});PERFORM pg_temp.enviar_kpi_reporte(rid);${actor(1)}PERFORM pg_temp.revisar_kpi_reporte(rid,true,'');`;
+const listo = (autor = 2, revisor = 1) => `${actor(autor)}rid:=pg_temp.crear_kpi_reporte('trimestre','2026-01-01');PERFORM pg_temp.guardar_kpi_reporte(rid,${analisis});${revisor !== 1 ? `PERFORM pg_temp.guardar_kpi_reporte(rid,'{"revisores":["${id(revisor)}"]}'::jsonb);` : ''}PERFORM pg_temp.enviar_kpi_reporte(rid);${actor(revisor)}PERFORM pg_temp.revisar_kpi_reporte(rid,true,'');`;
 const falla = (stmt: string, msg: string) => `failed:=false;BEGIN ${stmt};EXCEPTION WHEN raise_exception THEN failed:=true;END;IF NOT failed THEN RAISE EXCEPTION '${msg}';END IF;`;
 async function check(body: string) { expect(await run(body)).toContain('K3B OK'); }
 describe.skipIf(!process.env.PGHOST)('K3-b reporte periódico de indicadores, QA temporal con rollback', () => {
@@ -125,6 +128,15 @@ INSERT INTO objects VALUES('documentos-generados',s2->>'path');
 PERFORM pg_temp.confirmar_emision_kpi_word(rid,(s2->>'token')::uuid,NULL,repeat('a',64));
 IF (SELECT estado FROM kpi_reportes WHERE id=rid)<>'emitido' THEN RAISE EXCEPTION 'Reintento no emitió'; END IF;
 END;`));
+  it('S-1 RS máxima autoridad autoriza con leyenda y congela modo, nunca autor/revisor', () => check(`${actor(2)}PERFORM pg_temp.guardar_autoridad_calidad('rs_maxima','{}','QA autoridad RS');
+${listo(2,4)}${actor(1)}PERFORM pg_temp.emitir_kpi_reporte(rid);
+IF (SELECT firmantes->'autorizo'->>'leyenda' FROM kpi_reportes WHERE id=rid)<>'Autorizado por el Responsable Sanitario; la empresa no cuenta con Aseguramiento de Calidad' OR (SELECT formato_snapshot->'autoridad_calidad'->>'modo' FROM kpi_reportes WHERE id=rid)<>'rs_maxima' THEN RAISE EXCEPTION 'Leyenda o snapshot incorrecto'; END IF;
+${actor(2)}PERFORM pg_temp.guardar_autoridad_calidad('con_ac','{}','QA vuelve AC');
+IF (SELECT formato_snapshot->'autoridad_calidad'->>'modo' FROM kpi_reportes WHERE id=rid)<>'rs_maxima' THEN RAISE EXCEPTION 'Snapshot cambió'; END IF;
+PERFORM pg_temp.guardar_autoridad_calidad('rs_maxima','{}','QA máxima RS');
+${listo(1,4)}${actor(1)}${falla('PERFORM pg_temp.emitir_kpi_reporte(rid)', 'RS autor autorizó')}
+${listo(2,1)}${actor(1)}${falla('PERFORM pg_temp.emitir_kpi_reporte(rid)', 'RS revisor autorizó')}`));
+  it('S-1 cambiar autoridad sin motivo o sin admin se rechaza', () => check(`${actor(2)}${falla("PERFORM pg_temp.guardar_autoridad_calidad('rs_maxima','{}','')", 'Cambió sin motivo')}${actor(1)}${falla("PERFORM pg_temp.guardar_autoridad_calidad('rs_maxima','{}','QA motivo')", 'RS cambió modo')}`));
   it('flujo completo hasta emitido con firmantes, folio DOC y snapshot congelado', () => check(`${listo()}${actor(3)}PERFORM pg_temp.emitir_kpi_reporte(rid);
 SELECT * INTO r FROM kpi_reportes WHERE id=rid;
 IF r.estado<>'emitido' OR r.codigo<>'IND-2026-001' OR r.firmantes->'autorizo'->>'leyenda'<>'' OR r.firmantes->'elaboro'->>'nombre'<>'QA persona 2' OR jsonb_array_length(r.firmantes->'revisaron')<>1

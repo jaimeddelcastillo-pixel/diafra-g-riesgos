@@ -76,6 +76,8 @@ Deno.serve(async (req) => {
     });
     const { data: { user: caller } } = await callerClient.auth.getUser();
     if (!caller) return json({ error: "No autorizado" }, 401);
+    const { data: temporal, error: temporalError } = await callerClient.rpc('requiere_cambio_temporal');
+    if (temporalError || temporal) return json({ error: 'Debes cambiar tu contraseña temporal antes de usar la plataforma' }, 403);
 
     const adminClient = createClient(supabaseUrl, serviceRoleKey, {
       auth: { autoRefreshToken: false, persistSession: false },
@@ -227,6 +229,8 @@ Deno.serve(async (req) => {
       userId = newUser.user.id;
     }
 
+    const { error: temporalErrorNew } = await adminClient.rpc('marcar_password_temporal', { _usuario: userId, _org: orgIdToUse, _actor: caller.id });
+    if (temporalErrorNew) return json({ error: 'No se pudo activar el cambio obligatorio de contraseña' }, 500);
     await adminClient.from("profiles").update({ nombre, cargo: cargo || "" }).eq("id", userId);
 
     if (orgIdToUse) {
