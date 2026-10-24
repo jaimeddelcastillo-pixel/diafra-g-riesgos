@@ -10,6 +10,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { jsPDF } from "https://esm.sh/jspdf@2.5.2";
 import QRCode from "https://esm.sh/qrcode@1.5.4";
 import { conservarDiplomaOriginal } from "./original.ts";
+import { FIRMA_JDC_PNG_BASE64 } from './firma.ts';
 import { LOGO_TRACEA_PNG_BASE64, LOGO_W, LOGO_H } from "./logo.ts";
 import { resolverContextoOrg, ContextoOrgError } from "../_shared/contexto-org.ts";
 import { enviarYRegistrar } from "../_shared/transactional-email-templates/enviar-y-registrar.ts";
@@ -340,6 +341,7 @@ Deno.serve(async (req) => {
       return json({ error: `Curso: ${cursoErr.message}` }, 500);
     }
     if (!curso) return json({ error: "Curso no encontrado" }, 404);
+    await admin.rpc('inicializar_firma_diploma', { _curso: curso.id, _instructor: '28104b5b-dd9e-430d-9c19-9e62bfeab5cd', _firma: FIRMA_JDC_PNG_BASE64 });
     const { data: firma, error: firmaError } = await admin.from('curso_diploma_config').select('firma_png,instructor_nombre,instructor_cargo').eq('curso_id', curso.id).order('version', { ascending: false }).limit(1).maybeSingle();
     if (firmaError || !firma) return json({ error: 'Configura la firma del instructor antes de emitir el diploma' }, 400);
 
