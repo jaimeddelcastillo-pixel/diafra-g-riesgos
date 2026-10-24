@@ -1,5 +1,7 @@
 # Roadmap
 
+- [ ] S-1: corregir facultades AC y errores traducidos; autoridad calidad platform versionada/admin auditada y snapshot KPI; cambio temporal obligatorio auditado; firma instructor configurable solo diplomas; pruebas de flujos de pantalla y suite completa sin navegador/IA/dependencias.
+
 - [x] UX-1: Dialog/Sheet/Drawer/AlertDialog con límites y desplazamiento central compartidos; Table/ScrollFrames para tablas nativas/compartidas y marcos de Indicadores/AT/folio/pendientes; PNG retirado del alta/edición y diplomas nuevos, originales preservados y función desplegada. Suite única 437/437, 55 archivos, 748.19 s; sin navegador/IA/dependencias. Verificación visual excluida por petición.
 - [ ] UX-1 política alojada: no expuesta por herramientas de lectura disponibles; faltan longitud/tipos/HIBP exactos para conectar lista dinámica. No inferir de mínimos HTML ni modificar política. Generar no puede certificar aceptación HIBP antes del alta; la autenticación decide. Requiere valores de Auth settings → Email.
 
