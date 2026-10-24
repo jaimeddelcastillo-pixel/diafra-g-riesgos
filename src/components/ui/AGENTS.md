@@ -1,0 +1,4 @@
+# Shared UI
+- DialogContent limits every dialog to 90dvh with internal scrolling; DialogFooter stays sticky and opaque at the bottom, including nested forms; never fix sizing per dialog. Why: actions stay reachable in short viewports.
+- PasswordInput/PasswordFields owns every password field through the shared Toaster compatibility adapter, including later-mounted dialogs and legacy native inputs; preserve native handlers, values and validation, expose visibility/requirements and cryptographic generation for temporary creation, translate recognized auth errors in notifications without logging values. Why: consistent presentation without changing hosted security or individual pages.
+- Password guidance never claims a generated password passed breach checks; the hosted service remains authoritative and policy settings are never weakened by UI. Why: local generation cannot establish HIBP acceptance.
