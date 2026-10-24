@@ -256,6 +256,8 @@ Deno.serve(async (req) => {
     });
     const { data: { user } } = await userClient.auth.getUser();
     if (!user) return json({ error: "No autorizado" }, 401);
+    const { data: temporal, error: temporalError } = await userClient.rpc('requiere_cambio_temporal');
+    if (temporalError || temporal) return json({ error: 'Debes cambiar tu contraseña temporal antes de usar la plataforma' }, 403);
 
     const admin = createClient(supabaseUrl, serviceKey);
     const body = await req.json();

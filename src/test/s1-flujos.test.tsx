@@ -3,6 +3,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
+import { AccesoTemporalGuard } from '@/components/AccesoTemporalGuard';
 import { CambioTemporal } from '@/components/CambioTemporal';
 import { AutoridadCalidadCard } from '@/components/AutoridadCalidadCard';
 import { designarSuplencia, facultadesSuplencia, errorSuplencia } from '@/lib/suplencias';
@@ -13,6 +14,13 @@ vi.mock('@/hooks/useAuditorExpedientes', () => ({ useAuditorExpedientes: () => (
 afterEach(() => { cleanup(); vi.clearAllMocks(); mocks.temporal = true; });
 const wrapper = (children: React.ReactNode) => render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}><MemoryRouter>{children}</MemoryRouter></QueryClientProvider>);
 describe('S-1 flujos utilizados por las pantallas', () => {
+  it('el guard global bloquea también rutas que no usan ProtectedRoute y abre tras el cambio', async () => {
+    const view = wrapper(<AccesoTemporalGuard><div>Ruta QA</div></AccesoTemporalGuard>);
+    expect(screen.queryByText('Ruta QA')).not.toBeInTheDocument();
+    mocks.temporal = false;
+    view.rerender(<QueryClientProvider client={new QueryClient()}><MemoryRouter><AccesoTemporalGuard><div>Ruta QA</div></AccesoTemporalGuard></MemoryRouter></QueryClientProvider>);
+    expect(screen.getByText('Ruta QA')).toBeInTheDocument();
+  });
   it('el guard impide entrar a la plataforma con contraseña temporal', async () => {
     wrapper(<ProtectedRoute><div>Contenido privado QA</div></ProtectedRoute>);
     expect(await screen.findByRole('heading', { name: 'Cambia tu contraseña temporal' })).toBeInTheDocument();
