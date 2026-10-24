@@ -43,4 +43,5 @@ Technical rules — one line each; full text and "why" in docs/reglas-detalle.md
 - K1-c audit_trail read RLS evaluates puede_ver_auditoria once per query via wrapped subselects (InitPlan) and the general audit paginates without exact counts (page+1 rows, export in bounded batches); org_members role changes/removals by users require tracea.motivo (≥5) and go through cambiar_rol_miembro, with org_members/user_roles audited by audit_trigger_func; KPI pending items are one line per catalog; why: no statement timeouts and full role traceability without changing who can see or edit.
 - Read scoped rules: src/modules/indicadores/AGENTS.md (K1–K3); src/lib/documentos/AGENTS.md (identity/originals).
 - Automated test files run serially in Vitest while PostgreSQL fixtures remain temporary and rolled back; why: prevent shared database contention and obtain a complete single-run result.
-- DB functions use complete CREATE OR REPLACE, never pg_get_functiondef text replacement; why: reviewable migrations.
+- DB functions use complete CREATE OR REPLACE; never replace pg_get_functiondef text.
+- UX shared: DialogContent caps 90dvh with internal scroll/sticky DialogFooter; PasswordInput/PasswordFields owns visibility, generation and Spanish auth errors, preserving native handlers and hosted policy; why: no per-screen fixes.
