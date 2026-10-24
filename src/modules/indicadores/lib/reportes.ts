@@ -1,5 +1,6 @@
 import { AlignmentType, Document, Header, ImageRun, Packer, Paragraph, Table, TableCell, TableRow, TextRun, WidthType, HeadingLevel } from 'docx';
 import { supabase } from '@/integrations/supabase/client';
+import { fetchOrgLogoDataUrl } from '@/lib/orgLogo';
 import { construirContexto, type ContextoDocumento, type Logo, type RegistroDocumento } from '@/lib/documentos';
 import { encabezadoWord, encabezadoWordHijos, pieWord } from '@/lib/documentos/word';
 import { etiquetaPeriodo, etiquetaSub, flecha, fueraDeMeta, num, pct, type KpiResumen, type Resumen, type TipoPeriodo } from './tablero';
@@ -16,7 +17,7 @@ export interface Reporte {
   firmantes: Firmantes | null; formato_snapshot: (RegistroDocumento & { tipo: string; logo?: Logo | null; empresa?: string; archivo_path?: string; archivo_sha256?: string }) | null; datos_snapshot: Resumen | null;
   emitido_en: string | null; anulado_en: string | null; motivo_anulacion: string | null; updated_at: string;
 }
-export interface ConfigReporte { version: number; objetivo: string; alcance: string; metodologia: string; autorizadores: string[] }
+export interface ConfigReporte { version: number; objetivo: string; alcance: string; metodologia: string; autorizadores: string[]; textos_fijos: boolean }
 
 const rpc = async (fn: string, args: Record<string, unknown>) => {
   const { data, error } = await supabase.rpc(fn as never, args as never);
@@ -29,11 +30,11 @@ export async function listarReportes(): Promise<Reporte[]> {
   return (data ?? []) as unknown as Reporte[];
 }
 export async function configActual(): Promise<ConfigReporte | null> {
-  const { data, error } = await supabase.from('kpi_reporte_config').select('version,objetivo,alcance,metodologia,autorizadores').order('version', { ascending: false }).limit(1).maybeSingle();
+  const { data, error } = await supabase.from('kpi_reporte_config').select('version,objetivo,alcance,metodologia,autorizadores,textos_fijos').order('version', { ascending: false }).limit(1).maybeSingle();
   if (error) throw error;
   return data as ConfigReporte | null;
 }
-export const guardarConfig = (c: Omit<ConfigReporte, 'version'>, motivo: string) => rpc('guardar_kpi_reporte_config', { _objetivo: c.objetivo, _alcance: c.alcance, _metodologia: c.metodologia, _autorizadores: c.autorizadores, _motivo: motivo });
+export const guardarConfig = (c: Omit<ConfigReporte, 'version'>, motivo: string) => rpc('guardar_kpi_reporte_textos', { _objetivo: c.objetivo, _alcance: c.alcance, _metodologia: c.metodologia, _autorizadores: c.autorizadores, _motivo: motivo, _textos_fijos: c.textos_fijos });
 export const crearReporte = (tipo: TipoPeriodo, inicio: string) => rpc('crear_kpi_reporte', { _tipo: tipo, _inicio: inicio }) as Promise<string>;
 export const guardarReporte = (id: string, datos: Partial<Pick<Reporte, 'objetivo' | 'alcance' | 'metodologia' | 'analisis' | 'conclusiones' | 'revisores'>>) => rpc('guardar_kpi_reporte', { _id: id, _datos: datos });
 export const enviarReporte = (id: string) => rpc('enviar_kpi_reporte', { _id: id });
@@ -75,6 +76,14 @@ export function contextoEmitido(r: Reporte, opts: { empresa: string; logo: Logo 
   return construirContexto('indicadores.reporte_word', r.formato_snapshot, { empresa: r.formato_snapshot.empresa ?? opts.empresa, generadoPor: r.firmantes.autorizo?.nombre ?? '', logo: r.formato_snapshot.logo ?? null });
 }
 
-export { construirWordReporte, lineaFirma } from '../../../../supabase/functions/emitir-kpi-word/word';
+export async function contextoBorrador(r: Reporte, generadoPor: string) {
+  const data = await rpc('contexto_borrador_kpi_word', { _id: r.id }) as { reporte: Reporte; registro: RegistroDocumento };
+  const logo = await fetchOrgLogoDataUrl(data.registro.logo_path);
+  return construirContexto('indicadores.reporte_word', data.registro, { empresa: data.registro.empresa ?? '', generadoPor, logo });
+}
+export function textosReporte(r: Reporte, cfg: ConfigReporte | null | undefined): Reporte {
+  return r.estado === 'borrador' && cfg?.textos_fijos ? { ...r, objetivo: cfg.objetivo, alcance: cfg.alcance, metodologia: cfg.metodologia } : r;
+}
+export { construirWordReporte, lineaFirma, textoTendencia, notaVigilancia, periodoLegible } from '../../../../supabase/functions/emitir-kpi-word/word';
 export type { EntradaWord } from '../../../../supabase/functions/emitir-kpi-word/word';
 export const wordABlob = (d: Document) => Packer.toBlob(d);

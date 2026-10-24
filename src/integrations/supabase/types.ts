@@ -3864,6 +3864,7 @@ export type Database = {
           motivo: string
           objetivo: string
           org_id: string
+          textos_fijos: boolean
           version: number
         }
         Insert: {
@@ -3876,6 +3877,7 @@ export type Database = {
           motivo: string
           objetivo?: string
           org_id: string
+          textos_fijos?: boolean
           version: number
         }
         Update: {
@@ -3888,6 +3890,7 @@ export type Database = {
           motivo?: string
           objetivo?: string
           org_id?: string
+          textos_fijos?: boolean
           version?: number
         }
         Relationships: [
@@ -7099,6 +7102,7 @@ export type Database = {
           riesgo_id: string
         }[]
       }
+      contexto_borrador_kpi_word: { Args: { _id: string }; Returns: Json }
       contexto_cerebro: {
         Args: {
           _folio_id: string
@@ -7287,6 +7291,17 @@ export type Database = {
           _metodologia: string
           _motivo: string
           _objetivo: string
+        }
+        Returns: string
+      }
+      guardar_kpi_reporte_textos: {
+        Args: {
+          _alcance: string
+          _autorizadores: string[]
+          _metodologia: string
+          _motivo: string
+          _objetivo: string
+          _textos_fijos: boolean
         }
         Returns: string
       }

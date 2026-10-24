@@ -2,7 +2,9 @@ import { describe, expect, it, vi } from 'vitest';
 import JSZip from 'jszip';
 import { Packer } from 'docx';
 import { construirContexto } from '@/lib/documentos';
-import { construirWordReporte, contextoEmitido, descargarOriginal, lineaFirma, type Reporte } from './reportes';
+import { charts } from '../../../../supabase/functions/emitir-kpi-word/charts';
+import { periodosCerrados } from './tablero';
+import { construirWordReporte, textosReporte, textoTendencia, notaVigilancia, periodoLegible, contextoEmitido, descargarOriginal, lineaFirma, type Reporte } from './reportes';
 import { supabase } from '@/integrations/supabase/client';
 import type { Resumen } from './tablero';
 
@@ -16,12 +18,12 @@ const reporte = { id: 'r1', codigo: 'IND-2026-001', version: 1, estado: 'emitido
   objetivo: 'QA objetivo', alcance: 'QA alcance', metodologia: 'QA metodología', analisis: { k1: { causa: 'QA causa', accion: 'QA acción', capa: 'CAPA-1' } }, conclusiones: 'QA conclusiones',
   elaboro_por: 'u2', revisores: ['u1'], revisiones: [], firmantes, formato_snapshot: { tipo: 'indicadores.reporte_word', folio: 'DOC-2026-000123', generado_en: '2026-04-04T18:00:00Z', formato: null, identidad: null },
   datos_snapshot: resumen, emitido_en: '2026-04-04T18:00:00Z', anulado_en: null, motivo_anulacion: null, updated_at: '' } as unknown as Reporte;
-const ctx = construirContexto('indicadores.reporte_word', reporte.formato_snapshot!, { empresa: 'QA Empresa', generadoPor: 'QA Designado', logo: null });
+const ctx = construirContexto('indicadores.reporte_word', { folio: 'DOC-2026-000123', generado_en: '2026-04-04T18:00:00Z', formato: null, identidad: null }, { empresa: 'QA Empresa', generadoPor: 'QA Designado', logo: null });
 const xml = async (borrador: boolean) => {
   const zip = await JSZip.loadAsync(await Packer.toBuffer(construirWordReporte({ ctx, reporte, resumen, firmantes, graficas: { k1: new Uint8Array([137, 80, 78, 71, 1, 2, 3]) }, borrador })));
   const header = Object.keys(zip.files).filter(f => /word\/(header|footer)\d*\.xml/.test(f)).sort();
   // docx numbers drawing ids (docPr) with a process-wide counter; they are internal ids, not content.
-  return [await zip.file('word/document.xml')!.async('string'), ...(await Promise.all(header.map(f => zip.file(f)!.async('string'))))].join('\n').replace(/docPr id="\d+"/g, 'docPr id="N"');
+  return [await zip.file('word/document.xml')?.async('string'), ...(await Promise.all(header.map(f => zip.file(f)?.async('string'))))].join('\n').replace(/docPr id="\d+"/g, 'docPr id="N"');
 };
 
 describe('K3-b Word del reporte', () => {
@@ -50,5 +52,71 @@ describe('K3-b Word del reporte', () => {
   it('leyendas de ausencia y suplencia en la firma', () => {
     expect(lineaFirma(firmantes.autorizo)).toBe('QA Designado — Gerente, en ausencia de Aseguramiento de Calidad');
     expect(lineaFirma({ ...firmantes.autorizo, leyenda: '— En suplencia de QA AC' })).toBe('QA Designado — Gerente — En suplencia de QA AC');
+  });
+});
+
+const leerWord = async (entrada: Parameters<typeof construirWordReporte>[0]) => {
+  const zip = await JSZip.loadAsync(await Packer.toBuffer(construirWordReporte(entrada)));
+  return (await Promise.all(Object.keys(zip.files).filter(f => /word\/(document|header\d*|footer\d*)\.xml/.test(f)).map(f => zip.file(f)?.async('string')))).join('\n');
+};
+const entrada = { ctx, reporte, resumen, firmantes, graficas: {}, borrador: false };
+describe('K3-b-2 periodos y Word', () => {
+  it('solo ofrece semestre y año cerrados al 23 de octubre de 2026', () => {
+    const hoy = new Date('2026-10-23T12:00:00');
+    expect(periodosCerrados('semestre', 1, hoy)[0].inicio).toBe('2026-01-01');
+    expect(periodosCerrados('año', 1, hoy)[0].inicio).toBe('2025-01-01');
+    expect(periodoLegible('trimestre', '2026-07-01', '2026-09-30')).toBe('T3 2026 (1 jul – 30 sep 2026)');
+  });
+  it('textos fijos solo sustituyen borradores y no cambian emitidos', () => {
+    const cfg = { version: 2, objetivo: 'Vigente', alcance: 'SGC', metodologia: '1. Medir\n2. Revisar', autorizadores: [], textos_fijos: true };
+    expect(textosReporte({ ...reporte, estado: 'borrador' }, cfg).metodologia).toBe('1. Medir\n2. Revisar');
+    expect(textosReporte(reporte, cfg).objetivo).toBe('QA objetivo');
+    expect(textosReporte({ ...reporte, estado: 'borrador' }, { ...cfg, textos_fijos: false }).objetivo).toBe('QA objetivo');
+  });
+  it('conserva líneas numeradas de metodología en párrafos separados', async () => {
+    const contenido = await leerWord({ ...entrada, reporte: { ...reporte, metodologia: '1. Medir\n2. Revisar' } });
+    expect(contenido).toMatch(/1\. Medir<\/w:t>[\s\S]*?<\/w:p><w:p[\s\S]*?2\. Revisar/);
+  });
+  it('encabezado muestra código, versión y vigencia; pie conserva leyendas', async () => {
+    const contenido = await leerWord({ ...entrada, ctx: { ...ctx, codigo: 'FOR-IND-01', version: '02', vigencia: '1 ene 2026', leyendas: ['Confidencial', 'Copia no controlada'] } });
+    for (const texto of ['Código: FOR-IND-01', 'Versión: 02', 'Vigente desde: 1 ene 2026', 'Confidencial', 'Copia no controlada', 'Generado por']) expect(contenido).toContain(texto);
+    expect(contenido).not.toContain('Formato sin configurar');
+  });
+  it('formato ausente se señala y borrador no lleva DOC', async () => {
+    const contenido = await leerWord({ ...entrada, borrador: true });
+    expect(contenido).toContain('Formato sin configurar');
+    expect(contenido).toContain('BORRADOR · sin folio');
+    expect(contenido).not.toContain('DOC-2026-000123');
+    expect(await leerWord(entrada)).toContain('DOC-2026-000123');
+  });
+  it('KPI negativo que sube empeora; cuando baja mejora', () => {
+    expect(textoTendencia({ ...kpi, tendencia: 'negativa', valor_anterior: 4.32, valor: 5.13 })).toBe('4.32 → 5.13 · empeoró');
+    expect(textoTendencia({ ...kpi, tendencia: 'negativa', valor_anterior: 5.13, valor: 4.32 })).toBe('5.13 → 4.32 · mejoró');
+  });
+  it('barra de cero incluye etiqueta numérica explícita', () => {
+    const datos = { ...resumen, kpis: [{ ...kpi, subperiodos: [{ ...kpi.subperiodos[0], valor: 0 }] }] };
+    const svg = new TextDecoder().decode(charts({ ...reporte, datos_snapshot: datos }).k1);
+    expect(svg).toMatch(/text-anchor="middle">0<\/text>/);
+    expect(svg).not.toContain('>—</text>');
+  });
+  it('vigilancia debajo de KPI verde incluye subperiodo rojo', async () => {
+    const k = { ...kpi, semaforo: 'verde', subperiodos: [{ ...kpi.subperiodos[0], inicio: '2026-09-01', valor: 10 }] };
+    expect(notaVigilancia(k)).toBe('Sep en rojo (10 %); acumulado en meta');
+    expect(notaVigilancia({ ...k, semaforo: 'rojo' })).toBe('');
+    expect(await leerWord({ ...entrada, resumen: { ...resumen, kpis: [k] } })).toContain('Sep en rojo (10 %); acumulado en meta');
+  });
+  it('tablas repiten encabezados, no parten filas y usan hoja horizontal', async () => {
+    const contenido = await leerWord(entrada);
+    expect(contenido).toContain('<w:tblHeader');
+    expect(contenido).toContain('<w:cantSplit');
+    expect(contenido).toContain('w:orient="landscape"');
+  });
+  it('firma manual con dos renglones y fecha electrónica solo en emitido', async () => {
+    const emitido = await leerWord(entrada); const borrador = await leerWord({ ...entrada, borrador: true });
+    expect(emitido).toContain('Firma: ________________________');
+    expect(emitido).toContain('Fecha: ________________________');
+    expect(emitido).toContain('Firma electrónica:');
+    expect(borrador).toContain('QA RS (asignado)');
+    expect(borrador).not.toContain('Firma electrónica:');
   });
 });
