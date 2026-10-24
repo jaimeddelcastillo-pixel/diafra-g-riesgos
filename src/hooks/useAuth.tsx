@@ -45,6 +45,7 @@ interface AuthContextType {
   org: OrgInfo | null;
   orgRole: AppRole | null;
   loading: boolean;
+  requiereCambioTemporal: boolean;
   isImpersonating: boolean;
   impersonatedOrg: OrgInfo | null;
   hasRole: (role: AppRole) => boolean;
@@ -74,6 +75,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [orgRole, setOrgRole] = useState<AppRole | null>(null);
   const [soporteLogId, setSoporteLogId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [requiereCambioTemporal, setRequiereCambioTemporal] = useState(false);
   const channelRef = useRef<BroadcastChannel | null>(null);
   const lastUserRef = useRef<string | null>(null);
 
@@ -89,6 +91,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const cargarContexto = useCallback(async (u: User) => {
+    const { data: temporal, error: temporalError } = await supabase.rpc('requiere_cambio_temporal');
+    setRequiereCambioTemporal(temporalError ? true : temporal === true);
+    if (temporalError || temporal === true) { setProfile(null); setOrg(null); setOrgId(null); setRoles([]); setLoading(false); return; }
     const { data: profileData } = await supabase
       .from("profiles").select("nombre, email, cargo").eq("id", u.id).maybeSingle();
     setProfile(profileData);
@@ -133,6 +138,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const limpiarEstado = () => {
+    setRequiereCambioTemporal(false);
     setPuedeAdministrarUsuarios(false);
     setProfile(null); setRoles([]); setOrgId(null); setOrg(null); setOrgRole(null);
     setSoporteLogId(null);
@@ -184,7 +190,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const isSuperAdmin = () => roles.includes("super_admin");
 
   const refreshOrg = async () => {
-    if (!user || !orgId) return;
+    if (!user) return;
     await cargarContexto(user);
   };
 
@@ -271,7 +277,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     <AuthContext.Provider value={{
       user, session, profile, roles, puedeAdministrarUsuarios,
       orgId, org, orgRole: rolPresentacion(orgRole, pathname),
-      loading,
+      loading, requiereCambioTemporal,
       isImpersonating, impersonatedOrg,
       hasRole, isSuperAdmin,
       startImpersonation, stopImpersonation,

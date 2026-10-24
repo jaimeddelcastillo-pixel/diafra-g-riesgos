@@ -23,6 +23,7 @@ import { DocumentoTiposCard } from "@/components/DocumentoTiposCard";
 import { PlanSubscriptionCard } from "@/components/PlanSubscriptionCard";
 import { DatosFiscalesCard } from "@/components/DatosFiscalesCard";
 import { SemaforoPendientesCard } from "@/components/pendientes/SemaforoPendientesCard";
+import { AutoridadCalidadCard } from '@/components/AutoridadCalidadCard';
 import { Link, useLocation } from "react-router-dom";
 import { ListChecks } from "lucide-react";
 import type { Database } from "@/integrations/supabase/types";
@@ -375,6 +376,7 @@ export default function Configuracion() {
       {isAdmin && <UsuariosDesactivadosCard puedeReactivar={hasRole("admin") || isSuperAdmin()} />}
 
       {(hasRole("admin") || hasRole("responsable_sanitario")) && <SemaforoPendientesCard />}
+      <AutoridadCalidadCard/>
 
       {(hasRole("admin") || hasRole("responsable_sanitario")) && (
         <Card id="auditorias-externas" className="scroll-mt-20">
