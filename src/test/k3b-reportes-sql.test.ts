@@ -128,6 +128,15 @@ INSERT INTO objects VALUES('documentos-generados',s2->>'path');
 PERFORM pg_temp.confirmar_emision_kpi_word(rid,(s2->>'token')::uuid,NULL,repeat('a',64));
 IF (SELECT estado FROM kpi_reportes WHERE id=rid)<>'emitido' THEN RAISE EXCEPTION 'Reintento no emitió'; END IF;
 END;`));
+  it('S-1 RS máxima autoridad autoriza con leyenda y congela modo, nunca autor/revisor', () => check(`${actor(2)}PERFORM pg_temp.guardar_autoridad_calidad('rs_maxima','{}','QA autoridad RS');
+${listo(2,4)}${actor(1)}PERFORM pg_temp.emitir_kpi_reporte(rid);
+IF (SELECT firmantes->'autorizo'->>'leyenda' FROM kpi_reportes WHERE id=rid)<>'Autorizado por el Responsable Sanitario; la empresa no cuenta con Aseguramiento de Calidad' OR (SELECT formato_snapshot->'autoridad_calidad'->>'modo' FROM kpi_reportes WHERE id=rid)<>'rs_maxima' THEN RAISE EXCEPTION 'Leyenda o snapshot incorrecto'; END IF;
+${actor(2)}PERFORM pg_temp.guardar_autoridad_calidad('con_ac','{}','QA vuelve AC');
+IF (SELECT formato_snapshot->'autoridad_calidad'->>'modo' FROM kpi_reportes WHERE id=rid)<>'rs_maxima' THEN RAISE EXCEPTION 'Snapshot cambió'; END IF;
+PERFORM pg_temp.guardar_autoridad_calidad('rs_maxima','{}','QA máxima RS');
+${listo(1,4)}${actor(1)}${falla('PERFORM pg_temp.emitir_kpi_reporte(rid)', 'RS autor autorizó')}
+${listo(2,1)}${actor(1)}${falla('PERFORM pg_temp.emitir_kpi_reporte(rid)', 'RS revisor autorizó')}`));
+  it('S-1 cambiar autoridad sin motivo o sin admin se rechaza', () => check(`${actor(2)}${falla("PERFORM pg_temp.guardar_autoridad_calidad('rs_maxima','{}','')", 'Cambió sin motivo')}${actor(1)}${falla("PERFORM pg_temp.guardar_autoridad_calidad('rs_maxima','{}','QA motivo')", 'RS cambió modo')}`));
   it('flujo completo hasta emitido con firmantes, folio DOC y snapshot congelado', () => check(`${listo()}${actor(3)}PERFORM pg_temp.emitir_kpi_reporte(rid);
 SELECT * INTO r FROM kpi_reportes WHERE id=rid;
 IF r.estado<>'emitido' OR r.codigo<>'IND-2026-001' OR r.firmantes->'autorizo'->>'leyenda'<>'' OR r.firmantes->'elaboro'->>'nombre'<>'QA persona 2' OR jsonb_array_length(r.firmantes->'revisaron')<>1
