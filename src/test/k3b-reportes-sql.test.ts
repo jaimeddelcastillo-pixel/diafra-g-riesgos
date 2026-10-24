@@ -43,7 +43,7 @@ SELECT 'K3B OK';ROLLBACK;`;
 const actor = (n: number) => `PERFORM set_config('qa.actor','${id(n)}',true);`;
 const analisis = `'{"analisis":{"${id(10)}":{"causa":"QA causa","accion":"QA acción","capa":"CAPA-QA-1"}},"conclusiones":"QA conclusiones"}'::jsonb`;
 /** Draft created by `autor`, completed and sent; RS (1) reviews → ready to authorize. */
-const listo = (autor = 2) => `${actor(autor)}rid:=pg_temp.crear_kpi_reporte('trimestre','2026-01-01');PERFORM pg_temp.guardar_kpi_reporte(rid,${analisis});PERFORM pg_temp.enviar_kpi_reporte(rid);${actor(1)}PERFORM pg_temp.revisar_kpi_reporte(rid,true,'');`;
+const listo = (autor = 2, revisor = 1) => `${actor(autor)}rid:=pg_temp.crear_kpi_reporte('trimestre','2026-01-01');PERFORM pg_temp.guardar_kpi_reporte(rid,${analisis});${revisor !== 1 ? `PERFORM pg_temp.guardar_kpi_reporte(rid,'{"revisores":["${id(revisor)}"]}'::jsonb);` : ''}PERFORM pg_temp.enviar_kpi_reporte(rid);${actor(revisor)}PERFORM pg_temp.revisar_kpi_reporte(rid,true,'');`;
 const falla = (stmt: string, msg: string) => `failed:=false;BEGIN ${stmt};EXCEPTION WHEN raise_exception THEN failed:=true;END;IF NOT failed THEN RAISE EXCEPTION '${msg}';END IF;`;
 async function check(body: string) { expect(await run(body)).toContain('K3B OK'); }
 describe.skipIf(!process.env.PGHOST)('K3-b reporte periódico de indicadores, QA temporal con rollback', () => {
