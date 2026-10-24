@@ -848,6 +848,13 @@
       "when": 1792814694249,
       "tag": "0120_s1_autoridad_calidad",
       "breakpoints": true
+    },
+    {
+      "idx": 121,
+      "version": "7",
+      "when": 1792814770203,
+      "tag": "0121_s1_temporal_firma_cursos",
+      "breakpoints": true
     }
   ]
 }

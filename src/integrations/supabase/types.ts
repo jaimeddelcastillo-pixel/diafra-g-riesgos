@@ -2283,6 +2283,53 @@ export type Database = {
         }
         Relationships: []
       }
+      curso_diploma_config: {
+        Row: {
+          created_at: string
+          created_by: string
+          curso_id: string
+          firma_png: string
+          id: string
+          instructor_cargo: string
+          instructor_nombre: string
+          instructor_user_id: string | null
+          motivo: string
+          version: number
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          curso_id: string
+          firma_png: string
+          id?: string
+          instructor_cargo: string
+          instructor_nombre: string
+          instructor_user_id?: string | null
+          motivo: string
+          version: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          curso_id?: string
+          firma_png?: string
+          id?: string
+          instructor_cargo?: string
+          instructor_nombre?: string
+          instructor_user_id?: string | null
+          motivo?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "curso_diploma_config_curso_id_fkey"
+            columns: ["curso_id"]
+            isOneToOne: false
+            referencedRelation: "cursos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       curso_diplomas: {
         Row: {
           alumno_email: string
@@ -6845,6 +6892,41 @@ export type Database = {
         }
         Relationships: []
       }
+      usuario_acceso_temporal: {
+        Row: {
+          asignada_en: string
+          asignada_por: string
+          cambiada_en: string | null
+          org_id: string | null
+          pendiente: boolean
+          user_id: string
+        }
+        Insert: {
+          asignada_en?: string
+          asignada_por: string
+          cambiada_en?: string | null
+          org_id?: string | null
+          pendiente?: boolean
+          user_id: string
+        }
+        Update: {
+          asignada_en?: string
+          asignada_por?: string
+          cambiada_en?: string | null
+          org_id?: string | null
+          pendiente?: boolean
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "usuario_acceso_temporal_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vinculo_tipos_entidad: {
         Row: {
           activo: boolean
@@ -7124,6 +7206,10 @@ export type Database = {
         Args: { _id: string; _logo: Json; _sha256: string; _token: string }
         Returns: Json
       }
+      confirmar_password_temporal: {
+        Args: { _usuario: string }
+        Returns: undefined
+      }
       confirmar_perfil: {
         Args: { _cargo: string; _nombre: string }
         Returns: undefined
@@ -7300,6 +7386,17 @@ export type Database = {
       get_user_org_id: { Args: never; Returns: string }
       guardar_autoridad_calidad: {
         Args: { _autorizadores: string[]; _modo: string; _motivo: string }
+        Returns: string
+      }
+      guardar_firma_diploma: {
+        Args: {
+          _cargo: string
+          _curso: string
+          _firma: string
+          _instructor: string
+          _motivo: string
+          _nombre: string
+        }
         Returns: string
       }
       guardar_formato_documento: {
@@ -7482,6 +7579,10 @@ export type Database = {
         }
         Returns: Json
       }
+      marcar_password_temporal: {
+        Args: { _actor: string; _org: string; _usuario: string }
+        Returns: undefined
+      }
       mi_acceso_curso: { Args: { p_curso_id: string }; Returns: string }
       mi_autoridad_calidad: { Args: never; Returns: Json }
       mi_ia_en_prueba: { Args: never; Returns: boolean }
@@ -7654,6 +7755,7 @@ export type Database = {
         Args: { p_folio_id: string; p_orden: string[] }
         Returns: Json
       }
+      requiere_cambio_temporal: { Args: never; Returns: boolean }
       responder_suplencia: {
         Args: { _aceptar: boolean; _id: string }
         Returns: undefined
@@ -7679,6 +7781,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      s1_acceso_previo: { Args: never; Returns: undefined }
       same_org_member: { Args: { _user_id: string }; Returns: boolean }
       seed_documento_tipos: { Args: { _org_id: string }; Returns: number }
       seed_org_folio_tipos: {
