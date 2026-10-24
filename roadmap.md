@@ -1,6 +1,6 @@
 # Roadmap
 
-- [ ] K3-b-2: textos fijos versionados, borradores sin folio, identidad/periodos/tablas/gráficas/vigilancia/firmas Word y suite completa; sin navegador/IA/dependencias ni Tendencias/Riesgos.
+- [x] K3-b-2: textos fijos versionados y congelados al emitir, borradores sin folio, identidad/periodos/tablas/gráficas/vigilancia/firmas Word; migraciones 0117–0119 y emitir-kpi-word desplegada. Suite completa final 426/426 en 52 archivos (799.29 s); sin navegador/IA/dependencias ni edición de Tendencias/Riesgos. Verificación visual/autenticada excluida por petición.
 
 - [x] D1-a: firmas por puesto/perfil, originales y búsqueda en Configuración, periodos abiertos ignorados; migraciones 0114–0116. Suite única: 411/413, dos fallos por variable SQL ambigua corregidos y 3/3 en verificación focalizada; no se repitió la suite completa. Sin Tendencias/Riesgos, navegador, IA ni dependencias.
 
