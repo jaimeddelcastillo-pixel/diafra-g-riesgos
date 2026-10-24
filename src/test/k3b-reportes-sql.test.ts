@@ -5,7 +5,7 @@ const id = (n: number) => `00000000-0000-0000-0000-${String(n).padStart(12, '0')
 const ORG = id(400);
 let defs: string | undefined;
 const tablas = ['organizations', 'profiles', 'org_members', 'org_suplencias', 'puestos', 'kpi_definiciones', 'kpi_puesto', 'kpi_resultados', 'kpi_reporte_config', 'kpi_reportes', 'kpi_reportes_historial', 'org_formatos', 'org_identidad_documental', 'documentos_generados'];
-const funciones = ['rol_efectivo', 'kpi_acceso', 'kpi_periodo', 'kpi_calcular', 'kpi_semaforo_cumplimiento', 'kpi_acumulado_interno', 'kpi_resumen_periodo', 'kpi_reportes_guard', 'kpi_reporte_autoriza', 'kpi_reporte_preparar', 'guardar_kpi_reporte_config', 'crear_kpi_reporte', 'guardar_kpi_reporte', 'kpi_reporte_faltantes', 'enviar_kpi_reporte', 'revisar_kpi_reporte', 'preparar_emision_kpi_word', 'confirmar_emision_kpi_word', 'reclamar_emision_kpi_word', 'cancelar_reserva_emision_kpi_word', 'emitir_kpi_reporte', 'nueva_version_kpi_reporte', 'anular_kpi_reporte', 'registrar_documento_generado'];
+const funciones = ['rol_efectivo', 'kpi_acceso', 'kpi_periodo', 'kpi_calcular', 'kpi_semaforo_cumplimiento', 'kpi_acumulado_interno', 'kpi_resumen_periodo', 'kpi_reportes_guard', 'kpi_reporte_autoriza', 'kpi_reporte_preparar', 'guardar_kpi_reporte_textos', 'contexto_borrador_kpi_word', 'guardar_kpi_reporte_config', 'crear_kpi_reporte', 'guardar_kpi_reporte', 'kpi_reporte_faltantes', 'enviar_kpi_reporte', 'revisar_kpi_reporte', 'preparar_emision_kpi_word', 'confirmar_emision_kpi_word', 'reclamar_emision_kpi_word', 'cancelar_reserva_emision_kpi_word', 'emitir_kpi_reporte', 'nueva_version_kpi_reporte', 'anular_kpi_reporte', 'registrar_documento_generado'];
 function run(body: string) {
   if (!defs) defs = execFileSync('psql', ['-XqAt', '-v', 'ON_ERROR_STOP=1'], { input: `SELECT string_agg(pg_get_functiondef(oid)||';', E'\n') FROM pg_proc WHERE pronamespace='public'::regnamespace AND proname=ANY(ARRAY[${funciones.map(f => `'${f}'`).join(',')}]);`, encoding: 'utf8', timeout: 30000 })
     .replaceAll('public.', 'pg_temp.').replaceAll('pg_temp.app_role', 'public.app_role').replace(/\b_rol app_role\b/g, '_rol public.app_role').replaceAll('storage.objects', 'pg_temp.objects').replaceAll('auth.uid()', 'pg_temp.uid()').replaceAll('SECURITY DEFINER', '').replaceAll("SET search_path TO 'public'", 'SET search_path TO pg_temp,public');
@@ -44,6 +44,42 @@ const listo = (autor = 2) => `${actor(autor)}rid:=pg_temp.crear_kpi_reporte('tri
 const falla = (stmt: string, msg: string) => `failed:=false;BEGIN ${stmt};EXCEPTION WHEN raise_exception THEN failed:=true;END;IF NOT failed THEN RAISE EXCEPTION '${msg}';END IF;`;
 async function check(body: string) { expect(await run(body)).toContain('K3B OK'); }
 describe.skipIf(!process.env.PGHOST)('K3-b reporte periódico de indicadores, QA temporal con rollback', () => {
+  it('K3-b-2 semestre y año cerrados; rechaza ambos abiertos', () => check(`${actor(2)}
+    rid:=pg_temp.crear_kpi_reporte('semestre','2026-01-01');
+    IF (SELECT periodo_fin FROM kpi_reportes WHERE id=rid)<>'2026-06-30'::date THEN RAISE EXCEPTION 'Semestre incorrecto'; END IF;
+    rid:=pg_temp.crear_kpi_reporte('año','2025-01-01');
+    IF (SELECT periodo_fin FROM kpi_reportes WHERE id=rid)<>'2025-12-31'::date THEN RAISE EXCEPTION 'Año incorrecto'; END IF;
+    ${falla("PERFORM pg_temp.crear_kpi_reporte('semestre',date_trunc('year',now())::date+interval '6 months')", 'Aceptó semestre abierto')}
+    ${falla("PERFORM pg_temp.crear_kpi_reporte('año',date_trunc('year',now())::date)", 'Aceptó año abierto')}`));
+  it('K3-b-2 textos fijos versionados son del servidor al guardar, leer y emitir', () => check(`${actor(2)}
+    PERFORM pg_temp.guardar_kpi_reporte_textos('Objetivo fijo','Alcance fijo',E'1. Medir\\n2. Revisar','{}','QA textos fijos',true);
+    rid:=pg_temp.crear_kpi_reporte('trimestre','2026-01-01');
+    PERFORM pg_temp.guardar_kpi_reporte(rid,'{"objetivo":"fraude","metodologia":"fraude"}'::jsonb);
+    IF (SELECT objetivo FROM kpi_reportes WHERE id=rid)<>'Objetivo fijo' THEN RAISE EXCEPTION 'Cliente editó fijo'; END IF;
+    ${actor(1)}PERFORM pg_temp.guardar_kpi_reporte_textos('Vigente RS','Alcance fijo',E'1. Medir\\n2. Revisar','{}','QA versión RS',true);
+    IF pg_temp.contexto_borrador_kpi_word(rid)->'reporte'->>'objetivo'<>'Vigente RS' THEN RAISE EXCEPTION 'Lectura no vigente'; END IF;
+    ${actor(2)}PERFORM pg_temp.guardar_kpi_reporte(rid,${analisis});PERFORM pg_temp.enviar_kpi_reporte(rid);
+    ${actor(1)}PERFORM pg_temp.revisar_kpi_reporte(rid,true,'');
+    ${actor(3)}PERFORM pg_temp.guardar_kpi_reporte_textos('Vigente AC','Alcance fijo',E'1. Medir\\n2. Revisar','{}','QA versión AC',true);
+    PERFORM pg_temp.emitir_kpi_reporte(rid);
+    IF (SELECT objetivo FROM kpi_reportes WHERE id=rid)<>'Vigente AC' THEN RAISE EXCEPTION 'Emisión no vigente'; END IF;
+    PERFORM pg_temp.guardar_kpi_reporte_textos('Posterior','Alcance fijo','Otra','{}','QA posterior',false);
+    IF (SELECT objetivo FROM kpi_reportes WHERE id=rid)<>'Vigente AC' THEN RAISE EXCEPTION 'Emitido cambió'; END IF;
+    IF (SELECT count(*) FROM kpi_reporte_config)<>4 THEN RAISE EXCEPTION 'Versiones perdidas'; END IF;
+    IF current_setting('tracea.motivo',true)<>'QA posterior' THEN RAISE EXCEPTION 'Sin motivo auditable'; END IF;
+    rid:=pg_temp.crear_kpi_reporte('trimestre','2026-01-01');
+    PERFORM pg_temp.guardar_kpi_reporte(rid,'{"objetivo":"Editable"}'::jsonb);
+    IF (SELECT objetivo FROM kpi_reportes WHERE id=rid)<>'Editable' THEN RAISE EXCEPTION 'No editó texto libre'; END IF;
+    ${actor(4)}${falla("PERFORM pg_temp.guardar_kpi_reporte_textos('','','','{}','QA operador',true)", 'Operador configuró')}`));
+  it('K3-b-2 leer/exportar borrador no consume folio DOC; emisión sí', () => check(`${listo()}
+    DECLARE antes bigint; despues bigint; c jsonb; BEGIN
+    SELECT last_value INTO antes FROM documentos_generados_folio_seq;
+    c:=pg_temp.contexto_borrador_kpi_word(rid);
+    SELECT last_value INTO despues FROM documentos_generados_folio_seq;
+    IF antes<>despues OR c->'registro'->>'folio'<>'' OR EXISTS(SELECT 1 FROM documentos_generados) THEN RAISE EXCEPTION 'Borrador consumió folio'; END IF;
+    ${actor(3)}PERFORM pg_temp.emitir_kpi_reporte(rid);
+    IF (SELECT formato_snapshot->>'folio' FROM kpi_reportes WHERE id=rid) NOT LIKE 'DOC-%' OR NOT EXISTS(SELECT 1 FROM documentos_generados) THEN RAISE EXCEPTION 'Emitido sin folio'; END IF;
+    END;`));
   it('K3-b-1 no emite sin el original guardado y congela logo y ruta con folio', () => check(`${listo()}${actor(3)}
 DECLARE s jsonb; logo jsonb:='{"format":"PNG","dataUrl":"data:image/png;base64,QUFB"}'; BEGIN
 s:=pg_temp.preparar_emision_kpi_word(rid);
