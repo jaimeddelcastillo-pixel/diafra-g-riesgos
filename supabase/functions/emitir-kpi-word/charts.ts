@@ -1,4 +1,4 @@
-import { kpisDelAlcance, etiquetaSub, type Reporte } from './word';
+import { kpisDelAlcance, etiquetaSub, type Reporte } from './word.ts';
 
 const escape = (s: string) => s.replace(/[<>&"']/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&apos;' }[c] ?? c));
 

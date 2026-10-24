@@ -49,7 +49,7 @@ describe.skipIf(!process.env.PGHOST)('K3-b reporte periódico de indicadores, QA
     IF (SELECT periodo_fin FROM kpi_reportes WHERE id=rid)<>'2026-06-30'::date THEN RAISE EXCEPTION 'Semestre incorrecto'; END IF;
     rid:=pg_temp.crear_kpi_reporte('año','2025-01-01');
     IF (SELECT periodo_fin FROM kpi_reportes WHERE id=rid)<>'2025-12-31'::date THEN RAISE EXCEPTION 'Año incorrecto'; END IF;
-    ${falla("PERFORM pg_temp.crear_kpi_reporte('semestre',date_trunc('year',now())::date+interval '6 months')", 'Aceptó semestre abierto')}
+    ${falla("PERFORM pg_temp.crear_kpi_reporte('semestre',(date_trunc('year',now())+interval '6 months')::date)", 'Aceptó semestre abierto')}
     ${falla("PERFORM pg_temp.crear_kpi_reporte('año',date_trunc('year',now())::date)", 'Aceptó año abierto')}`));
   it('K3-b-2 textos fijos versionados son del servidor al guardar, leer y emitir', () => check(`${actor(2)}
     PERFORM pg_temp.guardar_kpi_reporte_textos('Objetivo fijo','Alcance fijo',E'1. Medir\\n2. Revisar','{}','QA textos fijos',true);
